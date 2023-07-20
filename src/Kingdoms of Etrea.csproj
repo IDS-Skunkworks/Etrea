@@ -1,0 +1,147 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{65402E18-46CD-4444-9059-ABAE6D9F9561}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Kingdoms_of_Etrea</RootNamespace>
+    <AssemblyName>Kingdoms of Etrea</AssemblyName>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Resources\Hybridworks-Haunted-Hotel-Haunted-Hotel.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.SQLite, Version=1.0.118.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
+      <HintPath>..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\lib\net46\System.Data.SQLite.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Core\ActImmortal.cs" />
+    <Compile Include="Core\ActPlayer.cs" />
+    <Compile Include="Core\CharacterCreator.cs" />
+    <Compile Include="Core\CombatManager.cs" />
+    <Compile Include="Core\CommandParser.cs" />
+    <Compile Include="Core\Connection.cs" />
+    <Compile Include="Core\Constants.cs" />
+    <Compile Include="Core\DatabaseManager.cs" />
+    <Compile Include="Core\Descriptor.cs" />
+    <Compile Include="Core\EmoteManager.cs" />
+    <Compile Include="Core\Game.cs" />
+    <Compile Include="Core\Helpers.cs" />
+    <Compile Include="Core\ItemManager.cs" />
+    <Compile Include="Core\NodeManager.cs" />
+    <Compile Include="Core\NPCManager.cs" />
+    <Compile Include="Core\QuestManager.cs" />
+    <Compile Include="Core\RecipeManager.cs" />
+    <Compile Include="Core\ShopManager.cs" />
+    <Compile Include="Entities\Buff.cs" />
+    <Compile Include="Entities\CombatSession.cs" />
+    <Compile Include="Entities\CraftingRecipe.cs" />
+    <Compile Include="Entities\Emote.cs" />
+    <Compile Include="Entities\Mail.cs" />
+    <Compile Include="Entities\Quest.cs" />
+    <Compile Include="Entities\ResourceNode.cs" />
+    <Compile Include="Entities\Shop.cs" />
+    <Compile Include="Entities\Skills.cs" />
+    <Compile Include="Entities\Spells.cs" />
+    <Compile Include="OLC\CraftingRecipe.cs" />
+    <Compile Include="OLC\Emotes.cs" />
+    <Compile Include="OLC\Items.cs" />
+    <Compile Include="OLC\NPC.cs" />
+    <Compile Include="OLC\OLC.cs" />
+    <Compile Include="Core\RoomManager.cs" />
+    <Compile Include="Core\SessionManager.cs" />
+    <Compile Include="Core\ZoneManager.cs" />
+    <Compile Include="Entities\Actor.cs" />
+    <Compile Include="Entities\Item.cs" />
+    <Compile Include="Entities\Room.cs" />
+    <Compile Include="Entities\Zone.cs" />
+    <Compile Include="Enums\Enums.cs" />
+    <Compile Include="Interfaces\IInputValidator.cs" />
+    <Compile Include="Interfaces\ILoggingProvider.cs" />
+    <Compile Include="Interfaces\ILogonProvider.cs" />
+    <Compile Include="Interfaces\LoggingProvider.cs" />
+    <Compile Include="Interfaces\LogonProvider.cs" />
+    <Compile Include="Networking\TcpServer.cs" />
+    <Compile Include="OLC\Quests.cs" />
+    <Compile Include="OLC\ResourceNode.cs" />
+    <Compile Include="OLC\Rooms.cs" />
+    <Compile Include="OLC\Shop.cs" />
+    <Compile Include="OLC\Zone.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Structs\Structs.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Hybridworks-Haunted-Hotel-Haunted-Hotel.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ToDo.txt" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets" Condition="Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets'))" />
+  </Target>
+</Project>
