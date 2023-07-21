@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using System.Net;
 
 namespace Kingdoms_of_Etrea.Core
 {
@@ -74,11 +75,12 @@ namespace Kingdoms_of_Etrea.Core
 
         internal void Close(Descriptor descriptor)
         {
-            var endpoint = descriptor.Client.Client.RemoteEndPoint;
-            var charName = descriptor.Player == null ? string.Empty : descriptor.Player.ToString();
+            EndPoint endpoint = null;
             try
             {
-                if(descriptor.Player != null)
+                endpoint = descriptor.Client.Client.RemoteEndPoint;
+                var charName = descriptor.Player == null ? string.Empty : descriptor.Player.ToString();
+                if (descriptor.Player != null)
                 {
                     if(descriptor.Player.FollowerID != Guid.Empty)
                     {

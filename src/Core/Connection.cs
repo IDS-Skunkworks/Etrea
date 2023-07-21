@@ -20,6 +20,22 @@ namespace Kingdoms_of_Etrea.Core
             var thread = new Thread(HandleConnection);
             thread.IsBackground = true;
             thread.Start();
+
+            var monitor = new Thread(MonitorConnection);
+            monitor.IsBackground = true;
+            monitor.Start();
+        }
+
+        private void MonitorConnection()
+        {
+            if(_desc != null)
+            {
+
+            }
+            else
+            {
+
+            }
         }
 
         private void HandleConnection()
@@ -87,48 +103,45 @@ namespace Kingdoms_of_Etrea.Core
         {
             _desc.State = ConnectionState.MainMenu;
             bool validSelection = false;
-            while(_desc != null && !validSelection)
+            while(_desc != null && _desc.IsConnected && !validSelection)
             {
-                if(_desc.IsConnected)
+                try
                 {
-                    try
+                    var pInput = _desc.Read().Trim();
+                    if (ValidateInput(pInput) && int.TryParse(pInput, out int opt))
                     {
-                        var pInput = _desc.Read().Trim();
-                        if (ValidateInput(pInput) && int.TryParse(pInput, out int opt))
+                        if (opt >= 1 && opt <= 3)
                         {
-                            if (opt >= 1 && opt <= 3)
+                            validSelection = true;
+                            if (opt == 1)
                             {
-                                validSelection = true;
-                                if (opt == 1)
+                                _logonProvider.LogonPlayer(ref _desc);
+                                if (_desc.Player != null)
                                 {
-                                    _logonProvider.LogonPlayer(ref _desc);
-                                    if (_desc.Player != null)
-                                    {
-                                        _desc.State = ConnectionState.Playing;
-                                        return;
-                                    }
-                                    MainMenu();
+                                    _desc.State = ConnectionState.Playing;
+                                    return;
                                 }
-                                if (opt == 2)
-                                {
-                                    CreateNewChar();
-                                }
-                                if (opt == 3)
-                                {
-                                    SessionManager.Instance.Close(_desc);
-                                }
+                                MainMenu();
                             }
-                            else
+                            if (opt == 2)
                             {
-                                _desc.Send($"Sorry, that doesn't look like a valid option.{Constants.NewLine}");
+                                CreateNewChar();
+                            }
+                            if (opt == 3)
+                            {
+                                SessionManager.Instance.Close(_desc);
                             }
                         }
+                        else
+                        {
+                            _desc.Send($"Sorry, that doesn't look like a valid option.{Constants.NewLine}");
+                        }
                     }
-                    catch(Exception ex)
-                    {
-                        Game.LogMessage($"ERROR: Error reading from socket at MainMenu(): {ex.Message}", LogLevel.Error, true);
-                        break;
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Game.LogMessage($"ERROR: Error reading from socket at MainMenu(): {ex.Message}", LogLevel.Error, true);
+                    SessionManager.Instance.Close(_desc);
                 }
             }
         }

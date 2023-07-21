@@ -191,7 +191,7 @@ namespace Kingdoms_of_Etrea.Core
                     _logProvider.LogMessage($"UPTIME: Game world has been up for {totalUptime.Days} days, {totalUptime.Hours} hours, {totalUptime.Minutes} minutes, {totalUptime.Seconds} seconds", LogLevel.Debug, true);
                 }
 
-                if (uptimeSeconds % 900 == 0)
+                if (uptimeSeconds % 90 == 0) // 900
                 {
                     CleanupDescriptors();
                 }
