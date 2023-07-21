@@ -80,6 +80,10 @@ namespace Kingdoms_of_Etrea.Core
                         }
                     }
                 }
+                else
+                {
+                    break;
+                }
             }
         }
 

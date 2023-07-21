@@ -734,10 +734,11 @@ namespace Kingdoms_of_Etrea.Core
         {
             if(desc.Player.Level >= Constants.ImmLevel)
             {
-                // list <item | room | zone | npc | skills | spells | node | recipe> <id | string>
-                var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                var objectType = TokeniseInput(ref line).FirstOrDefault();
-                var target = string.IsNullOrEmpty(objectType) ? string.Empty : line.Replace(objectType, string.Empty).Trim();
+                // list <item | room | zone | npc | skills | spells | node | recipe | quest> <id | string>
+                string v = GetVerb(ref input);
+                var line = input.Remove(0, v.Length).Trim();
+                var objectType = TokeniseInput(ref line).FirstOrDefault().Trim();
+                var target = string.IsNullOrEmpty(objectType) ? string.Empty : line.Remove(0, objectType.Length).Trim();
                 if (!string.IsNullOrEmpty(objectType))
                 {
                     bool targetIsID = uint.TryParse(target, out var targetID);
@@ -746,6 +747,24 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         switch (objectType.ToLower())
                         {
+                            case "quest":
+                                var q = QuestManager.Instance.GetQuest(targetID);
+                                if(q != null)
+                                {
+                                    sb.AppendLine($"  {new string('=', 77)}");
+                                    foreach (var p in q.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                                    {
+                                        sb.AppendLine($"|| {p.Name}: {p.GetValue(q, null)}");
+                                    }
+                                    sb.AppendLine($"  {new string('=', 77)}");
+                                    desc.Send(sb.ToString());
+                                }
+                                else
+                                {
+                                    desc.Send($"No Quest with that ID could be found.{Constants.NewLine}");
+                                }
+                                break;
+
                             case "item":
                                 var i = ItemManager.Instance.GetItemByID(targetID);
                                 if (i != null)
@@ -871,12 +890,34 @@ namespace Kingdoms_of_Etrea.Core
                                     desc.Send($"No Recipe with that ID could be found{Constants.NewLine}");
                                 }
                                 break;
+
+                            default:
+                                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                                break;
                         }
                     }
                     else
                     {
                         switch (objectType.ToLower())
                         {
+                            case "quest":
+                                var matchingQuests = QuestManager.Instance.GetQuestByNameOrDescription(target).OrderBy(x => x.QuestID).ToList();
+                                if(matchingQuests != null && matchingQuests.Count > 0)
+                                {
+                                    sb.AppendLine($"  {new string('=', 77)}");
+                                    foreach(var q in matchingQuests)
+                                    {
+                                        sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
+                                    }
+                                    sb.AppendLine($"  {new string('=', 77)}");
+                                    desc.Send(sb.ToString());
+                                }
+                                else
+                                {
+                                    desc.Send($"No matching Quests could be found.{Constants.NewLine}");
+                                }
+                                break;
+
                             case "item":
                                 var matchingItems = ItemManager.Instance.GetItemByNameOrDescription(target).OrderBy(x => x.Id).ToList();
                                 if (matchingItems != null && matchingItems.Count > 0)
@@ -1057,6 +1098,10 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     desc.Send($"No matching Crafting Recipe could be found.{Constants.NewLine}");
                                 }
+                                break;
+
+                            default:
+                                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
                                 break;
                         }
                     }

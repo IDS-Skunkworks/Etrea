@@ -52,6 +52,12 @@ namespace Kingdoms_of_Etrea.Core
             return Instance.quests.Values.Any(x => x.QuestGUID == guid);
         }
 
+        internal List<Quest> GetQuestByNameOrDescription(string criteria)
+        {
+            var retval = quests.Values.Where(x => Regex.Match(x.QuestName, criteria, RegexOptions.IgnoreCase).Success || Regex.Match(x.QuestText, criteria, RegexOptions.IgnoreCase).Success).ToList();
+            return retval;
+        }
+
         internal Quest GetQuest(uint id)
         {
             if(quests.ContainsKey(id))
