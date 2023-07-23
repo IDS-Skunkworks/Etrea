@@ -88,11 +88,11 @@ namespace Kingdoms_of_Etrea.Core
                     }
                     if(DatabaseManager.SavePlayerNew(ref descriptor, false))
                     {
-                        Game.LogMessage($"INFO: Client at {descriptor.Player.Name} on disconnection", LogLevel.Info, true);
+                        Game.LogMessage($"INFO: Player {descriptor.Player.Name} at {descriptor.Client.Client.RemoteEndPoint} saved on disconnection", LogLevel.Info, true);
                     }
                     else
                     {
-                        Game.LogMessage($"INFO: Client at {descriptor.Player.Name} on disconnection. Player data may be out of date on reload", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Player at {descriptor.Player.Name} at {descriptor.Client.Client.RemoteEndPoint} failed to save on disconnection. Player data may be out of date on reload", LogLevel.Error, true);
                     }
                 }
                 descriptor.Client.Close();

@@ -4047,7 +4047,7 @@ namespace Kingdoms_of_Etrea.Core
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"  {new string('=', 77)}");
-                sb.AppendLine($"|| You are carring:");
+                sb.AppendLine($"|| You are carrying:");
                 foreach (var i in desc.Player.Inventory.Select(x => new { x.Id, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
                 {
                     var cnt = desc.Player.Inventory.Where(y => y.Id == i.Id).Count();
