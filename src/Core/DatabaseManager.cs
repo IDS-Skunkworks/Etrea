@@ -569,6 +569,40 @@ namespace Kingdoms_of_Etrea.Core
         #endregion
 
         #region Shop
+        internal static Dictionary<uint, Shop> LoadAllShops(out bool hasErr)
+        {
+            hasErr = false;
+            var retval = new Dictionary<uint, Shop>();
+            string cs = $"URI=file:{worldDBPath}";
+            try
+            {
+                using (var con = new SQLiteConnection(cs))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "SELECT * FROM tblShops;";
+                        using (var dr = cmd.ExecuteReader())
+                        {
+                            while (dr.Read())
+                            {
+                                Shop s = Helpers.DeserialiseRoomShop(dr["ShopData"].ToString());
+                                retval.Add(s.ShopID, s);
+                            }
+                        }
+                        con.Close();
+                    }
+                }
+                return retval;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error loading Shops from World database: {ex.Message}", LogLevel.Error, true);
+                hasErr = true;
+                return null;
+            }
+        }
+
         internal static bool UpdateExistingShop(ref Descriptor desc, Shop s)
         {
             string cs = $"URI=file:{worldDBPath}";
@@ -838,40 +872,6 @@ namespace Kingdoms_of_Etrea.Core
             {
                 Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an exception updating Room {r.RoomID}: {ex.Message}", LogLevel.Error, true);
                 return false;
-            }
-        }
-
-        internal static Dictionary<uint, Shop> LoadAllShops(out bool hasErr)
-        {
-            hasErr = false;
-            var retval = new Dictionary<uint, Shop>();
-            string cs = $"URI=file:{worldDBPath}";
-            try
-            {
-                using (var con = new SQLiteConnection(cs))
-                {
-                    con.Open();
-                    using (var cmd = new SQLiteCommand(con))
-                    {
-                        cmd.CommandText = "SELECT * FROM tblShops;";
-                        using (var dr = cmd.ExecuteReader())
-                        {
-                            while (dr.Read())
-                            {
-                                Shop s = Helpers.DeserialiseRoomShop(dr["ShopData"].ToString());
-                                retval.Add(s.ShopID, s);
-                            }
-                        }
-                        con.Close();
-                    }
-                }
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error loading Shops from World database: {ex.Message}", LogLevel.Error, true);
-                hasErr = true;
-                return null;
             }
         }
 

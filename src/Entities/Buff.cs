@@ -23,6 +23,12 @@ namespace Kingdoms_of_Etrea.Entities
         {
             new Buff
             {
+                BuffName = "Bless",
+                Description = "Provides mystical bonuses",
+                BuffDuration = 10
+            },
+            new Buff
+            {
                 BuffName = "Mage Armour",
                 Description = "Provides a bonus to AC in combat",
                 BuffDuration = 2

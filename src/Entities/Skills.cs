@@ -51,6 +51,50 @@ namespace Kingdoms_of_Etrea.Entities
                 MPCost = 0,
                 GoldToLearn = 30000 },
 
+            new Skill
+            {
+                Name = "Heavy Armour Mastery",
+                Description = "Provides bonuses when wearing heavy armour",
+                MPCost = 0,
+                GoldToLearn = 25000 },
+
+            new Skill
+            {
+                Name = "Medium Armour Mastery",
+                Description = "Provides bonuses when wearing medium armour",
+                MPCost = 0,
+                GoldToLearn = 25000 },
+
+            new Skill
+            {
+                Name = "Light Armour Mastery",
+                Description = "Provides bonuses when wearing light armour",
+                MPCost = 0,
+                GoldToLearn = 25000 },
+
+            new Skill
+            {
+                Name = "Simple Weapon Mastery",
+                Description = "Provides bonuses when using simple weapons",
+                MPCost = 0,
+                GoldToLearn = 15000 },
+
+            new Skill
+            {
+                Name = "Martial Weapon Mastery",
+                Description = "Provides bonuses when using martial weapons",
+                MPCost = 0,
+                GoldToLearn = 36000
+            },
+
+            new Skill
+            {
+                Name = "Exotic Weapon Mastery",
+                Description = "Provides bonuses when using exotic weapons",
+                MPCost = 0,
+                GoldToLearn = 60000
+            },
+
             new Skill {
                 Name = "Simple Weapons",
                 Description = "Teaches you how to effectively use simple weapons",

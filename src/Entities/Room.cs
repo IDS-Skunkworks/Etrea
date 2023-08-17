@@ -28,6 +28,8 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal Dictionary<uint, uint> SpawnNPCsAtStart { get; set; }
         [JsonProperty]
+        internal Dictionary<uint,uint> SpawnItemsAtTick { get; set; }
+        [JsonProperty]
         internal uint? ShopID { get; set; }
         internal bool HasLightSource { get; set; }
         internal ResourceNode ResourceNode { get; set; }
@@ -37,6 +39,7 @@ namespace Kingdoms_of_Etrea.Entities
         {
             ItemsInRoom = new List<InventoryItem>();
             SpawnNPCsAtStart = new Dictionary<uint, uint>();
+            SpawnItemsAtTick = new Dictionary<uint, uint>();
             RoomExits = new List<Exit>();
         }
 
@@ -92,7 +95,7 @@ namespace Kingdoms_of_Etrea.Entities
                 }
                 else
                 {
-                    sb.AppendLine($"You are in {RoomManager.Instance.GetRoomShortDescription(desc.Player.CurrentRoom)}");
+                    sb.AppendLine($"You are in {RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomName}, {RoomManager.Instance.GetRoomShortDescription(desc.Player.CurrentRoom)}");
                     lDesc = RoomManager.Instance.GetRoomLongDescription(desc.Player.CurrentRoom);
                 }
                 
@@ -239,11 +242,26 @@ namespace Kingdoms_of_Etrea.Entities
             internal uint DestinationRoomID { get; set; }
             [JsonProperty]
             internal string ExitDirection { get; set; }
+            [JsonProperty]
+            internal RoomDoor RoomDoor { get; set; }
+            [JsonProperty]
+            internal Skills.Skill RequiredSkill { get; set; }
 
             public override string ToString()
             {
                 return $"{ExitDirection} ({DestinationRoomID})";
             }
+        }
+
+        // Room Door: can add to Exit or be null for open exit, add required item for lock, bool locked, bool open
+        internal class RoomDoor
+        {
+            [JsonProperty]
+            internal uint RequiredItemID { get; set; }
+            [JsonProperty]
+            internal bool IsLocked { get; set; }
+            [JsonProperty]
+            internal bool IsOpen { get; set; }
         }
     }
 }

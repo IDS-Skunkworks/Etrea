@@ -109,6 +109,16 @@ namespace Kingdoms_of_Etrea.Core
                 case "delete":
                     DeleteCharacter(ref desc);
                     break;
+
+                case "unlock":
+                case "lock":
+                    LockOrUnlockDoor(ref desc, ref input);
+                    break;
+
+                case "open":
+                case "close":
+                    OpenOrCloseDoor(ref desc, ref input);
+                    break;
                 #endregion
 
                 #region SkillCommands
@@ -154,192 +164,25 @@ namespace Kingdoms_of_Etrea.Core
 
                 case "down":
                 case "d":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("down"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "up":
                 case "u":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("up"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "west":
                 case "w":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("west"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "east":
                 case "e":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("east"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "north":
                 case "n":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("north"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "south":
                 case "s":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("south"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "northwest":
                 case "nw":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northwest"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "southwest":
                 case "sw":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southwest"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "northeast":
                 case "ne":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northeast"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
-                    break;
-
                 case "southeast":
                 case "se":
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southeast"))
-                    {
-                        if (desc.Player.Position == ActorPosition.Standing)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID, false, ref desc);
-                        }
-                        else
-                        {
-                            desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot go that way!{Constants.NewLine}");
-                    }
+                    MovePlayer(ref desc, ref input);
                     break;
                 #endregion
 

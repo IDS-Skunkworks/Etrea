@@ -618,9 +618,27 @@ namespace Kingdoms_of_Etrea.Core
                             foreach (var npc in npcsForZone)
                             {
                                 var roll = Helpers.RollDice(1, 100);
-                                if (roll < npc.AppearChance && (NPCManager.Instance.GetCountOfNPCsInWorld(npc.NPCID) + 1 < npc.MaxNumber))
+                                if (roll < npc.AppearChance && (NPCManager.Instance.GetCountOfNPCsInWorld(npc.NPCID) + 1 <= npc.MaxNumber))
                                 {
                                     NPCManager.Instance.AddNPCToWorld(npc.NPCID, room);
+                                }
+                            }
+                        }
+                        var items = RoomManager.Instance.GetRoom(room).SpawnItemsAtTick;
+                        if (items != null && items.Count > 0)
+                        {
+                            foreach(var item in items)
+                            {
+                                var i = ItemManager.Instance.GetItemByID(item.Key);
+                                if(i != null)
+                                {
+                                    for (var j = 0; j < item.Value; j++)
+                                    {
+                                        if(Helpers.RollDice(1,100) <= 38)
+                                        {
+                                            RoomManager.Instance.AddItemToRoomInventory(item.Key, ref i);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -671,19 +689,27 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         var rnd = new Random(DateTime.Now.ToString().GetHashCode());
                                         var index = rnd.Next(0, roomExits.Count);
-                                        var destRID = roomExits[index].DestinationRoomID;
-                                        if(RoomManager.Instance.RoomExists(destRID))
+                                        // only allow the NPC to move if there is no door or the door is open
+                                        if (roomExits[index].RoomDoor == null || roomExits[index].RoomDoor.IsOpen)
                                         {
-                                            // Only move the NPC to the target room if the RID is in the zone the NPC appears in and isn't flagged NoMob - prevent NPCs from wandering too much
-                                            if (ZoneManager.Instance.IsRIDInZone(destRID, n.AppearsInZone) && !RoomManager.Instance.GetRoom(destRID).Flags.HasFlag(RoomFlags.NoMobs))
+                                            var destRID = roomExits[index].DestinationRoomID;
+                                            if (RoomManager.Instance.RoomExists(destRID))
                                             {
-                                                _logProvider.LogMessage($"INFO: Moving {n.Name} from {n.CurrentRoom} to {destRID}", LogLevel.Info, true);
-                                                npc.Value.Move(ref n, n.CurrentRoom, destRID, false);
+                                                // Only move the NPC to the target room if the RID is in the zone the NPC appears in and isn't flagged NoMob - prevent NPCs from wandering too much
+                                                if (ZoneManager.Instance.IsRIDInZone(destRID, n.AppearsInZone) && !RoomManager.Instance.GetRoom(destRID).Flags.HasFlag(RoomFlags.NoMobs))
+                                                {
+                                                    _logProvider.LogMessage($"INFO: Moving {n.Name} from {n.CurrentRoom} to {destRID}", LogLevel.Info, true);
+                                                    npc.Value.Move(ref n, n.CurrentRoom, destRID, false);
+                                                }
                                             }
-                                        }    
+                                            else
+                                            {
+                                                _logProvider.LogMessage($"WARN: Cannot move {npc.Value.Name} from {npc.Value.CurrentRoom} to {destRID}, room does not exist", LogLevel.Warning, true);
+                                            }
+                                        }
                                         else
                                         {
-                                            _logProvider.LogMessage($"WARN: Cannot move {npc.Value.Name} from {npc.Value.CurrentRoom} to {destRID}, room does not exist", LogLevel.Warning, true);
+                                            _logProvider.LogMessage($"INFO: Cannot move {npc.Value.Name} from {npc.Value.CurrentRoom} to {roomExits[index].DestinationRoomID}, door is not open", LogLevel.Info, true);
                                         }
                                     }
                                 }

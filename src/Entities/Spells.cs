@@ -39,6 +39,32 @@ namespace Kingdoms_of_Etrea.Entities
         {
             new Spell
             {
+                SpellName = "Bless",
+                Description = "Provides mystical bonuses",
+                SpellType = SpellType.Buff,
+                MPCost = 10,
+                NumOfDamageDice = 0,
+                SizeOfDamageDice = 0,
+                AutoHitTarget = true,
+                RequiresTarget = false,
+                GoldToLearn = 10000
+            },
+
+            new Spell
+            {
+                SpellName = "Guiding Bolt",
+                Description = "Blasts a target with holy power",
+                SpellType = SpellType.Damage,
+                MPCost = 14,
+                NumOfDamageDice = 2,
+                SizeOfDamageDice = 8,
+                AutoHitTarget = false,
+                RequiresTarget = true,
+                GoldToLearn = 10000
+            },
+
+            new Spell
+            {
                 SpellName = "Magic Missile",
                 Description = "Fires seeking missiles of pure force at your target",
                 SpellType = SpellType.Damage,

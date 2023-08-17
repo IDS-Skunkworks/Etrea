@@ -11,6 +11,343 @@ namespace Kingdoms_of_Etrea.Core
     {
         // TODO: Update parsing code: instead of replacing the verb with an empty string, get verb and remove verb.length from the start of the string then trim()
         //       See PlayerQuests() for example code
+
+        private static void MovePlayer(ref Descriptor desc, ref string input)
+        {
+            var verb = GetVerb(ref input).Trim().ToLower();
+            string direction = string.Empty;
+            if(verb.Length <= 2)
+            {
+                switch(verb)
+                {
+                    case "s":
+                        direction = "south";
+                        break;
+                    case "n":
+                        direction = "north";
+                        break;
+                    case "w":
+                        direction = "west";
+                        break;
+                    case "e":
+                        direction = "east";
+                        break;
+                    case "ne":
+                        direction = "northeast";
+                        break;
+                    case "se":
+                        direction = "southeast";
+                        break;
+                    case "sw":
+                        direction = "southwest";
+                        break;
+                    case "nw":
+                        direction = "northwest";
+                        break;
+                    case "d":
+                        direction = "down";
+                        break;
+                    case "u":
+                        direction = "up";
+                        break;
+                }
+            }
+            else
+            {
+                direction = verb;
+            }
+            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion(direction))
+            {
+                if(desc.Player.Position == ActorPosition.Standing)
+                {
+                    var s = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RequiredSkill;
+                    if(s == null || desc.Player.HasSkill(s.Name))
+                    {
+                        var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor;
+                        if (d == null || (d != null && d.IsOpen))
+                        {
+                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).DestinationRoomID, false, ref desc);
+                        }
+                        else
+                        {
+                            desc.Send($"A doorway blocks your path in that direction!{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"You need the {s.Name} skill to go that way!{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"You cannot go that way!{Constants.NewLine}");
+            }
+        }
+
+        private static void OpenOrCloseDoor(ref Descriptor desc, ref string input)
+        {
+            var verb = GetVerb(ref input).Trim().ToLower();
+            string direction = input.Remove(0, verb.Length).Trim().ToLower();
+            if (direction.Length <= 2)
+            {
+                switch (direction)
+                {
+                    case "s":
+                        direction = "south";
+                        break;
+                    case "n":
+                        direction = "north";
+                        break;
+                    case "w":
+                        direction = "west";
+                        break;
+                    case "e":
+                        direction = "east";
+                        break;
+                    case "ne":
+                        direction = "northeast";
+                        break;
+                    case "se":
+                        direction = "southeast";
+                        break;
+                    case "sw":
+                        direction = "southwest";
+                        break;
+                    case "nw":
+                        direction = "northwest";
+                        break;
+                    case "d":
+                        direction = "down";
+                        break;
+                    case "u":
+                        direction = "up";
+                        break;
+                }
+            }
+            if(!string.IsNullOrEmpty(direction))
+            {
+                var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
+                if(r.HasExitInDiretion(direction))
+                {
+                    var d = r.GetRoomExit(direction).RoomDoor;
+                    if(d != null)
+                    {
+                        if(verb.ToLower() == "open")
+                        {
+                            if(d.IsLocked)
+                            {
+                                desc.Send($"The door is locked!{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = true;
+                                desc.Send($"You open the door {direction}.{Constants.NewLine}");
+                                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                if(localPlayers != null && localPlayers.Count > 1)
+                                {
+                                    var pn = desc.Player.Name;
+                                    foreach(var p in localPlayers.Where(x => x.Player.Name != pn))
+                                    {
+                                        if(desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                        {
+                                            p.Send($"{pn} opens the door {direction}.{Constants.NewLine}");
+                                        }
+                                        else
+                                        {
+                                            p.Send($"Something opens the door {direction}.{Constants.NewLine}");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if(verb.ToLower() == "close")
+                        {
+                            RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = false;
+                            desc.Send($"You close the door {direction}.{Constants.NewLine}");
+                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                            if (localPlayers != null && localPlayers.Count > 1)
+                            {
+                                var pn = desc.Player.Name;
+                                foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
+                                {
+                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                    {
+                                        p.Send($"{pn} closes the door {direction}.{Constants.NewLine}");
+                                    }
+                                    else
+                                    {
+                                        p.Send($"Something closes the door {direction}.{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"There is no door on the exit {direction}...{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"There is no exit {direction}...{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+            }
+        }
+
+        private static void LockOrUnlockDoor(ref Descriptor desc, ref string input)
+        {
+            var verb = GetVerb(ref input).Trim().ToLower();
+            string direction = input.Remove(0, verb.Length).Trim().ToLower();
+            if (direction.Length <= 2)
+            {
+                switch (direction)
+                {
+                    case "s":
+                        direction = "south";
+                        break;
+                    case "n":
+                        direction = "north";
+                        break;
+                    case "w":
+                        direction = "west";
+                        break;
+                    case "e":
+                        direction = "east";
+                        break;
+                    case "ne":
+                        direction = "northeast";
+                        break;
+                    case "se":
+                        direction = "southeast";
+                        break;
+                    case "sw":
+                        direction = "southwest";
+                        break;
+                    case "nw":
+                        direction = "northwest";
+                        break;
+                    case "d":
+                        direction = "down";
+                        break;
+                    case "u":
+                        direction = "up";
+                        break;
+                }
+            }
+            if (!string.IsNullOrEmpty(direction))
+            {
+                var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
+                if(r.HasExitInDiretion(direction))
+                {
+                    var d = r.GetRoomExit(direction).RoomDoor;
+                    if(d != null)
+                    {
+                        if(verb.ToLower() == "lock")
+                        {
+                            if(!d.IsOpen)
+                            {
+                                if(!d.IsLocked)
+                                {
+                                    if (d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
+                                    {
+                                        RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = true;
+                                        desc.Send($"You lock the door {direction}.{Constants.NewLine}");
+                                        var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                        if (localPlayers != null && localPlayers.Count > 1)
+                                        {
+                                            var pn = desc.Player.Name;
+                                            foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
+                                            {
+                                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                                {
+                                                    p.Send($"{pn} locks the door {direction}.{Constants.NewLine}");
+                                                }
+                                                else
+                                                {
+                                                    p.Send($"Something locks the door {direction}.{Constants.NewLine}");
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"You lack the correct key to lock the door...{Constants.NewLine}");
+                                    }
+                                }
+                                else
+                                {
+                                    desc.Send($"The door is already locked...{Constants.NewLine}");
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"The door must be shut first...{Constants.NewLine}");
+                            }
+                        }
+                        if(verb.ToLower() == "unlock")
+                        {
+                            if(d.IsOpen)
+                            {
+                                desc.Send($"The door is already open...{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                if(!d.IsLocked)
+                                {
+                                    desc.Send($"The door is already unlocked...{Constants.NewLine}");
+                                }
+                                else
+                                {
+                                    if(d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
+                                    {
+                                        RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = false;
+                                        desc.Send($"You unlock the door {direction}.{Constants.NewLine}");
+                                        var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                        if (localPlayers != null && localPlayers.Count > 1)
+                                        {
+                                            var pn = desc.Player.Name;
+                                            foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
+                                            {
+                                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                                {
+                                                    p.Send($"{pn} unlocks the door {direction}.{Constants.NewLine}");
+                                                }
+                                                else
+                                                {
+                                                    p.Send($"Something unlocks the door {direction}.{Constants.NewLine}");
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"You lack the correct key to unlock the door...{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    desc.Send($"There is no exit to the {direction}...{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+            }
+        }
+
         private static void PlayerQuests(ref Descriptor desc, ref string input)
         {
             // usage quest(s) - show current active quests
@@ -4110,7 +4447,9 @@ namespace Kingdoms_of_Etrea.Core
 
         internal static void PushTarget(ref Descriptor desc, ref string input)
         {
-            var line = input.Replace(GetVerb(ref input), string.Empty).ToLower().Trim();
+            var verb = GetVerb(ref input).Trim();
+            var line = input.Remove(0, verb.Length).ToLower().Trim();
+            //var line = input.Replace(GetVerb(ref input), string.Empty).ToLower().Trim();
             string target = string.Empty;
             string direction = string.Empty;
             if (line.IndexOf('\"') > -1)
@@ -4163,8 +4502,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "up":
                             if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("up"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").ExitDirection;
+                                } 
                             }
                             break;
 
@@ -4172,8 +4515,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "down":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("down"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4181,8 +4528,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "north":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("north"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4190,8 +4541,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "northwest":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northwest"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4199,8 +4554,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "west":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("west"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4208,8 +4567,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "southwest":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southwest"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4217,8 +4580,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "south":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("south"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4226,8 +4593,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "southeast":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southeast"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4235,8 +4606,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "east":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("east"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4244,8 +4619,12 @@ namespace Kingdoms_of_Etrea.Core
                         case "northeast":
                             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northeast"))
                             {
-                                targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID);
-                                roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").ExitDirection;
+                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").RoomDoor;
+                                if(d == null || (d != null && d.IsOpen))
+                                {
+                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID);
+                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").ExitDirection;
+                                }
                             }
                             break;
 
@@ -4481,16 +4860,8 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void Look(ref Descriptor desc, ref string input)
         {
-            string target = string.Empty;
             string verb = GetVerb(ref input).ToLower().Trim();
-            if(verb.Length == 1)
-            {
-                target = input.Remove(0, 1).Trim();
-            }
-            else
-            {
-                target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            }
+            string target = input.Remove(0, verb.Length).Trim().ToLower();
             string msgToSendToPlayer = string.Empty;
             string msgToSendToTarget = string.Empty;
             string[] msgToSendToOthers = new string[] { string.Empty, string.Empty };
@@ -4502,21 +4873,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "u":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("up"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").RoomDoor;
+                            if(d == null || (d != null && d.IsOpen))
                             {
-                                if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if (targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
@@ -4524,22 +4890,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look up...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look up...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view up...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4548,21 +4929,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "d":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("down"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if (targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
@@ -4570,22 +4946,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as your look down...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as your look down...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view down...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4594,21 +4985,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "w":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("west"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if (targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if (targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
@@ -4616,22 +5002,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look towards the west...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look towards the west...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view west...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4640,21 +5041,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "e":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("east"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if(targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if(targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
@@ -4662,22 +5058,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look towards the east...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look towards the east...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view east...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4686,21 +5097,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "n":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("north"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if(targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if(targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
@@ -4708,22 +5114,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look north...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look north...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view north...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4732,21 +5153,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "s":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("south"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if(targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if(targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
@@ -4754,22 +5170,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look south...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look south...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view south...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4778,21 +5209,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "nw":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northwest"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if(targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if(targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
@@ -4800,22 +5226,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look northwest...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look northwest...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
-                                    }    
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
+                                    }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view northwest...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4824,21 +5265,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "ne":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northeast"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if(targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if(targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
@@ -4846,22 +5282,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look northeast...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look northeast...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view northeast...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4870,21 +5321,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "se":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southeast"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if(targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if(targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
@@ -4892,22 +5338,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look southeast...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look southeast...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view southeast...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
                             }
                         }
                         break;
@@ -4916,21 +5377,16 @@ namespace Kingdoms_of_Etrea.Core
                     case "sw":
                         if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southwest"))
                         {
-                            var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID;
-                            var targetRoom = RoomManager.Instance.GetRoom(rid);
-                            if(targetRoom != null)
+                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").RoomDoor;
+                            if (d == null || (d != null && d.IsOpen))
                             {
-                                if(targetRoom.Flags.HasFlag(RoomFlags.Dark))
+                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID;
+                                var targetRoom = RoomManager.Instance.GetRoom(rid);
+                                if (targetRoom != null)
                                 {
-                                    if(targetRoom.HasLightSource)
+                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
                                     {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                        if (targetRoom.HasLightSource)
                                         {
                                             msgToSendToPlayer = targetRoom.LongDescription;
                                             msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
@@ -4938,22 +5394,37 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                         else
                                         {
-                                            msgToSendToPlayer = $"You see only darkness as you look southwest...{Constants.NewLine}";
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
+                                            {
+                                                msgToSendToPlayer = targetRoom.LongDescription;
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
+                                            }
+                                            else
+                                            {
+                                                msgToSendToPlayer = $"You see only darkness as you look southwest...{Constants.NewLine}";
+                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
+                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
+                                            }
                                         }
+                                    }
+                                    else
+                                    {
+                                        msgToSendToPlayer = targetRoom.LongDescription;
+                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
+                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
                                     }
                                 }
                                 else
                                 {
-                                    msgToSendToPlayer = targetRoom.LongDescription;
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
+                                    msgToSendToPlayer = "That way lies only the void...";
                                 }
                             }
                             else
                             {
-                                msgToSendToPlayer = "That way lies only the void...";
+                                msgToSendToPlayer = $"A doorway blocks your view southwest...{Constants.NewLine}";
+                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
+                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
                             }
                         }
                         break;
@@ -5115,8 +5586,8 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void SayToRoom(ref Descriptor desc, ref string line)
         {
-            var msg = line.TrimStart(GetVerb(ref line).ToCharArray()).Trim();
-            string v = $"{desc.Player.Name} says, \"{msg}\"{Constants.NewLine}";
+            var verb = GetVerb(ref line).Trim();
+            var msg = line.Remove(0, verb.Length).Trim();
             foreach (var p in RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom))
             {
                 if (Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)

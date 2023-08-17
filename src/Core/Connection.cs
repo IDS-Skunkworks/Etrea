@@ -73,7 +73,7 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             CommandParser.ParseCommand(ref _desc, input);
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             Game.LogMessage($"ERROR: Error parsing input from {_desc.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
                             _desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
