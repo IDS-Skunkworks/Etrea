@@ -636,7 +636,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         if(Helpers.RollDice(1,100) <= 38)
                                         {
-                                            RoomManager.Instance.AddItemToRoomInventory(item.Key, ref i);
+                                            RoomManager.Instance.AddItemToRoomInventory(room, ref i);
                                         }
                                     }
                                 }
