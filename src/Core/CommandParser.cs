@@ -14,6 +14,10 @@ namespace Kingdoms_of_Etrea.Core
             switch(GetVerb(ref input).ToLower())
             {
                 #region MiscCommands
+                case "bank":
+                    PlayerBanking(ref desc, ref input);
+                    break;
+
                 case "quest":
                 case "quests":
                     PlayerQuests(ref desc, ref input);

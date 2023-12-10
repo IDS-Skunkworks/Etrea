@@ -24,6 +24,8 @@ namespace Kingdoms_of_Etrea.Entities
         internal List<Exit> RoomExits { get; set; }
         [JsonProperty]
         internal RoomFlags Flags { get; set; }
+        [JsonProperty]
+        internal uint GoldInRoom { get; set; }
         internal List<InventoryItem> ItemsInRoom { get; set; }
         [JsonProperty]
         internal Dictionary<uint, uint> SpawnNPCsAtStart { get; set; }
@@ -157,6 +159,10 @@ namespace Kingdoms_of_Etrea.Entities
                 {
                     sb.AppendLine($"A Royal Mailbox is here, for sending and receiving messages!");
                 }
+                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Banker))
+                {
+                    sb.AppendLine($"A bank teller is here, dealing with accounts and balances.");
+                }
                 if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
                 {
                     var node = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.ToString();
@@ -211,6 +217,12 @@ namespace Kingdoms_of_Etrea.Entities
                             var cnt = itemsInRooom.Where(y => y.Id == i.Id).Count();
                             sb.AppendLine($"{cnt} x {i.Name}, {i.ShortDescription}");
                         }
+                    }
+                    var goldInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
+                    if(goldInRoom > 0)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine($"You can see a pile of {goldInRoom} gold coins!");
                     }
                     var npcs = NPCManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom);
                     if (npcs != null && npcs.Count > 0)

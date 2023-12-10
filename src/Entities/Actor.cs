@@ -482,6 +482,8 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal List<Quest> ActiveQuests { get; set; }
         internal Guid FollowerID { get; set; }
+        [JsonProperty]
+        internal uint BankBalance { get; set; }
         internal bool IsInCombat => CombatSessionID != Guid.Empty;
         internal bool PVP;
         internal uint IdleTicks { get; set; }
@@ -551,8 +553,9 @@ namespace Kingdoms_of_Etrea.Entities
             CombatSessionID = Guid.Empty;
             uint xpLost = Stats.Exp > 3 ? Convert.ToUInt32(Stats.Exp * 0.1) : 0;
             Stats.Exp -= xpLost;
-            uint goldLost = Convert.ToUInt32(Stats.Gold * (Level / 100));
-            Stats.Gold -= goldLost;
+            uint gp = descriptor.Player.Stats.Gold;
+            RoomManager.Instance.AddGoldToRoom(descriptor.Player.CurrentRoom, gp);
+            descriptor.Player.Stats.Gold = 0;
             RoomManager.Instance.GetRoom(CurrentRoom).ItemsInRoom.AddRange(Inventory);
             Inventory.Clear();
             Move(descriptor.Player.CurrentRoom, Constants.LimboRID(), true, ref descriptor);

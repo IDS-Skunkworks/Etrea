@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Kingdoms_of_Etrea.Core
 {
@@ -11,6 +12,99 @@ namespace Kingdoms_of_Etrea.Core
     {
         // TODO: Update parsing code: instead of replacing the verb with an empty string, get verb and remove verb.length from the start of the string then trim()
         //       See PlayerQuests() for example code
+
+        private static void PlayerBanking(ref Descriptor desc, ref string input)
+        {
+            // bank balance
+            // bank <deposit | withdraw> <amount>
+            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Banker))
+            {
+                var verb = GetVerb(ref input);
+                var line = input.Remove(0, verb.Length).Trim();
+                var tokens = TokeniseInput(ref line);
+                if(tokens.Length >= 1)
+                {
+                    switch(tokens[0].ToLower().Trim())
+                    {
+                        case "b":
+                        case "balance":
+                            desc.Send($"The bank teller files through some papers. \"Your current balance is {desc.Player.BankBalance} gold coins.\"{Constants.NewLine}");
+                            break;
+
+                        case "d":
+                        case "deposit":
+                            if(tokens.Length == 2)
+                            {
+                                if(uint.TryParse(tokens[1].Trim(), out uint depositAmount))
+                                {
+                                    if (depositAmount > 0 && depositAmount <= desc.Player.Stats.Gold)
+                                    {
+                                        desc.Player.Stats.Gold -= depositAmount;
+                                        desc.Player.BankBalance += depositAmount;
+                                        desc.Send($"You have successfully deposited {depositAmount} gold in your account!{Constants.NewLine}");
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"The bank teller looks confused. \"You must deposit at least 1 gold, and you can't depsoit more gold than you have!\"{Constants.NewLine}");
+                                    }
+                                }
+                                else
+                                {
+                                    desc.Send($"The bank teller looks confused and mutters \"That doesn't seem right...\"{Constants.NewLine}");
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"Usage: bank balance - view your current bank balance{Constants.NewLine}");
+                                desc.Send($"{Constants.TabStop}bank <deposit | withdraw> <amount> - to deposit or withdraw gold{Constants.NewLine}");
+                            }
+                            break;
+
+                        case "w":
+                        case "withdraw":
+                            if (tokens.Length == 2)
+                            {
+                                if (uint.TryParse(tokens[1].Trim(), out uint withdrawAmount))
+                                {
+                                    if (withdrawAmount > 0 && withdrawAmount <= desc.Player.BankBalance)
+                                    {
+                                        desc.Player.BankBalance -= withdrawAmount;
+                                        desc.Player.Stats.Gold += withdrawAmount;
+                                        desc.Send($"You have successfully withdrawn {withdrawAmount} gold from your account!{Constants.NewLine}");
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"The bank teller looks confused. \"You must withdraw at least 1 gold, and you can't withdraw more gold than is in your account!\"{Constants.NewLine}");
+                                    }
+                                }
+                                else
+                                {
+                                    desc.Send($"The bank teller looks confused and mutters \"That doesn't seem right...\"{Constants.NewLine}");
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"Usage: bank balance - view your current bank balance{Constants.NewLine}");
+                                desc.Send($"{Constants.TabStop}bank <deposit | withdraw> <amount> - to deposit or withdraw gold{Constants.NewLine}");
+                            }
+                            break;
+
+                        default:
+                            desc.Send($"Sorry, I don't understand...{Constants.NewLine}");
+                            break;
+                    }
+                }
+                else
+                {
+                    desc.Send($"Usage: bank balance - view your current bank balance{Constants.NewLine}");
+                    desc.Send($"{Constants.TabStop}bank <deposit | withdraw> <amount> - to deposit or withdraw gold{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"There is no banker here...{Constants.NewLine}");
+            }
+        }
 
         private static void MovePlayer(ref Descriptor desc, ref string input)
         {
@@ -3661,67 +3755,134 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void GiveItemToTarget(ref Descriptor desc, ref string input)
         {
-            var targetPlayer = TokeniseInput(ref input).Last().Trim();
-            var verb = GetVerb(ref input).Trim();
-            var itemName = input.Replace(verb, string.Empty).Replace(targetPlayer, string.Empty).Trim();
-            var i = GetTargetItem(ref desc, itemName, true);
-            if (i != null)
+            // give bob chain shirt
+            // give bob gold 400
+            var line = input.Remove(0, GetVerb(ref input).Length).Trim();
+            var targetPlayer = TokeniseInput(ref line).First().Trim();
+            var obj = line.Remove(0, targetPlayer.Length).Trim();
+            var objTokens = TokeniseInput(ref obj);
+            if(objTokens.Length >= 1)
             {
-                var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, targetPlayer, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if (p != null)
+                if(objTokens.First() != null && objTokens.First().ToLower() == "gold")
                 {
-                    if (desc.Player.Level >= Constants.ImmLevel || p.Player.Visible)
+                    if(objTokens.Length == 2)
                     {
-                        desc.Player.Inventory.Remove(i);
-                        p.Player.Inventory.Add(i);
-                        desc.Send($"You give {i.Name} to {p.Player.Name}{Constants.NewLine}");
-                        string msgToSendToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} has given you {i.Name}! How kind!{Constants.NewLine}"
-                            : $"Something has given you {i.Name}. How strange!{Constants.NewLine}";
-                        p.Send(msgToSendToTarget);
-                        var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        if (localPlayers != null && localPlayers.Count - 2 >= 1)
+                        if (uint.TryParse(objTokens.Last().Trim(), out uint gpToGive))
                         {
-                            foreach (var lp in localPlayers)
+                            if(gpToGive <= desc.Player.Stats.Gold)
                             {
-                                if (lp.Player.Name != desc.Player.Name && lp.Player.Name != p.Player.Name)
+                                var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, targetPlayer, RegexOptions.IgnoreCase).Success).FirstOrDefault();
+                                if (p != null)
                                 {
-                                    if (lp.Player.Level >= Constants.ImmLevel)
+                                    p.Player.Stats.Gold += gpToGive;
+                                    desc.Player.Stats.Gold -= gpToGive;
+                                    desc.Send($"You hand over {gpToGive} gold coins to {p.Player.Name}, how generous!{Constants.NewLine}");
+                                    var msgToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} hands you {gpToGive} gold coins!{Constants.NewLine}"
+                                        : $"Something hands you {gpToGive} gold coins, how odd!{Constants.NewLine}";
+                                    p.Send(msgToTarget);
+                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                    if(localPlayers != null && localPlayers.Count > 0)
                                     {
-                                        lp.Send($"{desc.Player.Name} hands {i.Name} to {p.Player.Name}{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        var g = desc.Player.Visible ? desc.Player.Name : "Something";
-                                        var r = p.Player.Visible ? p.Player.Name : "something";
-                                        lp.Send($"{g} hands {i.Name} to {r}{Constants.NewLine}");
+                                        foreach(var lp in localPlayers)
+                                        {
+                                            if(lp.Player.Name != desc.Player.Name && lp.Player.Name != p.Player.Name)
+                                            {
+                                                if (lp.Player.Level >= Constants.ImmLevel)
+                                                {
+                                                    lp.Send($"{desc.Player.Name} hands {gpToGive} gold coins to {p.Player.Name}. Very generous!{Constants.NewLine}");
+                                                }
+                                                else
+                                                {
+                                                    string gn = desc.Player.Visible ? desc.Player.Name : "Something";
+                                                    string rn = p.Player.Visible ? p.Player.Name : "Something";
+                                                    lp.Send($"{gn} hands {gpToGive} gold coins to {rn}. Very generous!{Constants.NewLine}");
+                                                }
+                                            }
+                                        }
                                     }
                                 }
+                                else
+                                {
+                                    desc.Send($"That person doesn't seem to be here right now...{Constants.NewLine}");
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"You don't have that much gold to give!{Constants.NewLine}");
+                            }
+                        }
+                        else
+                        {
+                            desc.Send($"That doesn't seem like a valid amount of gold to give...{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"Usage: Give <player> gold <amount>{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    var i = GetTargetItem(ref desc, obj, true);
+                    if (i != null)
+                    {
+                        var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, targetPlayer, RegexOptions.IgnoreCase).Success).FirstOrDefault();
+                        if (p != null)
+                        {
+                            if (desc.Player.Level >= Constants.ImmLevel || p.Player.Visible)
+                            {
+                                desc.Player.Inventory.Remove(i);
+                                p.Player.Inventory.Add(i);
+                                desc.Send($"You give {i.Name} to {p.Player.Name}{Constants.NewLine}");
+                                string msgToSendToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} has given you {i.Name}! How kind!{Constants.NewLine}"
+                                    : $"Something has given you {i.Name}. How strange!{Constants.NewLine}";
+                                p.Send(msgToSendToTarget);
+                                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                if (localPlayers != null && localPlayers.Count - 2 >= 1)
+                                {
+                                    foreach (var lp in localPlayers)
+                                    {
+                                        if (lp.Player.Name != desc.Player.Name && lp.Player.Name != p.Player.Name)
+                                        {
+                                            if (lp.Player.Level >= Constants.ImmLevel)
+                                            {
+                                                lp.Send($"{desc.Player.Name} hands {i.Name} to {p.Player.Name}{Constants.NewLine}");
+                                            }
+                                            else
+                                            {
+                                                var g = desc.Player.Visible ? desc.Player.Name : "Something";
+                                                var r = p.Player.Visible ? p.Player.Name : "something";
+                                                lp.Send($"{g} hands {i.Name} to {r}{Constants.NewLine}");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"That person isn't around right now...{Constants.NewLine}");
+                            }
+                        }
+                        else
+                        {
+                            var n = GetTargetNPC(ref desc, targetPlayer);
+                            if (n != null)
+                            {
+                                desc.Send($"You hand over {i.Name} to {n.Name}!{Constants.NewLine}");
+                                n.Inventory.Add(i);
+                                desc.Player.Inventory.Remove(i);
+                            }
+                            else
+                            {
+                                desc.Send($"That person isn't around right now...{Constants.NewLine}");
                             }
                         }
                     }
                     else
                     {
-                        desc.Send($"That person isn't around right now...{Constants.NewLine}");
+                        desc.Send($"You don't seem to be carrying that...{Constants.NewLine}");
                     }
                 }
-                else
-                {
-                    var n = GetTargetNPC(ref desc, targetPlayer);
-                    if(n != null)
-                    {
-                        desc.Send($"You hand over {i.Name} to {n.Name}!{Constants.NewLine}");
-                        n.Inventory.Add(i);
-                        desc.Player.Inventory.Remove(i);
-                    }
-                    else
-                    {
-                        desc.Send($"That person isn't around right now...{Constants.NewLine}");
-                    }
-                }
-            }
-            else
-            {
-                desc.Send($"You don't seem to be carrying that...{Constants.NewLine}");
             }
         }
 
@@ -4235,17 +4396,17 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void GetItemFromRoom(ref Descriptor desc, ref string input)
         {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom != null && RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Count > 0)
+            var obj = input.Remove(0, GetVerb(ref input).Length).Trim();
+            if(!string.IsNullOrEmpty(obj))
             {
-                string obj = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                if (!string.IsNullOrEmpty(obj))
+                if(obj.ToLower() == "gold")
                 {
-                    var i = GetTargetItem(ref desc, obj, false);
-                    if (i != null)
+                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
                     {
-                        RoomManager.Instance.RemoveItemFromRoomInventory(desc.Player.CurrentRoom, ref i);
-                        desc.Player.Inventory.Add(i);
-                        desc.Send($"You pick up {i.ShortDescription}{Constants.NewLine}");
+                        var amount = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
+                        desc.Player.Stats.Gold += amount;
+                        RoomManager.Instance.GetGoldFromRoom(desc.Player.CurrentRoom, amount);
+                        desc.Send($"You greedily snatch up the {amount} gold coins!{Constants.NewLine}");
                         var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                         if (playersToNotify != null && playersToNotify.Count > 1)
                         {
@@ -4255,14 +4416,60 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     if (p.Player.Name != desc.Player.Name)
                                     {
-                                        p.Send($"{desc.Player.Name} takes {i.ShortDescription}... Hope no one needed that!{Constants.NewLine}");
+                                        p.Send($"{desc.Player.Name} greedily snatches up {amount} gold coins! So much for charity!{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    p.Send($"Something takes {i.ShortDescription}...{Constants.NewLine}");
+                                    p.Send($"Something snatches up {amount} gold coins...{Constants.NewLine}");
                                 }
                             }
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"There isn't any gold here to take...{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom != null && RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Count > 0)
+                    {
+                        if (!string.IsNullOrEmpty(obj))
+                        {
+                            var i = GetTargetItem(ref desc, obj, false);
+                            if (i != null)
+                            {
+                                RoomManager.Instance.RemoveItemFromRoomInventory(desc.Player.CurrentRoom, ref i);
+                                desc.Player.Inventory.Add(i);
+                                desc.Send($"You pick up {i.ShortDescription}{Constants.NewLine}");
+                                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                if (playersToNotify != null && playersToNotify.Count > 1)
+                                {
+                                    foreach (var p in playersToNotify)
+                                    {
+                                        if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                        {
+                                            if (p.Player.Name != desc.Player.Name)
+                                            {
+                                                p.Send($"{desc.Player.Name} takes {i.ShortDescription}... Hope no one needed that!{Constants.NewLine}");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            p.Send($"Something takes {i.ShortDescription}...{Constants.NewLine}");
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"That item doesn't seem to be here...{Constants.NewLine}");
+                            }
+                        }
+                        else
+                        {
+                            desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
                         }
                     }
                     else
@@ -4270,65 +4477,112 @@ namespace Kingdoms_of_Etrea.Core
                         desc.Send($"That item doesn't seem to be here...{Constants.NewLine}");
                     }
                 }
-                else
-                {
-                    desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"That item doesn't seem to be here...{Constants.NewLine}");
             }
         }
 
         private static void DropCharacterItem(ref Descriptor desc, ref string input)
         {
-            if (desc.Player.Inventory != null && desc.Player.Inventory.Count > 0)
+            // TODO: Needs to deal with dropping gold into the room
+            // drop short sword
+            // drop chain shirt
+            // drop gold 500
+            var line = input.Remove(0, GetVerb(ref input).Length).Trim();
+            var tokens = TokeniseInput(ref line);
+            if(tokens.First().ToLower() == "gold")
             {
-                string obj = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                if (!string.IsNullOrEmpty(obj))
+                var amount = tokens.Last() ?? string.Empty;
+                if(!string.IsNullOrEmpty(amount))
                 {
-                    var i = GetTargetItem(ref desc, obj, true);
-                    if (i != null)
+                    if(uint.TryParse(amount, out uint gpToDrop))
                     {
-                        // we have an object from the inventory to drop, remove from player and add to room
-                        desc.Player.Inventory.Remove(i);
-                        RoomManager.Instance.AddItemToRoomInventory(desc.Player.CurrentRoom, ref i);
-                        desc.Send($"You drop {i.Name} on the floor{Constants.NewLine}");
-                        var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        if (playersToNotify.Count > 1)
+                        if(gpToDrop <= desc.Player.Stats.Gold)
                         {
-                            foreach (var p in playersToNotify)
+                            desc.Player.Stats.Gold -= gpToDrop;
+                            RoomManager.Instance.AddGoldToRoom(desc.Player.CurrentRoom, gpToDrop);
+                            desc.Send($"You drop {gpToDrop} gold to the floor!{Constants.NewLine}");
+                            var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                            if (playersToNotify.Count > 1)
                             {
-                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                foreach (var p in playersToNotify)
                                 {
-                                    if (p.Player.Name != desc.Player.Name)
+                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
                                     {
-                                        p.Send($"{desc.Player.Name} drops {i.ShortDescription} to the floor. What a litterbug!{Constants.NewLine}");
+                                        if (p.Player.Name != desc.Player.Name)
+                                        {
+                                            p.Send($"{desc.Player.Name} drops {gpToDrop} gold coins to the floor. What a litterbug!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        p.Send($"Something drops {gpToDrop} gold coins to the floor... How strange!{Constants.NewLine}");
                                     }
                                 }
-                                else
-                                {
-                                    p.Send($"Something drops {i.ShortDescription} to the floor... How strange!{Constants.NewLine}");
-                                }
                             }
+                        }
+                        else
+                        {
+                            desc.Send($"You don't have that much gold to drop!{Constants.NewLine}");
                         }
                     }
                     else
                     {
-                        // couldn't find a matching item in the player's inventory to drop
-                        desc.Send($"You don't seem to be carrying that with you...{Constants.NewLine}");
+                        desc.Send($"That doesn't seem like a valid amount of coins to drop...{Constants.NewLine}");
                     }
                 }
                 else
                 {
-                    // not able to determine the object to drop based off player input
-                    desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
+                    desc.Send($"You need to say how much gold you're dropping...{Constants.NewLine}");
                 }
             }
             else
             {
-                desc.Send($"You aren't carrying anything to drop...{Constants.NewLine}");
+                if (desc.Player.Inventory != null && desc.Player.Inventory.Count > 0)
+                {
+                    string obj = line;
+                    if (!string.IsNullOrEmpty(obj))
+                    {
+                        var i = GetTargetItem(ref desc, obj, true);
+                        if (i != null)
+                        {
+                            // we have an object from the inventory to drop, remove from player and add to room
+                            desc.Player.Inventory.Remove(i);
+                            RoomManager.Instance.AddItemToRoomInventory(desc.Player.CurrentRoom, ref i);
+                            desc.Send($"You drop {i.Name} on the floor{Constants.NewLine}");
+                            var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                            if (playersToNotify.Count > 1)
+                            {
+                                foreach (var p in playersToNotify)
+                                {
+                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                    {
+                                        if (p.Player.Name != desc.Player.Name)
+                                        {
+                                            p.Send($"{desc.Player.Name} drops {i.ShortDescription} to the floor. What a litterbug!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        p.Send($"Something drops {i.ShortDescription} to the floor... How strange!{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // couldn't find a matching item in the player's inventory to drop
+                            desc.Send($"You don't seem to be carrying that with you...{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        // not able to determine the object to drop based off player input
+                        desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"You aren't carrying anything to drop...{Constants.NewLine}");
+                }
             }
         }
 

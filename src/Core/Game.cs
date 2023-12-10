@@ -284,11 +284,11 @@ namespace Kingdoms_of_Etrea.Core
                 if(player.Player.CombatSessionID == Guid.Empty)
                 {
                     // only process basic regen on players that are alive and not fighting
-                    if(player.Player.Position != ActorPosition.Dead)
+                    if(player.Player.Position != ActorPosition.Dead && !RoomManager.Instance.GetRoom(player.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoHealing))
                     {
                         if(player.Player.Stats.CurrentHP < player.Player.Stats.MaxHP)
                         {
-                            var regen = Helpers.RollDice(1, 3);
+                            var regen = Helpers.RollDice(1, 4);
                             var bonus = ActorStats.CalculateAbilityModifier(player.Player.Stats.Constitution);
                             if(bonus > 0)
                             {

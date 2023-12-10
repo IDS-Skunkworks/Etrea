@@ -3,6 +3,7 @@ using Kingdoms_of_Etrea.Entities;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Bson;
 
 namespace Kingdoms_of_Etrea.Core
 {
@@ -316,6 +317,40 @@ namespace Kingdoms_of_Etrea.Core
             catch(Exception ex)
             {
                 Game.LogMessage($"Error removing Room {rid}: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        internal bool AddGoldToRoom(uint rid, uint gp)
+        {
+            try
+            {
+                lock(_lockObject)
+                {
+                    Instance.rooms[rid].GoldInRoom += gp;
+                }
+                return true;
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"Error adding {gp} gold to Room {rid}: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        internal bool GetGoldFromRoom(uint rid, uint gp)
+        {
+            try
+            {
+                lock (_lockObject)
+                {
+                    Instance.rooms[rid].GoldInRoom -= gp;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"Error removing {gp} gold from Room {rid}: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
