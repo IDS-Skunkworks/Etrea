@@ -4399,14 +4399,35 @@ namespace Kingdoms_of_Etrea.Core
             var obj = input.Remove(0, GetVerb(ref input).Length).Trim();
             if(!string.IsNullOrEmpty(obj))
             {
-                if(obj.ToLower() == "gold")
+                if(obj.ToLower().StartsWith("gold"))
                 {
                     if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
                     {
-                        var amount = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
-                        desc.Player.Stats.Gold += amount;
-                        RoomManager.Instance.GetGoldFromRoom(desc.Player.CurrentRoom, amount);
-                        desc.Send($"You greedily snatch up the {amount} gold coins!{Constants.NewLine}");
+                        var tokens = TokeniseInput(ref obj);
+                        uint gpToGet;
+                        if(tokens.Length > 1)
+                        {
+                            // player has specified an amount of gold to take
+                            if(uint.TryParse(tokens.Last().Trim(), out gpToGet))
+                            {
+                                if(gpToGet > RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom)
+                                {
+                                    desc.Send($"There isn't that much gold here!{Constants.NewLine}");
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"That doesn't seem right...{Constants.NewLine}");
+                            }
+                        }
+                        else
+                        {
+                            gpToGet = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
+                        }
+                        desc.Player.Stats.Gold += gpToGet;
+                        RoomManager.Instance.GetGoldFromRoom(desc.Player.CurrentRoom, gpToGet);
+                        desc.Send($"You greedily snatch up the {gpToGet} gold coins!{Constants.NewLine}");
                         var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                         if (playersToNotify != null && playersToNotify.Count > 1)
                         {
@@ -4416,12 +4437,12 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     if (p.Player.Name != desc.Player.Name)
                                     {
-                                        p.Send($"{desc.Player.Name} greedily snatches up {amount} gold coins! So much for charity!{Constants.NewLine}");
+                                        p.Send($"{desc.Player.Name} greedily snatches up {gpToGet} gold coins! So much for charity!{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    p.Send($"Something snatches up {amount} gold coins...{Constants.NewLine}");
+                                    p.Send($"Something snatches up {gpToGet} gold coins...{Constants.NewLine}");
                                 }
                             }
                         }
