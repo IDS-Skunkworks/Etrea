@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Kingdoms_of_Etrea.Entities;
+using static Kingdoms_of_Etrea.OLC.OLC;
 
 namespace Kingdoms_of_Etrea.Core
 {
@@ -14,6 +15,11 @@ namespace Kingdoms_of_Etrea.Core
             switch(GetVerb(ref input).ToLower())
             {
                 #region MiscCommands
+                case "lang":
+                case "language":
+                    PlayerLanguages(ref desc, ref input);
+                    break;
+
                 case "bank":
                     PlayerBanking(ref desc, ref input);
                     break;
@@ -234,6 +240,10 @@ namespace Kingdoms_of_Etrea.Core
                 case "trade":
                     GiveItemToTarget(ref desc, ref input);
                     break;
+
+                case "vault":
+                    PlayerVault(ref desc, ref input);
+                    break;
                 #endregion
 
                 #region CharInfo
@@ -258,7 +268,7 @@ namespace Kingdoms_of_Etrea.Core
 
                 case "recipe":
                 case "recipes":
-                    ShowPlayerRecipies(ref desc, ref input);
+                    ShowPlayerRecipes(ref desc, ref input);
                     break;
 
                 case "ldesc":
@@ -395,7 +405,7 @@ namespace Kingdoms_of_Etrea.Core
 
                 case "olc":
                 case "constructor":
-                    OLC.OLC.StartOLC(ref desc);
+                    StartOLC(ref desc);
                     break;
 
                 case "create":
@@ -557,7 +567,7 @@ namespace Kingdoms_of_Etrea.Core
             return null;
         }
 
-        private static InventoryItem GetTargetItem(ref Descriptor desc, string target, bool fromInventory)
+        private static InventoryItem GetTargetItem(ref Descriptor desc, string target, bool fromInventory, bool fromVault = false)
         {
             try
             {
@@ -588,26 +598,53 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(targetNo))
+                    if(fromVault)
                     {
-                        if (int.TryParse(targetNo, out int index))
+                        if(!string.IsNullOrEmpty(targetNo))
                         {
-                            target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
-                            target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                            var roomItems = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
-                            if (index >= 0)
+                            if(int.TryParse(targetNo, out int index))
                             {
-                                if (roomItems.Count >= 0 && roomItems.Count >= index)
+                                target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
+                                target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
+                                var vaultItems = desc.Player.VaultStore.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
+                                if(index >= 0)
                                 {
-                                    return roomItems[index];
+                                    if(vaultItems.Count >= 0 && vaultItems.Count >= index)
+                                    {
+                                        return vaultItems[index];
+                                    }
                                 }
                             }
+                        }
+                        else
+                        {
+                            target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
+                            return desc.Player.VaultStore.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
                         }
                     }
                     else
                     {
-                        target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                        return RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
+                        if (!string.IsNullOrEmpty(targetNo))
+                        {
+                            if (int.TryParse(targetNo, out int index))
+                            {
+                                target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
+                                target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
+                                var roomItems = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
+                                if (index >= 0)
+                                {
+                                    if (roomItems.Count >= 0 && roomItems.Count >= index)
+                                    {
+                                        return roomItems[index];
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
+                            return RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
+                        }
                     }
                 }
             }
@@ -621,6 +658,15 @@ namespace Kingdoms_of_Etrea.Core
         private static bool ValidateInput(string input)
         {
             return !string.IsNullOrWhiteSpace(input) && Encoding.UTF8.GetByteCount(input) == input.Length;
+        }
+
+        private static T ParseEnumValue<T>(ref string valIn) where T : struct, Enum
+        {
+            if (Enum.TryParse<T>(valIn, true, out T retval))
+            {
+                return retval;
+            }
+            return default;
         }
         #endregion
     }

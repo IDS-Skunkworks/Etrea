@@ -52,6 +52,8 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal List<InventoryItem> Inventory { get; set; }
         [JsonProperty]
+        internal List<InventoryItem> VaultStore { get; set; }
+        [JsonProperty]
         internal uint NumberOfAttacks { get; set; }
         [JsonProperty]
         internal uint CombatInitiative { get; set; }
@@ -85,6 +87,15 @@ namespace Kingdoms_of_Etrea.Entities
             if(Inventory != null && Inventory.Count > 0)
             {
                 return Inventory.Any(x => x.Id ==  itemID);
+            }
+            return false;
+        }
+
+        internal bool HasItemInVault(uint itemID)
+        {
+            if (VaultStore != null && VaultStore.Count > 0)
+            {
+                return VaultStore.Any(x => x.Id == itemID);
             }
             return false;
         }
@@ -484,6 +495,10 @@ namespace Kingdoms_of_Etrea.Entities
         internal Guid FollowerID { get; set; }
         [JsonProperty]
         internal uint BankBalance { get; set; }
+        [JsonProperty]
+        internal Languages KnownLanguages { get; set; }
+        [JsonProperty]
+        internal Languages SpokenLanguage { get; set; }
         internal bool IsInCombat => CombatSessionID != Guid.Empty;
         internal bool PVP;
         internal uint IdleTicks { get; set; }
@@ -532,7 +547,7 @@ namespace Kingdoms_of_Etrea.Entities
         {
             if(!string.IsNullOrEmpty(recipeName))
             {
-                var r = (from kr in KnownRecipes where Regex.Match(kr.RecipieName, recipeName, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
+                var r = (from kr in KnownRecipes where Regex.Match(kr.RecipeName, recipeName, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
                 return r != null;
             }
             return false;

@@ -10,13 +10,13 @@ namespace Kingdoms_of_Etrea.Entities
         internal class Recipe
         {
             [JsonProperty]
-            internal uint RecipieID { get; set; }
+            internal uint RecipeID { get; set; }
             [JsonProperty]
-            internal string RecipieName { get; set; }
+            internal string RecipeName { get; set; }
             [JsonProperty]
             internal RecipeType RecipeType { get; set; }
             [JsonProperty]
-            internal string RecipieDescription { get; set; }
+            internal string RecipeDescription { get; set; }
             [JsonProperty]
             internal uint RecipeResult { get; set; }
             [JsonProperty]

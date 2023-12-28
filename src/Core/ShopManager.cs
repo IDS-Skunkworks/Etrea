@@ -87,6 +87,12 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
+        internal List<Shop> GetShopByIDRange(uint start, uint end)
+        {
+            var retval = shops.Values.Where(x => x.ShopID >= start && x.ShopID <= end).ToList();
+            return retval;
+        }
+
         internal List<Shop> GetShopsByName(string name)
         {
             if(!string.IsNullOrEmpty(name))

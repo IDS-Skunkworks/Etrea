@@ -27,7 +27,7 @@ namespace Kingdoms_of_Etrea.Core
                             {
                                 var r = RecipeManager.Instance.GetRecipe(recipeName);
                                 tp.Player.KnownRecipes.Add(r);
-                                tp.Send($"{desc.Player} has granted you knowledge of crafting {r.RecipieName}!{Constants.NewLine}");
+                                tp.Send($"{desc.Player} has granted you knowledge of crafting {r.RecipeName}!{Constants.NewLine}");
                             }
                             else
                             {
@@ -74,7 +74,7 @@ namespace Kingdoms_of_Etrea.Core
                             if(tp.Player.KnowsRecipe(recipeName))
                             {
                                 SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.KnownRecipes.Remove(r);
-                                tp.Send($"{desc.Player} has removed your knowledge of crafting {r.RecipieName}!{Constants.NewLine}");
+                                tp.Send($"{desc.Player} has removed your knowledge of crafting {r.RecipeName}!{Constants.NewLine}");
                             }
                             else
                             {
@@ -671,7 +671,8 @@ namespace Kingdoms_of_Etrea.Core
         {
             if(desc.Player.Level >= Constants.ImmLevel)
             {
-                var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
+                var verb = GetVerb(ref input);
+                var target = input.Remove(0, verb.Length).Trim();
                 if (!string.IsNullOrEmpty(target))
                 {
                     StringBuilder sb = new StringBuilder();
@@ -709,7 +710,7 @@ namespace Kingdoms_of_Etrea.Core
                             sb.AppendLine($"|| Hit Dice: {n.NumberOfHitDice}d{n.SizeOfHitDice}");
                             sb.AppendLine($"|| Current HP: {n.Stats.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {n.Stats.MaxHP}");
                             sb.AppendLine($"|| Current MP: {n.Stats.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {n.Stats.MaxMP}");
-                            sb.AppendLine($"|| Armour Class: {n.Stats.ArmourClass}{Constants.TabStop}Exp: {n.BaseExpAward}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
+                            sb.AppendLine($"|| Armour Class: {n.Stats.ArmourClass}{Constants.TabStop}Exp: {n.BaseExpAward}{Constants.TabStop}Gold: {n.Stats.Gold}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
                             sb.AppendLine($"  {new string('=', 77)}");
                             desc.Send(sb.ToString());
                         }
@@ -898,211 +899,331 @@ namespace Kingdoms_of_Etrea.Core
                     }
                     else
                     {
-                        switch (objectType.ToLower())
+                        bool targetIsNumRange = Regex.IsMatch(target, @"\d+-\d+");
+                        if (targetIsNumRange)
                         {
-                            case "quest":
-                                var matchingQuests = QuestManager.Instance.GetQuestByNameOrDescription(target).OrderBy(x => x.QuestID).ToList();
-                                if(matchingQuests != null && matchingQuests.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach(var q in matchingQuests)
+                            var targetParts = target.Split('-');
+                            uint.TryParse(targetParts[0], out uint rangeStart);
+                            uint.TryParse(targetParts[1], out uint rangeEnd);
+                            switch(objectType.ToLower())
+                            {
+                                case "quest":
+                                    var questRange = QuestManager.Instance.GetQuestsByIDRange(rangeStart, rangeEnd);
+                                    if(questRange != null && questRange.Count > 0)
                                     {
-                                        sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var q in questRange)
+                                        {
+                                            sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Quests could be found.{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "item":
-                                var matchingItems = ItemManager.Instance.GetItemByNameOrDescription(target).OrderBy(x => x.Id).ToList();
-                                if (matchingItems != null && matchingItems.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var i in matchingItems)
+                                    else
                                     {
-                                        sb.AppendLine($"|| {i.Id} - {i.Name}");
+                                        desc.Send($"No Quests in that ID range were found.{Constants.NewLine}");
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Items could be found{Constants.NewLine}");
-                                }
-                                break;
+                                    break;
 
-                            case "room":
-                                var matchingRooms = RoomManager.Instance.GetRoomByNameOrDescription(target).OrderBy(x => x.RoomID).ToList();
-                                if (matchingRooms != null && matchingRooms.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var i in matchingRooms)
+                                case "room":
+                                    var roomRange = RoomManager.Instance.GetRoomsByIDRange(rangeStart, rangeEnd);
+                                    if(roomRange != null && roomRange.Count > 0)
                                     {
-                                        sb.AppendLine($"|| {i.RoomID} - {i.RoomName}");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in roomRange)
+                                        {
+                                            sb.AppendLine($"|| {i.RoomID} - {i.RoomName}, {i.ShortDescription}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Rooms could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "zone":
-                                var matchingZones = ZoneManager.Instance.GetZoneByName(target).OrderBy(x => x.ZoneID).ToList();
-                                if (matchingZones != null && matchingZones.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var i in matchingZones)
+                                    else
                                     {
-                                        sb.AppendLine($"|| {i.ZoneID} - {i.ZoneName}");
+                                        desc.Send($"No Rooms in that ID range were found.{Constants.NewLine}");
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Zones could be found{Constants.NewLine}");
-                                }
-                                break;
+                                    break;
 
-                            case "npc":
-                                var matchingNPCs = NPCManager.Instance.GetNPCByNameOrDescription(target).OrderBy(x => x.NPCID).ToList();
-                                if (matchingNPCs != null && matchingNPCs.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var i in matchingNPCs)
+                                case "item":
+                                    var itemRange = ItemManager.Instance.GetItemByIDRange(rangeStart, rangeEnd);
+                                    if(itemRange != null && itemRange.Count > 0)
                                     {
-                                        sb.AppendLine($"|| {i.NPCID} - {i.Name}");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in itemRange)
+                                        {
+                                            sb.AppendLine($"|| {i.Id} - {i.Name}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching NPCs could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "shop":
-                                var matchingShops = ShopManager.Instance.GetShopsByName(target).OrderBy(x => x.ShopID).ToList();
-                                if (matchingShops != null && matchingShops.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var i in matchingShops)
+                                    else
                                     {
-                                        sb.AppendLine($"|| ID: {i.ShopID}{Constants.TabStop}Name: {i.ShopName}");
+                                        desc.Send($"No Items in that ID range were found.{Constants.NewLine}");
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No mathcing Shops could be found.{Constants.NewLine}");
-                                }
-                                break;
+                                    break;
 
-                            case "emote":
-                                var matchingEmotes = EmoteManager.Instance.GetAllEmotes(target).OrderBy(x => x.EmoteName).ToList();
-                                if (matchingEmotes != null && matchingEmotes.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var e in matchingEmotes)
+                                case "zone":
+                                    var zoneRange = ZoneManager.Instance.GetZoneByIDRange(rangeStart, rangeEnd);
+                                    if(zoneRange != null && zoneRange.Count > 0)
                                     {
-                                        sb.AppendLine($"|| {e.EmoteID} - {e.EmoteName}");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in zoneRange)
+                                        {
+                                            sb.AppendLine($"|| {i.ZoneID} - {i.ZoneName}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Emotes could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "skills":
-                            case "skill":
-                                var skills = Skills.GetAllSkills(target).OrderBy(x => x.Name).ToList();
-                                if(skills != null && skills.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var skill in skills)
+                                    else
                                     {
-                                        sb.AppendLine($"|| {skill.Name} - {skill.Description}");
+                                        desc.Send($"No Zones in that ID range were found.{Constants.NewLine}");
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Skill could be found.{Constants.NewLine}");
-                                }
-                                break;
+                                    break;
 
-                            case "spells":
-                            case "spell":
-                                var matchingSpells = Spells.GetAllSpells(target).OrderBy(x => x.SpellName).ToList();
-                                if(matchingSpells != null && matchingSpells.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var s in matchingSpells)
+                                case "npc":
+                                    var npcRange = NPCManager.Instance.GetNPCByIDRange(rangeStart, rangeEnd);
+                                    if(npcRange != null && npcRange.Count > 0)
                                     {
-                                        sb.AppendLine($"|| {s.SpellName} - {s.Description}");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in npcRange)
+                                        {
+                                            sb.AppendLine($"|| {i.NPCID} - {i.Name}, {i.ShortDescription}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Spell could be found.{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "node":
-                                var matchingNodes = NodeManager.Instance.GetAllResourceNodes(target).OrderBy(x => x.NodeName).ToList();
-                                if(matchingNodes != null && matchingNodes.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach(var n in matchingNodes)
+                                    else
                                     {
-                                        sb.AppendLine($"|| ID: {n.Id}{Constants.TabStop}Name: {n.NodeName}");
+                                        desc.Send($"No NPCs in that ID range were found.{Constants.NewLine}");
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Resource Node could be found{Constants.NewLine}");
-                                }
-                                break;
+                                    break;
 
-                            case "recipe":
-                                var matchingRecipes = RecipeManager.Instance.GetAllCraftingRecipes(target).OrderBy(x => x.RecipieName).ToList();
-                                if(matchingRecipes != null  && matchingRecipes.Count > 0)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach(var r in matchingRecipes)
+                                case "shop":
+                                    var shopRange = ShopManager.Instance.GetShopByIDRange(rangeStart, rangeEnd);
+                                    if(shopRange != null && shopRange.Count > 0)
                                     {
-                                        sb.AppendLine($"|| ID: {r.RecipieID}{Constants.TabStop}Name: {r.RecipieName}");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in shopRange)
+                                        {
+                                            sb.AppendLine($"|| ID: {i.ShopID}{Constants.TabStop}Name: {i.ShopName}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
                                     }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No matching Crafting Recipe could be found.{Constants.NewLine}");
-                                }
-                                break;
+                                    else
+                                    {
+                                        desc.Send($"No Shops in that ID range were found.{Constants.NewLine}");
+                                    }
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            switch (objectType.ToLower())
+                            {
+                                case "quest":
+                                    var matchingQuests = QuestManager.Instance.GetQuestByNameOrDescription(target).OrderBy(x => x.QuestID).ToList();
+                                    if (matchingQuests != null && matchingQuests.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var q in matchingQuests)
+                                        {
+                                            sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Quests could be found.{Constants.NewLine}");
+                                    }
+                                    break;
 
-                            default:
-                                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                                break;
+                                case "item":
+                                    var matchingItems = ItemManager.Instance.GetItemByNameOrDescription(target).OrderBy(x => x.Id).ToList();
+                                    if (matchingItems != null && matchingItems.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in matchingItems)
+                                        {
+                                            sb.AppendLine($"|| {i.Id} - {i.Name}, {i.ShortDescription}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Items could be found{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "room":
+                                    var matchingRooms = RoomManager.Instance.GetRoomByNameOrDescription(target).OrderBy(x => x.RoomID).ToList();
+                                    if (matchingRooms != null && matchingRooms.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in matchingRooms)
+                                        {
+                                            sb.AppendLine($"|| {i.RoomID} - {i.RoomName}, {i.ShortDescription}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Rooms could be found{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "zone":
+                                    var matchingZones = ZoneManager.Instance.GetZoneByName(target).OrderBy(x => x.ZoneID).ToList();
+                                    if (matchingZones != null && matchingZones.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in matchingZones)
+                                        {
+                                            sb.AppendLine($"|| {i.ZoneID} - {i.ZoneName}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Zones could be found{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "npc":
+                                    var matchingNPCs = NPCManager.Instance.GetNPCByNameOrDescription(target).OrderBy(x => x.NPCID).ToList();
+                                    if (matchingNPCs != null && matchingNPCs.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in matchingNPCs)
+                                        {
+                                            sb.AppendLine($"|| {i.NPCID} - {i.Name}, {i.ShortDescription}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching NPCs could be found{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "shop":
+                                    var matchingShops = ShopManager.Instance.GetShopsByName(target).OrderBy(x => x.ShopID).ToList();
+                                    if (matchingShops != null && matchingShops.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var i in matchingShops)
+                                        {
+                                            sb.AppendLine($"|| ID: {i.ShopID}{Constants.TabStop}Name: {i.ShopName}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No mathcing Shops could be found.{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "emote":
+                                    var matchingEmotes = EmoteManager.Instance.GetAllEmotes(target).OrderBy(x => x.EmoteName).ToList();
+                                    if (matchingEmotes != null && matchingEmotes.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var e in matchingEmotes)
+                                        {
+                                            sb.AppendLine($"|| {e.EmoteID} - {e.EmoteName}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Emotes could be found{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "skills":
+                                case "skill":
+                                    var skills = Skills.GetAllSkills(target).OrderBy(x => x.Name).ToList();
+                                    if (skills != null && skills.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var skill in skills)
+                                        {
+                                            sb.AppendLine($"|| {skill.Name} - {skill.Description}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Skill could be found.{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "spells":
+                                case "spell":
+                                    var matchingSpells = Spells.GetAllSpells(target).OrderBy(x => x.SpellName).ToList();
+                                    if (matchingSpells != null && matchingSpells.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var s in matchingSpells)
+                                        {
+                                            sb.AppendLine($"|| {s.SpellName} - {s.Description}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Spell could be found.{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "node":
+                                    var matchingNodes = NodeManager.Instance.GetAllResourceNodes(target).OrderBy(x => x.NodeName).ToList();
+                                    if (matchingNodes != null && matchingNodes.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var n in matchingNodes)
+                                        {
+                                            sb.AppendLine($"|| ID: {n.Id}{Constants.TabStop}Name: {n.NodeName}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Resource Node could be found{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "recipe":
+                                    var matchingRecipes = RecipeManager.Instance.GetAllCraftingRecipes(target).OrderBy(x => x.RecipeName).ToList();
+                                    if (matchingRecipes != null && matchingRecipes.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var r in matchingRecipes)
+                                        {
+                                            sb.AppendLine($"|| ID: {r.RecipeID}{Constants.TabStop}Name: {r.RecipeName}");
+                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No matching Crafting Recipe could be found.{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                default:
+                                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                                    break;
+                            }
                         }
                     }
                 }
@@ -1204,6 +1325,11 @@ namespace Kingdoms_of_Etrea.Core
                                 NPCManager.Instance.RemoveNPCFromWorld(n.NPCGuid, n, desc.Player.CurrentRoom);
                             }
                         }
+                    }
+                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
+                    {
+                        var gp = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
+                        RoomManager.Instance.GetGoldFromRoom(desc.Player.CurrentRoom, gp);
                     }
                     desc.Send($"Calling on the Winds of Magic, you purge the area with holy fire!{Constants.NewLine}");
                 }

@@ -50,6 +50,8 @@ namespace Kingdoms_of_Etrea.Core
             p.KnownRecipes = new List<Crafting.Recipe>();
             p.CompletedQuests = new HashSet<Guid>();
             p.ActiveQuests = new List<Quest>();
+            p.KnownLanguages |= Languages.Common;
+            p.SpokenLanguage = Languages.Common;
             p.NumberOfAttacks = 1;
             p.PVP = false;
             while (!validRace)
@@ -84,6 +86,7 @@ namespace Kingdoms_of_Etrea.Core
                                 p.Stats.Charisma += 1;
                                 p.Stats.Constitution -= 1;
                                 p.Stats.Strength -= 1;
+                                p.KnownLanguages |= Languages.Elvish;
                                 validRace = true;
                                 break;
 
@@ -91,6 +94,7 @@ namespace Kingdoms_of_Etrea.Core
                                 p.Race = ActorRace.HalfElf;
                                 p.Stats.Intelligence += 1;
                                 p.Stats.Dexterity += 1;
+                                p.KnownLanguages |= Languages.Elvish;
                                 validRace = true;
                                 break;
 
@@ -101,6 +105,7 @@ namespace Kingdoms_of_Etrea.Core
                                 p.Stats.Intelligence -= 2;
                                 p.Stats.Charisma -= 2;
                                 p.Stats.ArmourClass += 1;
+                                p.KnownLanguages |= Languages.Orcish;
                                 validRace = true;
                                 break;
 
@@ -110,6 +115,7 @@ namespace Kingdoms_of_Etrea.Core
                                 p.Stats.Constitution += 2;
                                 p.Stats.Charisma -= 1;
                                 p.Stats.Dexterity -= 1;
+                                p.KnownLanguages |= Languages.Dwarvish;
                                 validRace = true;
                                 break;
 
@@ -167,6 +173,7 @@ namespace Kingdoms_of_Etrea.Core
                                 p.AddSkill("Simple Weapons");
                                 p.AddSpell("Magic Missile");
                                 p.AddSpell("Light");
+                                p.KnownLanguages |= Languages.Draconic;
                                 validClass = true;
                                 break;
                                 
@@ -358,6 +365,7 @@ namespace Kingdoms_of_Etrea.Core
                 sb.AppendLine($"Race: {p.Race}");
                 sb.AppendLine($"Class: {p.Class}");
                 sb.AppendLine($"Gender: {p.Gender}");
+                sb.AppendLine($"Languages: {p.KnownLanguages}");
                 sb.AppendLine();
                 sb.AppendLine("1. Change Name");
                 sb.AppendLine("2. Change Title");

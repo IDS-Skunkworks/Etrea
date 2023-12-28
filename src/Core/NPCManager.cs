@@ -441,6 +441,12 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
+        internal List<NPC> GetNPCByIDRange(uint start, uint end)
+        {
+            var retval = NPCs.Values.Where(x => x.NPCID >= start && x.NPCID <= end).ToList();
+            return retval;
+        }
+
         internal List<NPC> GetNPCByNameOrDescription(string criteria)
         {
             var retval = new List<NPC>();

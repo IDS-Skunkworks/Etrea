@@ -22,7 +22,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine("5. NPC");
                 sb.AppendLine("6. Emote");
                 sb.AppendLine("7. Resource Node");
-                sb.AppendLine("8. Crafting Recipie");
+                sb.AppendLine("8. Crafting Recipe");
                 sb.AppendLine("9. Quest");
                 sb.AppendLine("10. Return to main menu");
                 sb.Append("Selection: ");
@@ -99,7 +99,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine("5. NPC");
                 sb.AppendLine("6. Emote");
                 sb.AppendLine("7. Resource Node");
-                sb.AppendLine("8. Crafting Recipie");
+                sb.AppendLine("8. Crafting Recipe");
                 sb.AppendLine("9. Quest");
                 sb.AppendLine("10. Return to main menu");
                 sb.Append("Selection: ");
@@ -182,7 +182,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine("5. NPC");
                 sb.AppendLine("6. Emote");
                 sb.AppendLine("7. Resource Node");
-                sb.AppendLine("8. Crafting Recipie");
+                sb.AppendLine("8. Crafting Recipe");
                 sb.AppendLine("9. Quest");
                 sb.AppendLine("10. Return to main menu");
                 sb.Append("Selection: ");

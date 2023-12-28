@@ -359,7 +359,7 @@ namespace Kingdoms_of_Etrea.OLC
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("A Room is an aread of the World where items, players and NPCs interact. Rooms are grouped together to form Zones.");
+            sb.AppendLine("A Room is an area of the World where items, players and NPCs interact. Rooms are grouped together to form Zones.");
             sb.AppendLine("All properties of a Room, except for its RID can be changed later in other areas of OLC.");
             desc.Send(sb.ToString());
             Room newRoom = new Room();

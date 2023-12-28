@@ -62,6 +62,20 @@ namespace Kingdoms_of_Etrea
         PostBox = 1 << 20,       // Room has a mailbox allowing players to send and receive mail
         Banker = 1 << 21,        // Room has a banker allowing players to deposit gold to keep it safe
         NoHealing = 1 << 22,      // Players in this room do not regenerate HP or MP even if resting
+        ItemVault = 1 << 23,     // Room has a vault allowing players to store and retrieve items from their vault
+        LanguageTrainer = 1 << 24, // Room has a trainer allowing players to learn new languages
+    }
+
+    [Flags]
+    internal enum Languages
+    {
+        Common = 0,
+        Elvish = 1 << 0,
+        Dwarvish = 1 << 1,
+        Orcish = 1 << 2,
+        Draconic = 1 << 3,
+        Infernal = 1 << 4,
+        Celestial = 1 << 5,
     }
 
     [Flags]

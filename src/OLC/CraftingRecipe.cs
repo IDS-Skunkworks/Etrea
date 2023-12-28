@@ -11,7 +11,7 @@ namespace Kingdoms_of_Etrea.OLC
         private static void DeleteCraftingRecipe(ref Descriptor desc)
         {
             desc.Send($"{Constants.RedText}This is a permanent change to the World and cannot be undone unless a database backup is restored!{Constants.PlainText}{Constants.NewLine}");
-            desc.Send("Enter the ID of the Recipie to delete: ");
+            desc.Send("Enter the ID of the Recipe to delete: ");
             var input = desc.Read().Trim();
             if(Helpers.ValidateInput(input))
             {
@@ -26,9 +26,9 @@ namespace Kingdoms_of_Etrea.OLC
                 }
                 if(recipe != null)
                 {
-                    if(DatabaseManager.DeleteRecipeByID(ref desc, recipe.RecipieID))
+                    if(DatabaseManager.DeleteRecipeByID(ref desc, recipe.RecipeID))
                     {
-                        if(RecipeManager.Instance.RemoveRecipe(recipe.RecipieID, ref desc))
+                        if(RecipeManager.Instance.RemoveRecipe(recipe.RecipeID, ref desc))
                         {
                             desc.Send($"Recipe successfully removed from RecipeManager and World database.{Constants.NewLine}");
                         }
@@ -67,11 +67,11 @@ namespace Kingdoms_of_Etrea.OLC
             while(!okToReturn)
             {
                 sb.Clear();
-                sb.AppendLine($"Recipe ID: {r.RecipieID}");
-                sb.AppendLine($"Recipe Name: {r.RecipieName}");
+                sb.AppendLine($"Recipe ID: {r.RecipeID}");
+                sb.AppendLine($"Recipe Name: {r.RecipeName}");
                 sb.AppendLine($"Recipe Type: {r.RecipeType}");
                 sb.AppendLine($"Results In: {r.RecipeResult}");
-                sb.AppendLine($"Recipe Description: {r.RecipieDescription}");
+                sb.AppendLine($"Recipe Description: {r.RecipeDescription}");
                 sb.AppendLine($"Required Materials:");
                 if(r.RequiredMaterials != null && r.RequiredMaterials.Count > 0)
                 {
@@ -105,11 +105,11 @@ namespace Kingdoms_of_Etrea.OLC
                         switch(option)
                         {
                             case 1:
-                                r.RecipieID = GetAssetUintValue(ref desc, "Enter Recipe ID: ");
+                                r.RecipeID = GetAssetUintValue(ref desc, "Enter Recipe ID: ");
                                 break;
 
                             case 2:
-                                r.RecipieName = GetAssetStringValue(ref desc, "Enter Recipe Name: ");
+                                r.RecipeName = GetAssetStringValue(ref desc, "Enter Recipe Name: ");
                                 break;
 
                             case 3:
@@ -126,7 +126,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
-                                r.RecipieDescription = GetAssetStringValue(ref desc, "Enter Recipe Description: ");
+                                r.RecipeDescription = GetAssetStringValue(ref desc, "Enter Recipe Description: ");
                                 break;
 
                             case 6:
@@ -180,7 +180,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         if(RecipeManager.Instance.AddRecipe(r))
                                         {
                                             desc.Send($"New Recipe successfully added to RecipeManager and World Database{Constants.NewLine}");
-                                            Game.LogMessage($"INFO: Player {desc.Player} has added new Crafting Recipe '{r.RecipieName}' ({r.RecipieID}) to the World Database and RecipeManager.", LogLevel.Info, true);
+                                            Game.LogMessage($"INFO: Player {desc.Player} has added new Crafting Recipe '{r.RecipeName}' ({r.RecipeID}) to the World Database and RecipeManager.", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
@@ -232,11 +232,11 @@ namespace Kingdoms_of_Etrea.OLC
                     while(!okToReturn)
                     {
                         sb.Clear();
-                        sb.AppendLine($"Recipe ID: {r.RecipieID}");
-                        sb.AppendLine($"Recipe Name: {r.RecipieName}");
+                        sb.AppendLine($"Recipe ID: {r.RecipeID}");
+                        sb.AppendLine($"Recipe Name: {r.RecipeName}");
                         sb.AppendLine($"Recipe Type: {r.RecipeType}");
                         sb.AppendLine($"Results In: {r.RecipeResult}");
-                        sb.AppendLine($"Recipe Description: {r.RecipieDescription}");
+                        sb.AppendLine($"Recipe Description: {r.RecipeDescription}");
                         sb.AppendLine($"Required Materials:");
                         if (r.RequiredMaterials != null && r.RequiredMaterials.Count > 0)
                         {
@@ -268,7 +268,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 switch(option)
                                 {
                                     case 1:
-                                        r.RecipieName = GetAssetStringValue(ref desc, "Enter Recipe Name: ");
+                                        r.RecipeName = GetAssetStringValue(ref desc, "Enter Recipe Name: ");
                                         break;
 
                                     case 2:
@@ -285,7 +285,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         break;
 
                                     case 4:
-                                        r.RecipieDescription = GetAssetStringValue(ref desc, "Enter Recipe Description: ");
+                                        r.RecipeDescription = GetAssetStringValue(ref desc, "Enter Recipe Description: ");
                                         break;
 
                                     case 5:
@@ -338,13 +338,13 @@ namespace Kingdoms_of_Etrea.OLC
                                             {
                                                 if (RecipeManager.Instance.UpdateRecipe(ref desc, r))
                                                 {
-                                                    desc.Send($"Updated Recipe {r.RecipieID} in World Database and RecipeManager{Constants.NewLine}");
-                                                    Game.LogMessage($"INFO: Player {desc.Player} updated Recipe '{r.RecipieName}' ({r.RecipieID}) in World Database and RecipeManager", LogLevel.Info, true);
+                                                    desc.Send($"Updated Recipe {r.RecipeID} in World Database and RecipeManager{Constants.NewLine}");
+                                                    Game.LogMessage($"INFO: Player {desc.Player} updated Recipe '{r.RecipeName}' ({r.RecipeID}) in World Database and RecipeManager", LogLevel.Info, true);
                                                     okToReturn = true;
                                                 }
                                                 else
                                                 {
-                                                    desc.Send($"Failed to update Recipe {r.RecipieID} in RecipeManager, changes may not be available until restart.{Constants.NewLine}");
+                                                    desc.Send($"Failed to update Recipe {r.RecipeID} in RecipeManager, changes may not be available until restart.{Constants.NewLine}");
                                                 }
                                             }
                                             else
@@ -377,17 +377,17 @@ namespace Kingdoms_of_Etrea.OLC
         #region Functions
         private static bool ValidateRecipe(ref Descriptor desc, ref Crafting.Recipe recipe, bool isNewRecipe)
         {
-            if(string.IsNullOrEmpty(recipe.RecipieName) || string.IsNullOrEmpty(recipe.RecipieDescription))
+            if(string.IsNullOrEmpty(recipe.RecipeName) || string.IsNullOrEmpty(recipe.RecipeDescription))
             {
                 desc.Send($"A name and description are required.{Constants.NewLine}");
                 return false;
             }
-            if(recipe.RecipieID == 0)
+            if(recipe.RecipeID == 0)
             {
                 desc.Send($"A valid ID is required for a new recipe.{Constants.NewLine}");
                 return false;
             }
-            if(isNewRecipe && DatabaseManager.IsRecipeIDInUse(ref desc, recipe.RecipieID))
+            if(isNewRecipe && DatabaseManager.IsRecipeIDInUse(ref desc, recipe.RecipeID))
             {
                 desc.Send($"The specified Recipe ID is already in use.{Constants.NewLine}");
                 return false;

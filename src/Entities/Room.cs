@@ -67,7 +67,8 @@ namespace Kingdoms_of_Etrea.Entities
         internal bool HasTrainer()
         {
             return Flags.HasFlag(RoomFlags.MagicTrainer) || Flags.HasFlag(RoomFlags.StatTrainer) || Flags.HasFlag(RoomFlags.SkillTrainer) ||
-                Flags.HasFlag(RoomFlags.Scribe) || Flags.HasFlag(RoomFlags.Jeweler) || Flags.HasFlag(RoomFlags.Alchemist) || Flags.HasFlag(RoomFlags.Blacksmith);
+                Flags.HasFlag(RoomFlags.Scribe) || Flags.HasFlag(RoomFlags.Jeweler) || Flags.HasFlag(RoomFlags.Alchemist) || Flags.HasFlag(RoomFlags.Blacksmith) ||
+                Flags.HasFlag(RoomFlags.LanguageTrainer);
         }
 
         internal static void DescribeRoom(ref Descriptor desc, bool playerInRoom = false)
@@ -163,6 +164,14 @@ namespace Kingdoms_of_Etrea.Entities
                 {
                     sb.AppendLine($"A bank teller is here, dealing with accounts and balances.");
                 }
+                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.ItemVault))
+                {
+                    sb.AppendLine($"A vault warden is here, managing the storage of goods.");
+                }
+                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.LanguageTrainer))
+                {
+                    sb.AppendLine($"A retired Royal Diplomat is here, ready to teach the languages of the realms.");
+                }
                 if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
                 {
                     var node = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.ToString();
@@ -229,9 +238,17 @@ namespace Kingdoms_of_Etrea.Entities
                     {
                         sb.AppendLine();
                         sb.AppendLine("You see:");
-                        foreach (var npc in npcs)
+                        foreach(var n in npcs.Select(x => new {x.NPCID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
                         {
-                            sb.AppendLine($"{npc.Name}, {npc.ShortDescription}");
+                            var cnt = npcs.Where(y => y.NPCID == n.NPCID).Count();
+                            if(cnt == 1)
+                            {
+                                sb.AppendLine($"{n.Name}, {n.ShortDescription}");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"{cnt} x {n.Name}, {n.ShortDescription}");
+                            }
                         }
                     }
                     var roomExits = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomExits.OrderBy(x => x.ExitDirection).ToList();

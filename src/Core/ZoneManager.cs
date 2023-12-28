@@ -131,6 +131,12 @@ namespace Kingdoms_of_Etrea.Core
             return Instance.zones;
         }
 
+        internal List<Zone> GetZoneByIDRange(uint start, uint end)
+        {
+            var retval = zones.Values.Where(x => x.ZoneID >= start && x.ZoneID <= end).ToList();
+            return retval;
+        }
+
         internal List<Zone> GetZoneByName(string n)
         {
             return (from Zone z in Instance.zones.Values where Regex.Match(z.ZoneName, n, RegexOptions.IgnoreCase).Success select z).ToList();

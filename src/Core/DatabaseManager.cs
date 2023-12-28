@@ -443,7 +443,7 @@ namespace Kingdoms_of_Etrea.Core
                             while(dr.Read())
                             {
                                 Crafting.Recipe r = Helpers.DeserialiseRecipe(dr["RecipeData"].ToString());
-                                recipes.Add(r.RecipieID, r);
+                                recipes.Add(r.RecipeID, r);
                             }
                         }
                     }
@@ -471,7 +471,7 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         cmd.CommandText = "UPDATE tblCraftingRecipes SET RecipeData = @d WHERE RecipeID = @i;";
                         cmd.Parameters.Add(new SQLiteParameter("@d", Helpers.SerialiseCraftingRecipe(r)));
-                        cmd.Parameters.Add(new SQLiteParameter("@i", r.RecipieID));
+                        cmd.Parameters.Add(new SQLiteParameter("@i", r.RecipeID));
                         cmd.Prepare();
                         cmd.ExecuteNonQuery();
                     }
@@ -481,7 +481,7 @@ namespace Kingdoms_of_Etrea.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error updaing Recipe '{r.RecipieName}' ({r.RecipieID}): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error updaing Recipe '{r.RecipeName}' ({r.RecipeID}): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -497,7 +497,7 @@ namespace Kingdoms_of_Etrea.Core
                     using (var cmd = new SQLiteCommand(con))
                     {
                         cmd.CommandText = "INSERT INTO tblCraftingRecipes (RecipeID, RecipeData) VALUES (@i, @d);";
-                        cmd.Parameters.Add(new SQLiteParameter("@i", r.RecipieID));
+                        cmd.Parameters.Add(new SQLiteParameter("@i", r.RecipeID));
                         cmd.Parameters.Add(new SQLiteParameter("@d", Helpers.SerialiseCraftingRecipe(r)));
                         cmd.Prepare();
                         cmd.ExecuteNonQuery();
@@ -508,7 +508,7 @@ namespace Kingdoms_of_Etrea.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error adding Recipe '{r.RecipieName}' ({r.RecipieID}) to the World Database: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error adding Recipe '{r.RecipeName}' ({r.RecipeID}) to the World Database: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -1109,6 +1109,10 @@ namespace Kingdoms_of_Etrea.Core
                 if(p.ActiveQuests == null)
                 {
                     p.ActiveQuests = new List<Quest>();
+                }
+                if(p.VaultStore == null)
+                {
+                    p.VaultStore = new List<InventoryItem>(); // ensure the player's vault is intialised, if loading a player that was created before this feature was added
                 }
                 p.PVP = false;
                 p.Type = ActorType.Player;

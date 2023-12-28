@@ -3,7 +3,6 @@ using Kingdoms_of_Etrea.Entities;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json.Bson;
 
 namespace Kingdoms_of_Etrea.Core
 {
@@ -229,6 +228,7 @@ namespace Kingdoms_of_Etrea.Core
                 lock(_lockObject)
                 {
                     Instance.rooms[rid].ItemsInRoom.Clear();
+                    Instance.rooms[rid].GoldInRoom = 0;
                 }
                 return true;
             }
@@ -373,6 +373,12 @@ namespace Kingdoms_of_Etrea.Core
         internal Room GetRoom(uint rid)
         {
             return Instance.rooms.ContainsKey(rid) ? Instance.rooms[rid] : null;
+        }
+
+        internal List<Room> GetRoomsByIDRange(uint start, uint end)
+        {
+            var retval = rooms.Values.Where(x => x.RoomID >= start && x.RoomID <= end).ToList();
+            return retval;
         }
 
         internal List<Room> GetRoomByNameOrDescription(string n)

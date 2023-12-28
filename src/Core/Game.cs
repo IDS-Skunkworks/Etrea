@@ -745,6 +745,24 @@ namespace Kingdoms_of_Etrea.Core
                                 }
                             }
                         }
+                        var goldPickupChance = Helpers.RollDice(1, 100);
+                        var gp = RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).GoldInRoom;
+                        if (RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).GoldInRoom > 0)
+                        {
+                            if (goldPickupChance <= 33 && !CombatManager.Instance.IsNPCInCombat(npc.Key))
+                            {
+                                npc.Value.Stats.Gold += gp;
+                                RoomManager.Instance.GetGoldFromRoom(npc.Value.CurrentRoom, gp);
+                                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(npc.Value.CurrentRoom);
+                                if(playersToNotify != null && playersToNotify.Count > 0)
+                                {
+                                    foreach(var player in playersToNotify)
+                                    {
+                                        player.Send($"{npc.Value.Name} snatches up a pile of gold!{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 else

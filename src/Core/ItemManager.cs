@@ -63,6 +63,12 @@ namespace Kingdoms_of_Etrea.Core
             return (from InventoryItem item in Instance.items.Values where Regex.Match(item.Name, name, RegexOptions.IgnoreCase).Success select item).FirstOrDefault();
         }
 
+        internal List<InventoryItem> GetItemByIDRange(uint start, uint end)
+        {
+            var retval = items.Values.Where(x => x.Id >= start && x.Id <= end).ToList();
+            return retval;
+        }
+
         internal List<InventoryItem> GetItemByNameOrDescription(string n)
         {
             return (from InventoryItem item in Instance.items.Values

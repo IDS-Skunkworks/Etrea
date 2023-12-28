@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace Kingdoms_of_Etrea.Core
 {
@@ -12,6 +11,114 @@ namespace Kingdoms_of_Etrea.Core
     {
         // TODO: Update parsing code: instead of replacing the verb with an empty string, get verb and remove verb.length from the start of the string then trim()
         //       See PlayerQuests() for example code
+
+        private static void PlayerLanguages(ref Descriptor desc, ref string input)
+        {
+            var verb = GetVerb(ref input);
+            var line = input.Remove(0, verb.Length).Trim();
+            if(string.IsNullOrEmpty(line))
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"You are currently speaking {desc.Player.SpokenLanguage}");
+                sb.AppendLine($"You know the following languages: {desc.Player.KnownLanguages}");
+                desc.Send(sb.ToString());
+            }
+            else
+            {
+                var lang = ParseEnumValue<Languages>(ref line);
+                Game.LogMessage($"Player {desc.Player.Name} attempting to change language to '{line}'", LogLevel.Debug, true);
+                if(desc.Player.KnownLanguages.HasFlag(lang))
+                {
+                    desc.Player.SpokenLanguage = lang;
+                    desc.Send($"You are now speaking {lang}.{Constants.NewLine}");
+                }
+                else
+                {
+                    desc.Send($"You don't know that language!{Constants.NewLine}");
+                }
+            }
+        }
+
+        private static void PlayerVault(ref Descriptor desc, ref string input)
+        {
+            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.ItemVault))
+            {
+                var verb = GetVerb(ref input);
+                var line = input.Remove(0, verb.Length).Trim();
+                var tokens = TokeniseInput(ref line);
+                // vault deposit fox
+                if(tokens.Length >= 1)
+                {
+                    switch(tokens[0].ToLower().Trim())
+                    {
+                        case "check":
+                        case "c":
+                            if (desc.Player.VaultStore != null && desc.Player.VaultStore.Count > 0)
+                            {
+                                StringBuilder sb = new StringBuilder();
+                                sb.AppendLine($"The vault wardern rifles through his paperwork. \"You have the following things in storage.\"");
+                                sb.AppendLine($"  {new string('=', 77)}");
+                                foreach (var o in desc.Player.VaultStore.Select(x => new {x.Id, x.Name, x.ShortDescription}).Distinct().OrderBy(j => j.Name))
+                                {
+                                    var cnt = desc.Player.VaultStore.Where(x => x.Id == o.Id).Count();
+                                    sb.AppendLine($"|| {cnt} x {o.Name}, {o.ShortDescription}");
+                                }
+                                sb.AppendLine($"  {new string('=', 77)}");
+                                desc.Send(sb.ToString());
+                            }
+                            else
+                            {
+                                desc.Send($"The vault wardern rifles through his paperwork. \"You don't have anything in storage,\" he says.{Constants.NewLine}");
+                            }
+                            break;
+
+                        case "store":
+                        case "s":
+                            var item = line.Remove(0, tokens[0].Length).Trim();
+                            var i = GetTargetItem(ref desc, item, true);
+                            if(i != null)
+                            {
+                                desc.Player.Inventory.Remove(i);
+                                desc.Player.VaultStore.Add(i);
+                                desc.Send($"The vault warden smiles, \"Certainly, we'll keep that safe for you, you can collect it any time.\"{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                desc.Send($"You don't seem to be carrying anything like that.{Constants.NewLine}");
+                            }
+                            break;
+
+                        case "withdraw":
+                        case "w":
+                            var vItem = line.Remove(0, tokens[0].Length).Trim();
+                            var vaultItem = GetTargetItem(ref desc, vItem, false, true);
+                            if(vaultItem != null)
+                            {
+                                desc.Player.VaultStore.Remove(vaultItem);
+                                desc.Player.Inventory.Add(vaultItem);
+                                desc.Send($"The vault warden smiles, \"Certainly, returned to you safe and sound!\"{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                desc.Send($"The vault warden tuts, \"You don't have anything like that in storage.\"{Constants.NewLine}");
+                            }
+                            break;
+
+                        default:
+                            desc.Send($"Usage: vault <<check> | <store | withdraw> <item>{Constants.NewLine}");
+                            break;
+                    }
+                }
+                else
+                {
+                    desc.Send($"Usage: vault <<check> | <store | withdraw> <item>{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"There is no vault here...{Constants.NewLine}");
+            }
+        }
 
         private static void PlayerBanking(ref Descriptor desc, ref string input)
         {
@@ -231,54 +338,57 @@ namespace Kingdoms_of_Etrea.Core
                     var d = r.GetRoomExit(direction).RoomDoor;
                     if(d != null)
                     {
-                        if(verb.ToLower() == "open")
+                        List<Descriptor> localPlayers;
+                        switch(verb.ToLower())
                         {
-                            if(d.IsLocked)
-                            {
-                                desc.Send($"The door is locked!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = true;
-                                desc.Send($"You open the door {direction}.{Constants.NewLine}");
-                                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                if(localPlayers != null && localPlayers.Count > 1)
+                            case "open":
+                                if (d.IsLocked)
+                                {
+                                    desc.Send($"The door is locked!{Constants.NewLine}");
+                                }
+                                else
+                                {
+                                    RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = true;
+                                    desc.Send($"You open the door {direction}.{Constants.NewLine}");
+                                    localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                    if (localPlayers != null && localPlayers.Count > 1)
+                                    {
+                                        var pn = desc.Player.Name;
+                                        foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
+                                        {
+                                            if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                            {
+                                                p.Send($"{pn} opens the door {direction}.{Constants.NewLine}");
+                                            }
+                                            else
+                                            {
+                                                p.Send($"Something opens the door {direction}.{Constants.NewLine}");
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+
+                            case "close":
+                                RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = false;
+                                desc.Send($"You close the door {direction}.{Constants.NewLine}");
+                                localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                if (localPlayers != null && localPlayers.Count > 1)
                                 {
                                     var pn = desc.Player.Name;
-                                    foreach(var p in localPlayers.Where(x => x.Player.Name != pn))
+                                    foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
                                     {
-                                        if(desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                        if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
                                         {
-                                            p.Send($"{pn} opens the door {direction}.{Constants.NewLine}");
+                                            p.Send($"{pn} closes the door {direction}.{Constants.NewLine}");
                                         }
                                         else
                                         {
-                                            p.Send($"Something opens the door {direction}.{Constants.NewLine}");
+                                            p.Send($"Something closes the door {direction}.{Constants.NewLine}");
                                         }
                                     }
                                 }
-                            }
-                        }
-                        if(verb.ToLower() == "close")
-                        {
-                            RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = false;
-                            desc.Send($"You close the door {direction}.{Constants.NewLine}");
-                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                            if (localPlayers != null && localPlayers.Count > 1)
-                            {
-                                var pn = desc.Player.Name;
-                                foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
-                                {
-                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                    {
-                                        p.Send($"{pn} closes the door {direction}.{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        p.Send($"Something closes the door {direction}.{Constants.NewLine}");
-                                    }
-                                }
-                            }
+                                break;
                         }
                     }
                     else
@@ -345,89 +455,91 @@ namespace Kingdoms_of_Etrea.Core
                     var d = r.GetRoomExit(direction).RoomDoor;
                     if(d != null)
                     {
-                        if(verb.ToLower() == "lock")
+                        switch(verb.ToLower())
                         {
-                            if(!d.IsOpen)
-                            {
-                                if(!d.IsLocked)
+                            case "lock":
+                                if (!d.IsOpen)
                                 {
-                                    if (d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
+                                    if (!d.IsLocked)
                                     {
-                                        RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = true;
-                                        desc.Send($"You lock the door {direction}.{Constants.NewLine}");
-                                        var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                        if (localPlayers != null && localPlayers.Count > 1)
+                                        if (d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
                                         {
-                                            var pn = desc.Player.Name;
-                                            foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
+                                            RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = true;
+                                            desc.Send($"You lock the door {direction}.{Constants.NewLine}");
+                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                            if (localPlayers != null && localPlayers.Count > 1)
                                             {
-                                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                                var pn = desc.Player.Name;
+                                                foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
                                                 {
-                                                    p.Send($"{pn} locks the door {direction}.{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    p.Send($"Something locks the door {direction}.{Constants.NewLine}");
+                                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                                    {
+                                                        p.Send($"{pn} locks the door {direction}.{Constants.NewLine}");
+                                                    }
+                                                    else
+                                                    {
+                                                        p.Send($"Something locks the door {direction}.{Constants.NewLine}");
+                                                    }
                                                 }
                                             }
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"You lack the correct key to lock the door...{Constants.NewLine}");
                                         }
                                     }
                                     else
                                     {
-                                        desc.Send($"You lack the correct key to lock the door...{Constants.NewLine}");
+                                        desc.Send($"The door is already locked...{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    desc.Send($"The door is already locked...{Constants.NewLine}");
+                                    desc.Send($"The door must be shut first...{Constants.NewLine}");
                                 }
-                            }
-                            else
-                            {
-                                desc.Send($"The door must be shut first...{Constants.NewLine}");
-                            }
-                        }
-                        if(verb.ToLower() == "unlock")
-                        {
-                            if(d.IsOpen)
-                            {
-                                desc.Send($"The door is already open...{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                if(!d.IsLocked)
+                                break;
+
+                            case "unlock":
+                                if (d.IsOpen)
                                 {
-                                    desc.Send($"The door is already unlocked...{Constants.NewLine}");
+                                    desc.Send($"The door is already open...{Constants.NewLine}");
                                 }
                                 else
                                 {
-                                    if(d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
+                                    if (!d.IsLocked)
                                     {
-                                        RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = false;
-                                        desc.Send($"You unlock the door {direction}.{Constants.NewLine}");
-                                        var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                        if (localPlayers != null && localPlayers.Count > 1)
-                                        {
-                                            var pn = desc.Player.Name;
-                                            foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
-                                            {
-                                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                                {
-                                                    p.Send($"{pn} unlocks the door {direction}.{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    p.Send($"Something unlocks the door {direction}.{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
+                                        desc.Send($"The door is already unlocked...{Constants.NewLine}");
                                     }
                                     else
                                     {
-                                        desc.Send($"You lack the correct key to unlock the door...{Constants.NewLine}");
+                                        if (d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
+                                        {
+                                            RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = false;
+                                            desc.Send($"You unlock the door {direction}.{Constants.NewLine}");
+                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                            if (localPlayers != null && localPlayers.Count > 1)
+                                            {
+                                                var pn = desc.Player.Name;
+                                                foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
+                                                {
+                                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                                                    {
+                                                        p.Send($"{pn} unlocks the door {direction}.{Constants.NewLine}");
+                                                    }
+                                                    else
+                                                    {
+                                                        p.Send($"Something unlocks the door {direction}.{Constants.NewLine}");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"You lack the correct key to unlock the door...{Constants.NewLine}");
+                                        }
                                     }
                                 }
-                            }
+                                break;
                         }
                     }
                 }
@@ -764,8 +876,7 @@ namespace Kingdoms_of_Etrea.Core
                             {
                                 sb.AppendLine($"|| ID: {m.Key}{Constants.TabStop}{Constants.TabStop}From: {m.Value.MailFrom}{Constants.TabStop}Sent: {m.Value.MailSent}");
                                 sb.AppendLine($"|| Subject: {m.Value.MailSubject}");
-                                sb.AppendLine($"|| Attached Items: {m.Value.AttachedItems != null && m.Value.AttachedItems.Count > 0}");
-                                sb.AppendLine($"|| Attached Gold: {m.Value.AttachedGold}");
+                                sb.AppendLine($"|| Attached Items: {m.Value.AttachedItems != null && m.Value.AttachedItems.Count > 0}{Constants.TabStop}Attached Gold: {m.Value.AttachedGold}");
                                 index++;
                                 if(index < allMails.Count)
                                 {
@@ -851,12 +962,12 @@ namespace Kingdoms_of_Etrea.Core
                                             if (DatabaseManager.SendNewMail(ref desc, ref newMail))
                                             {
                                                 desc.Player.Stats.Gold -= 5;
-                                                desc.Send($"Your mail has been sent successfully!{Constants.NewLine}");
+                                                desc.Send($"The Winds of Magic swirl around your letter and it vanishes!{Constants.NewLine}");
                                                 ok = true;
                                             }
                                             else
                                             {
-                                                desc.Send($"There was a problem sending the mail, please check with an Imm.{Constants.NewLine}");
+                                                desc.Send($"The Winds of Magic sputter and die, your message was not taken!.{Constants.NewLine}");
                                                 returnItems = true;
                                             }
                                         }
@@ -904,16 +1015,16 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             if(DatabaseManager.DeleteMailByID(ref desc, mailItem.MailID))
                             {
-                                desc.Send($"The mail has been deleted.{Constants.NewLine}");
+                                desc.Send($"The Winds of Magic swirl and swallow the message, it is gone forever!{Constants.NewLine}");
                             }
                             else
                             {
-                                desc.Send($"There was a problem deleting the mail, please check with an Imm.{Constants.NewLine}");
+                                desc.Send($"The Winds of Magic sputter and die, your message remains!{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            desc.Send($"Couldn't find a mail with that ID number{Constants.NewLine}");
+                            desc.Send($"No such mail could be found in your mailbox!{Constants.NewLine}");
                         }
                         break;
 
@@ -1363,7 +1474,7 @@ namespace Kingdoms_of_Etrea.Core
                 var recipe = RecipeManager.Instance.GetRecipe(recipeName);
                 if(recipe != null)
                 {
-                    if(desc.Player.KnowsRecipe(recipe.RecipieName))
+                    if(desc.Player.KnowsRecipe(recipe.RecipeName))
                     {
                         bool canCraft = false;
                         switch(recipe.RecipeType)
@@ -1672,7 +1783,7 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        private static void ShowPlayerRecipies(ref Descriptor desc, ref string input)
+        private static void ShowPlayerRecipes(ref Descriptor desc, ref string input)
         {
             if(desc.Player.KnownRecipes != null && desc.Player.KnownRecipes.Count > 0)
             {
@@ -1691,7 +1802,7 @@ namespace Kingdoms_of_Etrea.Core
                             sb.AppendLine($"||{new string('=', 77)}");
                             foreach (var r in desc.Player.KnownRecipes.Where(x => x.RecipeType.ToString() == skill).ToList())
                             {
-                                sb.AppendLine($"|| {r.RecipieName}");
+                                sb.AppendLine($"|| {r.RecipeName}");
                             }
                             first = false;
                         }
@@ -1702,7 +1813,7 @@ namespace Kingdoms_of_Etrea.Core
                             sb.AppendLine($"||{new string('=', 77)}");
                             foreach (var r in desc.Player.KnownRecipes.Where(x => x.RecipeType.ToString() == skill).ToList())
                             {
-                                sb.AppendLine($"|| {r.RecipieName}");
+                                sb.AppendLine($"|| {r.RecipeName}");
                             }
                         }
                     }
@@ -1711,13 +1822,13 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 else
                 {
-                    var r = (from kr in desc.Player.KnownRecipes where Regex.Match(kr.RecipieName, target, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
+                    var r = (from kr in desc.Player.KnownRecipes where Regex.Match(kr.RecipeName, target, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
                     if(r != null)
                     {
                         StringBuilder sb = new StringBuilder();
                         sb.AppendLine($"  {new string('=', 77)}");
-                        sb.AppendLine($"|| Name: {r.RecipieName}");
-                        sb.AppendLine($"|| Description: {r.RecipieDescription}");
+                        sb.AppendLine($"|| Name: {r.RecipeName}");
+                        sb.AppendLine($"|| Description: {r.RecipeDescription}");
                         sb.AppendLine($"|| Produces: {ItemManager.Instance.GetItemByID(r.RecipeResult).Name}");
                         sb.AppendLine($"|| Requires:");
                         foreach(var req in r.RequiredMaterials)
@@ -2804,7 +2915,8 @@ namespace Kingdoms_of_Etrea.Core
             {
                 if(!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
                 {
-                    var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
+                    var verb = GetVerb(ref input);
+                    var target = input.Remove(0, verb.Length).Trim();
                     var tPlayer = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
                     if(tPlayer != null)
                     {
@@ -2985,8 +3097,8 @@ namespace Kingdoms_of_Etrea.Core
                     if(r != null)
                     {
                         StringBuilder sb = new StringBuilder();
-                        sb.AppendLine($"Name: {r.RecipieName}");
-                        sb.AppendLine($"Description: {r.RecipieDescription}");
+                        sb.AppendLine($"Name: {r.RecipeName}");
+                        sb.AppendLine($"Description: {r.RecipeDescription}");
                         sb.AppendLine($"Produces: {ItemManager.Instance.GetItemByID(r.RecipeResult).Name}");
                         sb.AppendLine("Requires:");
                         foreach(var m in r.RequiredMaterials)
@@ -3325,7 +3437,8 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void LearnSkillOrSpell(ref Descriptor desc, ref string input)
         {
-            // learn <skill | spell | recipe> <name>
+            // learn <skill | spell | recipe | language> <name>
+            // TODO: Add support for learning languages (other than Common) if the player doesn't know
             var elements = TokeniseInput(ref input);
             if(elements.Length == 1)
             {
@@ -3406,17 +3519,17 @@ namespace Kingdoms_of_Etrea.Core
                     var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Scribing).ToList();
                     foreach(var recipe in r)
                     {
-                        if(!desc.Player.KnowsRecipe(recipe.RecipieName))
+                        if(!desc.Player.KnowsRecipe(recipe.RecipeName))
                         {
                             recipesAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
                             if(p.ToString().Length > 4)
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                             else
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                         }
                     }
@@ -3437,17 +3550,17 @@ namespace Kingdoms_of_Etrea.Core
                     var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Alchemy).ToList();
                     foreach (var recipe in r)
                     {
-                        if (!desc.Player.KnowsRecipe(recipe.RecipieName))
+                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
                         {
                             recipesAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
                             if (p.ToString().Length > 4)
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                             else
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                         }
                     }
@@ -3468,17 +3581,17 @@ namespace Kingdoms_of_Etrea.Core
                     var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Blacksmithing).ToList();
                     foreach (var recipe in r)
                     {
-                        if (!desc.Player.KnowsRecipe(recipe.RecipieName))
+                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
                         {
                             recipesAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
                             if (p.ToString().Length > 4)
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                             else
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                         }
                     }
@@ -3498,23 +3611,52 @@ namespace Kingdoms_of_Etrea.Core
                     var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Jewelcrafting).ToList();
                     foreach (var recipe in r)
                     {
-                        if (!desc.Player.KnowsRecipe(recipe.RecipieName))
+                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
                         {
                             recipesAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
                             if (p.ToString().Length > 4)
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                             else
                             {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipieName}");
+                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
                         }
                     }
                     if (recipesAvailable == 0)
                     {
                         sb.AppendLine("|| No Jewelcrafting recipes available");
+                    }
+                    sb.AppendLine($"  {new string('=', 77)}");
+                }
+                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.LanguageTrainer))
+                {
+                    sb.AppendLine("The old diplomat gives you a smile. 'If you want to learn, I can teach!'");
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    sb.AppendLine($"|| Price{Constants.TabStop}|| Recipe");
+                    sb.AppendLine($"||==============||{new string('=', 61)}");
+                    uint langsAvailable = 0;
+                    foreach(Languages lang in Enum.GetValues(typeof(Languages)))
+                    {
+                        if(!desc.Player.KnownLanguages.HasFlag(lang))
+                        {
+                            langsAvailable++;
+                            var p = Helpers.GetNewPurchasePrice(ref desc, 5000);
+                            if(p.ToString().Length > 4)
+                            {
+                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {lang}");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {lang}");
+                            }
+                        }
+                    }
+                    if(langsAvailable == 0)
+                    {
+                        sb.AppendLine("|| No languages available");
                     }
                     sb.AppendLine($"  {new string('=', 77)}");
                 }
@@ -3527,145 +3669,175 @@ namespace Kingdoms_of_Etrea.Core
                     // we are learning a skill or a spell
                     var t = elements[1];
                     var toLearn = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
-                    if(t.ToLower() == "skill")
+                    switch(t.ToLower())
                     {
-                        if(Skills.SkillExists(toLearn))
-                        {
-                            if(!desc.Player.HasSkill(toLearn) || (toLearn.ToLower() == "extra attack" && desc.Player.NumberOfAttacks + 1 <= 5))
+                        case "skill":
+                            if (Skills.SkillExists(toLearn))
                             {
-                                var s = Skills.GetSkill(toLearn);
-                                var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                                if(desc.Player.Stats.Gold >= p)
+                                if (!desc.Player.HasSkill(toLearn) || (toLearn.ToLower() == "extra attack" && desc.Player.NumberOfAttacks + 1 <= 5))
                                 {
-                                    // skill exists, player does not know it and has enough gold to buy it
-                                    desc.Send($"The trainer smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
-                                    desc.Player.Stats.Gold -= p;
-                                    if(s.Name == "Extra Attack")
+                                    var s = Skills.GetSkill(toLearn);
+                                    var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
+                                    if (desc.Player.Stats.Gold >= p)
                                     {
-                                        desc.Player.NumberOfAttacks++;
+                                        // skill exists, player does not know it and has enough gold to buy it
+                                        desc.Send($"The trainer smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
+                                        desc.Player.Stats.Gold -= p;
+                                        if (s.Name == "Extra Attack")
+                                        {
+                                            desc.Player.NumberOfAttacks++;
+                                        }
+                                        else
+                                        {
+                                            desc.Player.AddSkill(s.Name);
+                                        }
                                     }
                                     else
                                     {
-                                        desc.Player.AddSkill(s.Name);
+                                        // skill exists, player does not know it but does not have enough gold to buy it
+                                        desc.Send($"The trainer laughs, 'You're a little short of gold, my friend!'{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    // skill exists, player does not know it but does not have enough gold to buy it
-                                    desc.Send($"The trainer laughs, 'You're a little short of gold, my friend!'{Constants.NewLine}");
+                                    // skill exists but the player already knows it
+                                    desc.Send($"'You already know all that I can teach about that,' the trainer says.{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                // skill exists but the player already knows it
-                                desc.Send($"'You already know all that I can teach about that,' the trainer says.{Constants.NewLine}");
+                                // skill does not exist
+                                desc.Send($"The trainer shakes their head. 'I don't think I can teach you that.'{Constants.NewLine}");
                             }
-                        }
-                        else
-                        {
-                            // skill does not exist
-                            desc.Send($"The trainer shakes their head. 'I don't think I can teach you that.'{Constants.NewLine}");
-                        }
-                    }
-                    if(t.ToLower() == "spell")
-                    {
-                        if(Spells.SpellExists(toLearn))
-                        {
-                            if (!desc.Player.HasSpell(toLearn))
+                            break;
+
+                        case "spell":
+                            if (Spells.SpellExists(toLearn))
                             {
-                                var s = Spells.GetSpell(toLearn);
-                                var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                                if(desc.Player.Stats.Gold >= p)
+                                if (!desc.Player.HasSpell(toLearn))
                                 {
-                                    desc.Send($"The sorceror smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
-                                    desc.Player.Stats.Gold -= p;
-                                    desc.Player.AddSpell(s.SpellName);
+                                    var s = Spells.GetSpell(toLearn);
+                                    var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
+                                    if (desc.Player.Stats.Gold >= p)
+                                    {
+                                        desc.Send($"The sorceror smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
+                                        desc.Player.Stats.Gold -= p;
+                                        desc.Player.AddSpell(s.SpellName);
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"The sorceror smiles. 'Come back with more gold.'{Constants.NewLine}");
+                                    }
                                 }
                                 else
                                 {
-                                    desc.Send($"The sorceror smiles. 'Come back with more gold.'{Constants.NewLine}");
+                                    desc.Send($"'You already know all I can teach about that spell,' the sorceror says.{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                desc.Send($"'You already know all I can teach about that spell,' the sorceror says.{Constants.NewLine}");
+                                desc.Send($"The sorceror shakes his head. 'I don't think I can teach you that.'{Constants.NewLine}");
                             }
-                        }
-                        else
-                        {
-                            desc.Send($"The sorceror shakes his head. 'I don't think I can teach you that.'{Constants.NewLine}");
-                        }
-                    }
-                    if(t.ToLower() == "recipe")
-                    {
-                        var r = RecipeManager.Instance.GetRecipe(toLearn);
-                        if(r != null)
-                        {
-                            if(!desc.Player.KnowsRecipe(r.RecipieName))
+                            break;
+
+                        case "recipe":
+                            var r = RecipeManager.Instance.GetRecipe(toLearn);
+                            if (r != null)
                             {
-                                bool canLearn = false;
-                                switch(r.RecipeType)
+                                if (!desc.Player.KnowsRecipe(r.RecipeName))
                                 {
-                                    case RecipeType.Scribing:
-                                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Scribe) && desc.Player.HasSkill("Scribing"))
-                                        {
-                                            canLearn = true;
-                                        }
-                                        break;
+                                    bool canLearn = false;
+                                    switch (r.RecipeType)
+                                    {
+                                        case RecipeType.Scribing:
+                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Scribe) && desc.Player.HasSkill("Scribing"))
+                                            {
+                                                canLearn = true;
+                                            }
+                                            break;
 
-                                    case RecipeType.Jewelcrafting:
-                                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Jeweler) && desc.Player.HasSkill("Jewelcrafting"))
-                                        {
-                                            canLearn = true;
-                                        }
-                                        break;
+                                        case RecipeType.Jewelcrafting:
+                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Jeweler) && desc.Player.HasSkill("Jewelcrafting"))
+                                            {
+                                                canLearn = true;
+                                            }
+                                            break;
 
-                                    case RecipeType.Blacksmithing:
-                                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Blacksmith) && desc.Player.HasSkill("Blacksmithing"))
-                                        {
-                                            canLearn = true;
-                                        }
-                                        break;
+                                        case RecipeType.Blacksmithing:
+                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Blacksmith) && desc.Player.HasSkill("Blacksmithing"))
+                                            {
+                                                canLearn = true;
+                                            }
+                                            break;
 
-                                    case RecipeType.Alchemy:
-                                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Alchemist) && desc.Player.HasSkill("Alchemy"))
+                                        case RecipeType.Alchemy:
+                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Alchemist) && desc.Player.HasSkill("Alchemy"))
+                                            {
+                                                canLearn = true;
+                                            }
+                                            break;
+                                    }
+                                    if (canLearn)
+                                    {
+                                        var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
+                                        if (desc.Player.Stats.Gold >= p)
                                         {
-                                            canLearn = true;
+                                            desc.Player.Stats.Gold -= p;
+                                            desc.Player.KnownRecipes.Add(r);
+                                            desc.Send($"You gain knowledge of crafting {r.RecipeName}{Constants.NewLine}");
                                         }
-                                        break;
+                                        else
+                                        {
+                                            desc.Send($"You don't have enough gold!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"You cannot learn that recipe right now.{Constants.NewLine}");
+                                    }
                                 }
-                                if(canLearn)
+                                else
                                 {
-                                    var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
+                                    desc.Send($"You already know that recipe!{Constants.NewLine}");
+                                }
+                            }
+                            else
+                            {
+                                desc.Send($"That recipe doesn't exist!{Constants.NewLine}");
+                            }
+                            break;
+
+                        case "language":
+                            if(Enum.TryParse<Languages>(toLearn, true, out Languages lang))
+                            {
+                                if(!desc.Player.KnownLanguages.HasFlag(lang))
+                                {
+                                    var p = Helpers.GetNewPurchasePrice(ref desc, 5000);
                                     if(desc.Player.Stats.Gold >= p)
                                     {
                                         desc.Player.Stats.Gold -= p;
-                                        desc.Player.KnownRecipes.Add(r);
-                                        desc.Send($"You gain knowledge of crafting {r.RecipieName}{Constants.NewLine}");
+                                        desc.Player.KnownLanguages |= lang;
+                                        desc.Send($"The old diplomat smiles and passes long his knowledge of the {lang} language.{Constants.NewLine}");
                                     }
                                     else
                                     {
-                                        desc.Send($"You don't have enough gold!{Constants.NewLine}");
+                                        desc.Send($"The old diplomat chuckles. 'You need more gold to learn that!'{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    desc.Send($"You cannot learn that recipe right now.{Constants.NewLine}");
+                                    desc.Send($"The old diplomat shakes his head. 'You already know all I can teach about that language.'{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                desc.Send($"You already know that recipe!{Constants.NewLine}");
+                                desc.Send($"That language doesn't exist!{Constants.NewLine}");
                             }
-                        }
-                        else
-                        {
-                            desc.Send($"That recipe doesn't exist!{Constants.NewLine}");
-                        }
-                    }
-                    if(t.ToLower() != "spell" && t.ToLower() != "skill" && t.ToLower() != "recipe")
-                    {
-                        desc.Send($"Usage: learn <skill | spell | recipe> <name>{Constants.NewLine}");
+                            break;
+
+                        default:
+                            desc.Send($"Usage: learn <skill | spell | recipe | language> <name>{Constants.NewLine}");
+                            break;
                     }
                 }
             }
@@ -5749,7 +5921,7 @@ namespace Kingdoms_of_Etrea.Core
                             RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => x.Player.Visible && Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
                         if (p != null)
                         {
-                            if (Regex.Match(desc.Player.Name, target, RegexOptions.IgnoreCase).Success)
+                            if (Regex.IsMatch(desc.Player.Name, target, RegexOptions.IgnoreCase))
                             {
                                 msgToSendToPlayer = $"You look yourself up and down. Vain, much?{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} looks themselves up and down. How vain.{Constants.NewLine}";
@@ -5855,6 +6027,7 @@ namespace Kingdoms_of_Etrea.Core
             sb.AppendLine($"|| Current HP: {desc.Player.Stats.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {desc.Player.Stats.MaxHP}");
             sb.AppendLine($"|| Current MP: {desc.Player.Stats.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {desc.Player.Stats.MaxMP}");
             sb.AppendLine($"|| Armour Class: {desc.Player.Stats.ArmourClass}{Constants.TabStop}No. Of Attacks: {desc.Player.NumberOfAttacks}");
+            sb.AppendLine($"|| Known Languages: {desc.Player.KnownLanguages}");
             sb.AppendLine($"  {new string('=', 77)}");
             desc.Send(sb.ToString());
         }
@@ -5867,13 +6040,39 @@ namespace Kingdoms_of_Etrea.Core
             {
                 if (Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
                 {
-                    p.Send($"You say \"{msg}\"{Constants.NewLine}");
+                    if(desc.Player.SpokenLanguage == Languages.Common)
+                    {
+                        p.Send($"You say \"{msg}\"{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        p.Send($"In {desc.Player.SpokenLanguage}, you say \"{msg}\"{Constants.NewLine}");
+                    }
+                    
                 }
                 else
                 {
-                    string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} says, \"{msg}\"{Constants.NewLine}"
-                        : $"Something says, \"{msg}\"{Constants.NewLine}";
-                    p.Send(msgToSend);
+                    if(desc.Player.SpokenLanguage == Languages.Common)
+                    {
+                        string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} says, \"{msg}\"{Constants.NewLine}"
+                            : $"Something says, \"{msg}\"{Constants.NewLine}";
+                        p.Send(msgToSend);
+                    }
+                    else
+                    {
+                        if (p.Player.KnownLanguages.HasFlag(desc.Player.SpokenLanguage))
+                        {
+                            string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"In {desc.Player.SpokenLanguage}, {desc.Player.Name} says, \"{msg}\"{Constants.NewLine}"
+                                : $"In {desc.Player.SpokenLanguage}, Something says, \"{msg}\"{Constants.NewLine}";
+                            p.Send(msgToSend);
+                        }
+                        else
+                        {
+                            string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} says something in {desc.Player.SpokenLanguage} but you don't understand.{Constants.NewLine}"
+                                : $"Something says something in {desc.Player.SpokenLanguage}, but you don't understand.{Constants.NewLine}";
+                            p.Send(msgToSend);
+                        }
+                    }
                 }
             }
         }
@@ -5900,13 +6099,33 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 return;
             }
-            var toSend = line.TrimStart(GetVerb(ref line).ToCharArray()).Trim().Trim(target.ToCharArray()).Trim();
+            var verb = GetVerb(ref line);
+            var toSend = line.Remove(0, verb.Length).Trim().Remove(0, target.Length).Trim();
+            //var toSend = line.TrimStart(GetVerb(ref line).ToCharArray()).Trim().Trim(target.ToCharArray()).Trim();
             var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
             if (p != null)
             {
-                var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} whispers \"{toSend}\"{Constants.NewLine}"
-                    : $"Something whispers \"{toSend}\"{Constants.NewLine}";
-                p.Send(msgToPlayer);
+                if(desc.Player.SpokenLanguage == Languages.Common)
+                {
+                    var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} whispers \"{toSend}\"{Constants.NewLine}"
+                        : $"Something whispers \"{toSend}\"{Constants.NewLine}";
+                    p.Send(msgToPlayer);
+                }
+                else
+                {
+                    if (p.Player.KnownLanguages.HasFlag(desc.Player.SpokenLanguage))
+                    {
+                        var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"In {desc.Player.SpokenLanguage}, {desc.Player.Name} whispers \"{toSend}\"{Constants.NewLine}"
+                            : $"In {desc.Player.SpokenLanguage}, something whispers \"{toSend}\"{Constants.NewLine}";
+                        p.Send(msgToPlayer);
+                    }
+                    else
+                    {
+                        var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} whispers something in {desc.Player.SpokenLanguage} but you can't understand.{Constants.NewLine}"
+                            : $"Something whispers something in {desc.Player.SpokenLanguage}, but you can't understand.{Constants.NewLine}";
+                        p.Send(msgToPlayer);
+                    }
+                }
                 if (playersInRoom.Count > 2)
                 {
                     foreach (var player in playersInRoom)

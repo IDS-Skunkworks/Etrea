@@ -10,11 +10,11 @@ namespace Kingdoms_of_Etrea.Core
     {
         private static readonly object _lockObject = new object();
         private static RecipeManager _instance = null;
-        private Dictionary<uint, Crafting.Recipe> _recipies;
+        private Dictionary<uint, Crafting.Recipe> _recipes;
 
         private RecipeManager()
         {
-            _recipies = new Dictionary<uint, Crafting.Recipe>();
+            _recipes = new Dictionary<uint, Crafting.Recipe>();
         }
 
         internal static RecipeManager Instance
@@ -40,7 +40,7 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     lock (_lockObject)
                     {
-                        _recipies.Add(recipe.RecipieID, recipe);
+                        _recipes.Add(recipe.RecipeID, recipe);
                     }
                     return true;
                 }
@@ -48,7 +48,7 @@ namespace Kingdoms_of_Etrea.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error adding Crafting Recipe '{recipe.RecipieName}' ({recipe.RecipieID}): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error adding Crafting Recipe '{recipe.RecipeName}' ({recipe.RecipeID}): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -57,29 +57,29 @@ namespace Kingdoms_of_Etrea.Core
         {
             try
             {
-                if(Instance._recipies.ContainsKey(r.RecipieID))
+                if(Instance._recipes.ContainsKey(r.RecipeID))
                 {
                     lock(_lockObject)
                     {
-                        Instance._recipies.Remove(r.RecipieID);
-                        Instance._recipies.Add(r.RecipieID, r);
-                        Game.LogMessage($"INFO: Player {desc.Player} updated Recipe '{r.RecipieName}' ({r.RecipieID}) in RecipeManager", LogLevel.Info, true);
+                        Instance._recipes.Remove(r.RecipeID);
+                        Instance._recipes.Add(r.RecipeID, r);
+                        Game.LogMessage($"INFO: Player {desc.Player} updated Recipe '{r.RecipeName}' ({r.RecipeID}) in RecipeManager", LogLevel.Info, true);
                     }
                     return true;
                 }
                 else
                 {
-                    Game.LogMessage($"WARN: RecipeManager does not contain a Recipe with ID {r.RecipieID}", LogLevel.Warning, true);
+                    Game.LogMessage($"WARN: RecipeManager does not contain a Recipe with ID {r.RecipeID}", LogLevel.Warning, true);
                     lock(_lockObject)
                     {
-                        Instance._recipies.Add(r.RecipieID , r);
+                        Instance._recipes.Add(r.RecipeID , r);
                     }
                     return true;
                 }
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error updating Recipe '{r.RecipieName}' ({r.RecipieID}) in the RecipeManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error updating Recipe '{r.RecipeName}' ({r.RecipeID}) in the RecipeManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -88,11 +88,11 @@ namespace Kingdoms_of_Etrea.Core
         {
             try
             {
-                if(Instance._recipies.ContainsKey(id))
+                if(Instance._recipes.ContainsKey(id))
                 {
                     lock(_lockObject)
                     {
-                        _recipies.Remove(id);
+                        _recipes.Remove(id);
                     }
                     Game.LogMessage($"INFO: Player {desc.Player} removed Recipe with ID {id} from RecipeManager", LogLevel.Info, true);
                     return true;
@@ -109,11 +109,11 @@ namespace Kingdoms_of_Etrea.Core
 
         internal Crafting.Recipe GetRecipe(uint id)
         {
-            if(_recipies != null && _recipies.Count > 0)
+            if(_recipes != null && _recipes.Count > 0)
             {
-                if(_recipies.ContainsKey(id))
+                if(_recipes.ContainsKey(id))
                 {
-                    return _recipies[id];
+                    return _recipes[id];
                 }
             }
             return null;
@@ -121,14 +121,14 @@ namespace Kingdoms_of_Etrea.Core
 
         internal Crafting.Recipe GetRecipe(string name)
         {
-            return (from Crafting.Recipe r in _recipies.Values where Regex.Match(r.RecipieName, name, RegexOptions.IgnoreCase).Success select r).FirstOrDefault();
+            return (from Crafting.Recipe r in _recipes.Values where Regex.Match(r.RecipeName, name, RegexOptions.IgnoreCase).Success select r).FirstOrDefault();
         }
 
         internal List<Crafting.Recipe> GetRecipeByNameOrDescription(string n)
         {
-            return (from Crafting.Recipe r in _recipies.Values
-                    where Regex.Match(r.RecipieName, n, RegexOptions.IgnoreCase).Success ||
-                    Regex.Match(r.RecipieDescription, n, RegexOptions.IgnoreCase).Success
+            return (from Crafting.Recipe r in _recipes.Values
+                    where Regex.Match(r.RecipeName, n, RegexOptions.IgnoreCase).Success ||
+                    Regex.Match(r.RecipeDescription, n, RegexOptions.IgnoreCase).Success
                     select r).ToList();
         }
 
@@ -137,8 +137,8 @@ namespace Kingdoms_of_Etrea.Core
             var result = DatabaseManager.LoadAllCraftingRecipes(out hasErr);
             if(!hasErr && result != null && result.Count > 0)
             {
-                Instance._recipies.Clear();
-                Instance._recipies = result;
+                Instance._recipes.Clear();
+                Instance._recipes = result;
             }
         }
 
@@ -146,16 +146,16 @@ namespace Kingdoms_of_Etrea.Core
         {
             if(!string.IsNullOrEmpty(name))
             {
-                var result = from r in _recipies.Values where Regex.Match(r.RecipieName, name, RegexOptions.IgnoreCase).Success ||
-                             Regex.Match(r.RecipieDescription, name, RegexOptions.IgnoreCase).Success select r;
+                var result = from r in _recipes.Values where Regex.Match(r.RecipeName, name, RegexOptions.IgnoreCase).Success ||
+                             Regex.Match(r.RecipeDescription, name, RegexOptions.IgnoreCase).Success select r;
                 return result.ToList();
             }
-            return _recipies.Values.ToList();
+            return _recipes.Values.ToList();
         }
 
         internal int GetRecipeCount()
         {
-            return _recipies.Count;
+            return _recipes.Count;
         }
     }
 }

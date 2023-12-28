@@ -11,7 +11,7 @@ namespace Kingdoms_of_Etrea.OLC
         private static void DeleteQuest(ref Descriptor desc)
         {
             desc.Send($"{Constants.RedText}This is a permanent change to the World and cannot be undone unless a database backup is restored!{Constants.PlainText}{Constants.NewLine}");
-            desc.Send("Enter the ID of the Recipie to delete: ");
+            desc.Send("Enter the ID of the Recipe to delete: ");
             var input = desc.Read().Trim();
             if(Helpers.ValidateInput(input))
             {
