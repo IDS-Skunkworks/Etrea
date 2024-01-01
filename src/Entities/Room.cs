@@ -32,6 +32,8 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal Dictionary<uint,uint> SpawnItemsAtTick { get; set; }
         [JsonProperty]
+        internal Dictionary<uint,uint> SpawnNPCsAtTick { get; set; }
+        [JsonProperty]
         internal uint? ShopID { get; set; }
         internal bool HasLightSource { get; set; }
         internal ResourceNode ResourceNode { get; set; }

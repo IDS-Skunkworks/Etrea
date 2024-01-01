@@ -135,7 +135,7 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         case "b":
                         case "balance":
-                            desc.Send($"The bank teller files through some papers. \"Your current balance is {desc.Player.BankBalance} gold coins.\"{Constants.NewLine}");
+                            desc.Send($"The bank teller files through some papers. \"Your current balance is {desc.Player.BankBalance:N0} gold coins.\"{Constants.NewLine}");
                             break;
 
                         case "d":
@@ -3206,7 +3206,8 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DoEmote(ref Descriptor desc, ref string input, Emote e)
         {
-            var targetString = input.Replace(GetVerb(ref input), string.Empty).Trim();
+            var verb = GetVerb(ref input);
+            var targetString = input.Remove(0, verb.Length).Trim();
             e.ShowEmoteMessage(ref desc, targetString);
         }
 
@@ -3216,9 +3217,8 @@ namespace Kingdoms_of_Etrea.Core
             if(r != null && !r.Flags.HasFlag(RoomFlags.NoTeleport))
             {
                 var cr = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-                if(!cr.Flags.HasFlag(RoomFlags.NoTeleport))
+                if(!cr.Flags.HasFlag(RoomFlags.NoTeleport) && desc.Player.Stats.CurrentSP >= 5)
                 {
-                    desc.Player.Move(desc.Player.CurrentRoom, Constants.PlayerStartRoom(), true, ref desc);
                     if(cr.PlayersInRoom(cr.RoomID) != null && cr.PlayersInRoom(cr.RoomID).Count > 0)
                     {
                         foreach(var p in cr.PlayersInRoom(cr.RoomID))
@@ -3231,7 +3231,9 @@ namespace Kingdoms_of_Etrea.Core
                             }
                         }
                     }
-                    if(r.PlayersInRoom(r.RoomID) != null && r.PlayersInRoom(r.RoomID).Count > 1)
+                    desc.Player.Move(desc.Player.CurrentRoom, Constants.PlayerStartRoom(), true, ref desc);
+                    desc.Player.Stats.CurrentSP -= 5;
+                    if (r.PlayersInRoom(r.RoomID) != null && r.PlayersInRoom(r.RoomID).Count > 1)
                     {
                         foreach(var p in r.PlayersInRoom(r.RoomID))
                         {
@@ -4896,7 +4898,6 @@ namespace Kingdoms_of_Etrea.Core
         {
             var verb = GetVerb(ref input).Trim();
             var line = input.Remove(0, verb.Length).ToLower().Trim();
-            //var line = input.Replace(GetVerb(ref input), string.Empty).ToLower().Trim();
             string target = string.Empty;
             string direction = string.Empty;
             if (line.IndexOf('\"') > -1)
@@ -5112,10 +5113,17 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     // target is an npc
                                     targetName = (objTgt as NPC).Name;
-                                    var targetStrModifier = ActorStats.CalculateAbilityModifier((objTgt as NPC).Stats.Strength);
-                                    targetFinalRoll += targetStrModifier;
-                                    targetFinalRoll = targetFinalRoll < 1 ? 1 : targetFinalRoll;
-                                    okToPush = playerFinalRoll > targetFinalRoll;
+                                    if(!(objTgt as NPC).BehaviourFlags.HasFlag(NPCFlags.NoPush))
+                                    {
+                                        var targetStrModifier = ActorStats.CalculateAbilityModifier((objTgt as NPC).Stats.Strength);
+                                        targetFinalRoll += targetStrModifier;
+                                        targetFinalRoll = targetFinalRoll < 1 ? 1 : targetFinalRoll;
+                                        okToPush = playerFinalRoll > targetFinalRoll;
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"Some mystical force prevents you from doing that!{Constants.NewLine}");
+                                    }
                                 }
                             }
                             if (playerRoll == 20)
@@ -5929,9 +5937,41 @@ namespace Kingdoms_of_Etrea.Core
                             }
                             else
                             {
-                                var targetHP = (double)p.Player.Stats.CurrentHP / p.Player.Stats.MaxHP * 100.0;
-                                string stateMsg = targetHP >= 90 ? $"{p.Player.Name} is in excellent health" : targetHP < 90 && targetHP >= 30 ? $"{p.Player.Name} looks a bit rough" : $"{p.Player.Name} looks on the verge of death";
+                                var targetHP = (double)p.Player.Stats.CurrentHP / p.Player.Stats.MaxHP * 100;
+                                string stateMsg = Helpers.GetActorStateMessage(p.Player.Name, targetHP);
                                 msgToSendToPlayer = $"{p.Player.LongDescription}{Constants.NewLine}{stateMsg}{Constants.NewLine}";
+                                if(p.Player.EquippedItems != null)
+                                {
+                                    msgToSendToPlayer = $"{msgToSendToPlayer}{p.Player.Name} is using:{Constants.NewLine}";
+                                    if(p.Player.EquippedItems.Head != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Head: {p.Player.EquippedItems.Head.Name}, {p.Player.EquippedItems.Head.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if(p.Player.EquippedItems.Neck != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {p.Player.EquippedItems.Neck.Name}, {p.Player.EquippedItems.Neck.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (p.Player.EquippedItems.Armour != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {p.Player.EquippedItems.Armour.Name}, {p.Player.EquippedItems.Armour.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (p.Player.EquippedItems.FingerLeft != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {p.Player.EquippedItems.FingerLeft.Name}, {p.Player.EquippedItems.FingerLeft.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (p.Player.EquippedItems.FingerRight != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {p.Player.EquippedItems.FingerRight.Name}, {p.Player.EquippedItems.FingerRight.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (p.Player.EquippedItems.Weapon != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {p.Player.EquippedItems.Weapon.Name}, {p.Player.EquippedItems.Weapon.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (p.Player.EquippedItems.Held != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Held: {p.Player.EquippedItems.Held.Name}, {p.Player.EquippedItems.Held.ShortDescription}{Constants.NewLine}";
+                                    }
+                                }
                                 msgToSendToOthers[0] = $"{desc.Player.Name} looks {p.Player.Name} up and down...{Constants.NewLine}";
                                 msgToSendToOthers[1] = $"Something looks {p.Player.Name} up and down...{Constants.NewLine}";
                                 msgToSendToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} gives you a studious look. Strange person.{Constants.NewLine}" : $"You feel a chill as though something was looking at you...{Constants.NewLine}";
@@ -5944,11 +5984,43 @@ namespace Kingdoms_of_Etrea.Core
                             var n = GetTargetNPC(ref desc, target);
                             if(n != null)
                             {
-                                var targetHP = (double)n.Stats.CurrentHP / n.Stats.MaxHP * 100.0;
-                                string stateMsg = targetHP >= 90 ? $"{n.Name} is in excellent health" : targetHP < 90 && targetHP >= 30 ? $"{n.Name} looks a bit rough" : $"{n.Name} looks on the verge of death";
+                                var targetHP = (double)n.Stats.CurrentHP / n.Stats.MaxHP * 100;
+                                string stateMsg = Helpers.GetActorStateMessage(n.Name, targetHP);
                                 msgToSendToPlayer = $"{n.LongDescription}{Constants.NewLine}{stateMsg}{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} gives {n.Name} a studious look{Constants.NewLine}";
                                 msgToSendToOthers[1] = $"Something gives {n.Name} a studious look{Constants.NewLine}";
+                                if (n.EquippedItems != null)
+                                {
+                                    msgToSendToPlayer = $"{msgToSendToPlayer}{n.Name} is using:{Constants.NewLine}";
+                                    if (n.EquippedItems.Head != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Head: {n.EquippedItems.Head.Name}, {n.EquippedItems.Head.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (n.EquippedItems.Neck != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {n.EquippedItems.Neck.Name}, {n.EquippedItems.Neck.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (n.EquippedItems.Armour != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {n.EquippedItems.Armour.Name}, {n.EquippedItems.Armour.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (n.EquippedItems.FingerLeft != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {n.EquippedItems.FingerLeft.Name}, {n.EquippedItems.FingerLeft.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (n.EquippedItems.FingerRight != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {n.EquippedItems.FingerRight.Name}, {n.EquippedItems.FingerRight.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (n.EquippedItems.Weapon != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {n.EquippedItems.Weapon.Name}, {n.EquippedItems.Weapon.ShortDescription}{Constants.NewLine}";
+                                    }
+                                    if (n.EquippedItems.Held != null)
+                                    {
+                                        msgToSendToPlayer = $"{msgToSendToPlayer}Held: {n.EquippedItems.Held.Name}, {n.EquippedItems.Held.ShortDescription}{Constants.NewLine}";
+                                    }
+                                }
                             }
                             else
                             {
@@ -6016,18 +6088,17 @@ namespace Kingdoms_of_Etrea.Core
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"  {new string('=', 77)}");
             sb.AppendLine($"|| Name: {desc.Player.Name}{Constants.TabStop}{Constants.TabStop}Gender: {desc.Player.Gender}{Constants.TabStop}Class: {desc.Player.Class}{Constants.TabStop}Race: {desc.Player.Race}");
-            sb.AppendLine($"|| Level: {desc.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {desc.Player.Stats.Exp}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(desc.Player.Level, desc.Player.Stats.Exp)}");
-            sb.AppendLine($"|| Alignment: {desc.Player.Alignment}{Constants.TabStop}{Constants.TabStop}Gold: {desc.Player.Stats.Gold}");
-            sb.AppendLine($"|| Position: {desc.Player.Position}");
+            sb.AppendLine($"|| Level: {desc.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {desc.Player.Stats.Exp:N0}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(desc.Player.Level, desc.Player.Stats.Exp):N0}");
+            sb.AppendLine($"|| Alignment: {desc.Player.Alignment}{Constants.TabStop}{Constants.TabStop}Gold: {desc.Player.Stats.Gold:N0}");
+            sb.AppendLine($"|| Position: {desc.Player.Position}{Constants.TabStop}{Constants.TabStop}Armour Class: {desc.Player.Stats.ArmourClass}");
             sb.AppendLine($"||");
             sb.AppendLine($"|| Stats:");
-            sb.AppendLine($"|| Strength: {desc.Player.Stats.Strength} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}Dexterity: {desc.Player.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity)})");
-            sb.AppendLine($"|| Constitution: {desc.Player.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution)}){Constants.TabStop}{Constants.TabStop}Intelligence: {desc.Player.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence)})");
-            sb.AppendLine($"|| Wisdom: {desc.Player.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}Charisma: {desc.Player.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Charisma)})");
-            sb.AppendLine($"|| Current HP: {desc.Player.Stats.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {desc.Player.Stats.MaxHP}");
-            sb.AppendLine($"|| Current MP: {desc.Player.Stats.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {desc.Player.Stats.MaxMP}");
-            sb.AppendLine($"|| Armour Class: {desc.Player.Stats.ArmourClass}{Constants.TabStop}No. Of Attacks: {desc.Player.NumberOfAttacks}");
-            sb.AppendLine($"|| Known Languages: {desc.Player.KnownLanguages}");
+            sb.AppendLine($"|| STR: {desc.Player.Stats.Strength} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {desc.Player.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {desc.Player.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution)})");
+            sb.AppendLine($"|| INT: {desc.Player.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {desc.Player.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {desc.Player.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Charisma)})");
+            sb.AppendLine($"|| ");
+            sb.AppendLine($"|| Health  : {desc.Player.Stats.CurrentHP} / {desc.Player.Stats.MaxHP}{Constants.TabStop}Mana: {desc.Player.Stats.CurrentMP} / {desc.Player.Stats.MaxMP}");
+            sb.AppendLine($"|| Stamina : {desc.Player.Stats.CurrentSP} / {desc.Player.Stats.MaxSP}{Constants.TabStop}Attacks: {desc.Player.NumberOfAttacks}");
+            sb.AppendLine($"|| Languages: {desc.Player.KnownLanguages}");
             sb.AppendLine($"  {new string('=', 77)}");
             desc.Send(sb.ToString());
         }

@@ -201,7 +201,8 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     foreach (var p in playersToNotify)
                     {
-                        p.Send($"{Constants.NewLine}The Winds of Magic swirl and give life to {n.Name}!{Constants.NewLine}");
+                        var article = Helpers.IsCharAVowel(n.Name[0]) ? "an" : "a";
+                        p.Send($"{Constants.NewLine}The Winds of Magic swirl and give life to {article} {n.Name}!{Constants.NewLine}");
                     }
                 }
                 return true;
@@ -252,9 +253,10 @@ namespace Kingdoms_of_Etrea.Core
                 var playersToNotify = RoomManager.Instance.GetPlayersInRoom(rid);
                 if(playersToNotify != null &&  playersToNotify.Count > 0)
                 {
+                    var article = Helpers.IsCharAVowel(toAdd.Name[0]) ? "an" : "a";
                     foreach(var p in playersToNotify)
                     {
-                        p.Send($"{Constants.NewLine}The Winds of Magic swirl and give life to {toAdd.Name}!{Constants.NewLine}");
+                        p.Send($"{Constants.NewLine}The Winds of Magic swirl and give life to {article} {toAdd.Name}!{Constants.NewLine}");
                     }
                 }
                 return true;

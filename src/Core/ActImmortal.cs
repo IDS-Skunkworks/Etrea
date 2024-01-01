@@ -153,13 +153,29 @@ namespace Kingdoms_of_Etrea.Core
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"  {new string('=', 77)}");
-                var npcsInGame = NPCManager.Instance.GetAllNPCIDS();
+                var npcsInGame = NPCManager.Instance.GetAllNPCIDS().Values;
                 if (npcsInGame != null && npcsInGame.Count > 0)
                 {
-                    foreach (var n in npcsInGame)
+                    foreach (var n in npcsInGame.Select(x => new { x.NPCID, x.Name }).Distinct().OrderBy(x => x.Name))
                     {
-                        sb.AppendLine($"|| {n.Value.Name} (ID: {n.Value.NPCID}) in Room {n.Value.CurrentRoom}");
+                        var npcLocations = npcsInGame.Where(x => x.NPCID == n.NPCID).Select(x => x.CurrentRoom).Distinct().OrderBy(x => x).ToList();
+                        if(npcLocations.Count > 1)
+                        {
+                            foreach(var loc in npcLocations)
+                            {
+                                var cnt = npcsInGame.Where(x => x.NPCID == n.NPCID && x.CurrentRoom == loc).Count();
+                                sb.AppendLine($"|| {cnt} x {n.Name} (ID: {n.NPCID}) in Room {loc}");
+                            }
+                        }
+                        else
+                        {
+                            var loc = npcLocations.First();
+                            var cnt = npcsInGame.Where(x => x.NPCID == n.NPCID && x.CurrentRoom == loc).Count();
+                            sb.AppendLine($"|| {cnt} x {n.Name} (ID: {n.NPCID}) in Room: {loc}");
+                        }
                     }
+                    sb.AppendLine($"||{new string('=', 77)}");
+                    sb.AppendLine($"|| {npcsInGame.Count} NPCs are currently in the world.");
                 }
                 else
                 {
@@ -193,7 +209,7 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             var tCurrentRID = target.Player.CurrentRoom;
                             target.Send($"{desc.Player.Name} has transported you elsewhere!{Constants.NewLine}");
-                            target.Player.Move(tCurrentRID, tRid, true, ref target);
+                            target.Player.Move(tCurrentRID, tRid, true, ref target, true);
                             Game.LogMessage($"INFO: Player {desc.Player.Name} transferred player {target.Player.Name} to RID {tRid}", LogLevel.Info, true);
                         }
                         else
@@ -1419,6 +1435,34 @@ namespace Kingdoms_of_Etrea.Core
                                     }
                                     break;
 
+                                case "sp":
+                                    if (uint.TryParse(inputElements[3], out value))
+                                    {
+                                        targetPlayer.Player.Stats.CurrentSP = value;
+                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s current SP to {value}{Constants.NewLine}";
+                                        msgToTarget = $"{desc.Player.Name} has changed your current SP to {value}!{Constants.NewLine}";
+                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s SP to {value}", LogLevel.Info, true);
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"That is not a valid value for SP{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "maxsp":
+                                    if (uint.TryParse(inputElements[3], out value))
+                                    {
+                                        targetPlayer.Player.Stats.MaxSP = value;
+                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s max SP to {value}{Constants.NewLine}";
+                                        msgToTarget = $"{desc.Player.Name} has changed your max SP to {value}!{Constants.NewLine}";
+                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s max SP to {value}", LogLevel.Info, true);
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"That is not a valid value for max SP{Constants.NewLine}");
+                                    }
+                                    break;
+
                                 case "mp":
                                     if (uint.TryParse(inputElements[3], out value))
                                     {
@@ -1701,7 +1745,7 @@ namespace Kingdoms_of_Etrea.Core
                             var msg = desc.Player.Visible ? $"{Constants.NewLine}The universe swirls as {desc.Player.Name} yanks you through the fabric of reality...{Constants.NewLine}" :
                                 $"{Constants.NewLine}The universe swirls as something yanks you through the fabric of reality...{Constants.NewLine}";
                             p.Send(msg);
-                            p.Player.Move(p.Player.CurrentRoom, desc.Player.CurrentRoom, true, ref p);
+                            p.Player.Move(p.Player.CurrentRoom, desc.Player.CurrentRoom, true, ref p, true);
                         }
                         else
                         {
@@ -1738,7 +1782,7 @@ namespace Kingdoms_of_Etrea.Core
                         if (RoomManager.Instance.RoomExists(targetRID))
                         {
                             var currentRID = desc.Player.CurrentRoom;
-                            desc.Player.Move(currentRID, targetRID, true, ref desc);
+                            desc.Player.Move(currentRID, targetRID, true, ref desc, true);
                         }
                         else
                         {
@@ -1751,7 +1795,7 @@ namespace Kingdoms_of_Etrea.Core
                         var p = SessionManager.Instance.GetPlayer(target);
                         if (p != null)
                         {
-                            desc.Player.Move(desc.Player.CurrentRoom, p.Player.CurrentRoom, true, ref desc);
+                            desc.Player.Move(desc.Player.CurrentRoom, p.Player.CurrentRoom, true, ref desc, true);
                         }
                         else
                         {
@@ -2017,6 +2061,7 @@ namespace Kingdoms_of_Etrea.Core
                         desc.Send($"With holy power you restore {tp.Player.Name}{Constants.NewLine}");
                         SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Stats.CurrentHP = (int)tp.Player.Stats.MaxHP;
                         SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Stats.CurrentMP = (int)tp.Player.Stats.MaxMP;
+                        SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Stats.CurrentSP = tp.Player.Stats.MaxSP;
                         SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Position = ActorPosition.Standing;
                         Game.LogMessage($"INFO: {desc.Player.Name} has restored {tp.Player.Name}", LogLevel.Info, true);
                     }

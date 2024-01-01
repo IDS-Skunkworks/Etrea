@@ -65,6 +65,10 @@ namespace Kingdoms_of_Etrea
         [JsonProperty]
         internal uint Charisma { get; set; }
         [JsonProperty]
+        internal uint CurrentSP { get; set; }
+        [JsonProperty]
+        internal uint MaxSP { get; set; }
+        [JsonProperty]
         internal uint MaxHP { get; set; }
         [JsonProperty]
         internal uint MaxMP { get; set; }

@@ -59,7 +59,7 @@ namespace Kingdoms_of_Etrea.Core
                     Room.DescribeRoom(ref _desc);
                     first = false;
                 }
-                string prompt = $"{Constants.NewLine}{Constants.BrightRedText}{_desc.Player.Stats.CurrentHP}/{_desc.Player.Stats.MaxHP} HP{Constants.PlainText}; {Constants.BrightYellowText}{_desc.Player.Stats.CurrentMP}/{_desc.Player.Stats.MaxMP} MP{Constants.PlainText} >>";
+                string prompt = $"{Constants.NewLine}{Constants.BrightRedText}{_desc.Player.Stats.CurrentHP}/{_desc.Player.Stats.MaxHP} HP{Constants.PlainText}; {Constants.BrightBluetext}{_desc.Player.Stats.CurrentMP}/{_desc.Player.Stats.MaxMP} MP{Constants.PlainText}; {Constants.BrightYellowText}{_desc.Player.Stats.CurrentSP}/{_desc.Player.Stats.MaxSP} SP{Constants.PlainText} >>";
                 _desc.Send(prompt);
 
                 var input = _desc.Read();

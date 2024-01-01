@@ -40,7 +40,9 @@ namespace Kingdoms_of_Etrea.Core
                 Intelligence = 10,
                 Wisdom = 10,
                 Charisma = 10,
-                ArmourClass = 10
+                ArmourClass = 10,
+                CurrentSP = 10,
+                MaxSP = 10,
             };
             p.EquippedItems = new EquippedItems();
             p.Inventory = new List<InventoryItem>();
@@ -464,6 +466,8 @@ namespace Kingdoms_of_Etrea.Core
 
             p.Position = ActorPosition.Standing;
             p.Level = 1;
+            p.Stats.MaxSP += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(p.Stats.Constitution));
+            p.Stats.CurrentSP = p.Stats.MaxSP;
             p.Stats.CurrentHP = (int)p.Stats.MaxHP;
             p.Stats.CurrentMP = (int)p.Stats.MaxMP;
             p.Stats.CurrentMaxHP = p.Stats.MaxHP;

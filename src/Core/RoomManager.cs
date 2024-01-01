@@ -59,7 +59,7 @@ namespace Kingdoms_of_Etrea.Core
                 var playersToNotify = Instance.GetPlayersInRoom(rid);
                 if(playersToNotify != null && playersToNotify.Count > 0)
                 {
-                    foreach(var p in playersToNotify)
+                    foreach(var p in playersToNotify.Where(x => !x.Player.IsInCombat))
                     {
                         p.Send($"{Constants.NewLine}{n.DepartMessage}{Constants.NewLine}");
                     }
@@ -70,7 +70,7 @@ namespace Kingdoms_of_Etrea.Core
                 var playersToNotify = Instance.GetPlayersInRoom(rid);
                 if(playersToNotify != null && playersToNotify.Count > 0)
                 {
-                    foreach(var p in playersToNotify)
+                    foreach(var p in playersToNotify.Where(x => !x.Player.IsInCombat))
                     {
                         p.Send($"{Constants.NewLine}{n.ArrivalMessage}{Constants.NewLine}");
                     }

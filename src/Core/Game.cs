@@ -341,6 +341,32 @@ namespace Kingdoms_of_Etrea.Core
                                 _logProvider.LogMessage($"INFO: Restoring {player.Player.Name} {regen} MP", LogLevel.Info, true);
                             }
                         }
+                        if(player.Player.Stats.CurrentSP < player.Player.Stats.MaxSP)
+                        {
+                            var regen = Helpers.RollDice(1, 3);
+                            var bonus = ActorStats.CalculateAbilityModifier(player.Player.Stats.Constitution);
+                            if(bonus > 0)
+                            {
+                                regen += Convert.ToUInt32(bonus);
+                            }
+                            if(player.Player.Position == ActorPosition.Resting)
+                            {
+                                regen += 2;
+                            }
+                            if(RoomManager.Instance.GetRoom(player.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Healing))
+                            {
+                                regen *= 2;
+                            }
+                            if(player.Player.Stats.CurrentSP + regen > player.Player.Stats.MaxSP)
+                            {
+                                SessionManager.Instance.GetPlayerByGUID(player.Id).Player.Stats.CurrentSP = player.Player.Stats.CurrentSP;
+                            }
+                            else
+                            {
+                                SessionManager.Instance.GetPlayerByGUID(player.Id).Player.Stats.CurrentSP += regen;
+                                _logProvider.LogMessage($"INFO: Restoring {player.Player.Name} {regen} SP", LogLevel.Info, true);
+                            }
+                        }
                     }
                 }
             }
@@ -639,6 +665,17 @@ namespace Kingdoms_of_Etrea.Core
                                             RoomManager.Instance.AddItemToRoomInventory(room, ref i);
                                         }
                                     }
+                                }
+                            }
+                        }
+                        var npcs = RoomManager.Instance.GetRoom(room).SpawnNPCsAtTick;
+                        if(npcs != null && npcs.Count > 0)
+                        {
+                            foreach(var npc in npcs)
+                            {
+                                if(RoomManager.Instance.GetNPCsInRoom(room).Where(x => x.NPCID == npc.Value).Count() < npc.Value)
+                                {
+                                    NPCManager.Instance.AddNPCToWorld(npc.Key, room);
                                 }
                             }
                         }

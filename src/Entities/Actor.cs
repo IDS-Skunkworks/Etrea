@@ -57,6 +57,18 @@ namespace Kingdoms_of_Etrea.Entities
         internal uint NumberOfAttacks { get; set; }
         [JsonProperty]
         internal uint CombatInitiative { get; set; }
+        [JsonProperty]
+        internal int FireResistance { get; set; }
+        [JsonProperty]
+        internal int IceResistance { get; set; }
+        [JsonProperty]
+        internal int LightningResistance { get; set; }
+        [JsonProperty]
+        internal int EarthResistance { get; set; }
+        [JsonProperty]
+        internal int HolyResistance { get; set; }
+        [JsonProperty]
+        internal int DarkResistance { get; set; }
 
         internal void CalculateArmourClass()
         {
@@ -472,7 +484,7 @@ namespace Kingdoms_of_Etrea.Entities
                 {
                     foreach(var lp in localPlayers)
                     {
-                        lp.Send($"{Name} drops some items as it is swallowed by the Winds of Magic!{Constants.NewLine}");
+                        lp.Send($"The {Name} drops some items before being swallowed by the Winds of Magic!{Constants.NewLine}");
                     }
                 }
             }
@@ -503,8 +515,9 @@ namespace Kingdoms_of_Etrea.Entities
         internal bool PVP;
         internal uint IdleTicks { get; set; }
 
-        internal virtual bool Move(uint fromRoomId, uint destRoomId, bool wasTeleported, ref Descriptor desc)
+        internal virtual bool Move(uint fromRoomId, uint destRoomId, bool wasTeleported, ref Descriptor desc, bool bypassStamCheck = false)
         {
+            // TODO: Ensure we properly reduce stamina: 1 point per room, +1d4 if either the current or target room has the HardTerrain flag
             try
             {
                 var targetRoom = RoomManager.Instance.GetRoom(destRoomId);
@@ -515,6 +528,24 @@ namespace Kingdoms_of_Etrea.Entities
                 }
                 else
                 {
+                    if(!bypassStamCheck)
+                    {
+                        uint stamCost = 1;
+                        if (RoomManager.Instance.GetRoom(fromRoomId).Flags.HasFlag(RoomFlags.HardTerrain))
+                        {
+                            stamCost += Helpers.RollDice(1, 4);
+                        }
+                        if (RoomManager.Instance.GetRoom(destRoomId).Flags.HasFlag(RoomFlags.HardTerrain))
+                        {
+                            stamCost += Helpers.RollDice(1, 4);
+                        }
+                        if (desc.Player.Stats.CurrentSP < stamCost)
+                        {
+                            desc.Send($"You don't have the energy to move that far just now...{Constants.NewLine}");
+                            return true;
+                        }
+                        desc.Player.Stats.CurrentSP -= stamCost;
+                    }
                     RoomManager.Instance.UpdatePlayersInRoom(fromRoomId, ref desc, true, wasTeleported, false, false);   // Player leaving a room
                     RoomManager.Instance.UpdatePlayersInRoom(destRoomId, ref desc, false, wasTeleported, false, false);  // Player arriving in a room
                     if(desc.Player.FollowerID != Guid.Empty)
@@ -671,11 +702,11 @@ namespace Kingdoms_of_Etrea.Entities
                         break;
                 }
                 hpMod = (int)hpIncrease + ActorStats.CalculateAbilityModifier(Stats.Constitution);
-                if (hpMod < 0)
+                if (hpMod < 1)
                 {
                     hpMod = 1;
                 }
-                if (mpMod < 0)
+                if (mpMod < 1)
                 {
                     mpMod = 1;
                 }
@@ -683,6 +714,13 @@ namespace Kingdoms_of_Etrea.Entities
                 Stats.MaxMP += Convert.ToUInt32(mpMod);
                 Stats.CurrentMaxHP += Convert.ToUInt32(hpMod);
                 Stats.CurrentMaxMP += Convert.ToUInt32(mpMod);
+                var stamIncrease = Convert.ToInt32(Helpers.RollDice(1,10) + ActorStats.CalculateAbilityModifier(Stats.Constitution));
+                if(stamIncrease < 1)
+                {
+                    stamIncrease = 1;
+                }
+                Stats.MaxSP += Convert.ToUInt32(stamIncrease);
+                Stats.CurrentSP += Convert.ToUInt32(stamIncrease);
             }
         }
     }

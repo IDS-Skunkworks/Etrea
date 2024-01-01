@@ -32,7 +32,8 @@ namespace Kingdoms_of_Etrea
         Scavenger = 1 << 8,        // NPC will pick up items dropped on the floor
         Awareness = 1 << 9,        // NPC gets a bonus to Initiative rolls
         BreathWeapon = 1 << 10,    // NPC can use a breath weapon dealing 6d6+6 damage to the target
-        Mercenary = 1 << 11       // NPC is a mercenary and can be hired by a player in the world
+        Mercenary = 1 << 11,       // NPC is a mercenary and can be hired by a player in the world
+        NoPush = 1 << 12,           // NPC cannot be pushed out of their current room by players
     }
 
     [Flags]
@@ -64,6 +65,7 @@ namespace Kingdoms_of_Etrea
         NoHealing = 1 << 22,      // Players in this room do not regenerate HP or MP even if resting
         ItemVault = 1 << 23,     // Room has a vault allowing players to store and retrieve items from their vault
         LanguageTrainer = 1 << 24, // Room has a trainer allowing players to learn new languages
+        HardTerrain = 1 << 25,      // Moving to or from this room costs double stamina
     }
 
     [Flags]

@@ -383,6 +383,7 @@ namespace Kingdoms_of_Etrea.Core
                     break;
 
                 case "npclist":
+                case "npcwho":
                     ListAllNPCS(ref desc);
                     break;
 

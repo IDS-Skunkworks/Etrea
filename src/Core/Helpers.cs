@@ -137,6 +137,47 @@ namespace Kingdoms_of_Etrea.Core
             return Convert.ToUInt32(retval);
         }
 
+        internal static string GetActorStateMessage(string actorName, double hp)
+        {
+            if (hp <= 100 && hp >= 90)
+            {
+                return $"{actorName} appears in perfect health, showing no sign of injury";
+            }
+            if (hp < 90 && hp >= 80)
+            {
+                return $"{actorName} looks healthy and energetic with no visible sign of injury";
+            }
+            if (hp < 80 && hp >= 70)
+            {
+                return $"{actorName} has a few scratches and bruises, but is in otherwise good condition";
+            }
+            if (hp < 70 && hp >= 60)
+            {
+                return $"{actorName} has several noticable cuts and bruises";
+            }
+            if (hp < 60 && hp >= 50)
+            {
+                return $"{actorName} is visibly injured, the stress of battle clear to see";
+            }
+            if (hp < 50 && hp >= 40)
+            {
+                return $"{actorName} is covered in cuts and wounds";
+            }
+            if (hp < 40 && hp >= 30)
+            {
+                return $"{actorName} is badly wounded";
+            }
+            if (hp < 30 && hp >= 20)
+            {
+                return $"{actorName} is in critical condition";
+            }
+            if( hp < 20 &&  hp >= 10)
+            {
+                return $"{actorName} is carrying critical wounds and near to bleeding out";
+            }
+            return $"{actorName} is on the brink of death";
+        }
+
         internal static bool IsCharAVowel(char c)
         {
             return (c > 64) && ((VowelMask & (1 << ((c | 0x20) % 32))) != 0);
