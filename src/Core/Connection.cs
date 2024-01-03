@@ -21,22 +21,23 @@ namespace Kingdoms_of_Etrea.Core
             thread.IsBackground = true;
             thread.Start();
 
-            var monitor = new Thread(MonitorConnection);
-            monitor.IsBackground = true;
-            monitor.Start();
+            // Can't remeber why I added this as it was never finished... Commenting out for now...
+            //var monitor = new Thread(MonitorConnection);
+            //monitor.IsBackground = true;
+            //monitor.Start();
         }
 
-        private void MonitorConnection()
-        {
-            if(_desc != null)
-            {
+        //private void MonitorConnection()
+        //{
+        //    if(_desc != null)
+        //    {
 
-            }
-            else
-            {
+        //    }
+        //    else
+        //    {
 
-            }
-        }
+        //    }
+        //}
 
         private void HandleConnection()
         {

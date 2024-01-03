@@ -1,6 +1,8 @@
 ﻿using Kingdoms_of_Etrea.Entities;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -267,7 +269,7 @@ namespace Kingdoms_of_Etrea.Core
                         var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor;
                         if (d == null || (d != null && d.IsOpen))
                         {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).DestinationRoomID, false, ref desc);
+                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).DestinationRoomID, false);
                         }
                         else
                         {
@@ -707,8 +709,8 @@ namespace Kingdoms_of_Etrea.Core
                                         StringBuilder sb = new StringBuilder();
                                         desc.Player.CompletedQuests.Add(q.QuestGUID);
                                         desc.Player.ActiveQuests.Remove(q);
-                                        desc.Player.AddExp(q.RewardExp, ref desc);
-                                        desc.Player.AddGold(q.RewardGold, ref desc);
+                                        desc.Player.AddExp(q.RewardExp);
+                                        desc.Player.AddGold(q.RewardGold);
                                         if(q.FetchItems != null && q.FetchItems.Count > 0)
                                         {
                                             foreach(var i in q.FetchItems)
@@ -1940,7 +1942,7 @@ namespace Kingdoms_of_Etrea.Core
                                                 // player hit, check for critical, do damage and start combat if NPC survives
                                                 var w = desc.Player.EquippedItems.Weapon;
                                                 var damRoll = Helpers.RollDice(w.NumberOfDamageDice, w.SizeOfDamageDice);
-                                                if (w.IsRanged)
+                                                if (w.IsFinesse)
                                                 {
                                                     if (ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity) > 0)
                                                     {
@@ -1970,8 +1972,8 @@ namespace Kingdoms_of_Etrea.Core
                                                         desc.Send($"Your backstab destroys {npc.Name}, killing them instantly!{Constants.NewLine}");
                                                     }
                                                     desc.Send($"You earn {npc.BaseExpAward} Exp and {npc.Stats.Gold} gold!{Constants.NewLine}");
-                                                    desc.Player.AddExp(npc.BaseExpAward, ref desc);
-                                                    desc.Player.AddGold(npc.Stats.Gold, ref desc);
+                                                    desc.Player.AddExp(npc.BaseExpAward);
+                                                    desc.Player.AddGold(npc.Stats.Gold);
                                                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                                                     if (localPlayers != null && localPlayers.Count > 1)
                                                     {
@@ -2067,11 +2069,13 @@ namespace Kingdoms_of_Etrea.Core
                                                         Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
                                                     }
                                                 }
-                                                var g = CombatManager.Instance.AddCombatSession(new CombatSession
+                                                var session = new CombatSessionNew
                                                 {
-                                                    Participants = participants
-                                                });
-                                                desc.Player.CombatSessionID = g;
+                                                    Participants = participants,
+                                                    SessionID = Guid.NewGuid(),
+                                                };
+                                                CombatManager.Instance.AddCombatSession(session);
+                                                desc.Player.CombatSessionID = session.SessionID;
                                                 desc.Player.Position = ActorPosition.Fighting;
                                             }
                                         }
@@ -2211,11 +2215,13 @@ namespace Kingdoms_of_Etrea.Core
                                                     Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
                                                 }
                                             }
-                                            var g = CombatManager.Instance.AddCombatSession(new CombatSession
+                                            var session = new CombatSessionNew
                                             {
-                                                Participants = participants
-                                            });
-                                            desc.Player.CombatSessionID = g;
+                                                Participants = participants,
+                                                SessionID = Guid.NewGuid(),
+                                            };
+                                            CombatManager.Instance.AddCombatSession(session);
+                                            desc.Player.CombatSessionID = session.SessionID;
                                             desc.Player.Position = ActorPosition.Fighting;
                                         }
                                     }
@@ -2762,8 +2768,8 @@ namespace Kingdoms_of_Etrea.Core
                                                 {
                                                     desc.Send($"Your {s.SpellName} deals lethal damage, killing {tNPC.Name}!{Constants.NewLine}");
                                                     desc.Send($"You have killed {tNPC.Name} and obtained {tNPC.BaseExpAward} Exp and {tNPC.Stats.Gold} gold!{Constants.NewLine}");
-                                                    desc.Player.AddExp(tNPC.BaseExpAward, ref desc);
-                                                    desc.Player.AddGold(tNPC.Stats.Gold, ref desc);
+                                                    desc.Player.AddExp(tNPC.BaseExpAward);
+                                                    desc.Player.AddGold(tNPC.Stats.Gold);
                                                     var pn = desc.Player.Name;
                                                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => !Regex.Match(x.Player.Name, pn, RegexOptions.IgnoreCase).Success).ToList();
                                                     if (localPlayers != null && localPlayers.Count > 0)
@@ -2825,11 +2831,13 @@ namespace Kingdoms_of_Etrea.Core
                                                                 Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
                                                             }
                                                         }
-                                                        var g = CombatManager.Instance.AddCombatSession(new CombatSession
+                                                        var session = new CombatSessionNew
                                                         {
-                                                            Participants = participants
-                                                        });
-                                                        desc.Player.CombatSessionID = g;
+                                                            Participants = participants,
+                                                            SessionID = Guid.NewGuid(),
+                                                        };
+                                                        CombatManager.Instance.AddCombatSession(session);
+                                                        desc.Player.CombatSessionID = session.SessionID;
                                                         desc.Player.Position = ActorPosition.Fighting;
                                                     }
                                                 }
@@ -2883,7 +2891,7 @@ namespace Kingdoms_of_Etrea.Core
                     desc.Player.Position = ActorPosition.Standing;
                     var rndExit = Helpers.GetRandomExit(desc.Player.CurrentRoom);
                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                    desc.Player.Move(desc.Player.CurrentRoom, rndExit.DestinationRoomID, false, ref desc);
+                    desc.Player.Move(desc.Player.CurrentRoom, rndExit.DestinationRoomID, false);
                     desc.Send($"The fight is too much and you flee towards the {rndExit.ExitDirection}...{Constants.NewLine}");
                     if (localPlayers != null && localPlayers.Count > 1)
                     {
@@ -2952,12 +2960,14 @@ namespace Kingdoms_of_Etrea.Core
                                 participants.Add((myFInit, myFollower, tFollower));
                                 participants.Add((tFInit, tFollower, myFollower));
                             }
-                            var g = CombatManager.Instance.AddCombatSession(new CombatSession
+                            var session = new CombatSessionNew
                             {
-                                Participants = participants
-                            });
-                            desc.Player.CombatSessionID = g;
-                            tPlayer.Player.CombatSessionID = g;
+                                Participants = participants,
+                                SessionID = Guid.NewGuid(),
+                            };
+                            CombatManager.Instance.AddCombatSession(session);
+                            desc.Player.CombatSessionID = session.SessionID;
+                            tPlayer.Player.CombatSessionID = session.SessionID;
                         }
                         else
                         {
@@ -2986,16 +2996,8 @@ namespace Kingdoms_of_Etrea.Core
             {
                 if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
                 {
-                    string target = string.Empty;
                     var verb = GetVerb(ref input).Trim();
-                    if(verb.Length == 1)
-                    {
-                        target = input.Remove(0, 1).Trim();
-                    }
-                    else
-                    {
-                        target = input.Replace(verb, string.Empty).Trim();
-                    }
+                    var target = input.Remove(0, verb.Length).Trim();
                     if (!string.IsNullOrEmpty(target))
                     {
                         var t = GetTargetNPC(ref desc, target);
@@ -3036,11 +3038,13 @@ namespace Kingdoms_of_Etrea.Core
                                         Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
                                     }
                                 }
-                                var g = CombatManager.Instance.AddCombatSession(new CombatSession
+                                var session = new CombatSessionNew
                                 {
-                                    Participants = participants
-                                });
-                                desc.Player.CombatSessionID = g;
+                                    Participants = participants,
+                                    SessionID = Guid.NewGuid(),
+                                };
+                                CombatManager.Instance.AddCombatSession(session);
+                                desc.Player.CombatSessionID = session.SessionID;
                                 desc.Player.Position = ActorPosition.Fighting;
                             }
                             else
@@ -3171,36 +3175,53 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        private static void ShowAllEmotes(ref Descriptor desc)
+        private static void ShowAllEmotes(ref Descriptor desc, ref string input)
         {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"  {new string('=', 77)}");
-            var emotes = EmoteManager.Instance.GetAllEmotes(string.Empty).OrderBy(x => x.EmoteName).ToList();
-            if(emotes != null && emotes.Count > 0)
+            var verb = GetVerb(ref input);
+            var line = input.Remove(0, verb.Length).Trim();
+            if(string.IsNullOrEmpty(line))
             {
-                int i = 0;
-                string l = "|| ";
-                for(int t = 0; t < emotes.Count; t++)
-                {
-                    l = $"{l}{emotes[t].EmoteName}{Constants.TabStop}{Constants.TabStop}";
-                    i++;
-                    if(i >= 5 && t < emotes.Count)
-                    {
-                        i = 0;
-                        sb.AppendLine(l.Trim());
-                        l = "|| ";
-                    }
-                    if(i == emotes.Count)
-                    {
-                        sb.AppendLine(l.Trim());
-                    }
-                }
+                // No input so show the list of configured emotes
+                StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"  {new string('=', 77)}");
-                desc.Send(sb.ToString());
+                var emotes = EmoteManager.Instance.GetAllEmotes(string.Empty).OrderBy(x => x.EmoteName).ToList();
+                if (emotes != null && emotes.Count > 0)
+                {
+                    int i = 0;
+                    string l = "|| ";
+                    for (int t = 0; t < emotes.Count; t++)
+                    {
+                        l = $"{l}{emotes[t].EmoteName}{Constants.TabStop}{Constants.TabStop}";
+                        i++;
+                        if (i >= 5 && t < emotes.Count)
+                        {
+                            i = 0;
+                            sb.AppendLine(l.Trim());
+                            l = "|| ";
+                        }
+                        if (i == emotes.Count)
+                        {
+                            sb.AppendLine(l.Trim());
+                        }
+                    }
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    desc.Send(sb.ToString());
+                }
+                else
+                {
+                    desc.Send($"No Emotes are currently in the game{Constants.NewLine}");
+                }
             }
             else
             {
-                desc.Send($"No Emotes are currently in the game{Constants.NewLine}");
+                desc.Send($"You {line}{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                var pName = desc.Player.Name;
+                foreach(var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pName)))
+                {
+                    var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel ? $"{pName} {line}{Constants.NewLine}" : $"Something {line}{Constants.NewLine}";
+                    lp.Send(msg);
+                }
             }
         }
 
@@ -3231,7 +3252,7 @@ namespace Kingdoms_of_Etrea.Core
                             }
                         }
                     }
-                    desc.Player.Move(desc.Player.CurrentRoom, Constants.PlayerStartRoom(), true, ref desc);
+                    desc.Player.Move(desc.Player.CurrentRoom, Constants.PlayerStartRoom(), true);
                     desc.Player.Stats.CurrentSP -= 5;
                     if (r.PlayersInRoom(r.RoomID) != null && r.PlayersInRoom(r.RoomID).Count > 1)
                     {
@@ -3893,7 +3914,7 @@ namespace Kingdoms_of_Etrea.Core
                             if (desc.Player.Stats.CurrentHP - result <= 0)
                             {
                                 desc.Send($"{i.Name} is toxic and burns its way through you, killing you!{Constants.NewLine}");
-                                desc.Player.Kill(ref desc);
+                                desc.Player.Kill();
                             }
                             else
                             {
@@ -5193,7 +5214,7 @@ namespace Kingdoms_of_Etrea.Core
                                 if(targetIsPlayer)
                                 {
                                     var p = SessionManager.Instance.GetPlayer((objTgt as Descriptor).Player.Name);
-                                    p.Player.Move(p.Player.CurrentRoom, newRID, false, ref p);
+                                    p.Player.Move(p.Player.CurrentRoom, newRID, false);
                                 }
                                 else
                                 {
@@ -6083,9 +6104,92 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
+        private static void DoPlayerAlias(ref Descriptor desc, ref string input)
+        {
+            var verb = GetVerb(ref input);
+            var line = input.Remove(0, verb.Length).Trim();
+            if(string.IsNullOrEmpty(line))
+            {
+                // show configured aliases
+                StringBuilder sb = new StringBuilder();
+                if(desc.Player.CommandAliases != null && desc.Player.CommandAliases.Count > 0)
+                {
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    sb.AppendLine($"|| Alias{Constants.TabStop}{Constants.TabStop}|| Command");
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    foreach (var alias in desc.Player.CommandAliases)
+                    {
+                        if(alias.Key.Length < 7)
+                        {
+                            sb.AppendLine($"|| {alias.Key}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {alias.Value}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"|| {alias.Key}{Constants.TabStop}{Constants.TabStop}|| {alias.Value}");
+                        }
+                    }
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    desc.Send(sb.ToString());
+                }
+                else
+                {
+                    desc.Send($"You haven't configured any aliases yet...{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                var tokens = TokeniseInput(ref line);
+                if(tokens.Length > 1)
+                {
+                    var operation = tokens[0].Trim().ToLower();
+                    switch(operation)
+                    {
+                        case "add":
+                        case "create":
+                            var alias = tokens[1].Trim().ToLower();
+                            var command = line.Remove(0, operation.Length).Trim().Remove(0, alias.Length).ToLower().Trim();
+                            if(!desc.Player.CommandAliases.ContainsKey(alias))
+                            {
+                                desc.Player.CommandAliases.Add(alias, command);
+                                desc.Send($"A new alias for '{alias}' has been created.{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                desc.Send($"You already have an alias configured for '{alias}', please remove this before adding a new one.{Constants.NewLine}");
+                            }
+                            break;
+
+                        case "remove":
+                        case "delete":
+                            alias = tokens[1].Trim().ToLower();
+                            if(desc.Player.CommandAliases.ContainsKey(alias))
+                            {
+                                desc.Player.CommandAliases.Remove(alias);
+                                desc.Send($"The alias '{alias}' has been successfully removed.{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                desc.Send($"No alias matching '{alias}' could be found to remove.{Constants.NewLine}");
+                            }
+                            break;
+
+                        default:
+                            desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                            break;
+                    }
+                }
+                else
+                {
+                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                }
+            }
+        }
+
         private static void ShowCharSheet(ref Descriptor desc)
         {
             StringBuilder sb = new StringBuilder();
+            string dmg = desc.Player.EquippedItems != null && desc.Player.EquippedItems.Weapon != null ? $"{desc.Player.EquippedItems.Weapon.NumberOfDamageDice}D{desc.Player.EquippedItems.Weapon.SizeOfDamageDice}"
+                : "1D2";
             sb.AppendLine($"  {new string('=', 77)}");
             sb.AppendLine($"|| Name: {desc.Player.Name}{Constants.TabStop}{Constants.TabStop}Gender: {desc.Player.Gender}{Constants.TabStop}Class: {desc.Player.Class}{Constants.TabStop}Race: {desc.Player.Race}");
             sb.AppendLine($"|| Level: {desc.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {desc.Player.Stats.Exp:N0}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(desc.Player.Level, desc.Player.Stats.Exp):N0}");
@@ -6097,7 +6201,7 @@ namespace Kingdoms_of_Etrea.Core
             sb.AppendLine($"|| INT: {desc.Player.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {desc.Player.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {desc.Player.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Charisma)})");
             sb.AppendLine($"|| ");
             sb.AppendLine($"|| Health  : {desc.Player.Stats.CurrentHP} / {desc.Player.Stats.MaxHP}{Constants.TabStop}Mana: {desc.Player.Stats.CurrentMP} / {desc.Player.Stats.MaxMP}");
-            sb.AppendLine($"|| Stamina : {desc.Player.Stats.CurrentSP} / {desc.Player.Stats.MaxSP}{Constants.TabStop}Attacks: {desc.Player.NumberOfAttacks}");
+            sb.AppendLine($"|| Stamina : {desc.Player.Stats.CurrentSP} / {desc.Player.Stats.MaxSP}{Constants.TabStop}Attacks: {desc.Player.NumberOfAttacks}{Constants.TabStop}Damage: {dmg}");
             sb.AppendLine($"|| Languages: {desc.Player.KnownLanguages}");
             sb.AppendLine($"  {new string('=', 77)}");
             desc.Send(sb.ToString());

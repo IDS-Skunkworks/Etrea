@@ -230,7 +230,7 @@ namespace Kingdoms_of_Etrea.Core
                 toAdd.NPCGuid = Guid.NewGuid();
 
                 var hp = Helpers.RollDice(toAdd.NumberOfHitDice, toAdd.SizeOfHitDice);
-                var mp = Helpers.RollDice(toAdd.NumberOfHitDice, 8);
+                var mp = Helpers.RollDice(toAdd.NumberOfHitDice, 10);
                 var hpModifier = ActorStats.CalculateAbilityModifier(toAdd.Stats.Constitution) * toAdd.NumberOfHitDice;
                 var mpModifier = ActorStats.CalculateAbilityModifier(toAdd.Stats.Intelligence) * toAdd.NumberOfHitDice;
                 var hpFinal = (hpModifier + hp) <= 0 ? 1 : hpModifier += hp;
@@ -271,7 +271,12 @@ namespace Kingdoms_of_Etrea.Core
         internal NPC GetHirelingNPC(ref Descriptor desc, string npcType)
         {
             NPC hireling = new NPC();
-            hireling.NumberOfAttacks = desc.Player.Level <= 5 ? desc.Player.Level : 5;
+            hireling.NumberOfAttacks = (uint)Math.Round((double)desc.Player.Level / 2, 0) <= 5 ? (uint)Math.Round((double)desc.Player.Level / 2, 0) : 5;
+            if(hireling.NumberOfAttacks < 1)
+            {
+                // Ensure hireling NPCs always have at least one attack per round
+                hireling.NumberOfAttacks = 1;
+            }
             hireling.NumberOfHitDice = desc.Player.Level;
             hireling.Skills = new List<Skills.Skill>();
             hireling.Spells = new List<Spells.Spell>();

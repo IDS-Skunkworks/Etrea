@@ -1114,6 +1114,10 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     p.VaultStore = new List<InventoryItem>(); // ensure the player's vault is intialised, if loading a player that was created before this feature was added
                 }
+                if(p.CommandAliases == null)
+                {
+                    p.CommandAliases = new Dictionary<string, string>();
+                }
                 p.PVP = false;
                 p.Type = ActorType.Player;
                 return p;

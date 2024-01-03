@@ -31,7 +31,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 var p = RoomManager.Instance.GetPlayersInRoom(r.RoomID).FirstOrDefault();
                                 if (p != null)
                                 {
-                                    if (!p.Player.Move(r.RoomID, Constants.LimboRID(), true, ref p))
+                                    if (!p.Player.Move(r.RoomID, Constants.LimboRID(), true))
                                     {
                                         okToDelete = false;
                                     }
@@ -111,8 +111,7 @@ namespace Kingdoms_of_Etrea.OLC
                     while(!okToReturn)
                     {
                         sb.Clear();
-                        sb.AppendLine($"Room ID: {r.RoomID}");
-                        sb.AppendLine($"Zone ID: {r.ZoneID}");
+                        sb.AppendLine($"Room ID: {r.RoomID}{Constants.TabStop}{Constants.TabStop}Zone ID: {r.ZoneID}");
                         sb.AppendLine($"Room Name: {r.RoomName}");
                         sb.AppendLine($"Short Description: {r.ShortDescription}");
                         sb.AppendLine($"Long Description: {r.LongDescription}");
@@ -172,23 +171,44 @@ namespace Kingdoms_of_Etrea.OLC
                         {
                             sb.AppendLine("Spawn Items: None");
                         }
+                        sb.AppendLine();
+                        if(r.SpawnNPCsAtTick != null && r.SpawnNPCsAtTick.Count > 0)
+                        {
+                            sb.AppendLine("Spawn NPCS:");
+                            foreach(var npc in r.SpawnNPCsAtTick)
+                            {
+                                var n = NPCManager.Instance.GetNPCByID(npc.Key);
+                                if(n != null)
+                                {
+                                    sb.AppendLine($"{npc.Value} x {n.Name}");
+                                }
+                                else
+                                {
+                                    sb.AppendLine($"{npc.Value} x {npc.Key}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            sb.AppendLine("Spawn NPC: None");
+                        }
                         sb.AppendLine("Options:");
                         sb.AppendLine($"1. Set Zone ID{Constants.TabStop}2. Set Room Name");
-                        sb.AppendLine("3. Set Short Description");
-                        sb.AppendLine("4. Set Long Description");
+                        sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                         sb.AppendLine($"5. Add Room Exit{Constants.TabStop}6. Remove Room Exit");
                         sb.AppendLine($"7. Add Spawn Item{Constants.TabStop}8. Remove Spawn Item");
-                        sb.AppendLine("9. Set Shop ID");
-                        sb.AppendLine($"10. Add Room Flag{Constants.TabStop}11. Remove Room Flag");
-                        sb.AppendLine($"12. Add NPC{Constants.TabStop}13. Remove NPC");
-                        sb.AppendLine("14. Save Room");
-                        sb.AppendLine("15. Exit without saving");
+                        sb.AppendLine($"9. Add Spawn NPC{Constants.TabStop}10. Remove Spawn NPC");
+                        sb.AppendLine("11. Set Shop ID");
+                        sb.AppendLine($"12. Add Room Flag{Constants.TabStop}13. Remove Room Flag");
+                        sb.AppendLine($"14. Add NPC{Constants.TabStop}15. Remove NPC");
+                        sb.AppendLine("16. Save Room");
+                        sb.AppendLine("17. Exit without saving");
                         sb.Append("Selection: ");
                         desc.Send(sb.ToString());
                         var choice = desc.Read().Trim();
                         if(Helpers.ValidateInput(choice) && uint.TryParse(choice, out uint option))
                         {
-                            if(option >= 1 && option <= 15)
+                            if(option >= 1 && option <= 17)
                             {
                                 switch(option)
                                 {
@@ -249,6 +269,33 @@ namespace Kingdoms_of_Etrea.OLC
                                         break;
 
                                     case 9:
+                                        i = GetAssetUintValue(ref desc, "Enter NPC ID: ");
+                                        if(r.SpawnNPCsAtTick.ContainsKey(i))
+                                        {
+                                            r.SpawnNPCsAtTick[i]++;
+                                        }
+                                        else
+                                        {
+                                            r.SpawnNPCsAtTick.Add(i, 1);
+                                        }
+                                        break;
+
+                                    case 10:
+                                        i = GetAssetUintValue(ref desc, "Enter NPC ID: ");
+                                        if (r.SpawnNPCsAtTick.ContainsKey(i))
+                                        {
+                                            if (r.SpawnNPCsAtTick[i] == 1)
+                                            {
+                                                r.SpawnNPCsAtTick.Remove(i);
+                                            }
+                                            else
+                                            {
+                                                r.SpawnNPCsAtTick[i]--;
+                                            }
+                                        }
+                                        break;
+
+                                    case 11:
                                         var sid = GetAssetUintValue(ref desc, "Enter Shop ID (0 to clear): ");
                                         if(sid > 0)
                                         {
@@ -260,7 +307,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 10:
+                                    case 12:
                                         var nf = GetAssetEnumValue<RoomFlags>(ref desc, "Enter Room Flag: ");
                                         if (nf != RoomFlags.None && !r.Flags.HasFlag(nf))
                                         {
@@ -268,7 +315,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 11:
+                                    case 13:
                                         var rf = GetAssetEnumValue<RoomFlags>(ref desc, "Enter Room Flag: ");
                                         if(rf != RoomFlags.None && r.Flags.HasFlag(rf))
                                         {
@@ -276,7 +323,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 12:
+                                    case 14:
                                         var nnpc = GetAssetUintValue(ref desc, "Enter NPC ID: ");
                                         if(r.SpawnNPCsAtStart == null)
                                         {
@@ -292,7 +339,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 13:
+                                    case 15:
                                         var rnpc = GetAssetUintValue(ref desc, "Enter NPC ID: ");
                                         if(r.SpawnNPCsAtStart.ContainsKey(rnpc))
                                         {
@@ -307,7 +354,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 14:
+                                    case 16:
                                         if(ValidateRoomAsset(ref desc, ref r, false))
                                         {
                                             if(DatabaseManager.UpdateRoom(ref desc, ref r))
@@ -326,7 +373,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 15:
+                                    case 17:
                                         okToReturn = true;
                                         break;
                                 }
@@ -370,8 +417,7 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Room ID: {newRoom.RoomID}");
-                sb.AppendLine($"Zone ID: {newRoom.ZoneID}");
+                sb.AppendLine($"Room ID: {newRoom.RoomID}{Constants.TabStop}Zone ID: {newRoom.ZoneID}");
                 sb.AppendLine($"Room Name: {newRoom.RoomName}");
                 sb.AppendLine($"Short Description: {newRoom.ShortDescription}");
                 sb.AppendLine($"Long Description: {newRoom.LongDescription}");
@@ -432,24 +478,44 @@ namespace Kingdoms_of_Etrea.OLC
                     sb.AppendLine("Spawn Item: None");
                 }
                 sb.AppendLine();
+                if(newRoom.SpawnNPCsAtTick != null && newRoom.SpawnNPCsAtTick.Count > 0)
+                {
+                    sb.AppendLine("Spawn NPCS:");
+                    foreach(var npc in newRoom.SpawnNPCsAtTick)
+                    {
+                        var n = NPCManager.Instance.GetNPCByID(npc.Key);
+                        if(n != null)
+                        {
+                            sb.AppendLine($"{npc.Value} x {n.Name}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"{npc.Value} x {npc.Key}");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine("Spawn NPCs: None");
+                }
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Room ID{Constants.TabStop}2. Set Zone ID");
-                sb.AppendLine("3. Set Room Name");
-                sb.AppendLine("4. Set Short Description");
+                sb.AppendLine($"3. Set Room Name{Constants.TabStop}4. Set Short Description");
                 sb.AppendLine("5. Set Long Description");
                 sb.AppendLine($"6. Add Room Exit{Constants.TabStop}7. Remove Room Exit");
                 sb.AppendLine($"8. Add Spawn Item{Constants.TabStop}9. Remove Spawn Item");
-                sb.AppendLine("10. Set Shop ID");
-                sb.AppendLine($"11. Add Room Flag{Constants.TabStop}12. Remove Room Flag");
-                sb.AppendLine($"13. Add NPC{Constants.TabStop}14. Remove NPC");
-                sb.AppendLine("15. Save Room");
-                sb.AppendLine("16. Exit without saving");
+                sb.AppendLine($"10. Add Spawn NPC{Constants.TabStop}11. Remove Spawn NPC");
+                sb.AppendLine("12. Set Shop ID");
+                sb.AppendLine($"13. Add Room Flag{Constants.TabStop}14. Remove Room Flag");
+                sb.AppendLine($"15. Add NPC{Constants.TabStop}16. Remove NPC");
+                sb.AppendLine("17. Save Room");
+                sb.AppendLine("18. Exit without saving");
                 sb.AppendLine("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if(result >= 1 && result <= 16)
+                    if(result >= 1 && result <= 18)
                     {
                         switch(result)
                         {
@@ -514,6 +580,33 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 10:
+                                i = GetAssetUintValue(ref desc, "Enter NPC ID: ");
+                                if (newRoom.SpawnNPCsAtTick.ContainsKey(i))
+                                {
+                                    newRoom.SpawnNPCsAtTick[i]++;
+                                }
+                                else
+                                {
+                                    newRoom.SpawnNPCsAtTick.Add(i, 1);
+                                }
+                                break;
+
+                            case 11:
+                                i = GetAssetUintValue(ref desc, "Enter NPC ID: ");
+                                if (newRoom.SpawnNPCsAtTick.ContainsKey(i))
+                                {
+                                    if (newRoom.SpawnNPCsAtTick[i] == 1)
+                                    {
+                                        newRoom.SpawnNPCsAtTick.Remove(i);
+                                    }
+                                    else
+                                    {
+                                        newRoom.SpawnNPCsAtTick[i]--;
+                                    }
+                                }
+                                break;
+
+                            case 12:
                                 var sid = GetAssetUintValue(ref desc, "Enter Shop ID (0 to clear): ");
                                 if (sid > 0)
                                 {
@@ -525,7 +618,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 11:
+                            case 13:
                                 var nf = GetAssetEnumValue<RoomFlags>(ref desc, "Enter Room Flag: ");
                                 if(nf != RoomFlags.None && !newRoom.Flags.HasFlag(nf))
                                 {
@@ -537,7 +630,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 12:
+                            case 14:
                                 var rf = GetAssetEnumValue<RoomFlags>(ref desc, "Enter Room Flag: ");
                                 if(rf != RoomFlags.None && newRoom.Flags.HasFlag(rf))
                                 {
@@ -545,7 +638,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 13:
+                            case 15:
                                 var nnpc = GetAssetUintValue(ref desc, "Enter NPC ID: ");
                                 if(newRoom.SpawnNPCsAtStart.ContainsKey(nnpc))
                                 {
@@ -557,7 +650,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 14:
+                            case 16:
                                 var rnpc = GetAssetUintValue(ref desc, "Enter NPC ID: ");
                                 if(newRoom.SpawnNPCsAtStart.ContainsKey(rnpc))
                                 {
@@ -572,7 +665,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 15:
+                            case 17:
                                 if(ValidateRoomAsset(ref desc, ref newRoom, true))
                                 {
                                     if(DatabaseManager.AddNewRoom(ref desc, newRoom))
@@ -594,7 +687,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 16:
+                            case 18:
                                 okToReturn = true;
                                 break;
                         }

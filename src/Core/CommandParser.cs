@@ -15,6 +15,10 @@ namespace Kingdoms_of_Etrea.Core
             switch(GetVerb(ref input).ToLower())
             {
                 #region MiscCommands
+                case "alias":
+                    DoPlayerAlias(ref desc, ref input);
+                    break;
+
                 case "lang":
                 case "language":
                     PlayerLanguages(ref desc, ref input);
@@ -57,7 +61,7 @@ namespace Kingdoms_of_Etrea.Core
 
                 case "emote":
                 case "emotes":
-                    ShowAllEmotes(ref desc);
+                    ShowAllEmotes(ref desc, ref input);
                     break;
 
                 case "showrolls":
@@ -465,14 +469,24 @@ namespace Kingdoms_of_Etrea.Core
                 default:
                     if(input.Length > 1)
                     {
-                        var emote = EmoteManager.Instance.GetEmoteByName(GetVerb(ref input));
-                        if (emote != null)
+                        var verb = GetVerb(ref input);
+                        if(desc.Player.CommandAliases.ContainsKey(verb))
                         {
-                            DoEmote(ref desc, ref input, emote);
+                            var command = desc.Player.CommandAliases[verb];
+                            var line = input.Remove(0, verb.Length).Trim();
+                            ParseCommand(ref desc, $"{command} {line}");
                         }
                         else
                         {
-                            desc.Send($"Sorry, I didn't understand that.{Constants.NewLine}");
+                            var emote = EmoteManager.Instance.GetEmoteByName(GetVerb(ref input));
+                            if (emote != null)
+                            {
+                                DoEmote(ref desc, ref input, emote);
+                            }
+                            else
+                            {
+                                desc.Send($"Sorry, I didn't understand that.{Constants.NewLine}");
+                            }
                         }
                     }
                     else

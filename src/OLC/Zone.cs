@@ -40,7 +40,7 @@ namespace Kingdoms_of_Etrea.OLC
                                             var p = RoomManager.Instance.GetPlayersInRoom(r).FirstOrDefault();
                                             if(p != null)
                                             {
-                                                if(!p.Player.Move(r, Constants.LimboRID(), true, ref p))
+                                                if(!p.Player.Move(r, Constants.LimboRID(), true))
                                                 {
                                                     OK = false;
                                                 }

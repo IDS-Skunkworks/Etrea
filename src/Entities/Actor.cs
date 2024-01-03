@@ -346,6 +346,7 @@ namespace Kingdoms_of_Etrea.Entities
         internal uint AppearsInZone { get; set; }
         internal Guid FollowingPlayer { get; set; }
         internal Guid NPCGuid { get; set; }
+        internal bool IsFollower => FollowingPlayer != Guid.Empty;
 
         internal NPC()
         {
@@ -482,9 +483,10 @@ namespace Kingdoms_of_Etrea.Entities
                 var localPlayers = RoomManager.Instance.GetPlayersInRoom(CurrentRoom);
                 if(localPlayers != null && localPlayers.Count > 0)
                 {
+                    var article = Helpers.IsCharAVowel(Name[0]) ? "An" : "A";
                     foreach(var lp in localPlayers)
                     {
-                        lp.Send($"The {Name} drops some items before being swallowed by the Winds of Magic!{Constants.NewLine}");
+                        lp.Send($"{article} {Name} drops some items before their corpse is swallowed by the Winds of Magic!{Constants.NewLine}");
                     }
                 }
             }
@@ -508,6 +510,8 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal uint BankBalance { get; set; }
         [JsonProperty]
+        internal Dictionary<string,string> CommandAliases { get; set; }
+        [JsonProperty]
         internal Languages KnownLanguages { get; set; }
         [JsonProperty]
         internal Languages SpokenLanguage { get; set; }
@@ -515,15 +519,14 @@ namespace Kingdoms_of_Etrea.Entities
         internal bool PVP;
         internal uint IdleTicks { get; set; }
 
-        internal virtual bool Move(uint fromRoomId, uint destRoomId, bool wasTeleported, ref Descriptor desc, bool bypassStamCheck = false)
+        internal virtual bool Move(uint fromRoomId, uint destRoomId, bool wasTeleported, /*ref Descriptor desc,*/ bool bypassStamCheck = false)
         {
-            // TODO: Ensure we properly reduce stamina: 1 point per room, +1d4 if either the current or target room has the HardTerrain flag
             try
             {
                 var targetRoom = RoomManager.Instance.GetRoom(destRoomId);
                 if (targetRoom == null)
                 {
-                    desc.Send("Some mysterious force pushes you back... You cannot go that way!");
+                    SessionManager.Instance.GetPlayer(Name).Send("Some mysterious force pushes you back... You cannot go that way!");
                     return true;
                 }
                 else
@@ -539,31 +542,32 @@ namespace Kingdoms_of_Etrea.Entities
                         {
                             stamCost += Helpers.RollDice(1, 4);
                         }
-                        if (desc.Player.Stats.CurrentSP < stamCost)
+                        if (this.Stats.CurrentSP < stamCost)
                         {
-                            desc.Send($"You don't have the energy to move that far just now...{Constants.NewLine}");
+                            SessionManager.Instance.GetPlayer(Name).Send($"You don't have the energy to move that far just now...{Constants.NewLine}");
                             return true;
                         }
-                        desc.Player.Stats.CurrentSP -= stamCost;
+                        this.Stats.CurrentSP -= stamCost;
                     }
-                    RoomManager.Instance.UpdatePlayersInRoom(fromRoomId, ref desc, true, wasTeleported, false, false);   // Player leaving a room
-                    RoomManager.Instance.UpdatePlayersInRoom(destRoomId, ref desc, false, wasTeleported, false, false);  // Player arriving in a room
-                    if(desc.Player.FollowerID != Guid.Empty)
+                    var pDesc = SessionManager.Instance.GetPlayer(Name);
+                    RoomManager.Instance.UpdatePlayersInRoom(fromRoomId, ref pDesc, true, wasTeleported, false, false);   // Player leaving a room
+                    RoomManager.Instance.UpdatePlayersInRoom(destRoomId, ref pDesc, false, wasTeleported, false, false);  // Player arriving in a room
+                    if(this.FollowerID != Guid.Empty)
                     {
-                        var n = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                        var n = NPCManager.Instance.GetNPCByGUID(this.FollowerID);
                         if (n != null)
                         {
                             n.Move(ref n, fromRoomId, destRoomId, false);
                         }
                         else
                         {
-                            desc.Player.FollowerID = Guid.Empty;
+                            this.FollowerID = Guid.Empty;
                         }
                     }
                     CurrentRoom = destRoomId;
                     RoomManager.Instance.ProcessEnvironmentBuffs(fromRoomId);
                     RoomManager.Instance.ProcessEnvironmentBuffs(destRoomId);
-                    Room.DescribeRoom(ref desc, true);
+                    Room.DescribeRoom(ref pDesc, true);
                 }
                 return true;
             }
@@ -584,7 +588,7 @@ namespace Kingdoms_of_Etrea.Entities
             return false;
         }
 
-        internal void Kill(ref Descriptor descriptor)
+        internal void Kill(/*ref Descriptor descriptor*/)
         {
             Stats.CurrentHP = 0;
             if (Buffs != null && Buffs.Count > 0)
@@ -599,39 +603,43 @@ namespace Kingdoms_of_Etrea.Entities
             CombatSessionID = Guid.Empty;
             uint xpLost = Stats.Exp > 3 ? Convert.ToUInt32(Stats.Exp * 0.1) : 0;
             Stats.Exp -= xpLost;
-            uint gp = descriptor.Player.Stats.Gold;
-            RoomManager.Instance.AddGoldToRoom(descriptor.Player.CurrentRoom, gp);
-            descriptor.Player.Stats.Gold = 0;
+            //uint gp = descriptor.Player.Stats.Gold;
+            uint gp = this.Stats.Gold;
+            //RoomManager.Instance.AddGoldToRoom(descriptor.Player.CurrentRoom, gp);
+            RoomManager.Instance.AddGoldToRoom(this.CurrentRoom, gp);
+            //descriptor.Player.Stats.Gold = 0;
+            this.Stats.Gold = 0;
             RoomManager.Instance.GetRoom(CurrentRoom).ItemsInRoom.AddRange(Inventory);
             Inventory.Clear();
-            Move(descriptor.Player.CurrentRoom, Constants.LimboRID(), true, ref descriptor);
+            //Move(descriptor.Player.CurrentRoom, Constants.LimboRID(), true, ref descriptor);
+            Move(this.CurrentRoom, Constants.LimboRID(), true, true);
         }
 
-        internal void AddGold(uint gp, ref Descriptor desc)
+        internal void AddGold(uint gp/*, ref Descriptor desc*/)
         {
             uint totalGP = gp;
             if(HasSkill("Gold Digger"))
             {
                 uint bonusGP = Convert.ToUInt32(gp * 0.5);
-                desc.Send($"Your skills allow you to find an extra {bonusGP} gold!{Constants.NewLine}");
+                SessionManager.Instance.GetPlayer(Name).Send($"Your skills allow you to find an extra {bonusGP} gold!{Constants.NewLine}");
                 totalGP += bonusGP;
             }
             Stats.Gold += totalGP;
         }
 
-        internal void AddExp(uint xp, ref Descriptor desc)
+        internal void AddExp(uint xp/*, ref Descriptor desc*/)
         {
             Stats.Exp += xp;
             if(Race == ActorRace.Human)
             {
                 uint bonusXP = Convert.ToUInt32(xp * 0.25);
-                desc.Send($"Your Human nature grants you a bonus of {bonusXP} Exp!{Constants.NewLine}");
+                SessionManager.Instance.GetPlayer(Name).Send($"Your Human nature grants you a bonus of {bonusXP} Exp!{Constants.NewLine}");
                 Stats.Exp += bonusXP;
             }
             if(HasSkill("Quick Learner"))
             {
                 uint bonusXP = Convert.ToUInt32(xp * 0.25);
-                desc.Send($"Your skills grant you a bonus of {bonusXP} Exp!{Constants.NewLine}");
+                SessionManager.Instance.GetPlayer(Name).Send($"Your skills grant you a bonus of {bonusXP} Exp!{Constants.NewLine}");
                 Stats.Exp += bonusXP;
             }
             if(LevelTable.HasCharAchievedNewLevel(Stats.Exp, Level, out uint newLevel))

@@ -29,12 +29,14 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal bool IsTwoHanded { get; set; }
         [JsonProperty]
+        internal bool IsFinesseWeapon { get; set; }
+        [JsonProperty]
         internal bool IsMonsterItem { get; set; }
-        internal bool IsRanged
+        internal bool IsFinesse
         {
             get
             {
-                return BaseWeaponType == WeaponType.Bow || BaseWeaponType == WeaponType.Crossbow;
+                return BaseWeaponType == WeaponType.Bow || BaseWeaponType == WeaponType.Crossbow || IsFinesseWeapon;
             }
         }
         [JsonProperty]

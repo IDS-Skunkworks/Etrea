@@ -209,7 +209,7 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             var tCurrentRID = target.Player.CurrentRoom;
                             target.Send($"{desc.Player.Name} has transported you elsewhere!{Constants.NewLine}");
-                            target.Player.Move(tCurrentRID, tRid, true, ref target, true);
+                            target.Player.Move(tCurrentRID, tRid, true, true);
                             Game.LogMessage($"INFO: Player {desc.Player.Name} transferred player {target.Player.Name} to RID {tRid}", LogLevel.Info, true);
                         }
                         else
@@ -1745,7 +1745,7 @@ namespace Kingdoms_of_Etrea.Core
                             var msg = desc.Player.Visible ? $"{Constants.NewLine}The universe swirls as {desc.Player.Name} yanks you through the fabric of reality...{Constants.NewLine}" :
                                 $"{Constants.NewLine}The universe swirls as something yanks you through the fabric of reality...{Constants.NewLine}";
                             p.Send(msg);
-                            p.Player.Move(p.Player.CurrentRoom, desc.Player.CurrentRoom, true, ref p, true);
+                            p.Player.Move(p.Player.CurrentRoom, desc.Player.CurrentRoom, true, true);
                         }
                         else
                         {
@@ -1782,7 +1782,7 @@ namespace Kingdoms_of_Etrea.Core
                         if (RoomManager.Instance.RoomExists(targetRID))
                         {
                             var currentRID = desc.Player.CurrentRoom;
-                            desc.Player.Move(currentRID, targetRID, true, ref desc, true);
+                            desc.Player.Move(currentRID, targetRID, true, true);
                         }
                         else
                         {
@@ -1795,7 +1795,7 @@ namespace Kingdoms_of_Etrea.Core
                         var p = SessionManager.Instance.GetPlayer(target);
                         if (p != null)
                         {
-                            desc.Player.Move(desc.Player.CurrentRoom, p.Player.CurrentRoom, true, ref desc, true);
+                            desc.Player.Move(desc.Player.CurrentRoom, p.Player.CurrentRoom, true, true);
                         }
                         else
                         {
@@ -1932,7 +1932,7 @@ namespace Kingdoms_of_Etrea.Core
                                 }
                                 targetPlayer.Send($"You feel the gaze of {desc.Player.Name} upon you as your life ebbs away...{Constants.NewLine}");
                                 targetPlayer.Player.Stats.CurrentHP = 0;
-                                targetPlayer.Player.Kill(ref targetPlayer);
+                                targetPlayer.Player.Kill();
                             }
                             else
                             {

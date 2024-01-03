@@ -52,6 +52,7 @@ namespace Kingdoms_of_Etrea.Core
             p.KnownRecipes = new List<Crafting.Recipe>();
             p.CompletedQuests = new HashSet<Guid>();
             p.ActiveQuests = new List<Quest>();
+            p.CommandAliases = new Dictionary<string, string>();
             p.KnownLanguages |= Languages.Common;
             p.SpokenLanguage = Languages.Common;
             p.NumberOfAttacks = 1;

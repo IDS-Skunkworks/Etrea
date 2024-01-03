@@ -532,7 +532,7 @@ namespace Kingdoms_of_Etrea.Core
                     for (int i = 0; i < playersToKill.Count; i++)
                     {
                         var p = playersToKill[i];
-                        p.Player.Kill(ref p);
+                        p.Player.Kill();
                     }
                 }
                 playersToKill.Clear();
@@ -828,11 +828,13 @@ namespace Kingdoms_of_Etrea.Core
                                         (myInit, tp, npc.Value),
                                         (mobInit, npc.Value, tp)
                                     };
-                                    var g = CombatManager.Instance.AddCombatSession(new CombatSession
+                                    var session = new CombatSessionNew
                                     {
-                                        Participants = participants
-                                    });
-                                    tp.Player.CombatSessionID = g;
+                                        Participants = participants,
+                                        SessionID = Guid.NewGuid(),
+                                    };
+                                    CombatManager.Instance.AddCombatSession(session);
+                                    tp.Player.CombatSessionID = session.SessionID;
                                     tp.Player.Position = ActorPosition.Fighting;
                                     tp.Send($"{npc.Value.Name} launches an attack on you!{Constants.NewLine}");
                                     _logProvider.LogMessage($"INFO: NPC {npc.Value.Name} starting combat session with {tp.Player.Name} in room {npc.Value.CurrentRoom}", LogLevel.Info, true);
@@ -927,18 +929,11 @@ namespace Kingdoms_of_Etrea.Core
 
         private void PulseCombat()
         {
+            // TODO: Needs updating to deal with the new combat processor
             List<Guid> CompletedCombatSessions = new List<Guid>();
             if(CombatManager.Instance.GetCombatQueue().Count > 0)
             {
-                var combats = CombatManager.Instance.GetCombatQueue();
-                foreach (var combat in combats)
-                {
-                    CombatManager.Instance.ProcessCombatRound(combat.Value, combat.Key, out bool combatOver);
-                    if(combatOver)
-                    {
-                        CompletedCombatSessions.Add(combat.Key);
-                    }
-                }
+                CombatManager.Instance.ProcessCombatQueue(out CompletedCombatSessions);
                 if(CompletedCombatSessions.Count > 0)
                 {
                     foreach(var s in CompletedCombatSessions)
@@ -946,6 +941,23 @@ namespace Kingdoms_of_Etrea.Core
                         CombatManager.Instance.RemoveCombatSession(s);
                     }
                 }
+                //var combats = CombatManager.Instance.GetCombatQueue();
+                //foreach (var combat in combats)
+                //{
+                //    CombatManager.Instance.ProcessCombatQueue()
+                //    CombatManager.Instance.ProcessCombatRound(combat.Value, combat.Key, out bool combatOver);
+                //    if(combatOver)
+                //    {
+                //        CompletedCombatSessions.Add(combat.Key);
+                //    }
+                //}
+                //if(CompletedCombatSessions.Count > 0)
+                //{
+                //    foreach(var s in CompletedCombatSessions)
+                //    {
+                //        CombatManager.Instance.RemoveCombatSession(s);
+                //    }
+                //}
             }
             CompletedCombatSessions.Clear();
         }

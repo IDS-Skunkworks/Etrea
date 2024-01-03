@@ -7,6 +7,7 @@ namespace Kingdoms_of_Etrea.OLC
 {
     internal static partial class OLC
     {
+        // TODO: Add support for modifying the Finesse flag on a weapon
         #region Menus
         private static void EditExistingItem(ref Descriptor desc)
         {
@@ -67,12 +68,9 @@ namespace Kingdoms_of_Etrea.OLC
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("An item can be anything from a piece of equipment to a scroll, potion or");
                 sb.AppendLine("just a piece of junk. Please select the type of item you wish to create:");
-                sb.AppendLine("1. Junk");
-                sb.AppendLine("2. Weapon");
-                sb.AppendLine("3. Armour");
-                sb.AppendLine("4. Ring");
-                sb.AppendLine("5. Scroll");
-                sb.AppendLine("6. Potion");
+                sb.AppendLine($"1. Junk{Constants.TabStop}2. Weapon");
+                sb.AppendLine($"3. Armour{Constants.TabStop}4. Ring");
+                sb.AppendLine($"5. Scroll{Constants.TabStop}6. Potion");
                 sb.AppendLine("7. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
@@ -143,8 +141,7 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newPotion.Id}");
-                sb.AppendLine($"Item Name: {newPotion.Name}");
+                sb.AppendLine($"Item ID: {newPotion.Id}{Constants.TabStop}Item Name: {newPotion.Name}");
                 sb.AppendLine($"Short Description: {newPotion.ShortDescription}");
                 sb.AppendLine($"Long Description: {newPotion.LongDescription}");
                 sb.AppendLine($"Value: {newPotion.BaseValue}{Constants.TabStop}{Constants.TabStop}Potion Effect: {newPotion.PotionEffect}");
@@ -154,8 +151,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
-                sb.AppendLine("3. Set Short Description");
-                sb.AppendLine("4. Set Long Description");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                 sb.AppendLine($"5. Set Value{Constants.TabStop}6. Set Potion Effect");
                 sb.AppendLine($"7. Set Number of Damage Dice{Constants.TabStop}8. Set Size of Damage Dice");
                 sb.AppendLine("9. Toggle Magical flag");
@@ -288,8 +284,7 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newScroll.Id}");
-                sb.AppendLine($"Item Name: {newScroll.Name}");
+                sb.AppendLine($"Item ID: {newScroll.Id}{Constants.TabStop}Item Name: {newScroll.Name}");
                 sb.AppendLine($"Short Description: {newScroll.ShortDescription}");
                 sb.AppendLine($"Long Description: {newScroll.LongDescription}");
                 sb.AppendLine($"Value: {newScroll.BaseValue}");
@@ -297,8 +292,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
-                sb.AppendLine("3. Set Short Description");
-                sb.AppendLine("4. Set Long Description");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                 sb.AppendLine("5. Set Spell");
                 sb.AppendLine($"6. Save Scroll{Constants.TabStop}7. Exit Without Saving");
                 sb.Append("Selection: ");
@@ -390,21 +384,17 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newRing.Id}");
-                sb.AppendLine($"Item Name: {newRing.Name}");
+                sb.AppendLine($"Item ID: {newRing.Id}{Constants.TabStop}Item Name: {newRing.Name}");
                 sb.AppendLine($"Short Description: {newRing.ShortDescription}");
                 sb.AppendLine($"Long Description: {newRing.LongDescription}");
-                sb.AppendLine($"Value: {newRing.BaseValue}");
-                sb.AppendLine($"Armour Class modifier: {newRing.ArmourClassModifier}");
+                sb.AppendLine($"Value: {newRing.BaseValue}{Constants.TabStop}Armour Class Modifier: {newRing.ArmourClassModifier}");
                 sb.AppendLine($"Hit Bonus: {newRing.HitModifier}{Constants.TabStop}Damage Bonus: {newRing.DamageModifier}");
                 sb.AppendLine($"Is Magical?: {newRing.IsMagical}{Constants.TabStop}Monster Only?: {newRing.IsMonsterItem}");
                 sb.AppendLine($"Buffs: {string.Join(", ", newRing.AppliedBuffs)}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item ID");
-                sb.AppendLine("2. Set Item Name");
-                sb.AppendLine("3. Set Short Description");
-                sb.AppendLine("4. Set Long Description");
+                sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                 sb.AppendLine($"5. Set Value{Constants.TabStop}6. Set Armour Class Modifier");
                 sb.AppendLine($"7. Set Hit Bonus{Constants.TabStop}8. Set Damage Bonus");
                 sb.AppendLine($"9. Toggle Magical flag{Constants.TabStop}10. Toggle Monster Only flag");
@@ -546,8 +536,7 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newArmour.Id}");
-                sb.AppendLine($"Item Name: {newArmour.Name}");
+                sb.AppendLine($"Item ID: {newArmour.Id}{Constants.TabStop}Item Name: {newArmour.Name}");
                 sb.AppendLine($"Short Description: {newArmour.ShortDescription}");
                 sb.AppendLine($"Long Description: {newArmour.LongDescription}");
                 sb.AppendLine($"Value: {newArmour.BaseValue}{Constants.TabStop}Armour Class Modifier: {newArmour.ArmourClassModifier}");
@@ -557,10 +546,8 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Monster Only?: {newArmour.IsMonsterItem}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item ID");
-                sb.AppendLine("2. Set Item Name");
-                sb.AppendLine("3. Set Short Description");
-                sb.AppendLine("4. Set Long Description");
+                sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                 sb.AppendLine($"5. Set value{Constants.TabStop}6. Set Armour Class Modifier");
                 sb.AppendLine($"7. Toggle Magical flag{Constants.NewLine}8. Set Armour Type");
                 sb.AppendLine($"9. Set Equip Slot{Constants.TabStop}10. Set Required Skill");
@@ -711,13 +698,11 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newWeapon.Id}");
-                sb.AppendLine($"Item Name: {newWeapon.Name}");
+                sb.AppendLine($"Item ID: {newWeapon.Id}{Constants.TabStop}Item Name: {newWeapon.Name}");
                 sb.AppendLine($"Short Description: {newWeapon.ShortDescription}");
                 sb.AppendLine($"Long Description: {newWeapon.LongDescription}");
                 sb.AppendLine($"Value: {newWeapon.BaseValue}");
-                sb.AppendLine($"No. of Damage Dice: {newWeapon.NumberOfDamageDice}");
-                sb.AppendLine($"Size of Damage Dice: {newWeapon.SizeOfDamageDice}");
+                sb.AppendLine($"No. of Damage Dice: {newWeapon.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {newWeapon.SizeOfDamageDice}");
                 sb.AppendLine($"Hit Bonus: {newWeapon.HitModifier}{Constants.TabStop}Damage Bonus: {newWeapon.DamageModifier}");
                 sb.AppendLine($"Is Magical?: {newWeapon.IsMagical}{Constants.TabStop}Two-Handed: {newWeapon.IsTwoHanded}");
                 sb.AppendLine($"Weapon Type: {newWeapon.BaseWeaponType}{Constants.TabStop}Required Skill: {newWeapon.RequiredSkill}");
@@ -725,10 +710,8 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Monster Only?: {newWeapon.IsMonsterItem}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item ID");
-                sb.AppendLine("2. Set Item Name");
-                sb.AppendLine("3. Set Short Description");
-                sb.AppendLine("4. Set Long Description");
+                sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                 sb.AppendLine("5. Set value");
                 sb.AppendLine($"6. Set number of damage dice{Constants.TabStop}7. Set Size of Damage Dice");
                 sb.AppendLine($"8. Set hit bonus{Constants.TabStop}9. Set Damage Bonus");
@@ -887,17 +870,14 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newItem.Id}");
-                sb.AppendLine($"Item Name: {newItem.Name}");
+                sb.AppendLine($"Item ID: {newItem.Id}{Constants.TabStop}Item Name: {newItem.Name}");
                 sb.AppendLine($"Short Description: {newItem.ShortDescription}");
                 sb.AppendLine($"Long Description: {newItem.LongDescription}");
                 sb.AppendLine($"Value: {newItem.BaseValue}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item ID");
-                sb.AppendLine("2. Set Item Name");
-                sb.AppendLine("3. Set Short Description");
-                sb.AppendLine("4. Set Long Description");
+                sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                 sb.AppendLine("5. Set Value");
                 sb.AppendLine("6. Save Item");
                 sb.AppendLine("7. Exit without saving");
@@ -982,8 +962,7 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {s.Id}");
-                sb.AppendLine($"Item Name: {s.Name}");
+                sb.AppendLine($"Item ID: {s.Id}{Constants.TabStop}2. Item Name: {s.Name}");
                 sb.AppendLine($"Short Description: {s.ShortDescription}");
                 sb.AppendLine($"Long Description: {s.LongDescription}");
                 sb.AppendLine($"Value: {s.BaseValue}");
@@ -991,8 +970,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine("1. Set Item Name");
-                sb.AppendLine("2. Set Short Description");
-                sb.AppendLine("3. Set Long Description");
+                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
                 sb.AppendLine("4. Set Spell");
                 sb.AppendLine("5. Save Scroll");
                 sb.AppendLine("6. Exit Without Saving");
@@ -1074,16 +1052,14 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {j.Id}");
-                sb.AppendLine($"Item Name: {j.Name}");
+                sb.AppendLine($"Item ID: {j.Id}{Constants.TabStop}Item Name: {j.Name}");
                 sb.AppendLine($"Short Description: {j.ShortDescription}");
                 sb.AppendLine($"Long Description: {j.LongDescription}");
                 sb.AppendLine($"Value: {j.BaseValue}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine("1. Set Item Name");
-                sb.AppendLine("2. Set Short Description");
-                sb.AppendLine("3. Set Long Description");
+                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
                 sb.AppendLine("4. Set Value");
                 sb.AppendLine("5. Save Item");
                 sb.AppendLine("6. Exit without saving");
@@ -1159,38 +1135,35 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {w.Id}");
-                sb.AppendLine($"Item Name: {w.Name}");
+                sb.AppendLine($"Item ID: {w.Id}{Constants.TabStop}Item Name: {w.Name}");
                 sb.AppendLine($"Short Description: {w.ShortDescription}");
                 sb.AppendLine($"Long Description: {w.LongDescription}");
                 sb.AppendLine($"Value: {w.BaseValue}");
-                sb.AppendLine($"No. of Damage Dice: {w.NumberOfDamageDice}");
-                sb.AppendLine($"Size of Damage Dice: {w.SizeOfDamageDice}");
+                sb.AppendLine($"No. of Damage Dice: {w.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {w.SizeOfDamageDice}");
                 sb.AppendLine($"Hit Bonus: {w.HitModifier}{Constants.TabStop}Damage Bonus: {w.DamageModifier}");
                 sb.AppendLine($"Is Magical?: {w.IsMagical}{Constants.TabStop}Two-Handed: {w.IsTwoHanded}");
                 sb.AppendLine($"Weapon Type: {w.BaseWeaponType}{Constants.TabStop}Required Skill: {w.RequiredSkill}");
+                sb.AppendLine($"Finesse Weapon?: {w.IsFinesseWeapon}");
                 sb.AppendLine($"Buffs: {string.Join(", ", w.AppliedBuffs)}");
                 sb.AppendLine($"Monster Only?: {w.IsMonsterItem}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine("1. Set Item Name");
-                sb.AppendLine("2. Set Short Description");
-                sb.AppendLine("3. Set Long Description");
-                sb.AppendLine("4. Set value");
+                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description{Constants.TabStop}4. Set Value");
                 sb.AppendLine($"5. Set number of damage dice{Constants.TabStop}6. Set Size of Damage Dice");
                 sb.AppendLine($"7. Set hit bonus{Constants.TabStop}8. Set Damage Bonus");
                 sb.AppendLine($"9. Toggle Magical flag{Constants.TabStop}10. Toggle Two-Handed");
                 sb.AppendLine($"11. Set Weapon Type{Constants.TabStop}12. Set Required Skill");
                 sb.AppendLine($"13. Add Buff{Constants.TabStop}14. Remove Buff");
-                sb.AppendLine("15. Toggle Monster Only flag");
-                sb.AppendLine("16. Save Weapon");
-                sb.AppendLine("17. Exit without saving");
+                sb.AppendLine($"15. Toggle Monster Only flag{Constants.TabStop}16. Toggle Finesse flag");
+                sb.AppendLine("17. Save Weapon");
+                sb.AppendLine("18. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if(result >= 1 && result <= 17)
+                    if(result >= 1 && result <= 18)
                     {
                         switch(result)
                         {
@@ -1275,6 +1248,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 16:
+                                w.IsFinesseWeapon = !w.IsFinesseWeapon;
+                                break;
+
+                            case 17:
                                 if (ValidateWeaponItem(ref desc, ref w, false))
                                 {
                                     if (DatabaseManager.UpdateItemByID(ref desc, ref w))
@@ -1296,7 +1273,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 17:
+                            case 18:
                                 okToReturn = true;
                                 break;
                         }
@@ -1321,8 +1298,7 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {a.Id}");
-                sb.AppendLine($"Item Name: {a.Name}");
+                sb.AppendLine($"Item ID: {a.Id}{Constants.TabStop}Item Name: {a.Name}");
                 sb.AppendLine($"Short Description: {a.ShortDescription}");
                 sb.AppendLine($"Long Description: {a.LongDescription}");
                 sb.AppendLine($"Value: {a.BaseValue}{Constants.TabStop}Armour Class Modifier: {a.ArmourClassModifier}");
@@ -1333,8 +1309,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine("1. Set Item Name");
-                sb.AppendLine("2. Set Short Description");
-                sb.AppendLine("3. Set Long Description");
+                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
                 sb.AppendLine($"4. Set value{Constants.TabStop}5. Set Armour Class Modifier");
                 sb.AppendLine($"6. Toggle Magical flag{Constants.TabStop}7. Set Armour Type");
                 sb.AppendLine($"8. Set Required Skill{Constants.TabStop}9. Set Equip Slot");
@@ -1466,20 +1441,17 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {p.Id}");
-                sb.AppendLine($"Item Name: {p.Name}");
+                sb.AppendLine($"Item ID: {p.Id}{Constants.TabStop}Item Name: {p.Name}");
                 sb.AppendLine($"Short Description: {p.ShortDescription}");
                 sb.AppendLine($"Long Description: {p.LongDescription}");
-                sb.AppendLine($"Value: {p.BaseValue}");
-                sb.AppendLine($"Potion Effect: {p.PotionEffect}");
+                sb.AppendLine($"Value: {p.BaseValue}{Constants.TabStop}Potion Effect: {p.PotionEffect}");
                 sb.AppendLine($"Number of Damage Dice: {p.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {p.SizeOfDamageDice}");
                 sb.AppendLine($"Is Magical?: {p.IsMagical}");
                 sb.AppendLine($"Buffs: {string.Join(", ", p.AppliedBuffs)}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine("1. Set Item Name");
-                sb.AppendLine("2. Set Short Description");
-                sb.AppendLine("3. Set Long Description");
+                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
                 sb.AppendLine($"4. Set Value{Constants.TabStop}5. Set Potion Effect");
                 sb.AppendLine($"6. Set Number of Damage Dice{Constants.TabStop}7. Set Size of Damage Dice");
                 sb.AppendLine("8. Toggle Magical flag");
@@ -1598,8 +1570,7 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {r.Id}");
-                sb.AppendLine($"Item Name: {r.Name}");
+                sb.AppendLine($"Item ID: {r.Id}{Constants.TabStop}Item Name: {r.Name}");
                 sb.AppendLine($"Short Description: {r.ShortDescription}");
                 sb.AppendLine($"Long Description: {r.LongDescription}");
                 sb.AppendLine($"Value: {r.BaseValue}{Constants.TabStop}Armour Class Modifier: {r.ArmourClassModifier}");
@@ -1610,8 +1581,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine("1. Set Item Name");
-                sb.AppendLine("2. Set Short Description");
-                sb.AppendLine("3. Set Long Description");
+                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
                 sb.AppendLine($"4. Set Value{Constants.TabStop}5. Set Armour Class Modifier");
                 sb.AppendLine($"6. Set Hit Bonus{Constants.TabStop}7. Set Damage Bonus");
                 sb.AppendLine("8. Toggle Magical flag");
