@@ -321,7 +321,7 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        internal bool AddGoldToRoom(uint rid, uint gp)
+        internal bool AddGoldToRoom(uint rid, ulong gp)
         {
             try
             {
@@ -338,7 +338,7 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        internal bool GetGoldFromRoom(uint rid, uint gp)
+        internal bool GetGoldFromRoom(uint rid, ulong gp)
         {
             try
             {

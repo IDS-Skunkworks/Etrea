@@ -246,6 +246,13 @@ namespace Kingdoms_of_Etrea.Entities
                 Description = "Allows crafting of Scribing recipes",
                 MPCost = 0,
                 GoldToLearn = 20000
+            },
+            new Skill
+            {
+                Name = "Cooking",
+                Description = "Allows the prepartion of food and drinks",
+                MPCost = 0,
+                GoldToLearn = 10000
             }
         };
 

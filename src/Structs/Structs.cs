@@ -83,7 +83,7 @@ namespace Kingdoms_of_Etrea
         [JsonProperty]
         internal uint ArmourClass { get; set; }
         [JsonProperty]
-        internal uint Gold { get; set; }
+        internal ulong Gold { get; set; }
         [JsonProperty]
         internal uint Level { get; set; }
         [JsonProperty]

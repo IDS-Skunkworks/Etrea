@@ -281,7 +281,7 @@ namespace Kingdoms_of_Etrea.Core
             var connectedPlayers = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected).ToList();
             foreach (var player in connectedPlayers)
             {
-                if(player.Player.CombatSessionID == Guid.Empty)
+                if(!player.Player.IsInCombat)
                 {
                     // only process basic regen on players that are alive and not fighting
                     if(player.Player.Position != ActorPosition.Dead && !RoomManager.Instance.GetRoom(player.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoHealing))
@@ -359,7 +359,7 @@ namespace Kingdoms_of_Etrea.Core
                             }
                             if(player.Player.Stats.CurrentSP + regen > player.Player.Stats.MaxSP)
                             {
-                                SessionManager.Instance.GetPlayerByGUID(player.Id).Player.Stats.CurrentSP = player.Player.Stats.CurrentSP;
+                                SessionManager.Instance.GetPlayerByGUID(player.Id).Player.Stats.CurrentSP = player.Player.Stats.MaxSP;
                             }
                             else
                             {
@@ -373,7 +373,7 @@ namespace Kingdoms_of_Etrea.Core
             var npcs = NPCManager.Instance.GetAllNPCIDS();
             foreach(var npc in npcs)
             {
-                if(!CombatManager.Instance.IsNPCInCombat(npc.Key) || npc.Value.BehaviourFlags.HasFlag(NPCFlags.Regen))
+                if(CombatManager.Instance.GetCombatSessionsForCombattant(npc.Key).Count() == 0 || npc.Value.BehaviourFlags.HasFlag(NPCFlags.Regen))
                 {
                     // only regen NPCs that are not in combat unless they have the regen behaviour flag
                     if(npc.Value.Stats.CurrentHP < npc.Value.Stats.MaxHP)
@@ -719,7 +719,7 @@ namespace Kingdoms_of_Etrea.Core
                             if(n != null)
                             {
                                 // only move the NPC if it isn't in an active combat session
-                                if(!CombatManager.Instance.IsNPCInCombat(npc.Key))
+                                if(CombatManager.Instance.GetCombatSessionsForCombattant(npc.Key).Count() == 0)
                                 {
                                     var roomExits = RoomManager.Instance.GetRoom(n.CurrentRoom).RoomExits;
                                     if (roomExits != null && roomExits.Count > 0)
@@ -762,7 +762,7 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         // npc is a sentinel scavenger so see if there are items to take in the room
                         var pickupChance = Helpers.RollDice(1, 100);
-                        if(pickupChance <= 33 && !CombatManager.Instance.IsNPCInCombat(npc.Key))
+                        if(pickupChance <= 33 && CombatManager.Instance.GetCombatSessionsForCombattant(npc.Key).Count() == 0)
                         {
                             var items = RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).ItemsInRoom;
                             if (items != null && items.Count > 0)
@@ -786,7 +786,7 @@ namespace Kingdoms_of_Etrea.Core
                         var gp = RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).GoldInRoom;
                         if (RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).GoldInRoom > 0)
                         {
-                            if (goldPickupChance <= 33 && !CombatManager.Instance.IsNPCInCombat(npc.Key))
+                            if (goldPickupChance <= 33 && CombatManager.Instance.GetCombatSessionsForCombattant(npc.Key).Count() == 0)
                             {
                                 npc.Value.Stats.Gold += gp;
                                 RoomManager.Instance.GetGoldFromRoom(npc.Value.CurrentRoom, gp);
@@ -806,7 +806,7 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     // NPC has the hostile flag, so look to see if it is in a room where it can start a fight, if so, start the fight
                     // if not, do something based off another flag or skip its turn
-                    if(!CombatManager.Instance.IsNPCInCombat(npc.Key))
+                    if(CombatManager.Instance.GetCombatSessionsForCombattant(npc.Key).Count() == 0)
                     {
                         bool startFight = false;
                         if (!RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
@@ -819,22 +819,18 @@ namespace Kingdoms_of_Etrea.Core
                                 if (tp.Player.Visible && !tp.Player.IsInCombat)
                                 {
                                     startFight = true;
-                                    var myInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(tp.Player.Stats.Dexterity));
-                                    var mobInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(npc.Value.Stats.Dexterity));
-                                    myInit = tp.Player.HasSkill("Awareness") ? myInit += 4 : myInit;
-                                    mobInit = npc.Value.HasSkill("Awareness") ? mobInit += 4 : mobInit;
-                                    var participants = new List<(uint Initiative, dynamic Participant, dynamic Target)>
+                                    var mSession = new CombatSessionNew(npc.Value, tp, npc.Key, tp.Id);
+                                    var pSession = new CombatSessionNew(tp, npc.Value, tp.Id, npc.Key);
+                                    CombatManager.Instance.AddCombatSession(mSession);
+                                    CombatManager.Instance.AddCombatSession(pSession);
+                                    if(tp.Player.FollowerID != Guid.Empty)
                                     {
-                                        (myInit, tp, npc.Value),
-                                        (mobInit, npc.Value, tp)
-                                    };
-                                    var session = new CombatSessionNew
-                                    {
-                                        Participants = participants,
-                                        SessionID = Guid.NewGuid(),
-                                    };
-                                    CombatManager.Instance.AddCombatSession(session);
-                                    tp.Player.CombatSessionID = session.SessionID;
+                                        var follower = NPCManager.Instance.GetNPCByGUID(tp.Player.FollowerID);
+                                        var mfSession = new CombatSessionNew(npc.Value, follower, npc.Key, follower.NPCGuid);
+                                        var fSession = new CombatSessionNew(follower, npc.Value, follower.NPCGuid, npc.Key);
+                                        CombatManager.Instance.AddCombatSession(mfSession);
+                                        CombatManager.Instance.AddCombatSession(fSession);
+                                    }
                                     tp.Player.Position = ActorPosition.Fighting;
                                     tp.Send($"{npc.Value.Name} launches an attack on you!{Constants.NewLine}");
                                     _logProvider.LogMessage($"INFO: NPC {npc.Value.Name} starting combat session with {tp.Player.Name} in room {npc.Value.CurrentRoom}", LogLevel.Info, true);
@@ -874,7 +870,7 @@ namespace Kingdoms_of_Etrea.Core
                                 var n = NPCManager.Instance.GetNPCByGUID(npc.Key);
                                 if(n != null)
                                 {
-                                    if(!CombatManager.Instance.IsNPCInCombat(npc.Key))
+                                    if(CombatManager.Instance.GetCombatSessionsForCombattant(npc.Key).Count() == 0)
                                     {
                                         var roomExits = RoomManager.Instance.GetRoom(n.CurrentRoom).RoomExits;
                                         if(roomExits != null && roomExits.Count > 0)
@@ -901,7 +897,7 @@ namespace Kingdoms_of_Etrea.Core
                             if(npc.Value.BehaviourFlags.HasFlag(NPCFlags.Scavenger))
                             {
                                 var pickupChance = Helpers.RollDice(1, 100);
-                                if (pickupChance <= 33 && !CombatManager.Instance.IsNPCInCombat(npc.Key))
+                                if (pickupChance <= 33 && CombatManager.Instance.GetCombatSessionsForCombattant(npc.Key).Count() == 0)
                                 {
                                     var items = RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).ItemsInRoom;
                                     if (items != null && items.Count > 0)

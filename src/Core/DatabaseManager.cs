@@ -11,6 +11,59 @@ namespace Kingdoms_of_Etrea.Core
         private static readonly string worldDBPath = $"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world")}\\world.db";
         private static readonly string playerDBPath = $"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world")}\\players.db";
 
+        #region Config
+        internal static bool SetMOTD(ref Descriptor desc, string msg)
+        {
+            string cs = $"URI=file:{worldDBPath}";
+            try
+            {
+                using (var con = new SQLiteConnection(cs))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "UPDATE tblMudOptions SET OptionValue = @m WHERE OptionName = 'MOTD';";
+                        cmd.Parameters.Add(new SQLiteParameter("@m", msg));
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                return true;
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"ERROR: Player {desc.Player} encountered an error updating the MOTD: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        internal static string GetMOTD()
+        {
+            string cs = $"URI=file:{worldDBPath}";
+            string result = string.Empty;
+            try
+            {
+                using (var con = new SQLiteConnection(cs))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "SELECT OptionValue FROM tblMudOptions WHERE OptionName = 'MOTD';";
+                        result = cmd.ExecuteScalar().ToString();
+                    }
+                    con.Close();
+                }
+                return result;
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error getting MOTD value from World Database: {ex.Message}", LogLevel.Error, true);
+                return string.Empty;
+            }
+        }
+        #endregion
+
         #region Quests
         internal static bool IsQuestIDInUse(ref Descriptor desc, uint id)
         {
@@ -1097,10 +1150,6 @@ namespace Kingdoms_of_Etrea.Core
                 if(p.NumberOfAttacks == 0)
                 {
                     p.NumberOfAttacks = 1; // ensure the player always has at least one attack
-                }
-                if(p.CombatSessionID != Guid.Empty)
-                {
-                    p.CombatSessionID = Guid.Empty; // if the player somehow saved with a combat session active, clear this to avoid confusing CombatManager
                 }
                 if(p.CompletedQuests == null)
                 {

@@ -1770,11 +1770,11 @@ namespace Kingdoms_of_Etrea.OLC
                 }
                 else
                 {
-                    if(p.PotionEffect == PotionEffect.Healing || p.PotionEffect == PotionEffect.Poison)
+                    if(p.PotionEffect.HasFlag(PotionEffect.Healing) || p.PotionEffect.HasFlag(PotionEffect.SPHealing) || p.PotionEffect.HasFlag(PotionEffect.MPHealing) || p.PotionEffect.HasFlag(PotionEffect.Poison))
                     {
                         if(p.NumberOfDamageDice == 0 || p.SizeOfDamageDice == 0)
                         {
-                            desc.Send($"If a Potion poisons or heals it needs to have damage dice{Constants.NewLine}");
+                            desc.Send($"If a Potion heals or poisons it needs to have damage dice{Constants.NewLine}");
                             isValid = false;
                         }
                     }

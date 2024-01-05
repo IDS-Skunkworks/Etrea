@@ -57,6 +57,22 @@ namespace Kingdoms_of_Etrea.Core
                         _desc.Send($"The world has shifted and the Gods have transported you to Limbo for safe keeping!{Constants.NewLine}");
                     }
                     RoomManager.Instance.ProcessEnvironmentBuffs(pStartRoom);
+                    var motd = DatabaseManager.GetMOTD();
+                    if (!string.IsNullOrEmpty(motd))
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.AppendLine($"  {new string('=', 77)}");
+                        sb.AppendLine($"|| Message Of The Day:");
+                        foreach (var line in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                        {
+                            if (!string.IsNullOrEmpty(line))
+                            {
+                                sb.AppendLine($"|| {line}");
+                            }
+                        }
+                        sb.AppendLine($"  {new string('=', 77)}{Constants.NewLine}");
+                        _desc.Send(sb.ToString());
+                    }
                     Room.DescribeRoom(ref _desc);
                     first = false;
                 }

@@ -110,6 +110,12 @@ namespace Kingdoms_of_Etrea.Entities
                 BuffName = "Poison",
                 Description = "Toxins course through your body causing damage over time",
                 BuffDuration = 6
+            },
+            new Buff
+            {
+                BuffName = "Silence",
+                Description = "You are silenced and cannot use magic",
+                BuffDuration = 4
             }
         };
 

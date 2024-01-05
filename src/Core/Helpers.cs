@@ -190,6 +190,17 @@ namespace Kingdoms_of_Etrea.Core
             return exitList[n];
         }
 
+        internal static IEnumerable<PotionEffect> GetPotionFlags(PotionEffect potionFlags)
+        {
+            foreach(PotionEffect pEffect in Enum.GetValues(typeof(PotionEffect)))
+            {
+                if (potionFlags.HasFlag(pEffect) && potionFlags != PotionEffect.None)
+                {
+                    yield return pEffect;
+                }
+            }
+        }
+
         internal static uint GetNewSalePrice(ref Descriptor desc, uint basePrice)
         {
             var charismaModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Charisma);
@@ -324,6 +335,45 @@ namespace Kingdoms_of_Etrea.Core
                 }
             }
             return body.ToString();
+        }
+
+        internal static string GetNewMOTD(ref Descriptor desc)
+        {
+            uint row = 1;
+            StringBuilder longDesc = new StringBuilder();
+            bool valid = false;
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("Enter a Message Of The Day (MOTD). This should be no more than 30 lines long and each");
+            sb.AppendLine("line should be no longer than 80 characters.");
+            sb.AppendLine("Enter END on a new line to finish editing.");
+            sb.AppendLine($"{new string('=', 80)}");
+            desc.Send(sb.ToString());
+            while (!valid)
+            {
+                desc.Send($"[{row}] ");
+                var input = desc.Read().Trim();
+                if (ValidateInput(input) && input.Length <= 80)
+                {
+                    if (input.ToUpper() == "END" && row >= 2)
+                    {
+                        valid = true;
+                    }
+                    else
+                    {
+                        longDesc.AppendLine(input);
+                        row++;
+                        if (row > 30)
+                        {
+                            valid = true;
+                        }
+                    }
+                }
+                else
+                {
+                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                }
+            }
+            return longDesc.ToString();
         }
 
         internal static string GetLongDescription(ref Descriptor desc)

@@ -46,7 +46,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 10000
             },
 
@@ -84,7 +84,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 6000
             },
             new Spell
@@ -96,7 +96,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 10000
             },
             new Spell
@@ -108,7 +108,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 10000
             },
             new Spell
@@ -132,7 +132,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 8000
             },
             new Spell
@@ -144,7 +144,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 8000
             },
             new Spell
@@ -156,7 +156,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 8000
             },
             new Spell
@@ -168,7 +168,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 8000
             },
             new Spell
@@ -180,7 +180,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 8000
             },
             new Spell
@@ -192,7 +192,7 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 0,
                 SizeOfDamageDice = 0,
                 AutoHitTarget = true,
-                RequiresTarget = false,
+                RequiresTarget = true,
                 GoldToLearn = 8000
             },
             new Spell
@@ -336,6 +336,18 @@ namespace Kingdoms_of_Etrea.Entities
                 NumOfDamageDice = 1,
                 SizeOfDamageDice = 6,
                 AutoHitTarget = false,
+                RequiresTarget = true,
+                GoldToLearn = 12000
+            },
+            new Spell
+            {
+                SpellName = "Silence",
+                Description = "Magically silence a target to stop them using magic",
+                SpellType = SpellType.Debuff,
+                MPCost = 20,
+                NumOfDamageDice = 0,
+                SizeOfDamageDice = 0,
+                AutoHitTarget = true,
                 RequiresTarget = true,
                 GoldToLearn = 12000
             }

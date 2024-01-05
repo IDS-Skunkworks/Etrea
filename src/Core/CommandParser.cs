@@ -233,6 +233,8 @@ namespace Kingdoms_of_Etrea.Core
 
                 case "drink":
                 case "quoff":
+                case "eat":
+                case "consume":
                     DrinkPotion(ref desc, ref input);
                     break;
 
@@ -333,6 +335,18 @@ namespace Kingdoms_of_Etrea.Core
 
                 // IMM only commands
                 #region ImmOnlyCommands
+                case "motd":
+                    MOTD(ref desc, ref input);
+                    break;
+
+                case "givelang":
+                    GivePlayerLanguage(ref desc, ref input);
+                    break;
+
+                case "removelang":
+                    RemovePlayerLanguage(ref desc, ref input);
+                    break;
+
                 case "connection":
                 case "connections":
                     GetCurrentConnections(ref desc);
@@ -538,7 +552,7 @@ namespace Kingdoms_of_Etrea.Core
             Regex rx = new Regex("\"(.*?)\"");
             if(rx.Match(input).Success)
             {
-                return rx.Match(input).Groups[1].Value;
+                return rx.Match(input).Groups[1].Value.Trim();
             }
             return string.Empty;
         }

@@ -1,8 +1,6 @@
 ﻿using Kingdoms_of_Etrea.Entities;
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -28,7 +26,6 @@ namespace Kingdoms_of_Etrea.Core
             else
             {
                 var lang = ParseEnumValue<Languages>(ref line);
-                Game.LogMessage($"Player {desc.Player.Name} attempting to change language to '{line}'", LogLevel.Debug, true);
                 if(desc.Player.KnownLanguages.HasFlag(lang))
                 {
                     desc.Player.SpokenLanguage = lang;
@@ -1918,13 +1915,14 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
                         {
-                            var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
+                            var verb = GetVerb(ref input);
+                            var target = input.Remove(0, verb.Length).Trim();
                             if (!string.IsNullOrEmpty(target))
                             {
                                 var npc = GetTargetNPC(ref desc, target);
                                 if (npc != null)
                                 {
-                                    if(!npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack) && !CombatManager.Instance.IsNPCInCombat(npc.NPCGuid))
+                                    if(!npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack) && !npc.IsNPCInCombat)
                                     {
                                         if(desc.Player.Stats.CurrentMP >= Skills.GetSkill("Backstab").MPCost)
                                         {
@@ -1960,7 +1958,6 @@ namespace Kingdoms_of_Etrea.Core
                                                 {
                                                     damRoll *= 4;
                                                 }
-                                                desc.Player.Visible = true;
                                                 if (damRoll >= npc.Stats.CurrentHP)
                                                 {
                                                     if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
@@ -2041,27 +2038,19 @@ namespace Kingdoms_of_Etrea.Core
                                                     desc.Player.Visible = true;
                                                     desc.Send($"You shimmer and become visible again.{Constants.NewLine}");
                                                 }
-                                                var myInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                                var mobInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity));
-                                                myInit = desc.Player.HasSkill("Awareness") ? myInit += 4 : myInit;
-                                                mobInit = npc.HasSkill("Awareness") ? mobInit += 4 : mobInit;
-                                                var participants = new List<(uint Initiative, dynamic Participant, dynamic Target)>
-                                                {
-                                                    (myInit, desc, npc),
-                                                    (mobInit, npc, desc)
-                                                };
+                                                var pSession = new CombatSessionNew(desc, npc, desc.Id, npc.NPCGuid);
+                                                var mSession = new CombatSessionNew(npc, desc, npc.NPCGuid, desc.Id);
+                                                CombatManager.Instance.AddCombatSession(pSession);
+                                                CombatManager.Instance.AddCombatSession(mSession);
                                                 if(desc.Player.FollowerID != Guid.Empty)
                                                 {
                                                     var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
                                                     if (f != null)
                                                     {
-                                                        var followerInit = Helpers.RollDice(1, 20);
-                                                        if (ActorStats.CalculateAbilityModifier(f.Stats.Dexterity) > 0)
-                                                        {
-                                                            followerInit += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(f.Stats.Dexterity));
-                                                        }
-                                                        participants.Add((followerInit, f, npc));
-                                                        participants.Add((mobInit, npc, f));
+                                                        var fSession = new CombatSessionNew(f, npc, f.NPCGuid, npc.NPCGuid);
+                                                        var nfSession = new CombatSessionNew(npc, f, npc.NPCGuid, f.NPCGuid);
+                                                        CombatManager.Instance.AddCombatSession(fSession);
+                                                        CombatManager.Instance.AddCombatSession(nfSession);
                                                     }
                                                     else
                                                     {
@@ -2069,13 +2058,6 @@ namespace Kingdoms_of_Etrea.Core
                                                         Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
                                                     }
                                                 }
-                                                var session = new CombatSessionNew
-                                                {
-                                                    Participants = participants,
-                                                    SessionID = Guid.NewGuid(),
-                                                };
-                                                CombatManager.Instance.AddCombatSession(session);
-                                                desc.Player.CombatSessionID = session.SessionID;
                                                 desc.Player.Position = ActorPosition.Fighting;
                                             }
                                         }
@@ -2134,9 +2116,10 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             if(!npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
                             {
-                                if (npc.Inventory != null && npc.Inventory.Count > 0)
+                                if(desc.Player.Stats.CurrentMP >= Skills.GetSkill("Pickpocket").MPCost)
                                 {
-                                    if(desc.Player.Stats.CurrentMP >= Skills.GetSkill("Pickpocket").MPCost)
+                                    desc.Player.Stats.CurrentMP -= (int)Skills.GetSkill("Pickpocket").MPCost;
+                                    if (npc.Inventory != null && npc.Inventory.Count > 0)
                                     {
                                         var skillRoll = Helpers.RollDice(1, 20);
                                         var modSkillRoll = skillRoll;
@@ -2169,7 +2152,7 @@ namespace Kingdoms_of_Etrea.Core
                                             if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
                                             {
                                                 desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
-                                                
+
                                             }
                                             desc.Send($"You successfully steal {item.Name} from {npc.Name}!{Constants.NewLine}");
                                         }
@@ -2180,60 +2163,139 @@ namespace Kingdoms_of_Etrea.Core
                                             {
                                                 desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
                                             }
-                                            desc.Send($"You failed to steal an item and have been noticed!{Constants.NewLine}");
-                                            if (!desc.Player.Visible)
+                                            if (skillRoll == 1)
                                             {
-                                                desc.Send($"You become visible again.{Constants.NewLine}");
-                                                desc.Player.Visible = true;
-                                            }
-                                            desc.Send($"{npc.Name} notices you trying to steal from them and attacks!{Constants.NewLine}");
-                                            var myInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                            var mobInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity));
-                                            myInit = desc.Player.HasSkill("Awareness") ? myInit += 4 : myInit;
-                                            mobInit = npc.HasSkill("Awareness") ? mobInit += 4 : mobInit;
-                                            var participants = new List<(uint Initiative, dynamic Participant, dynamic Target)>
-                                            {
-                                                (myInit, desc, npc),
-                                                (mobInit, npc, desc)
-                                            };
-                                            if(desc.Player.FollowerID != Guid.Empty)
-                                            {
-                                                var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                if (f != null)
+                                                desc.Send($"You failed to steal an item and have been noticed!{Constants.NewLine}");
+                                                if (!desc.Player.Visible)
                                                 {
-                                                    var followerInit = Helpers.RollDice(1, 20);
-                                                    if (ActorStats.CalculateAbilityModifier(f.Stats.Dexterity) > 0)
+                                                    desc.Send($"You become visible again.{Constants.NewLine}");
+                                                    desc.Player.Visible = true;
+                                                }
+                                                desc.Send($"{npc.Name} notices you trying to steal from them and attacks!{Constants.NewLine}");
+                                                var pSession = new CombatSessionNew(desc, npc, desc.Id, npc.NPCGuid);
+                                                var mSession = new CombatSessionNew(npc, desc, npc.NPCGuid, desc.Id);
+                                                CombatManager.Instance.AddCombatSession(pSession);
+                                                CombatManager.Instance.AddCombatSession(mSession);
+                                                if (desc.Player.FollowerID != Guid.Empty)
+                                                {
+                                                    var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                    if (f != null)
                                                     {
-                                                        followerInit += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(f.Stats.Dexterity));
+                                                        var fSession = new CombatSessionNew(f, npc, f.NPCGuid, npc.NPCGuid);
+                                                        var mfSession = new CombatSessionNew(npc, f, npc.NPCGuid, f.NPCGuid);
+                                                        CombatManager.Instance.AddCombatSession(fSession);
+                                                        CombatManager.Instance.AddCombatSession(mfSession);
                                                     }
-                                                    participants.Add((followerInit, f, npc));
-                                                    participants.Add((mobInit, npc, f));
+                                                    else
+                                                    {
+                                                        desc.Player.FollowerID = Guid.Empty;
+                                                        Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
+                                                    }
                                                 }
-                                                else
-                                                {
-                                                    desc.Player.FollowerID = Guid.Empty;
-                                                    Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
-                                                }
+                                                desc.Player.Position = ActorPosition.Fighting;
                                             }
-                                            var session = new CombatSessionNew
+                                            else
                                             {
-                                                Participants = participants,
-                                                SessionID = Guid.NewGuid(),
-                                            };
-                                            CombatManager.Instance.AddCombatSession(session);
-                                            desc.Player.CombatSessionID = session.SessionID;
-                                            desc.Player.Position = ActorPosition.Fighting;
+                                                // we failed but haven't been noticed by the NPC so inform player but don't start combat
+                                                desc.Send($"Lucky! {npc.Name} didn't spot you trying to steal from them!{Constants.NewLine}");
+                                            }
                                         }
                                     }
                                     else
                                     {
-                                        desc.Send($"You don't have enough MP to use that skill!{Constants.NewLine}");
+                                        // TODO: If the NPC isn't carrying any items, try and take their gold instead
+                                        if (npc.Stats.Gold > 0)
+                                        {
+                                            var skillRoll = Helpers.RollDice(1, 20);
+                                            var modSkillRoll = skillRoll;
+                                            if (ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity) > 0)
+                                            {
+                                                modSkillRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
+                                            }
+                                            if (!desc.Player.Visible)
+                                            {
+                                                // bonus if the player is not visible
+                                                modSkillRoll += 4;
+                                            }
+                                            var npcRoll = Helpers.RollDice(1, 20);
+                                            var modNpcRoll = npcRoll;
+                                            if (ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity) > 0)
+                                            {
+                                                modSkillRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity));
+                                            }
+                                            bool success = false;
+                                            if (skillRoll == 20 || modSkillRoll > modNpcRoll)
+                                            {
+                                                success = true;
+                                            }
+                                            if (success)
+                                            {
+                                                var gp = npc.Stats.Gold;
+                                                NPCManager.Instance.GetNPCByGUID(npc.NPCGuid).Stats.Gold = 0;
+                                                desc.Player.Stats.Gold += gp;
+                                                if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
+                                                {
+                                                    desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
+
+                                                }
+                                                desc.Send($"You successfully steal {gp} gold from {npc.Name}!{Constants.NewLine}");
+                                            }
+                                            else
+                                            {
+                                                // player failed to steal, so make them visible (if necessary) and start a fight with the target NPC
+                                                if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
+                                                {
+                                                    desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
+                                                }
+                                                if (skillRoll == 1)
+                                                {
+                                                    desc.Send($"You failed to steal an item and have been noticed!{Constants.NewLine}");
+                                                    if (!desc.Player.Visible)
+                                                    {
+                                                        desc.Send($"You become visible again.{Constants.NewLine}");
+                                                        desc.Player.Visible = true;
+                                                    }
+                                                    desc.Send($"{npc.Name} notices you trying to steal from them and attacks!{Constants.NewLine}");
+                                                    var pSession = new CombatSessionNew(desc, npc, desc.Id, npc.NPCGuid);
+                                                    var mSession = new CombatSessionNew(npc, desc, npc.NPCGuid, desc.Id);
+                                                    CombatManager.Instance.AddCombatSession(pSession);
+                                                    CombatManager.Instance.AddCombatSession(mSession);
+                                                    if (desc.Player.FollowerID != Guid.Empty)
+                                                    {
+                                                        var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                        if (f != null)
+                                                        {
+                                                            var fSession = new CombatSessionNew(f, npc, f.NPCGuid, npc.NPCGuid);
+                                                            var mfSession = new CombatSessionNew(npc, f, npc.NPCGuid, f.NPCGuid);
+                                                            CombatManager.Instance.AddCombatSession(fSession);
+                                                            CombatManager.Instance.AddCombatSession(mfSession);
+                                                        }
+                                                        else
+                                                        {
+                                                            desc.Player.FollowerID = Guid.Empty;
+                                                            Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
+                                                        }
+                                                    }
+                                                    desc.Player.Position = ActorPosition.Fighting;
+                                                }
+                                                else
+                                                {
+                                                    // we failed but haven't been noticed by the NPC so inform player but don't start combat
+                                                    desc.Send($"Lucky! {npc.Name} didn't spot you trying to steal from them!{Constants.NewLine}");
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"{npc.Name} isn't carrying anything you can steal...{Constants.NewLine}");
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    desc.Send($"{npc.Name} isn't carrying anything you can steal...{Constants.NewLine}");
+                                    desc.Send($"You don't have enough MP to use that skill1{Constants.NewLine}");
                                 }
+                                
                             }
                             else
                             {
@@ -2302,6 +2364,10 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "hp":
                     case "mp":
+                    case "health":
+                    case "mana":
+                    case "stamina":
+                    case "sp":
                         cost = 20000;
                         break;
 
@@ -2352,6 +2418,7 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case "hp":
+                        case "health":
                             switch(desc.Player.Class)
                             {
                                 case ActorClass.Wizard:
@@ -2389,6 +2456,7 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case "mp":
+                        case "mana":
                             switch (desc.Player.Class)
                             {
                                 case ActorClass.Wizard:
@@ -2423,6 +2491,19 @@ namespace Kingdoms_of_Etrea.Core
                                     desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
                                     break;
                             }
+                            break;
+
+                        case "sp":
+                        case "stamina":
+                            var spInc = Helpers.RollDice(1, 10);
+                            var mod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                            if(mod > 0)
+                            {
+                                spInc += (uint)mod;
+                            }
+                            desc.Player.Stats.MaxSP += spInc;
+                            desc.Player.Stats.CurrentSP += spInc;
+                            desc.Send($"Your stamina increases by {spInc}!{Constants.NewLine}");
                             break;
                     }
                     desc.Player.CalculateArmourClass();
@@ -2495,6 +2576,7 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra HP");
                 sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra MP");
+                sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra SP");
                 sb.AppendLine($"  {new string('=', 77)}");
                 desc.Send(sb.ToString());
             }
@@ -2569,309 +2651,798 @@ namespace Kingdoms_of_Etrea.Core
             desc.Send(sb.ToString());
         }
 
+        private static void EatFood(ref Descriptor desc, ref string input)
+        {
+            desc.Send($"Tell Zohar to finish EatFood()!{Constants.NewLine}");
+        }
+
         private static void CastSpell(ref Descriptor desc, ref string input, bool overrideSkillCheck = false)
         {
             if(!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
             {
-                var spellName = GetSkillOrSpellName(ref input);
-                var elements = TokeniseInput(ref input);
-                if(elements.Length < 2)
+                if(!desc.Player.HasBuff("Silence"))
                 {
-                    desc.Send($"Usage: cast \"<spellname>\" <target>{Constants.NewLine}");
-                    return;
-                }
-                spellName = string.IsNullOrEmpty(spellName) ? elements[1].Trim() : spellName.Trim();
-                if(!string.IsNullOrEmpty(spellName))
-                {
-                    if(Spells.SpellExists(spellName))
+                    // we aren't in a room that has the NoMagic flag and we aren't silenced so we can cast a spell
+                    var verb = GetVerb(ref input);
+                    var line = input.Remove(0, verb.Length).Trim();
+                    var lineElements = TokeniseInput(ref line);
+                    var spellName = GetSkillOrSpellName(ref line);
+                    spellName = string.IsNullOrEmpty(spellName) ? lineElements[0].Trim() : spellName;
+                    if(!string.IsNullOrEmpty(spellName))
                     {
-                        if(desc.Player.HasSpell(spellName) || overrideSkillCheck)
+                        var spell = Spells.GetSpell(spellName);
+                        if(spell != null)
                         {
-                            var s = Spells.GetSpell(spellName);
-                            bool okToCast = true;
-                            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+                            if(desc.Player.HasSpell(spellName))
                             {
-                                // Do some checks to make sure we can't cast a damaging spell in a safe room
-                                if(s.SpellType == SpellType.Damage || (s.NumOfDamageDice > 0 && s.SpellType != SpellType.Healing))
+                                bool okToCast = true;
+                                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
                                 {
-                                    okToCast = false;
+                                    // make sure we can't cast a debuff or damaging spell in a safe room
+                                    okToCast = spell.SpellType == SpellType.Healing || spell.SpellType == SpellType.Buff;
                                 }
-                            }
-                            if(okToCast)
-                            {
-                                if(desc.Player.Stats.CurrentMP >= s.MPCost)
+                                if(okToCast)
                                 {
-                                    var target = input.Replace(GetVerb(ref input), string.Empty).Replace(spellName, string.Empty).Replace("\"", string.Empty).Trim();
-                                    Descriptor tPlayer = null;
-                                    NPC tNPC = null;
-                                    Guid targetGUID = Guid.Empty;
-                                    if (desc.Player.IsInCombat)
+                                    if(desc.Player.Stats.CurrentMP >= spell.MPCost)
                                     {
-                                        targetGUID = CombatManager.Instance.GetNPCGuidFromCombatSession(desc.Player.CombatSessionID);
-                                        tNPC = targetGUID != Guid.Empty ? NPCManager.Instance.GetNPCByGUID(targetGUID) : null;
-                                    }
-                                    tPlayer = target.ToLower() == "self" ? desc : null;
-                                    bool targetFound = tNPC != null || tPlayer != null;
-                                    if(!targetFound)
-                                    {
-                                        tNPC = GetTargetNPC(ref desc, target);
-                                        if (tNPC == null)
+                                        var target = line.Replace(spellName, string.Empty).Replace("\"", string.Empty).Trim();
+                                        if(spell.RequiresTarget && string.IsNullOrEmpty(target))
                                         {
-                                            if (tPlayer == null)
-                                            {
-                                                tPlayer = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                                                if (tPlayer != null)
-                                                {
-                                                    targetFound = true;
-                                                }
-                                            }
+                                            desc.Send($"Cast that spell on what, exactly?{Constants.NewLine}");
                                         }
                                         else
                                         {
-                                            targetFound = true;
-                                        }
-                                        if (s.RequiresTarget && !targetFound)
-                                        {
-                                            desc.Send($"The target of your magic cannot be found!{Constants.NewLine}");
-                                            return;
-                                        }
-                                    }
-                                    if(tNPC != null && tNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
-                                    {
-                                        desc.Send($"Some mystical force prevents you from casting that on {tNPC.Name}!{Constants.NewLine}");
-                                        return;
-                                    }
-                                    if(tPlayer != null && (s.SpellType == SpellType.Damage || s.NumOfDamageDice > 0))
-                                    {
-                                        if(s.SpellType == SpellType.Healing)
-                                        {
-                                            var toHeal = Helpers.RollDice(s.NumOfDamageDice, s.SizeOfDamageDice);
-                                            var statMod = desc.Player.Class == ActorClass.Cleric ? ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom)
-                                                : ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                            if(statMod > 0)
+                                            Descriptor targetPlayer = null;
+                                            NPC targetNPC = null;
+                                            if(target.ToLower() == "self" || !spell.RequiresTarget)
                                             {
-                                                toHeal += Convert.ToUInt32((s.NumOfDamageDice * statMod));
+                                                targetPlayer = desc;
                                             }
-                                            if(tPlayer.Player.Stats.CurrentHP + toHeal > tPlayer.Player.Stats.MaxHP)
+                                            targetNPC = GetTargetNPC(ref desc, target);
+                                            if(targetPlayer == null)
                                             {
-                                                tPlayer.Player.Stats.CurrentHP = (int)tPlayer.Player.Stats.MaxHP;
-                                                if(tPlayer.Player.Name == desc.Player.Name)
-                                                {
-                                                    desc.Send($"Summoning holy power you restore yourself to full health!{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    desc.Send($"Summoning holy power you restore {tPlayer.Player.Name} to full health!{Constants.NewLine}");
-                                                    tPlayer.Send($"{desc.Player.Name} calls on holy power and restores you to full health!{Constants.NewLine}");
-                                                }
+                                                targetPlayer = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.IsMatch(x.Player.Name, target, RegexOptions.IgnoreCase)).FirstOrDefault();
+                                            }
+                                            if(targetPlayer == null && targetNPC == null && spell.RequiresTarget)
+                                            {
+                                                desc.Send($"The target of your magic cannot be found...{Constants.NewLine}");
                                             }
                                             else
                                             {
-                                                tPlayer.Player.Stats.CurrentHP += (int)toHeal;
-                                                if(tPlayer.Player.Name == desc.Player.Name)
+                                                // the spell doesn't require a target, or we have found a target for the spell and are otherwise OK to cast it
+                                                if(targetNPC != null)
                                                 {
-                                                    desc.Send($"Calling on holy power, you heal {toHeal} points of damage!{Constants.NewLine}");
+                                                    if(spell.SpellType == SpellType.Healing || spell.SpellType == SpellType.Buff)
+                                                    {
+                                                        // deal with buffs and healing spells separately from debuffs and damage spells
+                                                        switch(spell.SpellType)
+                                                        {
+                                                            case SpellType.Healing:
+                                                                desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                var healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                var abilityModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
+                                                                if(abilityModifier > 0)
+                                                                {
+                                                                    healAmount += Convert.ToUInt32(abilityModifier * spell.NumOfDamageDice);
+                                                                }
+                                                                if(targetNPC.Stats.CurrentHP + (int)healAmount >= targetNPC.Stats.MaxHP)
+                                                                {
+                                                                    NPCManager.Instance.SetNPCHealthToMax(targetNPC.NPCGuid);
+                                                                    desc.Send($"Calling on holy power, you heal {targetNPC.Name} back to full health!{Constants.NewLine}");
+                                                                    if(targetNPC.IsFollower)
+                                                                    {
+                                                                        SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"Calling on holy power, {desc.Player.Name} heals your follower to full health!{Constants.NewLine}");
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, (int)healAmount);
+                                                                    desc.Send($"Calling on holy power, you heal {healAmount} of damage on {targetNPC.Name}!{Constants.NewLine}");
+                                                                    if(targetNPC.IsFollower)
+                                                                    {
+                                                                        SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"Calling on holy power, {desc.Player.Name} heals {healAmount} of damage on your follower!{Constants.NewLine}");
+                                                                    }
+                                                                }
+                                                                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                                                if(localPlayers != null && localPlayers.Count > 1)
+                                                                {
+                                                                    foreach (var lp in localPlayers)
+                                                                    {
+                                                                        var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
+                                                                            ? $"{desc.Player.Name} calls on holy power heal {targetNPC.Name}{Constants.NewLine}"
+                                                                            : $"Something calls on holy power to heal {targetNPC.Name}{Constants.NewLine}";
+                                                                        if (!Regex.IsMatch(lp.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase))
+                                                                        {
+                                                                            lp.Send(msg);
+                                                                        }
+                                                                    }
+                                                                }
+                                                                break;
+
+                                                            case SpellType.Buff:
+                                                                if(!targetNPC.HasBuff(spell.SpellName))
+                                                                {
+                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                    NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).AddBuff(spell.SpellName);
+                                                                    if(spell.NumOfDamageDice > 0)
+                                                                    {
+                                                                        healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                        abilityModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
+                                                                        if(abilityModifier > 0)
+                                                                        {
+                                                                            healAmount += Convert.ToUInt32(abilityModifier * spell.NumOfDamageDice);
+                                                                        }
+                                                                        if (targetNPC.Stats.CurrentHP + (int)healAmount >= targetNPC.Stats.MaxHP)
+                                                                        {
+                                                                            NPCManager.Instance.SetNPCHealthToMax(targetNPC.NPCGuid);
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, (int)healAmount);
+                                                                        }
+                                                                    }
+                                                                    desc.Send($"You bless {targetNPC.Name} with the power of {spell.SpellName}!{Constants.NewLine}");
+                                                                    if(targetNPC.IsFollower)
+                                                                    {
+                                                                        SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"Calling on holy power, {desc.Player.Name} blesses your follower with the power of {spell.SpellName}!{Constants.NewLine}");
+                                                                    }
+                                                                    localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                                                    if(localPlayers != null && localPlayers.Count > 1)
+                                                                    {
+                                                                        foreach (var lp in localPlayers)
+                                                                        {
+                                                                            var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
+                                                                                ? $"{desc.Player.Name} calls on holy power bless {targetNPC.Name}{Constants.NewLine}"
+                                                                                : $"Something calls on holy power to bless {targetNPC.Name}{Constants.NewLine}";
+                                                                            if (!Regex.IsMatch(lp.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase))
+                                                                            {
+                                                                                lp.Send(msg);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    desc.Send($"{targetNPC.Name} already has that blessing!{Constants.NewLine}");
+                                                                }
+                                                                break;
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        var startCombat = true;
+                                                        if (targetNPC.IsFollower)
+                                                        {
+                                                            if (!SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Player.PVP)
+                                                            {
+                                                                desc.Send($"{targetNPC.Name} is someone's follower and cannot be attacked while their PVP flag is disabled.{Constants.NewLine}");
+                                                                return;
+                                                            }
+                                                            if (targetNPC.FollowingPlayer == desc.Id)
+                                                            {
+                                                                desc.Send($"{targetNPC.Name} is your loyal follower, you cannot attack them!{Constants.NewLine}");
+                                                                return;
+                                                            }
+                                                        }
+                                                        if (targetNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
+                                                        {
+                                                            desc.Send($"Some mystical force prevents you from casting {spell.SpellName} on {targetNPC.Name}!{Constants.NewLine}");
+                                                            return;
+                                                        }
+                                                        if (desc.Player.IsInCombat)
+                                                        {
+                                                            startCombat = !CombatManager.Instance.IsPlayerInCombatWithNPC(desc.Id, targetNPC.NPCGuid);
+                                                        }
+                                                        if(!startCombat)
+                                                        {
+                                                            desc.Send($"You are already in combat with something else!{Constants.NewLine}");
+                                                            return;
+                                                        }
+                                                        else
+                                                        {
+                                                            // we're casting a debuff or damage spell and the target NPC doesn't have the NoAttack flag so we're good to go
+                                                            switch(spell.SpellType)
+                                                            {
+                                                                case SpellType.Damage:
+                                                                    // check to make sure we are either not in combat or are in combat with the target npc - we shouldn't cast this otherwise
+                                                                    bool spellHits = spell.AutoHitTarget;
+                                                                    if(!spellHits)
+                                                                    {
+                                                                        var toHit = Helpers.RollDice(1, 20);
+                                                                        var toHitMod = toHit;
+                                                                        var targetAC = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.ArmourClass;
+                                                                        var dexModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
+                                                                        if(dexModifier > 0)
+                                                                        {
+                                                                            toHitMod += Convert.ToUInt32(dexModifier);
+                                                                        }
+                                                                        spellHits = toHit == 20 || toHitMod >= targetAC;
+                                                                    }
+                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                    if(spellHits)
+                                                                    {
+                                                                        var damage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                        var abilityModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                                                        if (abilityModifier > 0)
+                                                                        {
+                                                                            damage += Convert.ToUInt32(abilityModifier * spell.NumOfDamageDice);
+                                                                        }
+                                                                        var targetHP = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.CurrentHP;
+                                                                        if (damage >= targetHP)
+                                                                        {
+                                                                            // kill the NPC
+                                                                            var combatSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.Id, targetNPC.NPCGuid);
+                                                                            if(combatSessions.Count > 0)
+                                                                            {
+                                                                                foreach(var s in combatSessions)
+                                                                                {
+                                                                                    CombatManager.Instance.RemoveCombatSession(s);
+                                                                                }
+                                                                            }
+                                                                            desc.Send($"Your {spell.SpellName} strikes {targetNPC.Name} for lethal damage, killing them instantly!{Constants.NewLine}");
+                                                                            desc.Send($"You have killed {targetNPC.Name} and obtained {targetNPC.BaseExpAward} Exp and {targetNPC.Stats.Gold} gold!{Constants.NewLine}");
+                                                                            desc.Player.AddExp(targetNPC.BaseExpAward);
+                                                                            desc.Player.AddGold(targetNPC.Stats.Gold);
+                                                                            var pn = desc.Player.Name;
+                                                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                                                            if(localPlayers != null && localPlayers.Count > 1)
+                                                                            {
+                                                                                foreach(var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pn, RegexOptions.IgnoreCase)))
+                                                                                {
+                                                                                    var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
+                                                                                        ? $"There is a sickening scream as {targetNPC.Name} is slaughtered by {pn}'s {spell.SpellName} magic!{Constants.NewLine}"
+                                                                                        : $"There is a sickening scream is {targetNPC.Name} is slaughtered by someone's {spell.SpellName} magic!{Constants.NewLine}";
+                                                                                    lp.Send(msg);
+                                                                                }
+                                                                            }
+                                                                            NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Kill(true);
+                                                                            if (desc.Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(targetNPC.NPCID)))
+                                                                            {
+                                                                                for (int n = 0; n < desc.Player.ActiveQuests.Count; n++)
+                                                                                {
+                                                                                    if (desc.Player.ActiveQuests[n].Monsters.Keys.Contains(targetNPC.NPCID))
+                                                                                    {
+                                                                                        if (desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] <= 1)
+                                                                                        {
+                                                                                            desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] = 0;
+                                                                                        }
+                                                                                        else
+                                                                                        {
+                                                                                            desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID]--;
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            // damage the NPC and start combat session, if we're not already in one
+                                                                            NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, Convert.ToInt32(damage * -1));
+                                                                            desc.Send($"Your {spell.SpellName} spell blasts {targetNPC.Name} for {damage} damage!{Constants.NewLine}");
+                                                                            if(!desc.Player.IsInCombat)
+                                                                            {
+                                                                                var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
+                                                                                var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
+                                                                                CombatManager.Instance.AddCombatSession(pSession);
+                                                                                CombatManager.Instance.AddCombatSession(nSession);
+                                                                                desc.Player.Position = ActorPosition.Fighting;
+                                                                                if(desc.Player.FollowerID != Guid.Empty)
+                                                                                {
+                                                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                                    var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
+                                                                                    var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
+                                                                                    CombatManager.Instance.AddCombatSession(fSession);
+                                                                                    CombatManager.Instance.AddCombatSession(nfSession);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        // spell missed - notify and start combat session
+                                                                        desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetNPC.Name}!{Constants.NewLine}");
+                                                                        if(targetNPC.IsFollower)
+                                                                        {
+                                                                            SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"The magic of {desc.Player.Name}'s {spell.SpellName} fizzles and misses your follower!{Constants.NewLine}");
+                                                                        }
+                                                                        if (!desc.Player.IsInCombat)
+                                                                        {
+                                                                            var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
+                                                                            var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
+                                                                            CombatManager.Instance.AddCombatSession(pSession);
+                                                                            CombatManager.Instance.AddCombatSession(nSession);
+                                                                            desc.Player.Position = ActorPosition.Fighting;
+                                                                            if (desc.Player.FollowerID != Guid.Empty)
+                                                                            {
+                                                                                var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                                var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
+                                                                                var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
+                                                                                CombatManager.Instance.AddCombatSession(fSession);
+                                                                                CombatManager.Instance.AddCombatSession(nfSession);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    break;
+
+                                                                case SpellType.Debuff:
+                                                                    if(!targetNPC.HasBuff(spell.SpellName))
+                                                                    {
+                                                                        desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                        spellHits = true;
+                                                                        if(!spell.AutoHitTarget)
+                                                                        {
+                                                                            var toHit = Helpers.RollDice(1, 20);
+                                                                            var toHitMod = toHit;
+                                                                            var dexMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
+                                                                            var targetAC = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.ArmourClass;
+                                                                            if (dexMod > 0)
+                                                                            {
+                                                                                toHitMod += (uint)dexMod;
+                                                                            }
+                                                                            spellHits = toHit == 20 || toHitMod >= targetAC;
+                                                                        }
+                                                                        if(spellHits)
+                                                                        {
+                                                                            NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).AddBuff(spell.SpellName);
+                                                                            desc.Send($"Calling on the arcane arts, you hinder {targetNPC.Name} with the power of {spell.SpellName}!{Constants.NewLine}");
+                                                                            if (spell.NumOfDamageDice > 0)
+                                                                            {
+                                                                                var damage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                                var abilityMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                                                                if (abilityMod > 0)
+                                                                                {
+                                                                                    damage += Convert.ToUInt32(abilityMod * spell.NumOfDamageDice);
+                                                                                }
+                                                                                var targetHP = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.CurrentHP;
+                                                                                if (damage >= targetHP)
+                                                                                {
+                                                                                    // killed the NPC
+                                                                                    var combatSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.Id, targetNPC.NPCGuid);
+                                                                                    if (combatSessions.Count > 0)
+                                                                                    {
+                                                                                        foreach (var s in combatSessions)
+                                                                                        {
+                                                                                            CombatManager.Instance.RemoveCombatSession(s);
+                                                                                        }
+                                                                                    }
+                                                                                    desc.Send($"Your {spell.SpellName} strikes {targetNPC.Name} for lethal damage, killing them instantly!{Constants.NewLine}");
+                                                                                    desc.Send($"You have killed {targetNPC.Name} and obtained {targetNPC.BaseExpAward} Exp and {targetNPC.Stats.Gold} gold!{Constants.NewLine}");
+                                                                                    desc.Player.AddExp(targetNPC.BaseExpAward);
+                                                                                    desc.Player.AddGold(targetNPC.Stats.Gold);
+                                                                                    var pn = desc.Player.Name;
+                                                                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                                                                    if (localPlayers != null && localPlayers.Count > 1)
+                                                                                    {
+                                                                                        foreach (var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pn, RegexOptions.IgnoreCase)))
+                                                                                        {
+                                                                                            var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
+                                                                                                ? $"There is a sickening scream as {targetNPC.Name} is slaughtered by {pn}'s {spell.SpellName} magic!{Constants.NewLine}"
+                                                                                                : $"There is a sickening scream is {targetNPC.Name} is slaughtered by someone's {spell.SpellName} magic!{Constants.NewLine}";
+                                                                                            lp.Send(msg);
+                                                                                        }
+                                                                                    }
+                                                                                    NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Kill(true);
+                                                                                    if (desc.Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(targetNPC.NPCID)))
+                                                                                    {
+                                                                                        for (int n = 0; n < desc.Player.ActiveQuests.Count; n++)
+                                                                                        {
+                                                                                            if (desc.Player.ActiveQuests[n].Monsters.Keys.Contains(targetNPC.NPCID))
+                                                                                            {
+                                                                                                if (desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] <= 1)
+                                                                                                {
+                                                                                                    desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] = 0;
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                    desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID]--;
+                                                                                                }
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    // damage the NCP and start combat
+                                                                                    NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, Convert.ToInt32(damage * -1));
+                                                                                    desc.Send($"Your {spell.SpellName} spell blasts {targetNPC.Name} for {damage} damage!{Constants.NewLine}");
+                                                                                    if (!desc.Player.IsInCombat)
+                                                                                    {
+                                                                                        var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
+                                                                                        var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
+                                                                                        CombatManager.Instance.AddCombatSession(pSession);
+                                                                                        CombatManager.Instance.AddCombatSession(nSession);
+                                                                                        desc.Player.Position = ActorPosition.Fighting;
+                                                                                        if (desc.Player.FollowerID != Guid.Empty)
+                                                                                        {
+                                                                                            var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                                            var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
+                                                                                            var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
+                                                                                            CombatManager.Instance.AddCombatSession(fSession);
+                                                                                            CombatManager.Instance.AddCombatSession(nfSession);
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            // spell missed - notify the player and start combat
+                                                                            desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetNPC.Name}!{Constants.NewLine}");
+                                                                            if (targetNPC.IsFollower)
+                                                                            {
+                                                                                SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"The magic of {desc.Player.Name}'s {spell.SpellName} fizzles and misses your follower!{Constants.NewLine}");
+                                                                            }
+                                                                            if (!desc.Player.IsInCombat)
+                                                                            {
+                                                                                var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
+                                                                                var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
+                                                                                CombatManager.Instance.AddCombatSession(pSession);
+                                                                                CombatManager.Instance.AddCombatSession(nSession);
+                                                                                desc.Player.Position = ActorPosition.Fighting;
+                                                                                if (desc.Player.FollowerID != Guid.Empty)
+                                                                                {
+                                                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                                    var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
+                                                                                    var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
+                                                                                    CombatManager.Instance.AddCombatSession(fSession);
+                                                                                    CombatManager.Instance.AddCombatSession(nfSession);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        desc.Send($"{targetNPC.Name} is already affected by {spell.SpellName}!{Constants.NewLine}");
+                                                                    }
+                                                                    break;
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                                 else
                                                 {
-                                                    desc.Send($"Calling on holy power, you heal {tPlayer.Player.Name} {toHeal} points of damage!{Constants.NewLine}");
-                                                    tPlayer.Send($"{desc.Player.Name} calls on holy power, healing you {toHeal} points of damage!{Constants.NewLine}");
+                                                    // casting a spell on a player, if we're doing a debuff/damage spell we need to check the PVP flag first
+                                                    // assume that all players are OK with being healed or buffed so don't check PVP for these
+                                                    if(targetPlayer != null)
+                                                    {
+                                                        if (spell.SpellType == SpellType.Healing || spell.SpellType == SpellType.Buff)
+                                                        {
+                                                            switch(spell.SpellType)
+                                                            {
+                                                                case SpellType.Healing:
+                                                                    var healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                    var wisMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
+                                                                    var targetHP = targetPlayer.Player.Stats.CurrentHP;
+                                                                    var targetMaxHP = targetPlayer.Player.Stats.MaxHP;
+                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                    string pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
+                                                                    if (wisMod > 0)
+                                                                    {
+                                                                        healAmount += (uint)wisMod * spell.NumOfDamageDice;
+                                                                    }
+                                                                    if(targetHP + healAmount >= targetMaxHP)
+                                                                    {
+                                                                        targetPlayer.Player.Stats.CurrentHP = (int)targetMaxHP;
+                                                                        desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} back to full health!{Constants.NewLine}");
+                                                                        targetPlayer.Send($"{pName} calls on holy power to heal you back to full health!{Constants.NewLine}");
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        targetPlayer.Player.Stats.CurrentHP += (int)healAmount;
+                                                                        desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} for {healAmount} damage!{Constants.NewLine}");
+                                                                        targetPlayer.Send($"{pName} calls on holy power and heals {healAmount} damage!{Constants.NewLine}");
+                                                                    }
+                                                                    break;
+
+                                                                case SpellType.Buff:
+                                                                    if(!targetPlayer.Player.HasBuff(spell.SpellName))
+                                                                    {
+                                                                        desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                        targetPlayer.Player.AddBuff(spell.SpellName);
+                                                                        desc.Send($"Calling on holy power you bless {targetPlayer.Player.Name} with {spell.SpellName}!{Constants.NewLine}");
+                                                                        pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
+                                                                        targetPlayer.Send($"{pName} blesses you with the power of {spell.SpellName}!{Constants.NewLine}");
+                                                                        if (spell.NumOfDamageDice > 0)
+                                                                        {
+                                                                            healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                            wisMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
+                                                                            targetHP = targetPlayer.Player.Stats.CurrentHP;
+                                                                            targetMaxHP = targetPlayer.Player.Stats.MaxHP;
+                                                                            if (wisMod > 0)
+                                                                            {
+                                                                                healAmount += (uint)wisMod * spell.NumOfDamageDice;
+                                                                            }
+                                                                            if (targetHP + healAmount >= targetMaxHP)
+                                                                            {
+                                                                                targetPlayer.Player.Stats.CurrentHP = (int)targetMaxHP;
+                                                                                desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} back to full health!{Constants.NewLine}");
+                                                                                targetPlayer.Send($"{pName} calls on holy power to heal you back to full health!{Constants.NewLine}");
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                targetPlayer.Player.Stats.CurrentHP += (int)healAmount;
+                                                                                desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} for {healAmount} damage!{Constants.NewLine}");
+                                                                                targetPlayer.Send($"{pName} calls on holy power and heals {healAmount} damage!{Constants.NewLine}");
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        desc.Send($"{targetPlayer.Player.Name} already has that blessing!{Constants.NewLine}");
+                                                                    }
+                                                                    break;
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            if(!desc.Player.PVP)
+                                                            {
+                                                                desc.Send($"You can't cast that spell on {targetPlayer.Player.Name} right now...{Constants.NewLine}");
+                                                                return;
+                                                            }
+                                                            if(!targetPlayer.Player.PVP)
+                                                            {
+                                                                desc.Send($"You can't cast that spell on {targetPlayer.Player.Name} right now...{Constants.NewLine}");
+                                                                return;
+                                                            }
+                                                            // PVP is enabled and we can cast an offensive spell on a player
+                                                            switch (spell.SpellType)
+                                                            {
+                                                                case SpellType.Debuff:
+                                                                    bool spellHits = true;
+                                                                    bool startCombat = true;
+                                                                    if (!targetPlayer.Player.HasBuff(spell.SpellName))
+                                                                    {
+                                                                        desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                        if(!spell.AutoHitTarget)
+                                                                        {
+                                                                            var toHit = Helpers.RollDice(1, 20);
+                                                                            var toHitMod = toHit;
+                                                                            var dexMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
+                                                                            var targetAC = targetPlayer.Player.Stats.ArmourClass;
+                                                                            if(dexMod > 0)
+                                                                            {
+                                                                                toHitMod += (uint)dexMod;
+                                                                            }
+                                                                            spellHits = toHit == 20 || toHitMod >= targetAC;
+                                                                        }
+                                                                        if(spellHits)
+                                                                        {
+                                                                            targetPlayer.Player.AddBuff(spell.SpellName);
+                                                                            if(spell.NumOfDamageDice > 0)
+                                                                            {
+                                                                                uint damage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                                var intMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                                                                var pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
+                                                                                if(intMod > 0)
+                                                                                {
+                                                                                    damage += (uint)intMod * spell.NumOfDamageDice;
+                                                                                }
+                                                                                var targetHP = targetPlayer.Player.Stats.CurrentHP;
+                                                                                if (damage >= targetHP)
+                                                                                {
+                                                                                    desc.Send($"The magic of your {spell.SpellName} spell overcomes {targetPlayer.Player.Name} and kills them instantly!{Constants.NewLine}");
+                                                                                    targetPlayer.Send($"{pName} blasts you with the magic of {spell.SpellName} and kills you instantly!{Constants.NewLine}");
+                                                                                    targetPlayer.Player.Kill();
+                                                                                    startCombat = false;
+                                                                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                                                                    if(localPlayers != null && localPlayers.Count > 2)
+                                                                                    {
+                                                                                        foreach (var lp in localPlayers)
+                                                                                        {
+                                                                                            if (!Regex.IsMatch(lp.Player.Name, targetPlayer.Player.Name) && !Regex.IsMatch(lp.Player.Name, desc.Player.Name))
+                                                                                            {
+                                                                                                var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
+                                                                                                    ? $"{desc.Player.Name} blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}"
+                                                                                                    : $"Something blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}";
+                                                                                                lp.Send(msg);
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    // damage the player
+                                                                                    targetPlayer.Player.Stats.CurrentHP -= (int)damage;
+                                                                                    desc.Send($"The magic of your {spell.SpellName} blasts {targetPlayer.Player.Name} for {damage} damage!{Constants.NewLine}");
+                                                                                    targetPlayer.Send($"{pName} blasts you with the magic of {spell.SpellName} causing {damage} damage!{Constants.NewLine}");
+                                                                                }
+                                                                            }
+                                                                            if(startCombat)
+                                                                            {
+                                                                                var pSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
+                                                                                var tSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
+                                                                                CombatManager.Instance.AddCombatSession(pSession);
+                                                                                CombatManager.Instance.AddCombatSession(tSession);
+                                                                                if(desc.Player.FollowerID != Guid.Empty)
+                                                                                {
+                                                                                    var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                                    var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
+                                                                                    var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
+                                                                                    CombatManager.Instance.AddCombatSession(fSession);
+                                                                                    CombatManager.Instance.AddCombatSession(pfSession);
+                                                                                }
+                                                                                if(targetPlayer.Player.FollowerID != Guid.Empty)
+                                                                                {
+                                                                                    var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
+                                                                                    var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
+                                                                                    var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
+                                                                                    CombatManager.Instance.AddCombatSession(fSession);
+                                                                                    CombatManager.Instance.AddCombatSession(pfSession);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            // spell missed the tagret, start a combat session
+                                                                            desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetPlayer.Player.Name}!{Constants.NewLine}");
+                                                                            targetPlayer.Send($"{desc.Player.Name} tries to blast you with their magic but the spell fizzles and misses!{Constants.NewLine}");
+                                                                            var aSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
+                                                                            var dSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
+                                                                            CombatManager.Instance.AddCombatSession(aSession);
+                                                                            CombatManager.Instance.AddCombatSession(dSession);
+                                                                            if (desc.Player.FollowerID != Guid.Empty)
+                                                                            {
+                                                                                var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                                var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
+                                                                                var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
+                                                                                CombatManager.Instance.AddCombatSession(fSession);
+                                                                                CombatManager.Instance.AddCombatSession(pfSession);
+                                                                            }
+                                                                            if (targetPlayer.Player.FollowerID != Guid.Empty)
+                                                                            {
+                                                                                var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
+                                                                                var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
+                                                                                var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
+                                                                                CombatManager.Instance.AddCombatSession(fSession);
+                                                                                CombatManager.Instance.AddCombatSession(pfSession);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        desc.Send($"{targetPlayer.Player.Name} is already afflicted by this curse!{Constants.NewLine}");
+                                                                    }
+                                                                    break;
+
+                                                                case SpellType.Damage:
+                                                                    startCombat = true;
+                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
+                                                                    var spellDamage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
+                                                                    spellHits = true;
+                                                                    var abilityMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                                                    if(abilityMod > 0)
+                                                                    {
+                                                                        spellDamage += (uint)abilityMod * spell.NumOfDamageDice;
+                                                                    }
+                                                                    if(!spell.AutoHitTarget)
+                                                                    {
+                                                                        var toHit = Helpers.RollDice(1, 20);
+                                                                        var toHitMod = toHit;
+                                                                        var dexMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
+                                                                        var targetAC = targetPlayer.Player.Stats.ArmourClass;
+                                                                        if(dexMod > 0)
+                                                                        {
+                                                                            toHitMod += (uint)dexMod;
+                                                                        }
+                                                                        spellHits = toHit == 20 || toHitMod >= targetAC;
+                                                                    }
+                                                                    if(spellHits)
+                                                                    {
+                                                                        if(spellDamage >= targetPlayer.Player.Stats.CurrentHP)
+                                                                        {
+                                                                            var pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
+                                                                            desc.Send($"The magic of your {spell.SpellName} spell overcomes {targetPlayer.Player.Name} and kills them instantly!{Constants.NewLine}");
+                                                                            targetPlayer.Send($"{pName} blasts you with the magic of {spell.SpellName} and kills you instantly!{Constants.NewLine}");
+                                                                            targetPlayer.Player.Kill();
+                                                                            startCombat = false;
+                                                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                                                                            if (localPlayers != null && localPlayers.Count > 2)
+                                                                            {
+                                                                                foreach (var lp in localPlayers)
+                                                                                {
+                                                                                    if (!Regex.IsMatch(lp.Player.Name, targetPlayer.Player.Name) && !Regex.IsMatch(lp.Player.Name, desc.Player.Name))
+                                                                                    {
+                                                                                        var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
+                                                                                            ? $"{desc.Player.Name} blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}"
+                                                                                            : $"Something blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}";
+                                                                                        lp.Send(msg);
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            targetPlayer.Player.Stats.CurrentHP -= (int)spellDamage;
+                                                                            desc.Send($"The magic of your {spell.SpellName} spell blasts {targetPlayer.Player.Name} for {spellDamage} damage!{Constants.NewLine}");
+                                                                            targetPlayer.Send($"{desc.Player.Name} blasts you with the magic of {spell.SpellName} causing {spellDamage} damage!{Constants.NewLine}");
+                                                                        }
+                                                                        if(startCombat)
+                                                                        {
+                                                                            var aSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
+                                                                            var dSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
+                                                                            CombatManager.Instance.AddCombatSession(aSession);
+                                                                            CombatManager.Instance.AddCombatSession(dSession);
+                                                                            if (desc.Player.FollowerID != Guid.Empty)
+                                                                            {
+                                                                                var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                                var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
+                                                                                var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
+                                                                                CombatManager.Instance.AddCombatSession(fSession);
+                                                                                CombatManager.Instance.AddCombatSession(pfSession);
+                                                                            }
+                                                                            if (targetPlayer.Player.FollowerID != Guid.Empty)
+                                                                            {
+                                                                                var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
+                                                                                var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
+                                                                                var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
+                                                                                CombatManager.Instance.AddCombatSession(fSession);
+                                                                                CombatManager.Instance.AddCombatSession(pfSession);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        // spell missed the tagret, start a combat session
+                                                                        desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetPlayer.Player.Name}!{Constants.NewLine}");
+                                                                        targetPlayer.Send($"{desc.Player.Name} tries to blast you with their magic but the spell fizzles and misses!{Constants.NewLine}");
+                                                                        var aSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
+                                                                        var dSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
+                                                                        CombatManager.Instance.AddCombatSession(aSession);
+                                                                        CombatManager.Instance.AddCombatSession(dSession);
+                                                                        if (desc.Player.FollowerID != Guid.Empty)
+                                                                        {
+                                                                            var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                            var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
+                                                                            var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
+                                                                            CombatManager.Instance.AddCombatSession(fSession);
+                                                                            CombatManager.Instance.AddCombatSession(pfSession);
+                                                                        }
+                                                                        if (targetPlayer.Player.FollowerID != Guid.Empty)
+                                                                        {
+                                                                            var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
+                                                                            var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
+                                                                            var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
+                                                                            CombatManager.Instance.AddCombatSession(fSession);
+                                                                            CombatManager.Instance.AddCombatSession(pfSession);
+                                                                        }
+                                                                    }
+                                                                    break;
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
-                                        }
-                                        else
-                                        {
-                                            if (tPlayer.Player.Name == desc.Player.Name)
-                                            {
-                                                // player has tried to target an offensive spell at themselves...
-                                                desc.Send($"You can't cast that on yourself!{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"PvP combat is not yet implemented...{Constants.NewLine}");
-                                            }
-                                        }
-                                        return;
-                                    }
-                                    if(s.SpellType == SpellType.Buff && tPlayer != null)
-                                    {
-                                        var b = Buffs.GetBuff(s.SpellName);
-                                        if(b != null)
-                                        {
-                                            // successfully passed all checks and cast the spell on the player
-                                            desc.Player.Stats.CurrentMP -= (int)s.MPCost;
-                                            tPlayer.Player.AddBuff(b.BuffName);
-                                            desc.Send($"The Winds of Magic swirl, granting {tPlayer.Player.Name} the buff of {s.SpellName}!");
-                                            tPlayer.Send($"{desc.Player.Name} summons the Winds of Magic and grants you the buff of {s.SpellName}!");
-                                            RoomManager.Instance.ProcessEnvironmentBuffs(tPlayer.Player.CurrentRoom);
-                                        }
-                                        else
-                                        {
-                                            // we should always have a buff with the same name as the spell
-                                            Game.LogMessage($"WARN: Unable to find a buff for spell '{s.SpellName}'!", LogLevel.Warning, true);
-                                            desc.Send($"The spell {s.SpellName} appears to be broken, please check with an Imm!{Constants.NewLine}");
                                         }
                                     }
                                     else
                                     {
-                                        // target is an NPC and we're OK to cast the spell.
-                                        var b = Buffs.GetBuff(s.SpellName);
-                                        desc.Player.Stats.CurrentMP -= (int)s.MPCost;
-                                        if(b != null)
-                                        {
-                                            // spell has an associate buff, so apply that to the target
-                                            tNPC.AddBuff(b.BuffName);
-                                        }
-                                        if(s.NumOfDamageDice > 0)
-                                        {
-                                            if(s.SpellType == SpellType.Healing)
-                                            {
-                                                var toHeal = Helpers.RollDice(s.NumOfDamageDice, s.SizeOfDamageDice);
-                                                var healMod = desc.Player.Class == ActorClass.Cleric ? ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom)
-                                                    : ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                                if(healMod > 0)
-                                                {
-                                                    toHeal += Convert.ToUInt32(s.NumOfDamageDice * healMod);
-                                                }
-                                                if(tNPC.Stats.CurrentHP + toHeal > tNPC.Stats.MaxHP)
-                                                {
-                                                    NPCManager.Instance.SetNPCHealthToMax(tNPC.NPCGuid);
-                                                    desc.Send($"You heal {tNPC.Name} back to full health!{Constants.NewLine}");
-                                                    return;
-                                                }
-                                                else
-                                                {
-                                                    NPCManager.Instance.AdjustNPCHealth(tNPC.NPCGuid, (int)toHeal);
-                                                    desc.Send($"You heal {tNPC.Name} for {toHeal} points of damage!{Constants.NewLine}");
-                                                    return;
-                                                }
-                                            }
-                                            var damRoll = Helpers.RollDice(s.NumOfDamageDice, s.SizeOfDamageDice);
-                                            var abilityMod = desc.Player.Class == ActorClass.Cleric ? ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom)
-                                                : ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                            abilityMod *= Convert.ToInt32(s.NumOfDamageDice);
-                                            var result = damRoll + abilityMod;
-                                            result = result <= 0 ? 1 : result;
-                                            var toHit = Helpers.RollDice(1, 20);
-                                            var toHitFinal = toHit + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
-                                            bool startCombatSession = false;
-                                            if(s.AutoHitTarget || toHitFinal >= tNPC.Stats.ArmourClass)
-                                            {
-                                                // spell hit the target
-                                                if (result < tNPC.Stats.CurrentHP)
-                                                {
-                                                    NPCManager.Instance.AdjustNPCHealth(tNPC.NPCGuid, ((int)result * -1));
-                                                    desc.Send($"Your {s.SpellName} strikes {tNPC.Name} for {result} damage!{Constants.NewLine}");
-                                                    startCombatSession = true;
-                                                }
-                                                else
-                                                {
-                                                    desc.Send($"Your {s.SpellName} deals lethal damage, killing {tNPC.Name}!{Constants.NewLine}");
-                                                    desc.Send($"You have killed {tNPC.Name} and obtained {tNPC.BaseExpAward} Exp and {tNPC.Stats.Gold} gold!{Constants.NewLine}");
-                                                    desc.Player.AddExp(tNPC.BaseExpAward);
-                                                    desc.Player.AddGold(tNPC.Stats.Gold);
-                                                    var pn = desc.Player.Name;
-                                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => !Regex.Match(x.Player.Name, pn, RegexOptions.IgnoreCase).Success).ToList();
-                                                    if (localPlayers != null && localPlayers.Count > 0)
-                                                    {
-                                                        foreach (var p in localPlayers)
-                                                        {
-                                                            p.Send($"There is a sickening scream as {tNPC.Name} is slaughtered!{Constants.NewLine}");
-                                                        }
-                                                    }
-                                                    tNPC.Kill(true);
-                                                    if (desc.Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(tNPC.NPCID)))
-                                                    {
-                                                        for (int n = 0; n < desc.Player.ActiveQuests.Count; n++)
-                                                        {
-                                                            if (desc.Player.ActiveQuests[n].Monsters.Keys.Contains(tNPC.NPCID))
-                                                            {
-                                                                if (desc.Player.ActiveQuests[n].Monsters[tNPC.NPCID] <= 1)
-                                                                {
-                                                                    desc.Player.ActiveQuests[n].Monsters[tNPC.NPCID] = 0;
-                                                                }
-                                                                else
-                                                                {
-                                                                    desc.Player.ActiveQuests[n].Monsters[tNPC.NPCID]--;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if(startCombatSession)
-                                                {
-                                                    // only start a combat session if there isn't one already running
-                                                    if (targetGUID == Guid.Empty)
-                                                    {
-                                                        var myInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                                        var mobInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(tNPC.Stats.Dexterity));
-                                                        myInit = desc.Player.HasSkill("Awareness") ? myInit += 4 : myInit;
-                                                        mobInit = tNPC.HasSkill("Awareness") ? mobInit += 4 : mobInit;
-                                                        var participants = new List<(uint Initiative, dynamic Participant, dynamic Target)>
-                                                        {
-                                                            (myInit, desc, tNPC),
-                                                            (mobInit, tNPC, desc)
-                                                        };
-                                                        if(desc.Player.FollowerID != Guid.Empty)
-                                                        {
-                                                            var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                            if (f != null)
-                                                            {
-                                                                var followerInit = Helpers.RollDice(1, 20);
-                                                                if (ActorStats.CalculateAbilityModifier(f.Stats.Dexterity) > 0)
-                                                                {
-                                                                    followerInit += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(f.Stats.Dexterity));
-                                                                }
-                                                                participants.Add((followerInit, f, tNPC));
-                                                                participants.Add((mobInit, tNPC, f));
-                                                            }
-                                                            else
-                                                            {
-                                                                desc.Player.FollowerID = Guid.Empty;
-                                                                Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
-                                                            }
-                                                        }
-                                                        var session = new CombatSessionNew
-                                                        {
-                                                            Participants = participants,
-                                                            SessionID = Guid.NewGuid(),
-                                                        };
-                                                        CombatManager.Instance.AddCombatSession(session);
-                                                        desc.Player.CombatSessionID = session.SessionID;
-                                                        desc.Player.Position = ActorPosition.Fighting;
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your magic fizzles and misses its target!{Constants.NewLine}");
-                                            }
-                                        }
+                                        desc.Send($"You lack the MP to cast that spell!{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    desc.Send($"You don't have enough MP to cast that spell!{Constants.NewLine}");
+                                    desc.Send($"Some mystical force prevents you from casting that here...{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                desc.Send($"You cannot cast that here!{Constants.NewLine}");
+                                desc.Send($"You don't know that spell...{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            desc.Send($"You don't know that spell!{Constants.NewLine}");
+                            desc.Send($"No such spell exists in the Realms...{Constants.NewLine}");
                         }
                     }
                     else
                     {
-                        desc.Send($"That spell doesn't exist!{Constants.NewLine}");
+                        desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
                     }
                 }
                 else
                 {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                    desc.Send($"You have been silenced and cannot use magic right now!{Constants.NewLine}");
                 }
             }
             else
@@ -2882,12 +3453,18 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void FleeCombat(ref Descriptor desc)
         {
-            if(desc.Player.CombatSessionID != Guid.Empty && desc.Player.Position == ActorPosition.Fighting)
+            if(desc.Player.IsInCombat)
             {
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomExits.Count > 0)
+                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomExits.Count > 0)
                 {
-                    CombatManager.Instance.RemoveCombatSession(desc.Player.CombatSessionID);
-                    desc.Player.CombatSessionID = Guid.Empty;
+                    var sessions = CombatManager.Instance.GetCombatSessionsForCombattant(desc.Id);
+                    if(sessions != null && sessions.Count > 0)
+                    {
+                        foreach(var s in sessions)
+                        {
+                            CombatManager.Instance.RemoveCombatSession(s);
+                        }
+                    }
                     desc.Player.Position = ActorPosition.Standing;
                     var rndExit = Helpers.GetRandomExit(desc.Player.CurrentRoom);
                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
@@ -2930,44 +3507,28 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         if(tPlayer.Player.PVP)
                         {
-                            var myInit = Helpers.RollDice(1, 20);
-                            var tInit = Helpers.RollDice(1, 20);
-                            var participants = new List<(uint Initiative, dynamic Participant, dynamic Target)>
-                            {
-                                (myInit, desc, tPlayer),
-                                (tInit, tPlayer, desc)
-                            };
+                            var mySession = new CombatSessionNew(desc, tPlayer, desc.Id, tPlayer.Id);
+                            var tpSession = new CombatSessionNew(tPlayer, desc, tPlayer.Id, desc.Id);
+                            CombatManager.Instance.AddCombatSession(mySession);
+                            CombatManager.Instance.AddCombatSession(tpSession);
+                            desc.Player.Position = ActorPosition.Fighting;
+                            tPlayer.Player.Position = ActorPosition.Fighting;
                             if(desc.Player.FollowerID != Guid.Empty)
                             {
-                                var fInit = Helpers.RollDice(1, 20);
                                 var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                participants.Add((fInit, follower, tPlayer));
-                                participants.Add((tInit, tPlayer, follower));
+                                var fSession = new CombatSessionNew(follower, tPlayer, follower.NPCGuid, tPlayer.Id);
+                                var pfSession = new CombatSessionNew(tPlayer, follower, tPlayer.Id, follower.NPCGuid);
+                                CombatManager.Instance.AddCombatSession(fSession);
+                                CombatManager.Instance.AddCombatSession(pfSession);
                             }
                             if(tPlayer.Player.FollowerID != Guid.Empty)
                             {
-                                var fInit = Helpers.RollDice(1, 20);
-                                var follower = NPCManager.Instance.GetNPCByGUID(tPlayer.Player.FollowerID);
-                                participants.Add((fInit, follower, desc));
-                                participants.Add((myInit, desc, follower));
+                                var tpFollower = NPCManager.Instance.GetNPCByGUID(tPlayer.Player.FollowerID);
+                                var tpfSession = new CombatSessionNew(tpFollower, desc, tpFollower.NPCGuid, desc.Id);
+                                var mtpfSession = new CombatSessionNew(desc, tpFollower, desc.Id, tpFollower.NPCGuid);
+                                CombatManager.Instance.AddCombatSession(tpfSession);
+                                CombatManager.Instance.AddCombatSession(mtpfSession);
                             }
-                            if(desc.Player.FollowerID != Guid.Empty && tPlayer.Player.FollowerID != Guid.Empty)
-                            {
-                                var myFInit = Helpers.RollDice(1, 20);
-                                var tFInit = Helpers.RollDice(1, 20);
-                                var myFollower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                var tFollower = NPCManager.Instance.GetNPCByGUID(tPlayer.Player.FollowerID);
-                                participants.Add((myFInit, myFollower, tFollower));
-                                participants.Add((tFInit, tFollower, myFollower));
-                            }
-                            var session = new CombatSessionNew
-                            {
-                                Participants = participants,
-                                SessionID = Guid.NewGuid(),
-                            };
-                            CombatManager.Instance.AddCombatSession(session);
-                            desc.Player.CombatSessionID = session.SessionID;
-                            tPlayer.Player.CombatSessionID = session.SessionID;
                         }
                         else
                         {
@@ -3010,41 +3571,18 @@ namespace Kingdoms_of_Etrea.Core
                                     desc.Player.Visible = true;
                                     desc.Send($"You shimmer and become visible again.{Constants.NewLine}");
                                 }
-                                var myInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                var mobInit = Convert.ToUInt32(Helpers.RollDice(1, 20) + ActorStats.CalculateAbilityModifier(t.Stats.Dexterity));
-                                myInit = desc.Player.HasSkill("Awareness") ? myInit += 4 : myInit;
-                                mobInit = t.HasSkill("Awareness") ? mobInit += 4 : mobInit;
-                                var participants = new List<(uint Initiative, dynamic Participant, dynamic Target)>
-                                {
-                                    (myInit, desc, t),
-                                    (mobInit, t, desc)
-                                };
-                                if (desc.Player.FollowerID != Guid.Empty)
+                                var pSession = new CombatSessionNew(desc, t, desc.Id, t.NPCGuid);
+                                var mSession = new CombatSessionNew(t, desc, t.NPCGuid, desc.Id);
+                                CombatManager.Instance.AddCombatSession(pSession);
+                                CombatManager.Instance.AddCombatSession(mSession);
+                                if(desc.Player.FollowerID != Guid.Empty)
                                 {
                                     var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                    if (f != null)
-                                    {
-                                        var followerInit = Helpers.RollDice(1, 20);
-                                        if (ActorStats.CalculateAbilityModifier(f.Stats.Dexterity) > 0)
-                                        {
-                                            followerInit += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(f.Stats.Dexterity));
-                                        }
-                                        participants.Add((followerInit, f, t));
-                                        participants.Add((mobInit, t, f));
-                                    }
-                                    else
-                                    {
-                                        desc.Player.FollowerID = Guid.Empty;
-                                        Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
-                                    }
+                                    var fSession = new CombatSessionNew(f, t, f.NPCGuid, t.NPCGuid);
+                                    var mfSession = new CombatSessionNew(t, f, t.NPCGuid, f.NPCGuid);
+                                    CombatManager.Instance.AddCombatSession(fSession);
+                                    CombatManager.Instance.AddCombatSession(mfSession);
                                 }
-                                var session = new CombatSessionNew
-                                {
-                                    Participants = participants,
-                                    SessionID = Guid.NewGuid(),
-                                };
-                                CombatManager.Instance.AddCombatSession(session);
-                                desc.Player.CombatSessionID = session.SessionID;
                                 desc.Player.Position = ActorPosition.Fighting;
                             }
                             else
@@ -3868,35 +4406,123 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DrinkPotion(ref Descriptor desc, ref string input)
         {
-            var potionName = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            var i = GetTargetItem(ref desc, potionName, true);
-            string msgToSendToPlayer = string.Empty;
-            string msgToSendToOthers = string.Empty;
-            if (i != null)
+            var verb = GetVerb(ref input);
+            var itemName = input.Remove(0, verb.Length).Trim();
+            var i = GetTargetItem(ref desc, itemName, true);
+            if(i != null)
             {
                 if(i.ItemType == ItemType.Potion)
                 {
                     var pn = desc.Player.Name;
-                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => x.Player.Name != pn).ToList();
-                    desc.Send($"With a few gulps you drink the {i.Name}{Constants.NewLine}");
+                    desc.Send($"You greedily consume the {i.Name}!{Constants.NewLine}");
                     desc.Player.Inventory.Remove(i);
-                    if (localPlayers != null && localPlayers.Count > 0)
+                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => x.Player.Name != pn).ToList();
+                    if(localPlayers != null && localPlayers.Count > 0)
                     {
-                        foreach (var lp in localPlayers)
+                        foreach(var lp in localPlayers)
                         {
-                            if (desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel)
+                            var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
+                                ? $"{pn} greedily consume the {i.Name} they were carrying!{Constants.NewLine}"
+                                : $"There is a strange noise as something greedily consumes something!{Constants.NewLine}";
+                            lp.Send(msg);
+                        }
+                    }
+                    if(i.NumberOfDamageDice > 0)
+                    {
+                        var modAmount = Helpers.RollDice(i.NumberOfDamageDice, i.SizeOfDamageDice);
+                        foreach(PotionEffect flag in Helpers.GetPotionFlags(i.PotionEffect))
+                        {
+                            switch (i.PotionEffect)
                             {
-                                lp.Send($"{desc.Player} gulps down the {i.Name}.{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                lp.Send($"There is a strange noise as something gulps down a drink!{Constants.NewLine}");
+                                case PotionEffect.SPHealing:
+                                    if(desc.Player.Stats.CurrentSP + modAmount > desc.Player.Stats.MaxSP)
+                                    {
+                                        desc.Player.Stats.CurrentSP = desc.Player.Stats.MaxSP;
+                                    }
+                                    else
+                                    {
+                                        desc.Player.Stats.CurrentSP += modAmount;
+                                    }
+                                    desc.Send($"You feel invigorated!{Constants.NewLine}");
+                                    break;
+
+                                case PotionEffect.Healing:
+                                    if(desc.Player.Stats.CurrentHP + modAmount > desc.Player.Stats.MaxHP)
+                                    {
+                                        desc.Player.Stats.CurrentHP = (int)desc.Player.Stats.MaxHP;
+                                    }
+                                    else
+                                    {
+                                        desc.Player.Stats.CurrentHP += (int)modAmount;
+                                    }
+                                    desc.Send($"You feel your wounds fading to memory...{Constants.NewLine}");
+                                    break;
+
+                                case PotionEffect.MPHealing:
+                                    if(desc.Player.Stats.CurrentMP + modAmount > desc.Player.Stats.MaxMP)
+                                    {
+                                        desc.Player.Stats.CurrentMP = (int)desc.Player.Stats.MaxMP;
+                                    }
+                                    else
+                                    {
+                                        desc.Player.Stats.CurrentMP += (int)modAmount;
+                                    }
+                                    desc.Send($"You as though your spiritial force has been renewed!{Constants.NewLine}");
+                                    break;
+
+                                case PotionEffect.Death:
+                                    desc.Send($"You feel the spectral hand of Death upon you...{Constants.NewLine}");
+                                    desc.Player.Kill();
+                                    break;
+
+                                case PotionEffect.Poison:
+                                    desc.Send($"The {i.Name} tastes foul as you swallow it...{Constants.NewLine}");
+                                    if(desc.Player.Stats.CurrentHP - modAmount <= 0)
+                                    {
+                                        desc.Player.Kill();
+                                    }
+                                    else
+                                    {
+                                        desc.Player.Stats.CurrentHP -= (int)modAmount;
+                                    }
+                                    break;
+
+                                case PotionEffect.DrainSP:
+                                    desc.Send($"You begin to feel your stamina drain away...{Constants.NewLine}");
+                                    if(desc.Player.Stats.CurrentSP - modAmount <= 0)
+                                    {
+                                        desc.Player.Stats.CurrentSP = 0;
+                                    }
+                                    else
+                                    {
+                                        desc.Player.Stats.CurrentSP -= modAmount;
+                                    }
+                                    break;
+
+                                case PotionEffect.DrainMP:
+                                    desc.Send($"You feel as though something was sapping your very spirit...{Constants.NewLine}");
+                                    if(desc.Player.Stats.CurrentMP - modAmount <= 0)
+                                    {
+                                        desc.Player.Stats.CurrentMP = 0;
+                                    }
+                                    else
+                                    {
+                                        desc.Player.Stats.CurrentMP -= (int)modAmount;
+                                    }
+                                    break;
+
+                                case PotionEffect.Restoration:
+                                    desc.Send($"You feel holy power filling you, restoring you...{Constants.NewLine}");
+                                    desc.Player.Stats.CurrentMP = (int)desc.Player.Stats.MaxMP;
+                                    desc.Player.Stats.CurrentHP = (int)desc.Player.Stats.MaxHP;
+                                    desc.Player.Stats.CurrentSP = desc.Player.Stats.MaxSP;
+                                    break;
                             }
                         }
                     }
-                    if (i.AppliesBuff)
+                    if(i.AppliesBuff)
                     {
-                        desc.Send($"You feel the magic of the potion coursing through you!{Constants.NewLine}");
+                        desc.Send($"You feel the magic in the {i.Name} coursing through you!{Constants.NewLine}");
                         foreach (var b in i.AppliedBuffs)
                         {
                             var buff = Buffs.GetBuff(b);
@@ -3906,40 +4532,10 @@ namespace Kingdoms_of_Etrea.Core
                             }
                         }
                     }
-                    if (i.NumberOfDamageDice > 0)
-                    {
-                        var result = Helpers.RollDice(i.NumberOfDamageDice, i.SizeOfDamageDice);
-                        if (i.IsToxic)
-                        {
-                            if (desc.Player.Stats.CurrentHP - result <= 0)
-                            {
-                                desc.Send($"{i.Name} is toxic and burns its way through you, killing you!{Constants.NewLine}");
-                                desc.Player.Kill();
-                            }
-                            else
-                            {
-                                desc.Send($"{i.Name} is toxic and burns its way through you causing {result} damage!{Constants.NewLine}");
-                                desc.Player.Stats.CurrentHP -= (int)result;
-                            }
-                        }
-                        else
-                        {
-                            if (desc.Player.Stats.CurrentHP + result > desc.Player.Stats.MaxHP)
-                            {
-                                desc.Send($"{i.Name} restores your vitality!{Constants.NewLine}");
-                                desc.Player.Stats.CurrentHP = (int)desc.Player.Stats.MaxHP;
-                            }
-                            else
-                            {
-                                desc.Send($"{i.Name} restores your vitality, healing {result} damage!{Constants.NewLine}");
-                                desc.Player.Stats.CurrentHP += (int)result;
-                            }
-                        }
-                    }
                 }
                 else
                 {
-                    desc.Send($"You can't drink that!{Constants.NewLine}");
+                    desc.Send($"You can't consume that!{Constants.NewLine}");
                 }
             }
             else
@@ -4599,11 +5195,11 @@ namespace Kingdoms_of_Etrea.Core
                     if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
                     {
                         var tokens = TokeniseInput(ref obj);
-                        uint gpToGet;
+                        ulong gpToGet;
                         if(tokens.Length > 1)
                         {
                             // player has specified an amount of gold to take
-                            if(uint.TryParse(tokens.Last().Trim(), out gpToGet))
+                            if(ulong.TryParse(tokens.Last().Trim(), out gpToGet))
                             {
                                 if(gpToGet > RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom)
                                 {
@@ -4804,7 +5400,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DoHideSkill(ref Descriptor desc)
         {
-            if (desc.Player.Position == ActorPosition.Standing && desc.Player.HasSkill("Hide") && desc.Player.CombatSessionID == Guid.Empty)
+            if (desc.Player.Position == ActorPosition.Standing && desc.Player.HasSkill("Hide") && !desc.Player.IsInCombat)
             {
                 var pname = desc.Player.Name;
                 if (desc.Player.Visible)

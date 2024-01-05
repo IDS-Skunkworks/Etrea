@@ -58,7 +58,7 @@ namespace Kingdoms_of_Etrea.Entities
         {
             get
             {
-                return PotionEffect == PotionEffect.Poison;
+                return PotionEffect.HasFlag(PotionEffect.Poison);
             }
         }
         [JsonProperty]

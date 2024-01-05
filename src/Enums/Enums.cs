@@ -66,6 +66,7 @@ namespace Kingdoms_of_Etrea
         ItemVault = 1 << 23,     // Room has a vault allowing players to store and retrieve items from their vault
         LanguageTrainer = 1 << 24, // Room has a trainer allowing players to learn new languages
         HardTerrain = 1 << 25,      // Moving to or from this room costs double stamina
+        Chef = 1 << 26,             // Room has a Chef allowing players to cook food
     }
 
     [Flags]
@@ -78,6 +79,22 @@ namespace Kingdoms_of_Etrea
         Draconic = 1 << 3,
         Infernal = 1 << 4,
         Celestial = 1 << 5,
+    }
+
+    [Flags]
+    internal enum PotionEffect
+    {
+        None = 0,
+        Healing = 1 << 0,
+        MPHealing = 1 << 2,
+        Buff = 1 << 3,
+        SPHealing = 1 << 4,
+        Antidote = 1 << 5,
+        Death = 1 << 6,
+        Restoration = 1 << 7,
+        Poison = 1 << 8,
+        DrainMP = 1 << 9,
+        DrainSP = 1 << 10,
     }
 
     [Flags]
@@ -158,16 +175,6 @@ namespace Kingdoms_of_Etrea
         InOLC
     }
 
-    [Flags]
-    internal enum PotionEffect
-    {
-        None = 0,
-        Healing = 1,
-        MPHealing = 2,
-        Poison = 4,
-        Buff = 8
-    }
-
     internal enum ArmourType
     {
         Light,
@@ -193,7 +200,8 @@ namespace Kingdoms_of_Etrea
         Blacksmithing,
         Alchemy,
         Scribing,
-        Jewelcrafting
+        Jewelcrafting,
+        Cooking
     }
 
     internal enum ItemType
@@ -203,7 +211,7 @@ namespace Kingdoms_of_Etrea
         Potion = 4,
         Scroll = 8,
         Ring = 16,
-        Junk = 32
+        Junk = 32,
     }
     
     [Flags]

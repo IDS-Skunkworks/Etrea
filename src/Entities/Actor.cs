@@ -318,6 +318,7 @@ namespace Kingdoms_of_Etrea.Entities
                     Stats.ArmourClass -= 4;
                     break;
             }
+            CalculateArmourClass();
         }
     }
 
@@ -347,6 +348,7 @@ namespace Kingdoms_of_Etrea.Entities
         internal Guid FollowingPlayer { get; set; }
         internal Guid NPCGuid { get; set; }
         internal bool IsFollower => FollowingPlayer != Guid.Empty;
+        internal bool IsNPCInCombat => CombatManager.Instance.IsNPCInCombatNew(this.NPCGuid);
 
         internal NPC()
         {
@@ -497,8 +499,6 @@ namespace Kingdoms_of_Etrea.Entities
     internal class Player : Actor
     {
         [JsonProperty]
-        internal Guid CombatSessionID { get; set; }
-        [JsonProperty]
         internal bool ShowDetailedRollInfo { get; set; }
         [JsonProperty]
         internal List<Crafting.Recipe> KnownRecipes { get; set; }
@@ -508,15 +508,15 @@ namespace Kingdoms_of_Etrea.Entities
         internal List<Quest> ActiveQuests { get; set; }
         internal Guid FollowerID { get; set; }
         [JsonProperty]
-        internal uint BankBalance { get; set; }
+        internal ulong BankBalance { get; set; }
         [JsonProperty]
         internal Dictionary<string,string> CommandAliases { get; set; }
         [JsonProperty]
         internal Languages KnownLanguages { get; set; }
         [JsonProperty]
         internal Languages SpokenLanguage { get; set; }
-        internal bool IsInCombat => CombatSessionID != Guid.Empty;
         internal bool PVP;
+        internal bool IsInCombat => CombatManager.Instance.IsPlayerInCombat(SessionManager.Instance.GetPlayer(Name).Id);
         internal uint IdleTicks { get; set; }
 
         internal virtual bool Move(uint fromRoomId, uint destRoomId, bool wasTeleported, /*ref Descriptor desc,*/ bool bypassStamCheck = false)
@@ -600,11 +600,10 @@ namespace Kingdoms_of_Etrea.Entities
                 }
             }
             Position = ActorPosition.Dead;
-            CombatSessionID = Guid.Empty;
             uint xpLost = Stats.Exp > 3 ? Convert.ToUInt32(Stats.Exp * 0.1) : 0;
             Stats.Exp -= xpLost;
             //uint gp = descriptor.Player.Stats.Gold;
-            uint gp = this.Stats.Gold;
+            ulong gp = this.Stats.Gold;
             //RoomManager.Instance.AddGoldToRoom(descriptor.Player.CurrentRoom, gp);
             RoomManager.Instance.AddGoldToRoom(this.CurrentRoom, gp);
             //descriptor.Player.Stats.Gold = 0;
@@ -615,9 +614,9 @@ namespace Kingdoms_of_Etrea.Entities
             Move(this.CurrentRoom, Constants.LimboRID(), true, true);
         }
 
-        internal void AddGold(uint gp/*, ref Descriptor desc*/)
+        internal void AddGold(ulong gp/*, ref Descriptor desc*/)
         {
-            uint totalGP = gp;
+            ulong totalGP = gp;
             if(HasSkill("Gold Digger"))
             {
                 uint bonusGP = Convert.ToUInt32(gp * 0.5);

@@ -9,6 +9,168 @@ namespace Kingdoms_of_Etrea.Core
 {
     internal static partial class CommandParser
     {
+        private static void MOTD(ref Descriptor desc, ref string input)
+        {
+            var verb = GetVerb(ref input);
+            var line = input.Remove(0, verb.Length).Trim();
+            var tokens = TokeniseInput(ref line);
+            bool printUsage = false;
+            if(tokens.Length < 1)
+            {
+                printUsage = true;
+            }
+            else
+            {
+                switch(tokens[0].ToLower().Trim())
+                {
+                    case "show":
+                        var motd = DatabaseManager.GetMOTD();
+                        if(!string.IsNullOrEmpty(motd))
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            sb.AppendLine("Current MOTD:");
+                            sb.AppendLine($"  {new string('=', 77)}");
+                            foreach (var motdLine in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                            {
+                                if(!string.IsNullOrEmpty(motdLine))
+                                {
+                                    sb.AppendLine($"|| {motdLine}");
+                                }
+                            }
+                            sb.AppendLine($"  {new string('=', 77)}");
+                            desc.Send(sb.ToString());
+                        }
+                        else
+                        {
+                            desc.Send($"No MOTD message is configured.{Constants.NewLine}");
+                        }
+                        break;
+
+                    case "set":
+                        string newMOTD = Helpers.GetNewMOTD(ref desc);
+                        if(DatabaseManager.SetMOTD(ref desc, newMOTD))
+                        {
+                            desc.Send($"The MOTD message has been successfully updated.{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            desc.Send($"An error was encountered setting the new MOTD message.{Constants.NewLine}");
+                        }
+                        break;
+
+                    case "clear":
+                        if(DatabaseManager.SetMOTD(ref desc, string.Empty))
+                        {
+                            desc.Send($"The MOTD message has been successfully cleared.{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            desc.Send($"An error was encountered clearing the MOTD message.{Constants.NewLine}");
+                        }
+                        break;
+
+                    default:
+                        printUsage = true;
+                        break;
+                }
+            }
+            if(printUsage)
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("Usage:");
+                sb.AppendLine("motd - show this message");
+                sb.AppendLine("motd show - print the current MOTD message, if there is one");
+                sb.AppendLine("motd clear - clear the current MOTD message");
+                sb.AppendLine("motd set - set a new MOTD for players at login");
+                desc.Send(sb.ToString());
+            }
+        }
+
+        private static void GivePlayerLanguage(ref Descriptor desc, ref string input)
+        {
+            // givelang
+            var verb = GetVerb(ref input);
+            var line = input.Remove(0, verb.Length).Trim();
+            var tokens = TokeniseInput(ref line);
+            if(tokens.Length == 2)
+            {
+                var playerName = tokens[0];
+                var langName = tokens[1];
+                if(Enum.TryParse<Languages>(langName, true, out Languages lang))
+                {
+                    if(lang != Languages.Common)
+                    {
+                        var p = SessionManager.Instance.GetPlayer(playerName);
+                        if (p != null)
+                        {
+                            p.Player.KnownLanguages |= lang;
+                            p.Send($"{desc.Player.Name} has granted you knoweldge of the {lang} language!{Constants.NewLine}");
+                            desc.Send($"You have granted {p.Player} knowledge of the {lang} language!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"Everyone already knows the Common language!{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"No such language exists in the Realms!{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"Usage: givelang <player> <language>{Constants.NewLine}");
+            }
+        }
+
+        private static void RemovePlayerLanguage(ref Descriptor desc, ref string input)
+        {
+            // removelang
+            var verb = GetVerb(ref input);
+            var line = input.Remove(0, verb.Length).Trim();
+            var tokens = TokeniseInput(ref line);
+            if (tokens.Length == 2)
+            {
+                var playerName = tokens[0];
+                var langName = tokens[1];
+                if (Enum.TryParse<Languages>(langName, true, out Languages lang))
+                {
+                    if (lang != Languages.Common)
+                    {
+                        var p = SessionManager.Instance.GetPlayer(playerName);
+                        if (p != null)
+                        {
+                            p.Player.KnownLanguages &= lang;
+                            p.Send($"{desc.Player.Name} has removed your knoweldge of the {lang} language!{Constants.NewLine}");
+                            p.Player.SpokenLanguage = Languages.Common;
+                            desc.Send($"You have removed {p.Player}'s knowledge of the {lang} language!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"You cannot remove the Common language from someone!{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"No such language exists in the Realms!{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"Usage: removelang <player> <language>{Constants.NewLine}");
+            }
+        }
+
         private static void AddRecipeToPlayer(ref Descriptor desc, ref string input)
         {
             if(desc.Player.Level >= Constants.ImmLevel)

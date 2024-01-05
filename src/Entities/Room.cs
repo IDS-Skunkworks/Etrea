@@ -25,7 +25,7 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal RoomFlags Flags { get; set; }
         [JsonProperty]
-        internal uint GoldInRoom { get; set; }
+        internal ulong GoldInRoom { get; set; }
         internal List<InventoryItem> ItemsInRoom { get; set; }
         [JsonProperty]
         internal Dictionary<uint, uint> SpawnNPCsAtStart { get; set; }
@@ -70,7 +70,7 @@ namespace Kingdoms_of_Etrea.Entities
         {
             return Flags.HasFlag(RoomFlags.MagicTrainer) || Flags.HasFlag(RoomFlags.StatTrainer) || Flags.HasFlag(RoomFlags.SkillTrainer) ||
                 Flags.HasFlag(RoomFlags.Scribe) || Flags.HasFlag(RoomFlags.Jeweler) || Flags.HasFlag(RoomFlags.Alchemist) || Flags.HasFlag(RoomFlags.Blacksmith) ||
-                Flags.HasFlag(RoomFlags.LanguageTrainer);
+                Flags.HasFlag(RoomFlags.LanguageTrainer) || Flags.HasFlag(RoomFlags.Chef);
         }
 
         internal static void DescribeRoom(ref Descriptor desc, bool playerInRoom = false)
@@ -173,6 +173,10 @@ namespace Kingdoms_of_Etrea.Entities
                 if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.LanguageTrainer))
                 {
                     sb.AppendLine($"A retired Royal Diplomat is here, ready to teach the languages of the realms.");
+                }
+                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Chef))
+                {
+                    sb.AppendLine($"A master chef is here, ready to pass on the secrets of the kitchen!");
                 }
                 if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
                 {
