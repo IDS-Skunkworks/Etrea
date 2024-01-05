@@ -90,7 +90,13 @@ namespace Kingdoms_of_Etrea.Entities
                     if(desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision") || RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasLightSource)
                     {
                         sb.AppendLine($"You are in {RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomName}, {RoomManager.Instance.GetRoomShortDescription(desc.Player.CurrentRoom)}");
-                        lDesc = RoomManager.Instance.GetRoomLongDescription(desc.Player.CurrentRoom);
+                        foreach (var l in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).LongDescription.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                        {
+                            if(!string.IsNullOrEmpty(l))
+                            {
+                                sb.AppendLine(l);
+                            }
+                        }
                     }
                     else
                     {

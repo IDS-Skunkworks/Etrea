@@ -302,6 +302,7 @@ namespace Kingdoms_of_Etrea.Core
                                             ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
                                             SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
                                             SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
+                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
                                             // Check and update any quests that might depend on killing this NPC
                                             var npcID = ((NPC)defender).NPCID;
                                             if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
@@ -393,6 +394,7 @@ namespace Kingdoms_of_Etrea.Core
                                             ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
                                             SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
                                             SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
+                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
                                             // Check and update any quests that might depend on killing this NPC
                                             var npcID = ((NPC)defender).NPCID;
                                             if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
@@ -484,6 +486,7 @@ namespace Kingdoms_of_Etrea.Core
                                         ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
                                         SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
                                         SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
+                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
                                         // Check and update any quests that might depend on killing this NPC
                                         var npcID = ((NPC)defender).NPCID;
                                         if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
@@ -555,6 +558,7 @@ namespace Kingdoms_of_Etrea.Core
                                         ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
                                         SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
                                         SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
+                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
                                         // Check and update any quests that might depend on killing this NPC
                                         var npcID = ((NPC)defender).NPCID;
                                         if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
@@ -1390,7 +1394,7 @@ namespace Kingdoms_of_Etrea.Core
                                 }
                                 if (defenderIsPlayer)
                                 {
-                                    ((Descriptor)defender).Send($"{((NPC)attacker).Name} funbled their attack and misses you wildly!{Constants.NewLine}");
+                                    ((Descriptor)defender).Send($"{((NPC)attacker).Name} fumbled their attack and misses you wildly!{Constants.NewLine}");
                                 }
                                 if (!defenderIsPlayer && ((NPC)defender).IsFollower)
                                 {

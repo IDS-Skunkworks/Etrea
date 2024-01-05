@@ -9,9 +9,6 @@ namespace Kingdoms_of_Etrea.Core
 {
     internal static partial class CommandParser
     {
-        // TODO: Update parsing code: instead of replacing the verb with an empty string, get verb and remove verb.length from the start of the string then trim()
-        //       See PlayerQuests() for example code
-
         private static void PlayerLanguages(ref Descriptor desc, ref string input)
         {
             var verb = GetVerb(ref input);
@@ -1971,6 +1968,7 @@ namespace Kingdoms_of_Etrea.Core
                                                     desc.Send($"You earn {npc.BaseExpAward} Exp and {npc.Stats.Gold} gold!{Constants.NewLine}");
                                                     desc.Player.AddExp(npc.BaseExpAward);
                                                     desc.Player.AddGold(npc.Stats.Gold);
+                                                    desc.Player.UpdateAlignment(npc.Alignment);
                                                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                                                     if (localPlayers != null && localPlayers.Count > 1)
                                                     {
@@ -2325,260 +2323,267 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void TrainPlayerStat(ref Descriptor desc, ref string input)
         {
-            var stat = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            StringBuilder sb = new StringBuilder();
-            if(!string.IsNullOrEmpty(stat))
+            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.StatTrainer))
             {
-                uint cost = 0;
-                switch(stat.ToLower())
+                var stat = input.Replace(GetVerb(ref input), string.Empty).Trim();
+                StringBuilder sb = new StringBuilder();
+                if (!string.IsNullOrEmpty(stat))
                 {
-                    case "str":
-                    case "strength":
-                        cost = Convert.ToUInt32((desc.Player.Stats.Strength + 1) * 1000);
-                        break;
-
-                    case "dex":
-                    case "dexterity":
-                        cost = Convert.ToUInt32((desc.Player.Stats.Dexterity + 1) * 1000);
-                        break;
-
-                    case "int":
-                    case "intelligence":
-                        cost = Convert.ToUInt32((desc.Player.Stats.Intelligence + 1) * 1000);
-                        break;
-
-                    case "wisdom":
-                    case "wis":
-                        cost = Convert.ToUInt32((desc.Player.Stats.Wisdom + 1) * 1000);
-                        break;
-
-                    case "constitution":
-                    case "con":
-                        cost = Convert.ToUInt32((desc.Player.Stats.Constitution + 1) * 1000);
-                        break;
-
-                    case "charisma":
-                    case "cha":
-                        cost = Convert.ToUInt32((desc.Player.Stats.Charisma + 1) * 1000);
-                        break;
-
-                    case "hp":
-                    case "mp":
-                    case "health":
-                    case "mana":
-                    case "stamina":
-                    case "sp":
-                        cost = 20000;
-                        break;
-
-                    default:
-                        desc.Send($"'I can't help you train that,' the gym master says.{Constants.NewLine}");
-                        return;
-                }
-                if(desc.Player.Stats.Gold >= cost)
-                {
-                    desc.Send($"The gym master smiles. 'Certainly! Follow me...'{Constants.NewLine}");
-                    desc.Player.Stats.Gold -= cost;
+                    uint cost = 0;
                     switch (stat.ToLower())
                     {
                         case "str":
                         case "strength":
-                            desc.Player.Stats.Strength++;
-                            desc.Send($"Your Strength increases to {desc.Player.Stats.Strength}{Constants.NewLine}");
+                            cost = Convert.ToUInt32((desc.Player.Stats.Strength + 1) * 1000);
                             break;
 
                         case "dex":
                         case "dexterity":
-                            desc.Player.Stats.Dexterity++;
-                            desc.Send($"Your Dexterity increases to {desc.Player.Stats.Dexterity}{Constants.NewLine}");
+                            cost = Convert.ToUInt32((desc.Player.Stats.Dexterity + 1) * 1000);
                             break;
 
                         case "int":
                         case "intelligence":
-                            desc.Player.Stats.Intelligence++;
-                            desc.Send($"Your Intelligence increases to {desc.Player.Stats.Intelligence}{Constants.NewLine}");
+                            cost = Convert.ToUInt32((desc.Player.Stats.Intelligence + 1) * 1000);
                             break;
 
                         case "wisdom":
                         case "wis":
-                            desc.Player.Stats.Wisdom++;
-                            desc.Send($"Your Wisdom increases to {desc.Player.Stats.Wisdom}{Constants.NewLine}");
+                            cost = Convert.ToUInt32((desc.Player.Stats.Wisdom + 1) * 1000);
                             break;
 
                         case "constitution":
                         case "con":
-                            desc.Player.Stats.Constitution++;
-                            desc.Send($"Your Constitution increases to {desc.Player.Stats.Constitution}{Constants.NewLine}");
+                            cost = Convert.ToUInt32((desc.Player.Stats.Constitution + 1) * 1000);
                             break;
 
                         case "charisma":
                         case "cha":
-                            desc.Player.Stats.Charisma++;
-                            desc.Send($"Your Charisma increases to {desc.Player.Stats.Charisma}{Constants.NewLine}");
+                            cost = Convert.ToUInt32((desc.Player.Stats.Charisma + 1) * 1000);
                             break;
 
                         case "hp":
-                        case "health":
-                            switch(desc.Player.Class)
-                            {
-                                case ActorClass.Wizard:
-                                    var hpInc = Helpers.RollDice(1, 4) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
-                                    hpInc = hpInc <= 0 ? 1: hpInc;
-                                    desc.Player.Stats.CurrentHP += (int)hpInc;
-                                    desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
-                                    desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                    break;
-
-                                case ActorClass.Cleric:
-                                    hpInc = Helpers.RollDice(1, 8) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
-                                    hpInc = hpInc <= 0 ? 1 : hpInc;
-                                    desc.Player.Stats.CurrentHP += (int)hpInc;
-                                    desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
-                                    desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                    break;
-
-                                case ActorClass.Thief:
-                                    hpInc = Helpers.RollDice(1, 6) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
-                                    hpInc = hpInc <= 0 ? 1 : hpInc;
-                                    desc.Player.Stats.CurrentHP += (int)hpInc;
-                                    desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
-                                    desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                    break;
-
-                                case ActorClass.Fighter:
-                                    hpInc = Helpers.RollDice(1, 10) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
-                                    hpInc = hpInc <= 0 ? 1 : hpInc;
-                                    desc.Player.Stats.CurrentHP += (int)hpInc;
-                                    desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
-                                    desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                    break;
-                            }
-                            break;
-
                         case "mp":
+                        case "health":
                         case "mana":
-                            switch (desc.Player.Class)
-                            {
-                                case ActorClass.Wizard:
-                                    var mpInc = Helpers.RollDice(1, 10) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                    mpInc = mpInc <= 0 ? 1 : mpInc;
-                                    desc.Player.Stats.CurrentMP += (int)mpInc;
-                                    desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
-                                    desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                    break;
-
-                                case ActorClass.Cleric:
-                                    mpInc = Helpers.RollDice(1, 8) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
-                                    mpInc = mpInc <= 0 ? 1 : mpInc;
-                                    desc.Player.Stats.CurrentMP += (int)mpInc;
-                                    desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
-                                    desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                    break;
-
-                                case ActorClass.Thief:
-                                    mpInc = Helpers.RollDice(1, 6) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                    mpInc = mpInc <= 0 ? 1 : mpInc;
-                                    desc.Player.Stats.CurrentMP += (int)mpInc;
-                                    desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
-                                    desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                    break;
-
-                                case ActorClass.Fighter:
-                                    mpInc = Helpers.RollDice(1, 4) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                    mpInc = mpInc <= 0 ? 1 : mpInc;
-                                    desc.Player.Stats.CurrentMP += (int)mpInc;
-                                    desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
-                                    desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                    break;
-                            }
-                            break;
-
-                        case "sp":
                         case "stamina":
-                            var spInc = Helpers.RollDice(1, 10);
-                            var mod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
-                            if(mod > 0)
-                            {
-                                spInc += (uint)mod;
-                            }
-                            desc.Player.Stats.MaxSP += spInc;
-                            desc.Player.Stats.CurrentSP += spInc;
-                            desc.Send($"Your stamina increases by {spInc}!{Constants.NewLine}");
+                        case "sp":
+                            cost = 20000;
                             break;
+
+                        default:
+                            desc.Send($"'I can't help you train that,' the gym master says.{Constants.NewLine}");
+                            return;
                     }
-                    desc.Player.CalculateArmourClass();
+                    if (desc.Player.Stats.Gold >= cost)
+                    {
+                        desc.Send($"The gym master smiles. 'Certainly! Follow me...'{Constants.NewLine}");
+                        desc.Player.Stats.Gold -= cost;
+                        switch (stat.ToLower())
+                        {
+                            case "str":
+                            case "strength":
+                                desc.Player.Stats.Strength++;
+                                desc.Send($"Your Strength increases to {desc.Player.Stats.Strength}{Constants.NewLine}");
+                                break;
+
+                            case "dex":
+                            case "dexterity":
+                                desc.Player.Stats.Dexterity++;
+                                desc.Send($"Your Dexterity increases to {desc.Player.Stats.Dexterity}{Constants.NewLine}");
+                                break;
+
+                            case "int":
+                            case "intelligence":
+                                desc.Player.Stats.Intelligence++;
+                                desc.Send($"Your Intelligence increases to {desc.Player.Stats.Intelligence}{Constants.NewLine}");
+                                break;
+
+                            case "wisdom":
+                            case "wis":
+                                desc.Player.Stats.Wisdom++;
+                                desc.Send($"Your Wisdom increases to {desc.Player.Stats.Wisdom}{Constants.NewLine}");
+                                break;
+
+                            case "constitution":
+                            case "con":
+                                desc.Player.Stats.Constitution++;
+                                desc.Send($"Your Constitution increases to {desc.Player.Stats.Constitution}{Constants.NewLine}");
+                                break;
+
+                            case "charisma":
+                            case "cha":
+                                desc.Player.Stats.Charisma++;
+                                desc.Send($"Your Charisma increases to {desc.Player.Stats.Charisma}{Constants.NewLine}");
+                                break;
+
+                            case "hp":
+                            case "health":
+                                switch (desc.Player.Class)
+                                {
+                                    case ActorClass.Wizard:
+                                        var hpInc = Helpers.RollDice(1, 4) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        hpInc = hpInc <= 0 ? 1 : hpInc;
+                                        desc.Player.Stats.CurrentHP += (int)hpInc;
+                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
+                                        break;
+
+                                    case ActorClass.Cleric:
+                                        hpInc = Helpers.RollDice(1, 8) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        hpInc = hpInc <= 0 ? 1 : hpInc;
+                                        desc.Player.Stats.CurrentHP += (int)hpInc;
+                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
+                                        break;
+
+                                    case ActorClass.Thief:
+                                        hpInc = Helpers.RollDice(1, 6) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        hpInc = hpInc <= 0 ? 1 : hpInc;
+                                        desc.Player.Stats.CurrentHP += (int)hpInc;
+                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
+                                        break;
+
+                                    case ActorClass.Fighter:
+                                        hpInc = Helpers.RollDice(1, 10) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        hpInc = hpInc <= 0 ? 1 : hpInc;
+                                        desc.Player.Stats.CurrentHP += (int)hpInc;
+                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
+                                        break;
+                                }
+                                break;
+
+                            case "mp":
+                            case "mana":
+                                switch (desc.Player.Class)
+                                {
+                                    case ActorClass.Wizard:
+                                        var mpInc = Helpers.RollDice(1, 10) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                        mpInc = mpInc <= 0 ? 1 : mpInc;
+                                        desc.Player.Stats.CurrentMP += (int)mpInc;
+                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
+                                        break;
+
+                                    case ActorClass.Cleric:
+                                        mpInc = Helpers.RollDice(1, 8) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
+                                        mpInc = mpInc <= 0 ? 1 : mpInc;
+                                        desc.Player.Stats.CurrentMP += (int)mpInc;
+                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
+                                        break;
+
+                                    case ActorClass.Thief:
+                                        mpInc = Helpers.RollDice(1, 6) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                        mpInc = mpInc <= 0 ? 1 : mpInc;
+                                        desc.Player.Stats.CurrentMP += (int)mpInc;
+                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
+                                        break;
+
+                                    case ActorClass.Fighter:
+                                        mpInc = Helpers.RollDice(1, 4) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                        mpInc = mpInc <= 0 ? 1 : mpInc;
+                                        desc.Player.Stats.CurrentMP += (int)mpInc;
+                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
+                                        break;
+                                }
+                                break;
+
+                            case "sp":
+                            case "stamina":
+                                var spInc = Helpers.RollDice(1, 10);
+                                var mod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                if (mod > 0)
+                                {
+                                    spInc += (uint)mod;
+                                }
+                                desc.Player.Stats.MaxSP += spInc;
+                                desc.Player.Stats.CurrentSP += spInc;
+                                desc.Send($"Your stamina increases by {spInc}!{Constants.NewLine}");
+                                break;
+                        }
+                        desc.Player.CalculateArmourClass();
+                    }
+                    else
+                    {
+                        desc.Send($"The gym master frowns. 'Looks like you're short of funds!'{Constants.NewLine}");
+                    }
                 }
                 else
                 {
-                    desc.Send($"The gym master frowns. 'Looks like you're short of funds!'{Constants.NewLine}");
+                    // no stat specified so show price for increasing all stats
+                    sb.AppendLine($"The gym master flexes. 'Sure I can help you improve, but it will cost you...'");
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    sb.AppendLine($"|| Price{Constants.TabStop}|| Stat");
+                    var strIncPrice = (desc.Player.Stats.Strength + 1) * 1000;
+                    var dexIncPrice = (desc.Player.Stats.Dexterity + 1) * 1000;
+                    var intIncPrice = (desc.Player.Stats.Intelligence + 1) * 1000;
+                    var wisIncPrice = (desc.Player.Stats.Wisdom + 1) * 1000;
+                    var conIncPrice = (desc.Player.Stats.Constitution + 1) * 1000;
+                    var chaIncPrice = (desc.Player.Stats.Charisma + 1) * 1000;
+                    sb.AppendLine($"||==============||{new string('=', 61)}");
+                    if (strIncPrice.ToString().Length > 4)
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Strength + 1) * 1000}{Constants.TabStop}|| Strength");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Strength + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Strength");
+                    }
+                    if (dexIncPrice.ToString().Length > 4)
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Dexterity + 1) * 1000}{Constants.TabStop}|| Dexterity");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Dexterity + 1) * 1000}{Constants.TabStop}{Constants.NewLine}|| Dexterity");
+                    }
+                    if (intIncPrice.ToString().Length > 4)
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Intelligence + 1) * 1000}{Constants.TabStop}|| Intelligence");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Intelligence + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Intelligence");
+                    }
+                    if (wisIncPrice.ToString().Length > 4)
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Wisdom + 1) * 1000}{Constants.TabStop}|| Wisdom");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Wisdom + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Wisdom");
+                    }
+                    if (conIncPrice.ToString().Length > 4)
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Constitution + 1) * 1000}{Constants.TabStop}|| Constitution");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Constitution + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Constitution");
+                    }
+                    if (chaIncPrice.ToString().Length > 4)
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Charisma + 1) * 1000}{Constants.TabStop}|| Charisma");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| {(desc.Player.Stats.Charisma + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Charisma");
+                    }
+                    sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra HP");
+                    sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra MP");
+                    sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra SP");
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    desc.Send(sb.ToString());
                 }
             }
             else
             {
-                // no stat specified so show price for increasing all stats
-                sb.AppendLine($"The gym master flexes. 'Sure I can help you improve, but it will cost you...'");
-                sb.AppendLine($"  {new string('=', 77)}");
-                sb.AppendLine($"|| Price{Constants.TabStop}|| Stat");
-                var strIncPrice = (desc.Player.Stats.Strength + 1) * 1000;
-                var dexIncPrice = (desc.Player.Stats.Dexterity + 1) * 1000;
-                var intIncPrice = (desc.Player.Stats.Intelligence + 1) * 1000;
-                var wisIncPrice = (desc.Player.Stats.Wisdom + 1) * 1000;
-                var conIncPrice = (desc.Player.Stats.Constitution + 1) * 1000;
-                var chaIncPrice = (desc.Player.Stats.Charisma + 1) * 1000;
-                sb.AppendLine($"||==============||{new string('=', 61)}");
-                if(strIncPrice.ToString().Length > 4)
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Strength + 1) * 1000}{Constants.TabStop}|| Strength");
-                }
-                else
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Strength + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Strength");
-                }
-                if(dexIncPrice.ToString().Length > 4)
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Dexterity + 1) * 1000}{Constants.TabStop}|| Dexterity");
-                }
-                else
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Dexterity + 1) * 1000}{Constants.TabStop}{Constants.NewLine}|| Dexterity");
-                }
-                if(intIncPrice.ToString().Length > 4)
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Intelligence + 1) * 1000}{Constants.TabStop}|| Intelligence");
-                }
-                else
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Intelligence + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Intelligence");
-                }
-                if(wisIncPrice.ToString().Length > 4)
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Wisdom + 1) * 1000}{Constants.TabStop}|| Wisdom");
-                }
-                else
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Wisdom + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Wisdom");
-                }
-                if(conIncPrice.ToString().Length > 4)
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Constitution + 1) * 1000}{Constants.TabStop}|| Constitution");
-                }
-                else
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Constitution + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Constitution");
-                }
-                if(chaIncPrice.ToString().Length > 4)
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Charisma + 1) * 1000}{Constants.TabStop}|| Charisma");
-                }
-                else
-                {
-                    sb.AppendLine($"|| {(desc.Player.Stats.Charisma + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Charisma");
-                }
-                sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra HP");
-                sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra MP");
-                sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra SP");
-                sb.AppendLine($"  {new string('=', 77)}");
-                desc.Send(sb.ToString());
+                desc.Send($"There is no one here to train you!{Constants.NewLine}");
             }
         }
 
@@ -2588,11 +2593,25 @@ namespace Kingdoms_of_Etrea.Core
             sb.AppendLine($"  {new string('=', 77)}");
             if(desc.Player.Skills.Count > 0)
             {
-                sb.AppendLine("|| You know the following skills:");
-                foreach(var s in desc.Player.Skills)
+                sb.AppendLine($"|| Skill {Constants.TabStop}{Constants.TabStop}|| MP{Constants.TabStop}|| Description");
+                sb.AppendLine($"||{new string('=', 77)}");
+                foreach (var s in desc.Player.Skills)
                 {
-                    sb.AppendLine($"|| Name: {s.Name}{Constants.TabStop}MP: {s.MPCost}");
-                    sb.AppendLine($"|| Effect: {s.Description}");
+                    if(s.Name.Length <= 4)
+                    {
+                        sb.AppendLine($"|| {s.Name}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
+                    }
+                    else
+                    {
+                        if (s.Name.Length < 13)
+                        {
+                            sb.AppendLine($"|| {s.Name}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"|| {s.Name}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
+                        }
+                    }
                 }
             }
             else
@@ -2609,11 +2628,25 @@ namespace Kingdoms_of_Etrea.Core
             sb.AppendLine($"  {new string('=', 77)}");
             if(desc.Player.Spells.Count > 0)
             {
-                sb.AppendLine("|| You know the following spells:");
-                foreach(var s in desc.Player.Spells)
+                sb.AppendLine($"|| Spell {Constants.TabStop}{Constants.TabStop}|| MP{Constants.TabStop}|| Description");
+                sb.AppendLine($"||{new string('=', 77)}");
+                foreach (var s in desc.Player.Spells)
                 {
-                    sb.AppendLine($"|| Name: {s.SpellName}{Constants.TabStop}Mana: {s.MPCost}");
-                    sb.AppendLine($"|| Effect: {s.Description}");
+                    if (s.SpellName.Length <= 4)
+                    {
+                        sb.AppendLine($"|| {s.SpellName}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
+                    }
+                    else
+                    {
+                        if (s.SpellName.Length < 13)
+                        {
+                            sb.AppendLine($"|| {s.SpellName}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"|| {s.SpellName}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
+                        }
+                    }
                 }
             }
             else
@@ -2883,6 +2916,7 @@ namespace Kingdoms_of_Etrea.Core
                                                                             desc.Send($"You have killed {targetNPC.Name} and obtained {targetNPC.BaseExpAward} Exp and {targetNPC.Stats.Gold} gold!{Constants.NewLine}");
                                                                             desc.Player.AddExp(targetNPC.BaseExpAward);
                                                                             desc.Player.AddGold(targetNPC.Stats.Gold);
+                                                                            desc.Player.UpdateAlignment(targetNPC.Alignment);
                                                                             var pn = desc.Player.Name;
                                                                             var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                                                                             if(localPlayers != null && localPlayers.Count > 1)
@@ -3009,6 +3043,7 @@ namespace Kingdoms_of_Etrea.Core
                                                                                     desc.Send($"You have killed {targetNPC.Name} and obtained {targetNPC.BaseExpAward} Exp and {targetNPC.Stats.Gold} gold!{Constants.NewLine}");
                                                                                     desc.Player.AddExp(targetNPC.BaseExpAward);
                                                                                     desc.Player.AddGold(targetNPC.Stats.Gold);
+                                                                                    desc.Player.UpdateAlignment(targetNPC.Alignment);
                                                                                     var pn = desc.Player.Name;
                                                                                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                                                                                     if (localPlayers != null && localPlayers.Count > 1)
@@ -3897,7 +3932,7 @@ namespace Kingdoms_of_Etrea.Core
             var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
             if(r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
             {
-                var criteria = input.Replace(GetVerb(ref input), string.Empty).Trim();
+                var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
                 var s = ShopManager.Instance.GetShop(r.ShopID.Value);
                 if(s != null)
                 {
@@ -3922,13 +3957,30 @@ namespace Kingdoms_of_Etrea.Core
                 var s = ShopManager.Instance.GetShop(r.ShopID.Value);
                 if(s != null)
                 {
-                    var criteria = input.Replace(GetVerb(ref input), string.Empty).Trim();
+                    var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
                     if(!string.IsNullOrEmpty(criteria))
                     {
                         var i = GetTargetItem(ref desc, criteria, true);
                         if(i != null)
                         {
                             var salePrice = Helpers.GetNewSalePrice(ref desc, i.BaseValue);
+
+                            if (s.ShopAlignment != ActorAlignment.Neutral)
+                            {
+                                // adjust the sale price some more if the shop isn't neutral and doesn't match with the alignment of the player
+                                if (s.ShopAlignment != desc.Player.Alignment)
+                                {
+                                    // drop the purchase price by 10% of base price if the alignments don't match
+                                    var priceMod = Convert.ToUInt32(i.BaseValue * 0.1);
+                                    salePrice = salePrice - priceMod < 0 ? 1 : salePrice - priceMod;
+                                }
+                                if (s.ShopAlignment == desc.Player.Alignment)
+                                {
+                                    // increase the purchase price by 10% of base price if the alignments match
+                                    var priceMod = Convert.ToUInt32(i.BaseValue * 0.1);
+                                    salePrice += priceMod;
+                                }
+                            }
                             desc.Player.Inventory.Remove(i);
                             desc.Player.Stats.Gold += salePrice;
                             desc.Send($"You hand over {i.ShortDescription} and pocket the {salePrice} gold from the shopkeeper{Constants.NewLine}");
@@ -3973,7 +4025,7 @@ namespace Kingdoms_of_Etrea.Core
             if(r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
             {
                 var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                var criteria = input.Replace(GetVerb(ref input), string.Empty).Trim();
+                var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
                 if(s != null)
                 {
                     if (!string.IsNullOrEmpty(criteria))

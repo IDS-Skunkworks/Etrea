@@ -860,12 +860,11 @@ namespace Kingdoms_of_Etrea.Core
                         sb.AppendLine($"  {new string('=', 77)}");
                         sb.AppendLine($"|| Name: {p.Player.Name}{Constants.TabStop}{Constants.TabStop}Gender: {p.Player.Gender}{Constants.TabStop}Class: {p.Player.Class}{Constants.TabStop}Race: {p.Player.Race}");
                         sb.AppendLine($"|| Level: {p.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {p.Player.Stats.Exp}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(p.Player.Level, p.Player.Stats.Exp)}");
-                        sb.AppendLine($"|| Alignment: {p.Player.Alignment}{Constants.TabStop}{Constants.TabStop}Gold: {p.Player.Stats.Gold}");
+                        sb.AppendLine($"|| Alignment: {p.Player.Alignment}({p.Player.AlignmentScale}){Constants.TabStop}Gold: {p.Player.Stats.Gold}");
                         sb.AppendLine($"||");
                         sb.AppendLine($"|| Stats:");
-                        sb.AppendLine($"|| Strength: {p.Player.Stats.Strength} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}Dexterity: {p.Player.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Dexterity)})");
-                        sb.AppendLine($"|| Constitution: {p.Player.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Constitution)}){Constants.TabStop}{Constants.TabStop}Intelligence: {p.Player.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Intelligence)})");
-                        sb.AppendLine($"|| Wisdom: {p.Player.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}Charisma: {p.Player.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Charisma)})");
+                        sb.AppendLine($"|| STR: {p.Player.Stats.Strength} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {p.Player.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {p.Player.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Constitution)})");
+                        sb.AppendLine($"|| INT: {p.Player.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {p.Player.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {p.Player.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Charisma)})");
                         sb.AppendLine($"|| Current HP: {p.Player.Stats.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {p.Player.Stats.MaxHP}");
                         sb.AppendLine($"|| Current MP: {p.Player.Stats.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {p.Player.Stats.MaxMP}");
                         sb.AppendLine($"|| Armour Class: {p.Player.Stats.ArmourClass}{Constants.TabStop}No. Of Attacks: {p.Player.NumberOfAttacks}");
@@ -879,12 +878,12 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             sb.AppendLine($"  {new string('=', 77)}");
                             sb.AppendLine($"|| Name: {n.Name}{Constants.TabStop}GUID: {n.NPCGuid}");
+                            sb.AppendLine($"|| Alignment: {n.Alignment}");
                             sb.AppendLine($"|| Template: {n.NPCID}");
                             sb.AppendLine($"||");
                             sb.AppendLine($"|| Stats:");
-                            sb.AppendLine($"|| Strength: {n.Stats.Strength} ({ActorStats.CalculateAbilityModifier(n.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}Dexterity: {n.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(n.Stats.Dexterity)})");
-                            sb.AppendLine($"|| Constitution: {n.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(n.Stats.Constitution)}){Constants.TabStop}{Constants.TabStop}Intelligence: {n.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(n.Stats.Intelligence)})");
-                            sb.AppendLine($"|| Wisdom: {n.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(n.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}Charisma: {n.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(n.Stats.Charisma)})");
+                            sb.AppendLine($"|| STR: {n.Stats.Strength} ({ActorStats.CalculateAbilityModifier(n.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {n.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(n.Stats.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {n.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(n.Stats.Constitution)})");
+                            sb.AppendLine($"|| INT: {n.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(n.Stats.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {n.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(n.Stats.Wisdom)}){Constants.TabStop}{Constants.TabStop}CHA: {n.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(n.Stats.Charisma)})");
                             sb.AppendLine($"|| Hit Dice: {n.NumberOfHitDice}d{n.SizeOfHitDice}");
                             sb.AppendLine($"|| Current HP: {n.Stats.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {n.Stats.MaxHP}");
                             sb.AppendLine($"|| Current MP: {n.Stats.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {n.Stats.MaxMP}");
@@ -1086,7 +1085,7 @@ namespace Kingdoms_of_Etrea.Core
                             switch(objectType.ToLower())
                             {
                                 case "quest":
-                                    var questRange = QuestManager.Instance.GetQuestsByIDRange(rangeStart, rangeEnd);
+                                    var questRange = QuestManager.Instance.GetQuestsByIDRange(rangeStart, rangeEnd).OrderBy(x => x.QuestID).ToList();
                                     if(questRange != null && questRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1104,7 +1103,7 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "room":
-                                    var roomRange = RoomManager.Instance.GetRoomsByIDRange(rangeStart, rangeEnd);
+                                    var roomRange = RoomManager.Instance.GetRoomsByIDRange(rangeStart, rangeEnd).OrderBy(x => x.RoomID).ToList();
                                     if(roomRange != null && roomRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1122,7 +1121,7 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "item":
-                                    var itemRange = ItemManager.Instance.GetItemByIDRange(rangeStart, rangeEnd);
+                                    var itemRange = ItemManager.Instance.GetItemByIDRange(rangeStart, rangeEnd).OrderBy(x => x.Id).ToList();
                                     if(itemRange != null && itemRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1140,7 +1139,7 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "zone":
-                                    var zoneRange = ZoneManager.Instance.GetZoneByIDRange(rangeStart, rangeEnd);
+                                    var zoneRange = ZoneManager.Instance.GetZoneByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ZoneID).ToList();
                                     if(zoneRange != null && zoneRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1158,7 +1157,7 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "npc":
-                                    var npcRange = NPCManager.Instance.GetNPCByIDRange(rangeStart, rangeEnd);
+                                    var npcRange = NPCManager.Instance.GetNPCByIDRange(rangeStart, rangeEnd).OrderBy(x => x.NPCID).ToList();
                                     if(npcRange != null && npcRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1176,7 +1175,7 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "shop":
-                                    var shopRange = ShopManager.Instance.GetShopByIDRange(rangeStart, rangeEnd);
+                                    var shopRange = ShopManager.Instance.GetShopByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ShopID).ToList();
                                     if(shopRange != null && shopRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1817,6 +1816,40 @@ namespace Kingdoms_of_Etrea.Core
                                     else
                                     {
                                         desc.Send($"That is not a valid value for armour class{Constants.NewLine}");
+                                    }
+                                    break;
+
+                                case "alignment":
+                                case "align":
+                                    if (Enum.TryParse<ActorAlignment>(inputElements[3], true, out ActorAlignment alignment))
+                                    {
+                                        switch(alignment)
+                                        {
+                                            case ActorAlignment.Neutral:
+                                                targetPlayer.Player.Alignment = ActorAlignment.Neutral;
+                                                targetPlayer.Player.AlignmentScale = 0;
+                                                targetPlayer.Send($"{desc.Player.Name} has changed your Alignment to Neutral!{Constants.NewLine}");
+                                                desc.Send($"You have changed {targetPlayer.Player.Name}'s Alignment to Neutral!{Constants.NewLine}");
+                                                break;
+
+                                            case ActorAlignment.Evil:
+                                                targetPlayer.Player.Alignment = ActorAlignment.Evil;
+                                                targetPlayer.Player.AlignmentScale = -100;
+                                                targetPlayer.Send($"{desc.Player.Name} has changed your Alignment to Evil!{Constants.NewLine}");
+                                                desc.Send($"You have changed {targetPlayer.Player.Name}'s Alignment to Evil!{Constants.NewLine}");
+                                                break;
+
+                                            case ActorAlignment.Good:
+                                                targetPlayer.Player.Alignment = ActorAlignment.Good;
+                                                targetPlayer.Player.AlignmentScale = 100;
+                                                targetPlayer.Send($"{desc.Player.Name} has changed your Alignmnet to Good!{Constants.NewLine}");
+                                                desc.Send($"You have changed {targetPlayer.Player.Name}'s Alignment to Good!{Constants.NewLine}");
+                                                break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"That doesn't seem to be a valid alignment!{Constants.NewLine}");
                                     }
                                     break;
 

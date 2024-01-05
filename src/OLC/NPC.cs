@@ -1,6 +1,5 @@
 ﻿using Kingdoms_of_Etrea.Core;
 using Kingdoms_of_Etrea.Entities;
-using Kingdoms_of_Etrea.Interfaces;
 using System.Text;
 
 namespace Kingdoms_of_Etrea.OLC
@@ -60,17 +59,16 @@ namespace Kingdoms_of_Etrea.OLC
                     {
                         sb.Clear();
                         sb.AppendLine();
-                        sb.AppendLine($"NPC ID: {npc.NPCID}");
-                        sb.AppendLine($"NPC Name: {npc.Name}");
-                        sb.AppendLine($"Gender: {npc.Gender}");
+                        sb.AppendLine($"NPC ID: {npc.NPCID}{Constants.TabStop}NPC Name: {npc.Name}");
+                        sb.AppendLine($"Gender: {npc.Gender}{Constants.TabStop}Alignment: {npc.Alignment}");
                         sb.AppendLine($"NPC Zone: {npc.AppearsInZone}");
                         sb.AppendLine($"Frequency: {npc.AppearChance}{Constants.TabStop}{Constants.TabStop}Max Number: {npc.MaxNumber}");
                         sb.AppendLine($"Short Description: {npc.ShortDescription}");
                         sb.AppendLine($"Long Description: {npc.LongDescription}");
                         sb.AppendLine($"Number of Hit Dice: {npc.NumberOfHitDice}{Constants.TabStop}Size of Hit Dice: {npc.SizeOfHitDice}");
-                        sb.AppendLine($"Strength: {npc.Stats.Strength}{Constants.TabStop}Dexterity: {npc.Stats.Dexterity}");
-                        sb.AppendLine($"Constitution: {npc.Stats.Constitution}{Constants.TabStop}Intelligence: {npc.Stats.Intelligence}");
-                        sb.AppendLine($"Wisdom: {npc.Stats.Wisdom}{Constants.TabStop}Charisma: {npc.Stats.Charisma}");
+                        sb.AppendLine($"STR: {npc.Stats.Strength}{Constants.TabStop}DEX: {npc.Stats.Dexterity}");
+                        sb.AppendLine($"CON: {npc.Stats.Constitution}{Constants.TabStop}INT: {npc.Stats.Intelligence}");
+                        sb.AppendLine($"WIS: {npc.Stats.Wisdom}{Constants.TabStop}CHA: {npc.Stats.Charisma}");
                         sb.AppendLine($"Armour Class: {npc.Stats.ArmourClass}{Constants.TabStop}Base Exp: {npc.BaseExpAward}");
                         sb.AppendLine($"Gold: {npc.Stats.Gold}{Constants.TabStop}NPC Flags: {npc.BehaviourFlags}");
                         sb.AppendLine($"No. Of Attacks: {npc.NumberOfAttacks}");
@@ -90,8 +88,7 @@ namespace Kingdoms_of_Etrea.OLC
                         sb.AppendLine();
                         sb.AppendLine("Options:");
                         sb.AppendLine("1. Set NPC Name");
-                        sb.AppendLine("2. Set Short Description");
-                        sb.AppendLine("3. Set Long Description");
+                        sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
                         sb.AppendLine($"4. Set number of Hit Dice{Constants.TabStop}5. Set size of Hit Dice");
                         sb.AppendLine($"6. Set Strength{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}7. Set Dexterity");
                         sb.AppendLine($"8. Set Constitution{Constants.TabStop}{Constants.TabStop}9. Set Intelligence");
@@ -107,14 +104,14 @@ namespace Kingdoms_of_Etrea.OLC
                         sb.AppendLine($"29. Set Weapon Equip{Constants.TabStop}30. Set Held Equip");
                         sb.AppendLine($"31 Add Skill{Constants.TabStop}32. Remove Skill");
                         sb.AppendLine($"33. Add Spell{Constants.TabStop}34. Remove Spell");
-                        sb.AppendLine("35. Save NPC");
-                        sb.AppendLine("36. Exit without saving");
+                        sb.AppendLine("35. Set Alignment");
+                        sb.AppendLine($"36. Save NPC{Constants.TabStop}37. Exit without saving");
                         sb.Append("Selection: ");
                         desc.Send(sb.ToString());
                         var opt = desc.Read().Trim();
                         if(Helpers.ValidateInput(opt) && uint.TryParse(opt, out uint option))
                         {
-                            if(option >= 1 && option <= 36)
+                            if(option >= 1 && option <= 37)
                             {
                                 switch (option)
                                 {
@@ -444,6 +441,10 @@ namespace Kingdoms_of_Etrea.OLC
                                         break;
 
                                     case 35:
+                                        npc.Alignment = GetAssetEnumValue<ActorAlignment>(ref desc, "Enter Alignment: ");
+                                        break;
+
+                                    case 36:
                                         if (ValidateNPCAsset(ref desc, ref npc, false))
                                         {
                                             if(DatabaseManager.UpdateNPCByID(ref desc, ref npc))
@@ -465,7 +466,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 36:
+                                    case 37:
                                         okToReturn = true;
                                         break;
                                 }
@@ -509,10 +510,8 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"NPC ID: {newNPC.NPCID}");
-                sb.AppendLine($"NPC Name: {newNPC.Name}");
-                sb.AppendLine($"Gender: {newNPC.Gender}");
-                sb.AppendLine($"NPC Zone: {newNPC.AppearsInZone}");
+                sb.AppendLine($"NPC ID: {newNPC.NPCID}{Constants.TabStop}NPC Zone: {newNPC.AppearsInZone}");
+                sb.AppendLine($"NPC Name: {newNPC.Name}{Constants.TabStop}Gender: {newNPC.Gender}");
                 sb.AppendLine($"Frequency: {newNPC.AppearChance}{Constants.TabStop}{Constants.TabStop}Max Number: {newNPC.MaxNumber}");
                 sb.AppendLine($"Short Description: {newNPC.ShortDescription}");
                 sb.AppendLine($"Long Description: {newNPC.LongDescription}");
@@ -522,7 +521,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Wisdom: {newNPC.Stats.Wisdom}{Constants.TabStop}Charisma: {newNPC.Stats.Charisma}");
                 sb.AppendLine($"Armour Class: {newNPC.Stats.ArmourClass}{Constants.TabStop}Base Exp: {newNPC.BaseExpAward}");
                 sb.AppendLine($"Gold: {newNPC.Stats.Gold}{Constants.TabStop}NPC Flags: {newNPC.BehaviourFlags}");
-                sb.AppendLine($"No. Of Attacks: {newNPC.NumberOfAttacks}");
+                sb.AppendLine($"Alginment: {newNPC.Alignment}{Constants.TabStop}No. Of Attacks: {newNPC.NumberOfAttacks}");
                 sb.AppendLine($"Skills: {string.Join(", ", newNPC.Skills)}");
                 sb.AppendLine($"Spells: {string.Join(", ", newNPC.Spells)}");
                 sb.AppendLine($"Arrival Message: {newNPC.ArrivalMessage}");
@@ -539,8 +538,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set NPC ID{Constants.TabStop}2. Set NPC Name");
-                sb.AppendLine("3. Set Short Description");
-                sb.AppendLine("4. Set Long Description");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
                 sb.AppendLine($"5. Set number of Hit Dice{Constants.TabStop}6. Set size of Hit Dice");
                 sb.AppendLine($"7. Set Strength{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}8. Set Dexterity");
                 sb.AppendLine($"9. Set Constitution{Constants.TabStop}{Constants.TabStop}10. Set Intelligence");
@@ -556,14 +554,14 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"30. Set Weapon Equip{Constants.TabStop}31. Set Held Equip");
                 sb.AppendLine($"32. Add Skill{Constants.TabStop}33. Remove Skill");
                 sb.AppendLine($"34. Add Spell{Constants.TabStop}35. Remove Spell");
-                sb.AppendLine("36. Save NPC");
-                sb.AppendLine("37. Exit without saving");
+                sb.AppendLine("36. Set Alignment");
+                sb.AppendLine($"37. Save NPC{Constants.TabStop}38. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
                 {
-                    if(option >= 1 && option <= 37)
+                    if(option >= 1 && option <= 38)
                     {
                         switch(option)
                         {
@@ -897,6 +895,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 36:
+                                newNPC.Alignment = GetAssetEnumValue<ActorAlignment>(ref desc, "Enter Alignment: ");
+                                break;
+
+                            case 37:
                                 if(ValidateNPCAsset(ref desc, ref newNPC, true))
                                 {
                                     if(DatabaseManager.AddNewNPC(ref desc, ref newNPC))
@@ -919,7 +921,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 37:
+                            case 38:
                                 okToReturn = true;
                                 break;
                         }

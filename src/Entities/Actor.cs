@@ -578,6 +578,34 @@ namespace Kingdoms_of_Etrea.Entities
             }
         }
 
+        internal void UpdateAlignment(ActorAlignment npcAlignment)
+        {
+            switch (npcAlignment)
+            {
+                case ActorAlignment.Evil:
+                    AlignmentScale++;
+                    break;
+
+                case ActorAlignment.Good:
+                    AlignmentScale--;
+                    break;
+            }
+            if (AlignmentScale <= -50)
+            {
+                Alignment = ActorAlignment.Evil;
+                return;
+            }
+            if (AlignmentScale > -50 && AlignmentScale < 50)
+            {
+                Alignment = ActorAlignment.Neutral;
+                return;
+            }
+            if (AlignmentScale >= 50)
+            {
+                Alignment = ActorAlignment.Good;
+            }
+        }
+
         internal bool KnowsRecipe(string recipeName)
         {
             if(!string.IsNullOrEmpty(recipeName))

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Text;
+using System;
 
 namespace Kingdoms_of_Etrea.Entities
 {
@@ -14,6 +15,8 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal string ShopName { get; set; }
         [JsonProperty]
+        internal ActorAlignment ShopAlignment { get; set; }
+        [JsonProperty]
         internal List<uint> InventoryItems { get; set; }
 
         public Shop()
@@ -21,6 +24,7 @@ namespace Kingdoms_of_Etrea.Entities
             InventoryItems = new List<uint>();
             ShopID = 0;
             ShopName = string.Empty;
+            ShopAlignment = ActorAlignment.Neutral;
         }
 
         internal bool HasItemInInventory(uint itemID)
@@ -39,10 +43,27 @@ namespace Kingdoms_of_Etrea.Entities
                     if(item != null && Regex.Match(item.Name, input, RegexOptions.IgnoreCase).Success)
                     {
                         matchingItem = true;
-                        if(desc.Player.Stats.Gold >= item.BaseValue)
+                        var purchasePrice = Helpers.GetNewPurchasePrice(ref desc, item.BaseValue);
+                        if(ShopAlignment != ActorAlignment.Neutral)
+                        {
+                            // adjust the purchase price some more if the shop isn't neutral and doesn't match with the alignment of the player
+                            if(ShopAlignment != desc.Player.Alignment)
+                            {
+                                // increase the price by 10% of base price if the alignments don't match
+                                var priceMod = Convert.ToUInt32(item.BaseValue * 0.1);
+                                purchasePrice += priceMod;
+                            }
+                            if(ShopAlignment == desc.Player.Alignment)
+                            {
+                                // drop the price by 10% of base price if the alignments match
+                                var priceMod = Convert.ToUInt32(item.BaseValue * 0.1);
+                                purchasePrice = purchasePrice - priceMod < 0 ? 1 : purchasePrice - priceMod;
+                            }
+                        }
+                        if(desc.Player.Stats.Gold >= purchasePrice)
                         {
                             desc.Player.Inventory.Add(item);
-                            desc.Player.Stats.Gold -= item.BaseValue;
+                            desc.Player.Stats.Gold -= purchasePrice;
                             desc.Send($"You purchase {item.Name} from the shopkeeper who eagerly pockets your gold!{Constants.NewLine}");
                             var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom);
                             if(playersInRoom != null && playersInRoom.Count > 1)
@@ -87,7 +108,24 @@ namespace Kingdoms_of_Etrea.Entities
                                   where i != null && (string.IsNullOrEmpty(criteria) || Regex.Match(i.Name, criteria, RegexOptions.IgnoreCase).Success || Regex.Match(i.ShortDescription, criteria, RegexOptions.IgnoreCase).Success || Regex.Match(i.LongDescription, criteria, RegexOptions.IgnoreCase).Success)
                                   select i)
                 {
-                    sb.AppendLine($"|| {Helpers.GetNewPurchasePrice(ref desc, i.BaseValue)}{Constants.TabStop}{Constants.TabStop}|| {i.Name}, {i.ShortDescription}");
+                    var purchasePrice = Helpers.GetNewPurchasePrice(ref desc, i.BaseValue);
+                    if (ShopAlignment != ActorAlignment.Neutral)
+                    {
+                        // adjust the purchase price some more if the shop isn't neutral and doesn't match with the alignment of the player
+                        if (ShopAlignment != desc.Player.Alignment)
+                        {
+                            // increase the price by 10% of base price if the alignments don't match
+                            var priceMod = Convert.ToUInt32(i.BaseValue * 0.1);
+                            purchasePrice += priceMod;
+                        }
+                        if (ShopAlignment == desc.Player.Alignment)
+                        {
+                            // drop the price by 10% of base price if the alignments match
+                            var priceMod = Convert.ToUInt32(i.BaseValue * 0.1);
+                            purchasePrice = purchasePrice - priceMod < 0 ? 1 : purchasePrice - priceMod;
+                        }
+                    }
+                    sb.AppendLine($"|| {purchasePrice}{Constants.TabStop}{Constants.TabStop}|| {i.Name}, {i.ShortDescription}");
                     matchingItem = true;
                 }
 

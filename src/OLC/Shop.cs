@@ -70,6 +70,7 @@ namespace Kingdoms_of_Etrea.OLC
                         sb.Clear();
                         sb.AppendLine($"Shop ID: {s.ShopID}");
                         sb.AppendLine($"Shop Name: {s.ShopName}");
+                        sb.AppendLine($"Alignment: {s.ShopAlignment}");
                         if (s.InventoryItems != null && s.InventoryItems.Count > 0)
                         {
                             sb.AppendLine("Shop Inventory:");
@@ -93,16 +94,15 @@ namespace Kingdoms_of_Etrea.OLC
                         sb.AppendLine();
                         sb.AppendLine("Options:");
                         sb.AppendLine("1. Set Shop Name");
-                        sb.AppendLine("2. Add Item");
-                        sb.AppendLine("3. Remove Item");
-                        sb.AppendLine("4. Save Shop");
-                        sb.AppendLine("5. Exit without saving");
+                        sb.AppendLine($"2. Add Item{Constants.TabStop}3. Remove Item");
+                        sb.AppendLine("4. Set Alignment");
+                        sb.AppendLine($"5. Save Shop{Constants.TabStop}6. Exit without saving");
                         sb.Append("Selection: ");
                         desc.Send(sb.ToString());
                         var option = desc.Read().Trim();
                         if(Helpers.ValidateInput(option) && uint.TryParse(option, out uint opt))
                         {
-                            if(opt >= 1 && opt <= 5)
+                            if(opt >= 1 && opt <= 6)
                             {
                                 switch(opt)
                                 {
@@ -127,6 +127,10 @@ namespace Kingdoms_of_Etrea.OLC
                                         break;
 
                                     case 4:
+                                        s.ShopAlignment = GetAssetEnumValue<ActorAlignment>(ref desc, "Enter Alignment: ");
+                                        break;
+
+                                    case 5:
                                         if(ValidateShopAsset(ref desc, ref s, false))
                                         {
                                             if(DatabaseManager.UpdateExistingShop(ref desc, s))
@@ -149,7 +153,7 @@ namespace Kingdoms_of_Etrea.OLC
                                         }
                                         break;
 
-                                    case 5:
+                                    case 6:
                                         okToReturn = true;
                                         break;
                                 }
@@ -192,6 +196,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.Clear();
                 sb.AppendLine($"Shop ID: {newShop.ShopID}");
                 sb.AppendLine($"Shop Name: {newShop.ShopName}");
+                sb.AppendLine($"Alignment: {newShop.ShopAlignment}");
                 if(newShop.InventoryItems != null && newShop.InventoryItems.Count > 0)
                 {
                     sb.AppendLine("Shop Inventory:");
@@ -214,18 +219,16 @@ namespace Kingdoms_of_Etrea.OLC
                 }
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Shop ID");
-                sb.AppendLine("2. Set Shop Name");
-                sb.AppendLine("3. Add Item");
-                sb.AppendLine("4. Remove Item");
-                sb.AppendLine("5. Save Shop");
-                sb.AppendLine("6. Exit without saving");
+                sb.AppendLine($"1. Set Shop ID{Constants.TabStop}2. Set Shop Name");
+                sb.AppendLine($"3. Add Item{Constants.TabStop}4. Remove Item");
+                sb.AppendLine("5. Set Alignment");
+                sb.AppendLine($"6. Save Shop{Constants.TabStop}7. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if(result >= 1 && result <= 6)
+                    if(result >= 1 && result <= 7)
                     {
                         switch(result)
                         {
@@ -254,6 +257,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
+                                newShop.ShopAlignment = GetAssetEnumValue<ActorAlignment>(ref desc, "Enter Alignment: ");
+                                break;
+
+                            case 6:
                                 if(ValidateShopAsset(ref desc, ref newShop, true))
                                 {
                                     if(DatabaseManager.AddNewShop(ref desc, ref newShop))
@@ -276,7 +283,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 6:
+                            case 7:
                                 okToReturn = true;
                                 break;
                         }

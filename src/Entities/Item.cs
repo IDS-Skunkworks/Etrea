@@ -52,6 +52,8 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal int ArmourClassModifier { get; set; }
         [JsonProperty]
+        internal uint DamageReductionModifier { get; set; } // TODO: If the target is wearing armour that has this >0 reduce damage from weapons by this to a min of 0
+        [JsonProperty]
         internal PotionEffect PotionEffect { get; set; }
         [JsonProperty]
         internal bool IsToxic
