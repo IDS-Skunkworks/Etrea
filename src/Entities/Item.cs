@@ -52,15 +52,15 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal int ArmourClassModifier { get; set; }
         [JsonProperty]
-        internal uint DamageReductionModifier { get; set; } // TODO: If the target is wearing armour that has this >0 reduce damage from weapons by this to a min of 0
+        internal uint DamageReductionModifier { get; set; }
         [JsonProperty]
-        internal PotionEffect PotionEffect { get; set; }
+        internal ConsumableEffect ConsumableEffect { get; set; }
         [JsonProperty]
         internal bool IsToxic
         {
             get
             {
-                return PotionEffect.HasFlag(PotionEffect.Poison);
+                return ConsumableEffect.HasFlag(ConsumableEffect.Poison);
             }
         }
         [JsonProperty]
@@ -69,6 +69,8 @@ namespace Kingdoms_of_Etrea.Entities
         internal string CastsSpell { get; set; }
         [JsonProperty]
         internal ItemType ItemType { get; set; }
+        [JsonProperty]
+        internal bool IsCursed { get; set; }
         internal bool AppliesBuff
         {
             get

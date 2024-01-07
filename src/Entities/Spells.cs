@@ -29,6 +29,8 @@ namespace Kingdoms_of_Etrea.Entities
             internal bool RequiresTarget { get; set; }
             [JsonProperty]
             internal uint GoldToLearn { get; set; }
+            [JsonProperty]
+            internal bool AOESpell { get; set; }
             public override string ToString()
             {
                 return SpellName;
@@ -49,7 +51,6 @@ namespace Kingdoms_of_Etrea.Entities
                 RequiresTarget = true,
                 GoldToLearn = 10000
             },
-
             new Spell
             {
                 SpellName = "Guiding Bolt",
@@ -62,7 +63,6 @@ namespace Kingdoms_of_Etrea.Entities
                 RequiresTarget = true,
                 GoldToLearn = 10000
             },
-
             new Spell
             {
                 SpellName = "Magic Missile",

@@ -190,11 +190,11 @@ namespace Kingdoms_of_Etrea.Core
             return exitList[n];
         }
 
-        internal static IEnumerable<PotionEffect> GetPotionFlags(PotionEffect potionFlags)
+        internal static IEnumerable<ConsumableEffect> GetPotionFlags(ConsumableEffect potionFlags)
         {
-            foreach(PotionEffect pEffect in Enum.GetValues(typeof(PotionEffect)))
+            foreach(ConsumableEffect pEffect in Enum.GetValues(typeof(ConsumableEffect)))
             {
-                if (potionFlags.HasFlag(pEffect) && potionFlags != PotionEffect.None)
+                if (potionFlags.HasFlag(pEffect) && potionFlags != ConsumableEffect.None)
                 {
                     yield return pEffect;
                 }

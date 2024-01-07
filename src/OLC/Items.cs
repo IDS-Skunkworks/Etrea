@@ -1,13 +1,13 @@
 ﻿using Kingdoms_of_Etrea.Core;
 using Kingdoms_of_Etrea.Entities;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace Kingdoms_of_Etrea.OLC
 {
     internal static partial class OLC
     {
-        // TODO: Add support for modifying the Finesse flag on a weapon
         #region Menus
         private static void EditExistingItem(ref Descriptor desc)
         {
@@ -28,8 +28,8 @@ namespace Kingdoms_of_Etrea.OLC
                             EditRing(ref desc, item);
                             break;
 
-                        case ItemType.Potion:
-                            EditPotion(ref desc, item);
+                        case ItemType.Consumable:
+                            EditConsumable(ref desc, item);
                             break;
 
                         case ItemType.Armour:
@@ -102,7 +102,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 6:
-                                CreateNewPotion(ref desc);
+                                CreateNewConsumable(ref desc);
                                 break;
 
                             case 7:
@@ -124,7 +124,7 @@ namespace Kingdoms_of_Etrea.OLC
         #endregion
 
         #region CreateItems
-        internal static void CreateNewPotion(ref Descriptor desc)
+        internal static void CreateNewConsumable(ref Descriptor desc)
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
@@ -134,7 +134,7 @@ namespace Kingdoms_of_Etrea.OLC
             sb.AppendLine("Valid effects for potions are: None, Poison, Healing or Buff.");
             sb.AppendLine("Where a potion effect is Healing, its damage role is added to the drinker's HP instead of subtraced from it.");
             InventoryItem newPotion = new InventoryItem();
-            newPotion.ItemType = ItemType.Potion;
+            newPotion.ItemType = ItemType.Consumable;
             newPotion.AppliedBuffs = new List<string>();
             desc.Send(sb.ToString());
             while(!okToReturn)
@@ -144,7 +144,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Item ID: {newPotion.Id}{Constants.TabStop}Item Name: {newPotion.Name}");
                 sb.AppendLine($"Short Description: {newPotion.ShortDescription}");
                 sb.AppendLine($"Long Description: {newPotion.LongDescription}");
-                sb.AppendLine($"Value: {newPotion.BaseValue}{Constants.TabStop}{Constants.TabStop}Potion Effect: {newPotion.PotionEffect}");
+                sb.AppendLine($"Value: {newPotion.BaseValue}{Constants.TabStop}{Constants.TabStop}Potion Effect: {newPotion.ConsumableEffect}");
                 sb.AppendLine($"Number of Damage Dice: {newPotion.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {newPotion.SizeOfDamageDice}");
                 sb.AppendLine($"Is Magical?: {newPotion.IsMagical}");
                 sb.AppendLine($"Buffs: {string.Join(", ", newPotion.AppliedBuffs)}");
@@ -188,7 +188,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 6:
-                                newPotion.PotionEffect = GetAssetEnumValue<PotionEffect>(ref desc, "Enter Effect: ");
+                                newPotion.ConsumableEffect = GetAssetEnumValue<ConsumableEffect>(ref desc, "Enter Effect: ");
                                 break;
 
                             case 7:
@@ -228,7 +228,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 12:
-                                if (ValidatePotionItem(ref desc, ref newPotion, true))
+                                if (ValidateConsumableItem(ref desc, ref newPotion, true))
                                 {
                                     if (DatabaseManager.AddNewItem(newPotion))
                                     {
@@ -390,6 +390,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Value: {newRing.BaseValue}{Constants.TabStop}Armour Class Modifier: {newRing.ArmourClassModifier}");
                 sb.AppendLine($"Hit Bonus: {newRing.HitModifier}{Constants.TabStop}Damage Bonus: {newRing.DamageModifier}");
                 sb.AppendLine($"Is Magical?: {newRing.IsMagical}{Constants.TabStop}Monster Only?: {newRing.IsMonsterItem}");
+                sb.AppendLine($"IS Cursed?: {newRing.IsCursed}");
                 sb.AppendLine($"Buffs: {string.Join(", ", newRing.AppliedBuffs)}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
@@ -399,14 +400,14 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"7. Set Hit Bonus{Constants.TabStop}8. Set Damage Bonus");
                 sb.AppendLine($"9. Toggle Magical flag{Constants.TabStop}10. Toggle Monster Only flag");
                 sb.AppendLine($"11. Add Buff{Constants.TabStop}12. Remove Buff");
-                sb.AppendLine("13. Save Ring");
-                sb.AppendLine("14. Exit without saving");
+                sb.AppendLine($"13. Toggle Curse flag");
+                sb.AppendLine($"14. Save Ring{Constants.TabStop}15. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 0 && result <= 14)
+                    if (result >= 0 && result <= 15)
                     {
                         switch (result)
                         {
@@ -475,6 +476,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 13:
+                                newRing.IsCursed = !newRing.IsCursed;
+                                break;
+
+                            case 14:
                                 if (ValidateRingItem(ref desc, ref newRing, true))
                                 {
                                     if (DatabaseManager.AddNewItem(newRing))
@@ -499,7 +504,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 14:
+                            case 15:
                                 okToReturn = true;
                                 break;
                         }
@@ -542,8 +547,9 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Value: {newArmour.BaseValue}{Constants.TabStop}Armour Class Modifier: {newArmour.ArmourClassModifier}");
                 sb.AppendLine($"Is Magical?: {newArmour.IsMagical}{Constants.TabStop}Armour Type: {newArmour.BaseArmourType}");
                 sb.AppendLine($"Equip Slot: {newArmour.Slot}{Constants.TabStop}Required Skill: {newArmour.RequiredSkill}");
+                sb.AppendLine($"Damage Reduction: {newArmour.DamageReductionModifier}");
                 sb.AppendLine($"Buffs: {string.Join(", ", newArmour.AppliedBuffs)}");
-                sb.AppendLine($"Monster Only?: {newArmour.IsMonsterItem}");
+                sb.AppendLine($"Monster Only?: {newArmour.IsMonsterItem}{Constants.TabStop}Is Cursed?: {newArmour.IsCursed}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
@@ -552,15 +558,15 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"7. Toggle Magical flag{Constants.NewLine}8. Set Armour Type");
                 sb.AppendLine($"9. Set Equip Slot{Constants.TabStop}10. Set Required Skill");
                 sb.AppendLine($"11. Add Buff{Constants.TabStop}12. Remove Buff");
-                sb.AppendLine("13. Toggle Monster Only flag");
-                sb.AppendLine("14. Save Armour");
-                sb.AppendLine("15. Exit without saving");
+                sb.AppendLine($"13. Set Damage Reduction{Constants.TabStop}14. Toggle Monster Only flag");
+                sb.AppendLine($"15. Toggle Cursed flag");
+                sb.AppendLine($"16. Save Armour{Constants.TabStop}17. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 15)
+                    if (result >= 1 && result <= 17)
                     {
                         switch (result)
                         {
@@ -633,10 +639,18 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 13:
-                                newArmour.IsMonsterItem = !newArmour.IsMonsterItem;
+                                newArmour.DamageReductionModifier = GetAssetUintValue(ref desc, "Enter Damage Reduction Modifier: ");
                                 break;
 
                             case 14:
+                                newArmour.IsMonsterItem = !newArmour.IsMonsterItem;
+                                break;
+
+                            case 15:
+                                newArmour.IsCursed = !newArmour.IsCursed;
+                                break;
+
+                            case 16:
                                 if (ValidateArmourItem(ref desc, ref newArmour, true))
                                 {
                                     if (DatabaseManager.AddNewItem(newArmour))
@@ -661,7 +675,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 15:
+                            case 17:
                                 okToReturn = true;
                                 break;
                         }
@@ -707,7 +721,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Is Magical?: {newWeapon.IsMagical}{Constants.TabStop}Two-Handed: {newWeapon.IsTwoHanded}");
                 sb.AppendLine($"Weapon Type: {newWeapon.BaseWeaponType}{Constants.TabStop}Required Skill: {newWeapon.RequiredSkill}");
                 sb.AppendLine($"Buffs: {string.Join(", ", newWeapon.AppliedBuffs)}");
-                sb.AppendLine($"Monster Only?: {newWeapon.IsMonsterItem}");
+                sb.AppendLine($"Monster Only?: {newWeapon.IsMonsterItem}{Constants.TabStop}Is Cursed?: {newWeapon.IsCursed}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
@@ -718,15 +732,14 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"10. Toggle Magical flag{Constants.TabStop}11. Toggle Two-Handed");
                 sb.AppendLine($"12. Set Weapon Type{Constants.TabStop}13. Set Required Skill");
                 sb.AppendLine($"14. Add Buff{Constants.TabStop}15. Remove Buff");
-                sb.AppendLine("16. Toggle Monster Only flag");
-                sb.AppendLine("17. Save Weapon");
-                sb.AppendLine("18. Exit without saving");
+                sb.AppendLine($"16. Toggle Monster Only flag{Constants.TabStop}17. Toggle Curse Flag");
+                sb.AppendLine($"18. Save Weapon{Constants.TabStop}19. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 18)
+                    if (result >= 1 && result <= 19)
                     {
                         switch (result)
                         {
@@ -815,6 +828,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 17:
+                                newWeapon.IsCursed = !newWeapon.IsCursed;
+                                break;
+
+                            case 18:
                                 if (ValidateWeaponItem(ref desc, ref newWeapon, true))
                                 {
                                     if (DatabaseManager.AddNewItem(newWeapon))
@@ -839,7 +856,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 18:
+                            case 19:
                                 okToReturn = true;
                                 break;
                         }
@@ -1143,7 +1160,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Hit Bonus: {w.HitModifier}{Constants.TabStop}Damage Bonus: {w.DamageModifier}");
                 sb.AppendLine($"Is Magical?: {w.IsMagical}{Constants.TabStop}Two-Handed: {w.IsTwoHanded}");
                 sb.AppendLine($"Weapon Type: {w.BaseWeaponType}{Constants.TabStop}Required Skill: {w.RequiredSkill}");
-                sb.AppendLine($"Finesse Weapon?: {w.IsFinesseWeapon}");
+                sb.AppendLine($"Finesse Weapon?: {w.IsFinesseWeapon}{Constants.TabStop}Is Cursed?: {w.IsCursed}");
                 sb.AppendLine($"Buffs: {string.Join(", ", w.AppliedBuffs)}");
                 sb.AppendLine($"Monster Only?: {w.IsMonsterItem}");
                 sb.AppendLine();
@@ -1156,14 +1173,14 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"11. Set Weapon Type{Constants.TabStop}12. Set Required Skill");
                 sb.AppendLine($"13. Add Buff{Constants.TabStop}14. Remove Buff");
                 sb.AppendLine($"15. Toggle Monster Only flag{Constants.TabStop}16. Toggle Finesse flag");
-                sb.AppendLine("17. Save Weapon");
-                sb.AppendLine("18. Exit without saving");
+                sb.AppendLine($"17. Toggle Curse flag");
+                sb.AppendLine($"18. Save Weapon{Constants.TabStop}19. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if(result >= 1 && result <= 18)
+                    if(result >= 1 && result <= 19)
                     {
                         switch(result)
                         {
@@ -1252,6 +1269,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 17:
+                                w.IsCursed = !w.IsCursed;
+                                break;
+
+                            case 18:
                                 if (ValidateWeaponItem(ref desc, ref w, false))
                                 {
                                     if (DatabaseManager.UpdateItemByID(ref desc, ref w))
@@ -1273,7 +1294,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 18:
+                            case 19:
                                 okToReturn = true;
                                 break;
                         }
@@ -1305,7 +1326,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Is Magical?: {a.IsMagical}{Constants.NewLine}Armour Type: {a.BaseArmourType}");
                 sb.AppendLine($"Required Skill: {a.RequiredSkill}{Constants.TabStop}Equip Slot: {a.Slot}");
                 sb.AppendLine($"Buffs: {string.Join(", ", a.AppliedBuffs)}");
-                sb.AppendLine($"Monster Only?: {a.IsMonsterItem}");
+                sb.AppendLine($"Monster Only?: {a.IsMonsterItem}{Constants.TabStop}Is Cursed?: {a.IsCursed}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine("1. Set Item Name");
@@ -1314,15 +1335,14 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"6. Toggle Magical flag{Constants.TabStop}7. Set Armour Type");
                 sb.AppendLine($"8. Set Required Skill{Constants.TabStop}9. Set Equip Slot");
                 sb.AppendLine($"10. Add Buff{Constants.TabStop}11. Remove Buff");
-                sb.AppendLine("12. Toggle Monster Only flag");
-                sb.AppendLine("13. Save Armour");
-                sb.AppendLine("14. Exit without saving");
+                sb.AppendLine($"12. Toggle Monster Only flag{Constants.TabStop}13. Toggle Curse flag");
+                sb.AppendLine($"14. Save Armour{Constants.TabStop}15. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 14)
+                    if (result >= 1 && result <= 15)
                     {
                         switch(result)
                         {
@@ -1395,6 +1415,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 13:
+                                a.IsCursed = !a.IsCursed;
+                                break;
+
+                            case 14:
                                 if (ValidateArmourItem(ref desc, ref a, false))
                                 {
                                     if (DatabaseManager.UpdateItemByID(ref desc, ref a))
@@ -1416,7 +1440,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 14:
+                            case 15:
                                 okToReturn = true;
                                 break;
                         }
@@ -1433,7 +1457,7 @@ namespace Kingdoms_of_Etrea.OLC
             }
         }
 
-        private static void EditPotion(ref Descriptor desc, InventoryItem p)
+        private static void EditConsumable(ref Descriptor desc, InventoryItem p)
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
@@ -1444,7 +1468,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Item ID: {p.Id}{Constants.TabStop}Item Name: {p.Name}");
                 sb.AppendLine($"Short Description: {p.ShortDescription}");
                 sb.AppendLine($"Long Description: {p.LongDescription}");
-                sb.AppendLine($"Value: {p.BaseValue}{Constants.TabStop}Potion Effect: {p.PotionEffect}");
+                sb.AppendLine($"Value: {p.BaseValue}{Constants.TabStop}Potion Effect: {p.ConsumableEffect}");
                 sb.AppendLine($"Number of Damage Dice: {p.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {p.SizeOfDamageDice}");
                 sb.AppendLine($"Is Magical?: {p.IsMagical}");
                 sb.AppendLine($"Buffs: {string.Join(", ", p.AppliedBuffs)}");
@@ -1484,7 +1508,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
-                                p.PotionEffect = GetAssetEnumValue<PotionEffect>(ref desc, "Enter Potion Effect: ");
+                                p.ConsumableEffect = GetAssetEnumValue<ConsumableEffect>(ref desc, "Enter Potion Effect: ");
                                 break;
 
                             case 6:
@@ -1524,7 +1548,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 11:
-                                if (ValidatePotionItem(ref desc, ref p, false))
+                                if (ValidateConsumableItem(ref desc, ref p, false))
                                 {
                                     if (DatabaseManager.UpdateItemByID(ref desc, ref p))
                                     {
@@ -1575,7 +1599,7 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Long Description: {r.LongDescription}");
                 sb.AppendLine($"Value: {r.BaseValue}{Constants.TabStop}Armour Class Modifier: {r.ArmourClassModifier}");
                 sb.AppendLine($"Hit Bonus: {r.HitModifier}{Constants.TabStop}Damage Bonus: {r.DamageModifier}");
-                sb.AppendLine($"Is Magical?: {r.IsMagical}");
+                sb.AppendLine($"Is Magical?: {r.IsMagical}{Constants.TabStop}Is Cursed?: {r.IsCursed}");
                 sb.AppendLine($"Buffs: {string.Join(", ", r.AppliedBuffs)}");
                 sb.AppendLine($"Monster Only?: {r.IsMonsterItem}");
                 sb.AppendLine();
@@ -1586,15 +1610,14 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"6. Set Hit Bonus{Constants.TabStop}7. Set Damage Bonus");
                 sb.AppendLine("8. Toggle Magical flag");
                 sb.AppendLine($"9. Add Buff{Constants.TabStop}10. Remove Buff");
-                sb.AppendLine("11. Toggle Monster Only flag");
-                sb.AppendLine("12. Save changes");
-                sb.AppendLine("13. Exit without saving");
+                sb.AppendLine($"11. Toggle Monster Only flag{Constants.TabStop}12. Toggle Curse Flag");
+                sb.AppendLine($"13. Save changes{Constants.TabStop}14. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if(result >= 1 && result <= 13)
+                    if(result >= 1 && result <= 14)
                     {
                         switch(result)
                         {
@@ -1659,6 +1682,10 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 12:
+                                r.IsCursed = !r.IsCursed;
+                                break;
+
+                            case 13:
                                 if(ValidateRingItem(ref desc, ref r, false))
                                 {
                                     if(DatabaseManager.UpdateItemByID(ref desc, ref r))
@@ -1680,7 +1707,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 13:
+                            case 14:
                                 okToReturn = true;
                                 break;
                         }
@@ -1758,7 +1785,7 @@ namespace Kingdoms_of_Etrea.OLC
             return isValid;
         }
 
-        private static bool ValidatePotionItem(ref Descriptor desc, ref InventoryItem p, bool isNewItem)
+        private static bool ValidateConsumableItem(ref Descriptor desc, ref InventoryItem p, bool isNewItem)
         {
             bool isValid = true;
             if ((isNewItem && !ItemManager.Instance.ItemExists(p.Id) && p.Id != 0) || !isNewItem)
@@ -1770,21 +1797,21 @@ namespace Kingdoms_of_Etrea.OLC
                 }
                 else
                 {
-                    if(p.PotionEffect.HasFlag(PotionEffect.Healing) || p.PotionEffect.HasFlag(PotionEffect.SPHealing) || p.PotionEffect.HasFlag(PotionEffect.MPHealing) || p.PotionEffect.HasFlag(PotionEffect.Poison))
+                    if(p.ConsumableEffect.HasFlag(ConsumableEffect.Healing) || p.ConsumableEffect.HasFlag(ConsumableEffect.SPHealing) || p.ConsumableEffect.HasFlag(ConsumableEffect.MPHealing) || p.ConsumableEffect.HasFlag(ConsumableEffect.Poison))
                     {
                         if(p.NumberOfDamageDice == 0 || p.SizeOfDamageDice == 0)
                         {
-                            desc.Send($"If a Potion heals or poisons it needs to have damage dice{Constants.NewLine}");
+                            desc.Send($"If a Consumable heals or poisons it needs to have damage dice{Constants.NewLine}");
                             isValid = false;
                         }
                     }
                     else
                     {
-                        if(p.PotionEffect == PotionEffect.None || p.PotionEffect == PotionEffect.Buff)
+                        if(p.ConsumableEffect == ConsumableEffect.None || p.ConsumableEffect == ConsumableEffect.Buff)
                         {
                             if(p.NumberOfDamageDice > 0 || p.SizeOfDamageDice > 0)
                             {
-                                desc.Send($"Potions which apply buffs or have no effect do not need damage dice{Constants.NewLine}");
+                                desc.Send($"Consumable which apply buffs or have no effect do not need damage dice{Constants.NewLine}");
                                 isValid = false;
                             }
                         }
@@ -1815,6 +1842,11 @@ namespace Kingdoms_of_Etrea.OLC
                 desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
                 isValid = false;
             }
+            if(r.IsCursed && !r.IsMagical)
+            {
+                desc.Send($"If the Ring has the Cursed flag, it should also have the Magical flag{Constants.NewLine}");
+                isValid = false;
+            }
             return isValid;
         }
 
@@ -1832,6 +1864,11 @@ namespace Kingdoms_of_Etrea.OLC
             else
             {
                 desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
+                isValid = false;
+            }
+            if(a.IsCursed && !a.IsMagical)
+            {
+                desc.Send($"If the armour is cursed, it must also be magical.{Constants.NewLine}");
                 isValid = false;
             }
             return isValid;
@@ -1859,6 +1896,11 @@ namespace Kingdoms_of_Etrea.OLC
             else
             {
                 desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
+                isValid = false;
+            }
+            if(w.IsCursed && !w.IsMagical)
+            {
+                desc.Send($"If the weapon is cursed it must also be magical.{Constants.NewLine}");
                 isValid = false;
             }
             return isValid;

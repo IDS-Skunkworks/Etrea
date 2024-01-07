@@ -11,78 +11,104 @@ namespace Kingdoms_of_Etrea.Core
     {
         private static void MOTD(ref Descriptor desc, ref string input)
         {
-            var verb = GetVerb(ref input);
-            var line = input.Remove(0, verb.Length).Trim();
-            var tokens = TokeniseInput(ref line);
-            bool printUsage = false;
-            if(tokens.Length < 1)
+            if(desc.Player.Level < Constants.ImmLevel)
             {
-                printUsage = true;
+                var motd = DatabaseManager.GetMOTD();
+                if (!string.IsNullOrEmpty(motd))
+                {
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendLine("Current MOTD:");
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    foreach (var motdLine in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                    {
+                        if (!string.IsNullOrEmpty(motdLine))
+                        {
+                            sb.AppendLine($"|| {motdLine}");
+                        }
+                    }
+                    sb.AppendLine($"  {new string('=', 77)}");
+                    desc.Send(sb.ToString());
+                }
+                else
+                {
+                    desc.Send($"No MOTD message is configured.{Constants.NewLine}");
+                }
             }
             else
             {
-                switch(tokens[0].ToLower().Trim())
+                var verb = GetVerb(ref input);
+                var line = input.Remove(0, verb.Length).Trim();
+                var tokens = TokeniseInput(ref line);
+                bool printUsage = false;
+                if (tokens.Length < 1)
                 {
-                    case "show":
-                        var motd = DatabaseManager.GetMOTD();
-                        if(!string.IsNullOrEmpty(motd))
-                        {
-                            StringBuilder sb = new StringBuilder();
-                            sb.AppendLine("Current MOTD:");
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            foreach (var motdLine in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
-                            {
-                                if(!string.IsNullOrEmpty(motdLine))
-                                {
-                                    sb.AppendLine($"|| {motdLine}");
-                                }
-                            }
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            desc.Send(sb.ToString());
-                        }
-                        else
-                        {
-                            desc.Send($"No MOTD message is configured.{Constants.NewLine}");
-                        }
-                        break;
-
-                    case "set":
-                        string newMOTD = Helpers.GetNewMOTD(ref desc);
-                        if(DatabaseManager.SetMOTD(ref desc, newMOTD))
-                        {
-                            desc.Send($"The MOTD message has been successfully updated.{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Send($"An error was encountered setting the new MOTD message.{Constants.NewLine}");
-                        }
-                        break;
-
-                    case "clear":
-                        if(DatabaseManager.SetMOTD(ref desc, string.Empty))
-                        {
-                            desc.Send($"The MOTD message has been successfully cleared.{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Send($"An error was encountered clearing the MOTD message.{Constants.NewLine}");
-                        }
-                        break;
-
-                    default:
-                        printUsage = true;
-                        break;
+                    printUsage = true;
                 }
-            }
-            if(printUsage)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Usage:");
-                sb.AppendLine("motd - show this message");
-                sb.AppendLine("motd show - print the current MOTD message, if there is one");
-                sb.AppendLine("motd clear - clear the current MOTD message");
-                sb.AppendLine("motd set - set a new MOTD for players at login");
-                desc.Send(sb.ToString());
+                else
+                {
+                    switch (tokens[0].ToLower().Trim())
+                    {
+                        case "show":
+                            var motd = DatabaseManager.GetMOTD();
+                            if (!string.IsNullOrEmpty(motd))
+                            {
+                                StringBuilder sb = new StringBuilder();
+                                sb.AppendLine("Current MOTD:");
+                                sb.AppendLine($"  {new string('=', 77)}");
+                                foreach (var motdLine in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                                {
+                                    if (!string.IsNullOrEmpty(motdLine))
+                                    {
+                                        sb.AppendLine($"|| {motdLine}");
+                                    }
+                                }
+                                sb.AppendLine($"  {new string('=', 77)}");
+                                desc.Send(sb.ToString());
+                            }
+                            else
+                            {
+                                desc.Send($"No MOTD message is configured.{Constants.NewLine}");
+                            }
+                            break;
+
+                        case "set":
+                            string newMOTD = Helpers.GetNewMOTD(ref desc);
+                            if (DatabaseManager.SetMOTD(ref desc, newMOTD))
+                            {
+                                desc.Send($"The MOTD message has been successfully updated.{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                desc.Send($"An error was encountered setting the new MOTD message.{Constants.NewLine}");
+                            }
+                            break;
+
+                        case "clear":
+                            if (DatabaseManager.SetMOTD(ref desc, string.Empty))
+                            {
+                                desc.Send($"The MOTD message has been successfully cleared.{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                desc.Send($"An error was encountered clearing the MOTD message.{Constants.NewLine}");
+                            }
+                            break;
+
+                        default:
+                            printUsage = true;
+                            break;
+                    }
+                }
+                if (printUsage)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendLine("Usage:");
+                    sb.AppendLine("motd - show this message");
+                    sb.AppendLine("motd show - print the current MOTD message, if there is one");
+                    sb.AppendLine("motd clear - clear the current MOTD message");
+                    sb.AppendLine("motd set - set a new MOTD for players at login");
+                    desc.Send(sb.ToString());
+                }
             }
         }
 

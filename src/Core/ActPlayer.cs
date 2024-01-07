@@ -9,6 +9,160 @@ namespace Kingdoms_of_Etrea.Core
 {
     internal static partial class CommandParser
     {
+        private static void ExorciseCursedItem(ref Descriptor desc, ref string input)
+        {
+            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Exorcist))
+            {
+                var verb = GetVerb(ref input);
+                var targetSlot = input.Remove(0, verb.Length).Trim();
+                if (!string.IsNullOrEmpty(targetSlot))
+                {
+                    if (targetSlot.ToLower() == "price")
+                    {
+                        var p = Helpers.GetNewPurchasePrice(ref desc, 2500);
+                        desc.Send($"The priest looks solemn. \"Removing this curse will cost {p:N0} gold.\"{Constants.NewLine}");
+                        return;
+                    }
+                    if (desc.Player.EquippedItems != null)
+                    {
+                        InventoryItem i = null;
+                        switch (targetSlot.ToLower())
+                        {
+                            case "head":
+                                if (desc.Player.EquippedItems.Head != null && desc.Player.EquippedItems.Head != null && desc.Player.EquippedItems.Head.IsCursed)
+                                {
+                                    i = desc.Player.EquippedItems.Head;
+                                }
+                                else
+                                {
+                                    desc.Send($"You aren't wearing anything cursed on your head!{Constants.NewLine}");
+                                }
+                                break;
+
+                            case "neck":
+                                if (desc.Player.EquippedItems.Neck != null && desc.Player.EquippedItems.Neck != null && desc.Player.EquippedItems.Neck.IsCursed)
+                                {
+                                    i = desc.Player.EquippedItems.Neck;
+                                }
+                                else
+                                {
+                                    desc.Send($"You aren't wearing anything cursed around your neck!{Constants.NewLine}");
+                                }
+                                break;
+
+                            case "armour":
+                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.Armour != null && desc.Player.EquippedItems.Armour.IsCursed)
+                                {
+                                    i = desc.Player.EquippedItems.Armour;
+                                }
+                                else
+                                {
+                                    desc.Send($"Your armour isn't cursed!{Constants.NewLine}");
+                                }
+                                break;
+
+                            case "weapon":
+                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.Weapon != null && desc.Player.EquippedItems.Weapon.IsCursed)
+                                {
+                                    i = desc.Player.EquippedItems.Weapon;
+                                }
+                                else
+                                {
+                                    desc.Send($"Your weapon isn't cursed!{Constants.NewLine}");
+                                }
+                                break;
+
+                            case "held":
+                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.Held != null && desc.Player.EquippedItems.Held.IsCursed)
+                                {
+                                    i = desc.Player.EquippedItems.Held;
+                                }
+                                else
+                                {
+                                    desc.Send($"You aren't holding anything cursed!{Constants.NewLine}");
+                                }
+                                break;
+
+                            case "fingerright":
+                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.FingerRight != null && desc.Player.EquippedItems.FingerRight.IsCursed)
+                                {
+                                    i = desc.Player.EquippedItems.FingerRight;
+                                }
+                                else
+                                {
+                                    desc.Send($"You aren't wearing anything with a curse on your right hand!{Constants.NewLine}");
+                                }
+                                break;
+
+                            case "fingerleft":
+                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.FingerLeft != null && desc.Player.EquippedItems.FingerLeft.IsCursed)
+                                {
+                                    i = desc.Player.EquippedItems.FingerLeft;
+                                }
+                                else
+                                {
+                                    desc.Send($"You aren't wearing anything with a curse on your left hand!{Constants.NewLine}");
+                                }
+                                break;
+                        }
+                        if (i != null)
+                        {
+                            var removePrice = Helpers.GetNewPurchasePrice(ref desc, 2500);
+                            if (removePrice > desc.Player.Stats.Gold)
+                            {
+                                desc.Send($"The exorcist gives you a solemn look. \"You can't afford that, it seems.\"{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                desc.Send($"The exorcist stashes your gold in his robe. \"Excellent! One moment...\"{Constants.NewLine}");
+                                desc.Player.Stats.Gold -= removePrice;
+                                desc.Player.Inventory.Add(i);
+                                switch (targetSlot.ToLower())
+                                {
+                                    case "head":
+                                        desc.Player.EquippedItems.Head = null;
+                                        break;
+
+                                    case "neck":
+                                        desc.Player.EquippedItems.Neck = null;
+                                        break;
+
+                                    case "armour":
+                                        desc.Player.EquippedItems.Armour = null;
+                                        break;
+
+                                    case "weapon":
+                                        desc.Player.EquippedItems.Weapon = null;
+                                        break;
+
+                                    case "held":
+                                        desc.Player.EquippedItems.Held = null;
+                                        break;
+
+                                    case "fingerright":
+                                        desc.Player.EquippedItems.FingerRight = null;
+                                        break;
+
+                                    case "fingerleft":
+                                        desc.Player.EquippedItems.FingerLeft = null;
+                                        break;
+
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    desc.Send($"Usage: exorcise <price | equipment slot>{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"There is no one here that can help exorcise cursed items...{Constants.NewLine}");
+            }
+        }
+
         private static void PlayerLanguages(ref Descriptor desc, ref string input)
         {
             var verb = GetVerb(ref input);
@@ -4456,14 +4610,14 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        private static void DrinkPotion(ref Descriptor desc, ref string input)
+        private static void ConsumeItem(ref Descriptor desc, ref string input)
         {
             var verb = GetVerb(ref input);
             var itemName = input.Remove(0, verb.Length).Trim();
             var i = GetTargetItem(ref desc, itemName, true);
             if(i != null)
             {
-                if(i.ItemType == ItemType.Potion)
+                if(i.ItemType == ItemType.Consumable)
                 {
                     var pn = desc.Player.Name;
                     desc.Send($"You greedily consume the {i.Name}!{Constants.NewLine}");
@@ -4482,11 +4636,11 @@ namespace Kingdoms_of_Etrea.Core
                     if(i.NumberOfDamageDice > 0)
                     {
                         var modAmount = Helpers.RollDice(i.NumberOfDamageDice, i.SizeOfDamageDice);
-                        foreach(PotionEffect flag in Helpers.GetPotionFlags(i.PotionEffect))
+                        foreach(ConsumableEffect flag in Helpers.GetPotionFlags(i.ConsumableEffect))
                         {
-                            switch (i.PotionEffect)
+                            switch (i.ConsumableEffect)
                             {
-                                case PotionEffect.SPHealing:
+                                case ConsumableEffect.SPHealing:
                                     if(desc.Player.Stats.CurrentSP + modAmount > desc.Player.Stats.MaxSP)
                                     {
                                         desc.Player.Stats.CurrentSP = desc.Player.Stats.MaxSP;
@@ -4498,7 +4652,7 @@ namespace Kingdoms_of_Etrea.Core
                                     desc.Send($"You feel invigorated!{Constants.NewLine}");
                                     break;
 
-                                case PotionEffect.Healing:
+                                case ConsumableEffect.Healing:
                                     if(desc.Player.Stats.CurrentHP + modAmount > desc.Player.Stats.MaxHP)
                                     {
                                         desc.Player.Stats.CurrentHP = (int)desc.Player.Stats.MaxHP;
@@ -4510,7 +4664,7 @@ namespace Kingdoms_of_Etrea.Core
                                     desc.Send($"You feel your wounds fading to memory...{Constants.NewLine}");
                                     break;
 
-                                case PotionEffect.MPHealing:
+                                case ConsumableEffect.MPHealing:
                                     if(desc.Player.Stats.CurrentMP + modAmount > desc.Player.Stats.MaxMP)
                                     {
                                         desc.Player.Stats.CurrentMP = (int)desc.Player.Stats.MaxMP;
@@ -4522,12 +4676,12 @@ namespace Kingdoms_of_Etrea.Core
                                     desc.Send($"You as though your spiritial force has been renewed!{Constants.NewLine}");
                                     break;
 
-                                case PotionEffect.Death:
+                                case ConsumableEffect.Death:
                                     desc.Send($"You feel the spectral hand of Death upon you...{Constants.NewLine}");
                                     desc.Player.Kill();
                                     break;
 
-                                case PotionEffect.Poison:
+                                case ConsumableEffect.Poison:
                                     desc.Send($"The {i.Name} tastes foul as you swallow it...{Constants.NewLine}");
                                     if(desc.Player.Stats.CurrentHP - modAmount <= 0)
                                     {
@@ -4539,7 +4693,7 @@ namespace Kingdoms_of_Etrea.Core
                                     }
                                     break;
 
-                                case PotionEffect.DrainSP:
+                                case ConsumableEffect.DrainSP:
                                     desc.Send($"You begin to feel your stamina drain away...{Constants.NewLine}");
                                     if(desc.Player.Stats.CurrentSP - modAmount <= 0)
                                     {
@@ -4551,7 +4705,7 @@ namespace Kingdoms_of_Etrea.Core
                                     }
                                     break;
 
-                                case PotionEffect.DrainMP:
+                                case ConsumableEffect.DrainMP:
                                     desc.Send($"You feel as though something was sapping your very spirit...{Constants.NewLine}");
                                     if(desc.Player.Stats.CurrentMP - modAmount <= 0)
                                     {
@@ -4563,7 +4717,7 @@ namespace Kingdoms_of_Etrea.Core
                                     }
                                     break;
 
-                                case PotionEffect.Restoration:
+                                case ConsumableEffect.Restoration:
                                     desc.Send($"You feel holy power filling you, restoring you...{Constants.NewLine}");
                                     desc.Player.Stats.CurrentMP = (int)desc.Player.Stats.MaxMP;
                                     desc.Player.Stats.CurrentHP = (int)desc.Player.Stats.MaxHP;
@@ -6608,7 +6762,9 @@ namespace Kingdoms_of_Etrea.Core
                             {
                                 var targetHP = (double)p.Player.Stats.CurrentHP / p.Player.Stats.MaxHP * 100;
                                 string stateMsg = Helpers.GetActorStateMessage(p.Player.Name, targetHP);
-                                msgToSendToPlayer = $"{p.Player.LongDescription}{Constants.NewLine}{stateMsg}{Constants.NewLine}";
+                                string pAlignString = p.Player.Alignment == ActorAlignment.Evil ? $"{Constants.NewLine}{p.Player} gives off a dark aura.{Constants.NewLine}"
+                                    : p.Player.Alignment == ActorAlignment.Good ? $"{Constants.NewLine}{p.Player} radiates a holy glow.{Constants.NewLine}" : string.Empty;
+                                msgToSendToPlayer = $"{p.Player.LongDescription}{pAlignString}{stateMsg}{Constants.NewLine}";
                                 if(p.Player.EquippedItems != null)
                                 {
                                     msgToSendToPlayer = $"{msgToSendToPlayer}{p.Player.Name} is using:{Constants.NewLine}";
@@ -6655,7 +6811,9 @@ namespace Kingdoms_of_Etrea.Core
                             {
                                 var targetHP = (double)n.Stats.CurrentHP / n.Stats.MaxHP * 100;
                                 string stateMsg = Helpers.GetActorStateMessage(n.Name, targetHP);
-                                msgToSendToPlayer = $"{n.LongDescription}{Constants.NewLine}{stateMsg}{Constants.NewLine}";
+                                string pAlignString = n.Alignment == ActorAlignment.Evil ? $"{Constants.NewLine}{n.Name} gives off a dark aura.{Constants.NewLine}"
+                                    : n.Alignment == ActorAlignment.Good ? $"{Constants.NewLine}{n.Name} radiates a holy glow.{Constants.NewLine}" : string.Empty;
+                                msgToSendToPlayer = $"{n.LongDescription}{pAlignString}{stateMsg}{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} gives {n.Name} a studious look{Constants.NewLine}";
                                 msgToSendToOthers[1] = $"Something gives {n.Name} a studious look{Constants.NewLine}";
                                 if (n.EquippedItems != null)
@@ -6697,7 +6855,16 @@ namespace Kingdoms_of_Etrea.Core
                                 var i = GetTargetItem(ref desc, target, false);
                                 if(i != null)
                                 {
-                                    msgToSendToPlayer = $"{i.LongDescription}{Constants.NewLine}";
+                                    string modMsg = i.LongDescription;
+                                    if (i.IsMagical)
+                                    {
+                                        modMsg = $"{modMsg}{Constants.NewLine}This item appears magical...";
+                                        if (i.IsCursed)
+                                        {
+                                            modMsg = $"{modMsg}And possibly cursed!";
+                                        }
+                                    }
+                                    msgToSendToPlayer = $"{modMsg}{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} looks longingly at {i.Name}{Constants.NewLine}";
                                     msgToSendToOthers[1] = $"Something looks longingly at {i.Name}";
                                 }
@@ -6707,7 +6874,16 @@ namespace Kingdoms_of_Etrea.Core
                                     var ii = GetTargetItem(ref desc, target, true);
                                     if(ii != null)
                                     {
-                                        msgToSendToPlayer = $"{ii.LongDescription}{Constants.NewLine}";
+                                        string modMsg = ii.LongDescription;
+                                        if (ii.IsMagical)
+                                        {
+                                            modMsg = $"{modMsg}{Constants.NewLine}This item appears magical...";
+                                            if (ii.IsCursed)
+                                            {
+                                                modMsg = $"{modMsg}And possibly cursed!";
+                                            }
+                                        }
+                                        msgToSendToPlayer = $"{modMsg}{Constants.NewLine}";
                                         msgToSendToOthers[0] = $"{desc.Player.Name} looks longling at {ii.Name} that they're holding{Constants.NewLine}";
                                         msgToSendToOthers[1] = $"Something looks longingly at something else... Very strange{Constants.NewLine}";
                                     }

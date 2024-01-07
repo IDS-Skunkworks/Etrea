@@ -517,7 +517,6 @@ namespace Kingdoms_of_Etrea.Entities
         internal Languages SpokenLanguage { get; set; }
         internal bool PVP;
         internal bool IsInCombat => CombatManager.Instance.IsPlayerInCombat(SessionManager.Instance.GetPlayer(Name).Id);
-        internal uint IdleTicks { get; set; }
 
         internal virtual bool Move(uint fromRoomId, uint destRoomId, bool wasTeleported, /*ref Descriptor desc,*/ bool bypassStamCheck = false)
         {

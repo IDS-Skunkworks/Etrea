@@ -67,6 +67,7 @@ namespace Kingdoms_of_Etrea
         LanguageTrainer = 1 << 24, // Room has a trainer allowing players to learn new languages
         HardTerrain = 1 << 25,      // Moving to or from this room costs double stamina
         Chef = 1 << 26,             // Room has a Chef allowing players to cook food
+        Exorcist = 1 << 27,         // Room has an Exorcist priest that can remove cursed items back to the inventory
     }
 
     [Flags]
@@ -82,7 +83,7 @@ namespace Kingdoms_of_Etrea
     }
 
     [Flags]
-    internal enum PotionEffect
+    internal enum ConsumableEffect
     {
         None = 0,
         Healing = 1 << 0,
@@ -208,7 +209,7 @@ namespace Kingdoms_of_Etrea
     {
         Armour = 1,
         Weapon = 2,
-        Potion = 4,
+        Consumable = 4,
         Scroll = 8,
         Ring = 16,
         Junk = 32,

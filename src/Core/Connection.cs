@@ -80,7 +80,7 @@ namespace Kingdoms_of_Etrea.Core
                 _desc.Send(prompt);
 
                 var input = _desc.Read();
-                _desc.Player.IdleTicks = 0;
+                _desc.LastInputTime = DateTime.UtcNow;
                 if (!string.IsNullOrEmpty(input))
                 {
                     input = input.Trim();

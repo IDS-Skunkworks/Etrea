@@ -184,6 +184,10 @@ namespace Kingdoms_of_Etrea.Entities
                 {
                     sb.AppendLine($"A master chef is here, ready to pass on the secrets of the kitchen!");
                 }
+                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Exorcist))
+                {
+                    sb.AppendLine($"An Exorcist cleric is here, ready to remove curses.");
+                }
                 if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
                 {
                     var node = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.ToString();

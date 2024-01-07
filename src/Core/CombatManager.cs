@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Data;
-using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace Kingdoms_of_Etrea.Core
 {
@@ -132,44 +131,6 @@ namespace Kingdoms_of_Etrea.Core
             return retval;
         }
 
-        //internal Guid GetCombatSessionForNPC(Guid npcID)
-        //{
-        //    Guid retval = Guid.Empty;
-        //    if(CombatQueue.Count > 0)
-        //    {
-        //        lock(_lockObject)
-        //        {
-        //            var matchingSessions = CombatQueue.Where(kv => kv.Value.Participants.Any(s => s.Attacker is NPC && (((NPC)s.Attacker).NPCGuid == npcID) || ((NPC)s.Target).NPCGuid == npcID)).ToList();
-        //            if(matchingSessions.Count == 1)
-        //            {
-        //                retval = matchingSessions.First().Key;
-        //            }
-        //            else
-        //            {
-        //                Game.LogMessage($"DEBUG: Request to get Combat Session for {npcID} returned {matchingSessions.Count} sessions when 1 was expected", LogLevel.Debug, true);
-        //            }
-        //        }
-        //    }
-        //    return retval;
-        //}
-
-        //internal Guid GetNPCGuidFromCombatSession(Guid sessionID)
-        //{
-        //    Guid retval = Guid.Empty;
-        //    if(CombatQueue.Count > 0 )
-        //    {
-        //        lock(_lockObject)
-        //        {
-        //            if(CombatQueue.ContainsKey(sessionID))
-        //            {
-        //                var participant = CombatQueue[sessionID].Participants.Where(p => p.Attacker is NPC).FirstOrDefault();
-        //                return (participant.Attacker as NPC).NPCGuid;
-        //            }
-        //        }
-        //    }
-        //    return retval;
-        //}
-
         internal void ProcessCombatQueue(out List<Guid> completedSessions)
         {
             completedSessions = new List<Guid>();
@@ -240,9 +201,26 @@ namespace Kingdoms_of_Etrea.Core
                         bool fumble = hitRoll == 1;
                         bool critical = hitRoll == 20;
                         InventoryItem weapon = null;
+                        InventoryItem armour = null;
                         if (((Descriptor)attacker).Player.EquippedItems != null && ((Descriptor)attacker).Player.EquippedItems.Weapon != null)
                         {
                             weapon = ((Descriptor)attacker).Player.EquippedItems.Weapon;
+                        }
+                        switch(defenderIsPlayer)
+                        {
+                            case true:
+                                if (((Descriptor)defender).Player.EquippedItems != null && ((Descriptor)defender).Player.EquippedItems.Armour != null)
+                                {
+                                    armour = ((Descriptor)defender).Player.EquippedItems.Armour;
+                                }
+                                break;
+
+                            case false:
+                                if (((NPC)defender).EquippedItems != null && ((NPC)defender).EquippedItems.Armour != null)
+                                {
+                                    armour = ((NPC)defender).EquippedItems.Armour;
+                                }
+                                break;
                         }
                         if (!fumble && !critical)
                         {
@@ -258,6 +236,11 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     hitRollFinal += 10;
                                 }
+                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
+                                {
+                                    hitRollFinal += 2;
+                                    finalDamage += 2;
+                                }
                                 if (((Descriptor)attacker).Player.HasBuff("Desperate Attack"))
                                 {
                                     hitRollFinal -= 4;
@@ -266,6 +249,17 @@ namespace Kingdoms_of_Etrea.Core
                                 if (hitRollFinal >= targetAC)
                                 {
                                     // attack landed
+                                    if(armour != null && armour.DamageReductionModifier > 0)
+                                    {
+                                        if(0 > (int)(finalDamage - armour.DamageReductionModifier))
+                                        {
+                                            finalDamage = 0;
+                                        }
+                                        else
+                                        {
+                                            finalDamage -= armour.DamageReductionModifier;
+                                        }
+                                    }
                                     if (showRollInfo)
                                     {
                                         ((Descriptor)attacker).Send($"You rolled {hitRoll} ({hitRollFinal}) and hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
@@ -355,9 +349,34 @@ namespace Kingdoms_of_Etrea.Core
                                 var abilityModifier = ActorStats.CalculateAbilityModifier(((Descriptor)attacker).Player.Stats.Strength);
                                 var hitRollFinal = Convert.ToInt32(hitRoll + abilityModifier);
                                 var finalDamage = damage + abilityModifier > 0 ? Convert.ToUInt32(damage + abilityModifier) : 1;
+                                if (((Descriptor)attacker).Player.HasBuff("Truestrike"))
+                                {
+                                    hitRollFinal += 10;
+                                }
+                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
+                                {
+                                    hitRollFinal += 2;
+                                    finalDamage += 2;
+                                }
+                                if (((Descriptor)attacker).Player.HasBuff("Desperate Attack"))
+                                {
+                                    hitRollFinal -= 4;
+                                    finalDamage += 4;
+                                }
                                 if (hitRollFinal >= targetAC)
                                 {
                                     // attack landed
+                                    if (armour != null && armour.DamageReductionModifier > 0)
+                                    {
+                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
+                                        {
+                                            finalDamage = 0;
+                                        }
+                                        else
+                                        {
+                                            finalDamage -= armour.DamageReductionModifier;
+                                        }
+                                    }
                                     if (showRollInfo)
                                     {
                                         ((Descriptor)attacker).Send($"You rolled {hitRoll} ({hitRollFinal}) and hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
@@ -457,6 +476,21 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     damage += 4;
                                 }
+                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
+                                {
+                                    damage += 2;
+                                }
+                                if (armour != null && armour.DamageReductionModifier > 0)
+                                {
+                                    if (0 > (int)(damage - armour.DamageReductionModifier))
+                                    {
+                                        damage = 0;
+                                    }
+                                    else
+                                    {
+                                        damage -= armour.DamageReductionModifier;
+                                    }
+                                }
                                 ((Descriptor)attacker).Send($"You struck a critical blow and hit {targetName} for {damage} damage!{Constants.NewLine}");
                                 if (defenderIsPlayer)
                                 {
@@ -528,6 +562,21 @@ namespace Kingdoms_of_Etrea.Core
                                 if (((Descriptor)attacker).Player.HasBuff("Desperate Attack"))
                                 {
                                     damage += 4;
+                                }
+                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
+                                {
+                                    damage += 2;
+                                }
+                                if (armour != null && armour.DamageReductionModifier > 0)
+                                {
+                                    if (0 > (int)(damage - armour.DamageReductionModifier))
+                                    {
+                                        damage = 0;
+                                    }
+                                    else
+                                    {
+                                        damage -= armour.DamageReductionModifier;
+                                    }
                                 }
                                 ((Descriptor)attacker).Send($"You struck a critical blow and hit {targetName} for {damage} damage!{Constants.NewLine}");
                                 if (defenderIsPlayer)
@@ -1062,9 +1111,24 @@ namespace Kingdoms_of_Etrea.Core
                             bool fumble = hitRoll == 1;
                             bool critical = hitRoll == 20;
                             InventoryItem weapon = null;
+                            InventoryItem armour = null;
                             if (((NPC)attacker).EquippedItems != null && ((NPC)attacker).EquippedItems.Weapon != null)
                             {
                                 weapon = ((NPC)attacker).EquippedItems.Weapon;
+                            }
+                            if (defenderIsPlayer)
+                            {
+                                if (((Descriptor)defender).Player.EquippedItems != null && ((Descriptor)defender).Player.EquippedItems.Armour != null)
+                                {
+                                    armour = ((Descriptor)defender).Player.EquippedItems.Armour;
+                                }
+                            }
+                            else
+                            {
+                                if (((NPC)defender).EquippedItems != null && ((NPC)defender).EquippedItems.Armour != null)
+                                {
+                                    armour = ((NPC)defender).EquippedItems.Armour;
+                                }
                             }
                             if (!fumble && !critical)
                             {
@@ -1084,6 +1148,22 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         hitRollFinal -= 4;
                                         finalDamage += 4;
+                                    }
+                                    if (((NPC)attacker).HasBuff("Bless"))
+                                    {
+                                        hitRoll += 2;
+                                        finalDamage += 2;
+                                    }
+                                    if(armour != null && armour.DamageReductionModifier > 0)
+                                    {
+                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
+                                        {
+                                            finalDamage = 0;
+                                        }
+                                        else
+                                        {
+                                            finalDamage -= armour.DamageReductionModifier;
+                                        }
                                     }
                                     if (hitRollFinal >= targetAC)
                                     {
@@ -1181,6 +1261,22 @@ namespace Kingdoms_of_Etrea.Core
                                         hitRollFinal -= 4;
                                         finalDamage += 4;
                                     }
+                                    if (((NPC)attacker).HasBuff("Bless"))
+                                    {
+                                        hitRollFinal += 2;
+                                        finalDamage += 2;
+                                    }
+                                    if (armour != null && armour.DamageReductionModifier > 0)
+                                    {
+                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
+                                        {
+                                            finalDamage = 0;
+                                        }
+                                        else
+                                        {
+                                            finalDamage -= armour.DamageReductionModifier;
+                                        }
+                                    }
                                     if (hitRollFinal >= targetAC)
                                     {
                                         // attack landed
@@ -1253,6 +1349,21 @@ namespace Kingdoms_of_Etrea.Core
                                     if (((NPC)attacker).HasBuff("Desperate Attack"))
                                     {
                                         finalDamage += 4;
+                                    }
+                                    if (((NPC)attacker).HasBuff("Bless"))
+                                    {
+                                        finalDamage += 2;
+                                    }
+                                    if (armour != null && armour.DamageReductionModifier > 0)
+                                    {
+                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
+                                        {
+                                            finalDamage = 0;
+                                        }
+                                        else
+                                        {
+                                            finalDamage -= armour.DamageReductionModifier;
+                                        }
                                     }
                                     if (((NPC)attacker).IsFollower)
                                     {
@@ -1327,6 +1438,21 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         hitRollFinal -= 4;
                                         finalDamage += 4;
+                                    }
+                                    if (((NPC)attacker).HasBuff("Bless"))
+                                    {
+                                        finalDamage += 2;
+                                    }
+                                    if (armour != null && armour.DamageReductionModifier > 0)
+                                    {
+                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
+                                        {
+                                            finalDamage = 0;
+                                        }
+                                        else
+                                        {
+                                            finalDamage -= armour.DamageReductionModifier;
+                                        }
                                     }
                                     if (defenderIsPlayer)
                                     {

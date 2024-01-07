@@ -15,6 +15,10 @@ namespace Kingdoms_of_Etrea.Core
             switch(GetVerb(ref input).ToLower())
             {
                 #region MiscCommands
+                case "exorcise":
+                    ExorciseCursedItem(ref desc, ref input);
+                    break;
+
                 case "alias":
                     DoPlayerAlias(ref desc, ref input);
                     break;
@@ -235,7 +239,7 @@ namespace Kingdoms_of_Etrea.Core
                 case "quoff":
                 case "eat":
                 case "consume":
-                    DrinkPotion(ref desc, ref input);
+                    ConsumeItem(ref desc, ref input);
                     break;
 
                 case "drop":

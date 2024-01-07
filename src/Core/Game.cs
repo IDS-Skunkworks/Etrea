@@ -967,7 +967,6 @@ namespace Kingdoms_of_Etrea.Core
                 foreach(var p in playersInGame)
                 {
                     var player = p;
-                    SessionManager.Instance.GetPlayerByGUID(p.Id).Player.IdleTicks++;
                     if (DatabaseManager.SavePlayerNew(ref player, false))
                     {
                         _logProvider.LogMessage($"AUTOSAVE: Player {player.Player.Name} saved by autosave tick", LogLevel.Info, true);
@@ -982,15 +981,15 @@ namespace Kingdoms_of_Etrea.Core
             {
                 _logProvider.LogMessage($"AUTOSAVE: No players to save on tick.", LogLevel.Info, true);
             }
-            var idlePlayers = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected && x.Player.IdleTicks > Constants.MaxIdleTickCount()).ToList();
+            var idlePlayers = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected && (DateTime.UtcNow - x.LastInputTime).TotalSeconds > Constants.MaxIdleTickCount()).ToList();
             if(idlePlayers != null && idlePlayers.Count > 0)
             {
-                _logProvider.LogMessage($"INFO: Disconnecting idle players; {idlePlayers.Count} to process", LogLevel.Info, true);
+                _logProvider.LogMessage($"INFO: Disconnecting idle players; {idlePlayers.Count} connected players to process", LogLevel.Info, true);
                 foreach (var player in idlePlayers)
                 {
                     if(player.Player.Level < Constants.ImmLevel || (player.Player.Level >= Constants.ImmLevel && Constants.DisconnectIdleImms()))
                     {
-                        _logProvider.LogMessage($"INFO: {player.Player} has been idle for {player.Player.IdleTicks} ticks and will be disconnected", LogLevel.Info, true);
+                        _logProvider.LogMessage($"INFO: {player.Player} has been idle for {(DateTime.UtcNow - player.LastInputTime).TotalSeconds} seconds and will be disconnected", LogLevel.Info, true);
                         player.Send($"You have been disconnected due to an idle timeout.{Constants.NewLine}");
                         SessionManager.Instance.Close(player);
                     }

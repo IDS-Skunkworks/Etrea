@@ -14,15 +14,14 @@ namespace Kingdoms_of_Etrea.Core
             ConnectionTime = DateTime.UtcNow;
             State = ConnectionState.GetUsername;
             Id = Guid.NewGuid();
-            IdleTicks = 0;
             Player = null;
         }
 
         internal Guid Id;
         internal TcpClient Client { get; private set; }
         internal bool IsConnected => Client.Connected;
-        internal uint IdleTicks { get; set; }
         internal DateTime ConnectionTime { get; private set; }
+        internal DateTime LastInputTime { get; set; }
         internal Player Player { get; set; }
         internal ConnectionState State { get; set; }
 
