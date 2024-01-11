@@ -946,6 +946,14 @@ namespace Kingdoms_of_Etrea.Core
                             while (dr.Read())
                             {
                                 var r = Helpers.DeserialiseRoomObject(dr["RoomData"].ToString());
+                                if (r.SpawnItemsAtTick == null)
+                                {
+                                    r.SpawnItemsAtTick = new Dictionary<uint, uint>();
+                                }
+                                if (r.SpawnNPCsAtTick == null)
+                                {
+                                    r.SpawnNPCsAtTick = new Dictionary<uint, uint>();
+                                }
                                 retval.Add(r.RoomID, r);
                             }
                         }
