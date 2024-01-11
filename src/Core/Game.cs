@@ -673,7 +673,7 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             foreach(var npc in npcs)
                             {
-                                if(RoomManager.Instance.GetNPCsInRoom(room).Where(x => x.NPCID == npc.Value).Count() < npc.Value)
+                                if(RoomManager.Instance.GetNPCsInRoom(room).Where(x => x.NPCID == npc.Key).Count() < npc.Value)
                                 {
                                     NPCManager.Instance.AddNPCToWorld(npc.Key, room);
                                 }
