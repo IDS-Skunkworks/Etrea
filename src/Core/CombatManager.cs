@@ -1,758 +1,673 @@
-﻿using Kingdoms_of_Etrea.Interfaces;
-using Kingdoms_of_Etrea.Entities;
+﻿using Etrea2.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Data;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class CombatManager
     {
-        private static CombatManager _instnace = null;
-        private static readonly object _lockObject = new object();
-        private static ILoggingProvider _loggingProvider = new LoggingProvider();
-        private Dictionary<Guid, CombatSessionNew> CombatQueue;
+        private static CombatManager _instance = null;
+        private static readonly object _lock = new object();
+        private Dictionary<Guid, CombatSession> CombatSessions;
 
         private CombatManager()
         {
-            CombatQueue = new Dictionary<Guid, CombatSessionNew>();
+            CombatSessions = new Dictionary<Guid, CombatSession>();
         }
 
         internal static CombatManager Instance
         {
             get
             {
-                lock(_lockObject)
+                lock(_lock)
                 {
-                    if (_instnace == null)
+                    if (_instance == null)
                     {
-                        _instnace = new CombatManager();
+                        _instance = new CombatManager();
                     }
-                    return _instnace;
+                    return _instance;
                 }
             }
         }
 
-        internal bool IsPlayerInCombat(Guid playerID)
+        internal bool IsPlayerInCombat(Guid playerId)
         {
-            if(CombatQueue.Count > 0)
+            lock(_lock)
             {
-                lock(_lockObject)
+                if (Instance.CombatSessions.Count > 0)
                 {
-                    foreach(var _ in from s in CombatQueue.Values
-                                     where s.Attacker is Descriptor
-                                     where (s.Attacker as Descriptor).Id == playerID
-                                     select new { })
-                    {
-                        return true;
-                    }
-                    return false;
+                    return Instance.CombatSessions.Values.Where(x => x.Attacker is Descriptor && (x.Attacker as Descriptor).ID == playerId).Any();
                 }
-            }
-            else
-            {
                 return false;
             }
         }
 
-        internal bool IsNPCInCombatNew(Guid npcID)
+        internal bool IsNPCInCombat(Guid npcId)
         {
-            if(CombatQueue.Count > 0)
+            lock(_lock)
             {
-                lock(_lockObject)
+                if (Instance.CombatSessions.Count > 0)
                 {
-                    foreach (var _ in from s in CombatQueue.Values
-                                      where s.Attacker is NPC
-                                      where (s.Attacker as NPC).NPCGuid == npcID
-                                      select new { })
-                    {
-                        return true;
-                    }
-                    return false;
+                    return Instance.CombatSessions.Values.Where(x => x.Attacker is NPC && (x.Attacker as NPC).NPCGuid == npcId).Any();
                 }
-            }
-            else
-            {
                 return false;
             }
         }
 
-        internal bool IsPlayerInCombatWithNPC(Guid playerID, Guid npcID)
+        internal bool IsPlayerInCombatWithNPC(Guid playerId, Guid npcId)
         {
-            if (CombatQueue.Count > 0)
+            lock (_lock)
             {
-                lock(_lockObject)
+                if (Instance.CombatSessions.Count > 0)
                 {
-                    foreach(var _ in from s in CombatQueue.Values
-                                     where s.Attacker is Descriptor
-                                     where s.Defender is NPC
-                                     where (s.Attacker as Descriptor).Id == playerID && (s.Defender as NPC).NPCGuid == npcID
-                                     select new { })
-                    {
-                        return true;
-                    }
-                    return false;
+                    return Instance.CombatSessions.Values.Where(x => x.Attacker is Descriptor && x.Defender is NPC && (x.Defender as NPC).NPCGuid == npcId && (x.Attacker as Descriptor).ID == playerId).Any();
                 }
-            }
-            else
-            {
                 return false;
             }
         }
 
-        internal List<Guid> GetCombatSessionsForCombattant(Guid combatantID)
+        internal List<Guid> GetCombatSessionsForCombatant(Guid id)
         {
-            var retval = new List<Guid>();
-            if (CombatQueue.Count > 0)
+            lock(_lock)
             {
-                lock(_lockObject)
+                if (Instance.CombatSessions.Count > 0)
                 {
-                    var matchingSessions = CombatQueue.Values.Where(x => x.AttackerID == combatantID || x.DefenderID == combatantID).Select(x => x.SessionID).ToList();
-                    retval.AddRange(matchingSessions);
+                    return Instance.CombatSessions.Values.Where(x => x.AttackerID == id || x.DefenderID == id).Select(x => x.SessionID).ToList();
                 }
             }
-            return retval;
+            return new List<Guid>();
         }
 
-        internal List<Guid> GetCombatSessionsForCombatantPairing(Guid attackerID, Guid defenderID)
+        internal List<Guid> GetCombatSessionsForCombatantPairing(Guid attacker, Guid defender)
         {
-            var retval = new List<Guid>();
-            if (CombatQueue.Count > 0)
+            lock (_lock)
             {
-                lock(_lockObject)
+                if (Instance.CombatSessions.Count > 0)
                 {
-                    var matchingSessions = CombatQueue.Values.Where(x => x.AttackerID == attackerID && x.DefenderID == defenderID).Select(x => x.SessionID).ToList();
-                    retval.AddRange(matchingSessions);
-                    matchingSessions = CombatQueue.Values.Where(x => x.AttackerID == defenderID && x.DefenderID == attackerID).Select(x => x.SessionID).ToList();
-                    retval.AddRange(matchingSessions);
+                    List<Guid> result = new List<Guid>();
+                    result.AddRange(from CombatSession s in Instance.CombatSessions.Values where s.AttackerID == attacker && s.DefenderID == defender select s.SessionID);
+                    result.AddRange(from CombatSession s in Instance.CombatSessions.Values where s.AttackerID == defender && s.DefenderID == attacker select s.SessionID);
+                    return result;
                 }
             }
-            return retval;
+            return new List<Guid>();
+        }
+
+        internal Dictionary<Guid, CombatSession> GetCombatQueue()
+        {
+            lock (_lock)
+            {
+                return Instance.CombatSessions;
+            }
+        }
+
+        internal void AddCombatSession(CombatSession session)
+        {
+            lock (_lock)
+            {
+                Instance.CombatSessions.Add(session.SessionID, session);
+            }
+        }
+
+        internal void RemoveCombatSession(Guid sessionID)
+        {
+            lock (_lock)
+            {
+                if (Instance.CombatSessions.ContainsKey(sessionID))
+                {
+                    if (Instance.CombatSessions[sessionID].Attacker != null && Instance.CombatSessions[sessionID].Attacker is Descriptor)
+                    {
+                        SessionManager.Instance.GetPlayerByGUID((Instance.CombatSessions[sessionID].Attacker as Descriptor).ID).Player.Position = ActorPosition.Standing;
+                    }
+                    if (Instance.CombatSessions[sessionID].Defender != null && Instance.CombatSessions[sessionID].Defender is Descriptor)
+                    {
+                        SessionManager.Instance.GetPlayerByGUID((Instance.CombatSessions[sessionID].Defender as Descriptor).ID).Player.Position = ActorPosition.Standing;
+                    }
+                    Instance.CombatSessions.Remove(sessionID);
+                }
+            }
         }
 
         internal void ProcessCombatQueue(out List<Guid> completedSessions)
         {
             completedSessions = new List<Guid>();
-            foreach(var session in CombatQueue.Values)
+            lock( _lock)
             {
-                bool sessionComplete = false;
-                var attacker = session.Attacker;
-                var defender = session.Defender;
-                if (attacker == null || defender == null)
+                var toProcess = new Dictionary<Guid, CombatSession>(Instance.CombatSessions);
+                foreach(var session in toProcess)
                 {
-                    Game.LogMessage($"WARN: Combat Manager is aborting session {session.SessionID}: attacker and/or defender was null", LogLevel.Warning, true);
-                    completedSessions.Add(session.SessionID);
-                    sessionComplete = true;
-                    break;
-                }
-                bool attackerIsPlayer = session.Attacker is Descriptor;
-                bool defenderIsPlayer = session.Defender is Descriptor;
-                // Check the HP of both attacker and defender in case the values were modified outside of CombatManager
-                if(attackerIsPlayer)
-                {
-                    var attackerHP = SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.Stats.CurrentHP;
-                    if (attackerHP <= 0)
+                    //bool sessionComplete = false;
+                    if (session.Value.Attacker == null || session.Value.Defender == null)
                     {
-                        completedSessions.Add(session.SessionID);
-                        sessionComplete = true;
-                        break;
+                        Game.LogMessage($"WARN: Aborting Combat session {session.Key}, attacker and/or defender was null", LogLevel.Warning, true);
+                        completedSessions.Add(session.Key);
+                        continue;
                     }
-                }
-                else
-                {
-                    var attackerHP = NPCManager.Instance.GetNPCByGUID(((NPC)attacker).NPCGuid) != null ? NPCManager.Instance.GetNPCByGUID(((NPC)attacker).NPCGuid).Stats.CurrentHP : 0;
-                    if (attackerHP <= 0)
-                    {
-                        completedSessions.Add(session.SessionID);
-                        sessionComplete = true;
-                        break;
-                    }
-                }
-                if (defenderIsPlayer)
-                {
-                    var defenderHP = SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP;
-                    if (defenderHP <= 0)
-                    {
-                        completedSessions.Add(session.SessionID);
-                        sessionComplete = true;
-                        break;
-                    }
-                }
-                else
-                {
-                    var defenderHP = NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP;
-                    if (defenderHP <= 0)
-                    {
-                        completedSessions.Add(session.SessionID);
-                        sessionComplete = true;
-                        break;
-                    }
-                }
-                if (attackerIsPlayer)
-                {
-                    // Attacker is a player
-                    bool showRollInfo = ((Descriptor)attacker).Player.ShowDetailedRollInfo || ((Descriptor)attacker).Player.Level >= Constants.ImmLevel;
-                    for (int a = 0; a < ((Descriptor)attacker).Player.NumberOfAttacks; a++)
-                    {
-                        var targetAC = defenderIsPlayer ? ((Descriptor)defender).Player.Stats.ArmourClass : ((NPC)defender).Stats.ArmourClass;
-                        var targetName = defenderIsPlayer ? ((Descriptor)defender).Player.Name : ((NPC)defender).Name;
-                        var hitRoll = Helpers.RollDice(1, 20);
-                        bool fumble = hitRoll == 1;
-                        bool critical = hitRoll == 20;
-                        InventoryItem weapon = null;
-                        InventoryItem armour = null;
-                        if (((Descriptor)attacker).Player.EquippedItems != null && ((Descriptor)attacker).Player.EquippedItems.Weapon != null)
-                        {
-                            weapon = ((Descriptor)attacker).Player.EquippedItems.Weapon;
-                        }
-                        switch(defenderIsPlayer)
-                        {
-                            case true:
-                                if (((Descriptor)defender).Player.EquippedItems != null && ((Descriptor)defender).Player.EquippedItems.Armour != null)
-                                {
-                                    armour = ((Descriptor)defender).Player.EquippedItems.Armour;
-                                }
-                                break;
 
-                            case false:
-                                if (((NPC)defender).EquippedItems != null && ((NPC)defender).EquippedItems.Armour != null)
-                                {
-                                    armour = ((NPC)defender).EquippedItems.Armour;
-                                }
-                                break;
-                        }
-                        if (!fumble && !critical)
+                    // PVE combat, so one participant is a Player the other is an NPC
+                    if ((session.Value.Attacker is Descriptor && session.Value.Defender is NPC) || (session.Value.Attacker is NPC && session.Value.Defender is Descriptor))
+                    {
+                        if (session.Value.Attacker is Descriptor)
                         {
-                            // Normal attack, not a natural 1 or 20
-                            if (weapon != null)
+                            var attacker = SessionManager.Instance.GetPlayerByGUID((session.Value.Attacker as Descriptor).ID);
+                            var defender = NPCManager.Instance.GetNPCByGUID((session.Value.Defender as NPC).NPCGuid);
+                            if (attacker != null && defender != null)
                             {
-                                var damage = Helpers.RollDice(weapon.NumberOfDamageDice, weapon.SizeOfDamageDice);
-                                var ability = weapon.IsFinesse ? ((Descriptor)attacker).Player.Stats.Dexterity : ((Descriptor)attacker).Player.Stats.Strength;
-                                var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                var hitRollFinal = Convert.ToInt32(hitRoll + abilityModifier);
-                                var finalDamage = damage + abilityModifier > 0 ? Convert.ToUInt32(damage + abilityModifier) : 1;
-                                if (((Descriptor)attacker).Player.HasBuff("Truestrike"))
+                                var article = Helpers.IsCharAVowel(defender.Name[0]) ? "an" : "a";
+                                for (int a = 0; a < attacker.Player.NumberOfAttacks; a++)
                                 {
-                                    hitRollFinal += 10;
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
-                                {
-                                    hitRollFinal += 2;
-                                    finalDamage += 2;
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Desperate Attack"))
-                                {
-                                    hitRollFinal -= 4;
-                                    finalDamage += 4;
-                                }
-                                if (hitRollFinal >= targetAC)
-                                {
-                                    // attack landed
-                                    if(armour != null && armour.DamageReductionModifier > 0)
+                                    bool hits = attacker.Player.DoHitRoll(defender, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
+                                    var wpn = attacker.Player.EquipWeapon?.Name.ToLower() ?? "strike";
+                                    if (hits)
                                     {
-                                        if(0 > (int)(finalDamage - armour.DamageReductionModifier))
+                                        var damage = attacker.Player.DoDamageRoll(defender);
+                                        if (isCritical)
                                         {
-                                            finalDamage = 0;
+                                            damage *= 2;
+                                            attacker.Send($"You have struck a critical blow against your enemy!{Constants.NewLine}");
+                                        }
+                                        defender.AdjustHP((int)damage * -1, out bool isKilled);
+                                        if (isKilled)
+                                        {
+                                            attacker.Send($"Your {wpn} hits for lethal damage, killing {article} {defender.Name}!{Constants.NewLine}");
+                                            defender.Kill(true, ref attacker);
+                                            attacker.Send($"You gain {defender.BaseExpAward} Exp and {defender.Gold} gold!{Constants.NewLine}");
+                                            attacker.Player.AddExp(defender.BaseExpAward, false, false);
+                                            attacker.Player.AddGold(defender.Gold, false);
+                                            completedSessions.AddRange(GetCombatSessionsForCombatant((session.Value.Defender as NPC).NPCGuid));
+                                            break;
                                         }
                                         else
                                         {
-                                            finalDamage -= armour.DamageReductionModifier;
-                                        }
-                                    }
-                                    if (showRollInfo)
-                                    {
-                                        ((Descriptor)attacker).Send($"You rolled {hitRoll} ({hitRollFinal}) and hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        ((Descriptor)attacker).Send($"Your {weapon.Name} hits {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                    }
-                                    if (defenderIsPlayer)
-                                    {
-                                        // apply damage to player
-                                        if (((Descriptor)defender).Player.Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // kill the player
-                                            sessionComplete = true;
-                                            ((Descriptor)attacker).Send($"You have killed {targetName}!{Constants.NewLine}");
-                                            ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} has killed you!{Constants.NewLine}");
-                                            ((Descriptor)defender).Player.Kill();
-                                        }
-                                        else
-                                        {
-                                            // haven't done enough damage to kill the player, so just reduce their HP
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                            ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name}'s {weapon.Name} hits you for {finalDamage} damage!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // apply damage to the NPC
-                                        if (((NPC)defender).Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // Kill the NPC
-                                            sessionComplete = true;
-                                            ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
-                                            // Check and update any quests that might depend on killing this NPC
-                                            var npcID = ((NPC)defender).NPCID;
-                                            if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
+                                            var pDmg = (uint)Math.Round((double)damage / defender.CurrentHP * 100, 0);
+                                            if (attacker.Player.ShowDetailedRollInfo || attacker.Player.Level >= Constants.ImmLevel)
                                             {
-                                                for (int q = 0; q < ((Descriptor)attacker).Player.ActiveQuests.Count; q++)
-                                                {
-                                                    if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters.Keys.Contains(npcID))
-                                                    {
-                                                        if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] <= 1)
-                                                        {
-                                                            ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] = 0;
-                                                        }
-                                                        else
-                                                        {
-                                                            ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID]--;
-                                                        }
-                                                    }
-                                                }
+                                                attacker.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): Your {wpn} {Helpers.GetDamageString(pDmg)} {article} {defender.Name} for {damage} damage!{Constants.NewLine}");
                                             }
-                                            ((NPC)defender).Kill(true);
+                                            else
+                                            {
+                                                attacker.Send($"Your {wpn} {Helpers.GetDamageString(pDmg)} {article} {defender.Name}!{Constants.NewLine}");
+                                            }
                                         }
-                                        else
-                                        {
-                                            // reduce NPC HP
-                                            NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // attack missed
-                                    if (showRollInfo)
-                                    {
-                                        ((Descriptor)attacker).Send($"You rolled {hitRoll} ({hitRollFinal}) and missed {targetName}!{Constants.NewLine}");
                                     }
                                     else
                                     {
-                                        ((Descriptor)attacker).Send($"Your {weapon.Name} misses {targetName}!{Constants.NewLine}");
-                                    }
-                                    if (defenderIsPlayer)
-                                    {
-                                        ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} misses you with their {weapon.Name}!{Constants.NewLine}");
+                                        if (attacker.Player.ShowDetailedRollInfo || attacker.Player.Level >= Constants.ImmLevel)
+                                        {
+                                            attacker.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): Your {wpn} misses {article} {defender.Name}!{Constants.NewLine}");
+                                        }
+                                        else
+                                        {
+                                            attacker.Send($"Your {wpn} misses {defender.Name}!{Constants.NewLine}");
+                                        }
                                     }
                                 }
                             }
                             else
                             {
-                                // No weapon equipped by the attacker
-                                var damage = Helpers.RollDice(1, 2); // base damage for a punch
-                                var abilityModifier = ActorStats.CalculateAbilityModifier(((Descriptor)attacker).Player.Stats.Strength);
-                                var hitRollFinal = Convert.ToInt32(hitRoll + abilityModifier);
-                                var finalDamage = damage + abilityModifier > 0 ? Convert.ToUInt32(damage + abilityModifier) : 1;
-                                if (((Descriptor)attacker).Player.HasBuff("Truestrike"))
-                                {
-                                    hitRollFinal += 10;
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
-                                {
-                                    hitRollFinal += 2;
-                                    finalDamage += 2;
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Desperate Attack"))
-                                {
-                                    hitRollFinal -= 4;
-                                    finalDamage += 4;
-                                }
-                                if (hitRollFinal >= targetAC)
-                                {
-                                    // attack landed
-                                    if (armour != null && armour.DamageReductionModifier > 0)
-                                    {
-                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
-                                        {
-                                            finalDamage = 0;
-                                        }
-                                        else
-                                        {
-                                            finalDamage -= armour.DamageReductionModifier;
-                                        }
-                                    }
-                                    if (showRollInfo)
-                                    {
-                                        ((Descriptor)attacker).Send($"You rolled {hitRoll} ({hitRollFinal}) and hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        ((Descriptor)attacker).Send($"Your strike hits {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                    }
-                                    if (defenderIsPlayer)
-                                    {
-                                        // apply damage to player
-                                        if (((Descriptor)defender).Player.Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // kill the player
-                                            sessionComplete = true;
-                                            ((Descriptor)attacker).Send($"You have killed {targetName}!{Constants.NewLine}");
-                                            ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} has killed you!{Constants.NewLine}");
-                                            ((Descriptor)defender).Player.Kill();
-                                        }
-                                        else
-                                        {
-                                            // haven't done enough damage to kill the player, so just reduce their HP
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                            ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name}'s strike hits you for {finalDamage} damage!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // apply damage to the NPC
-                                        if (((NPC)defender).Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // Kill the NPC
-                                            sessionComplete = true;
-                                            ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
-                                            // Check and update any quests that might depend on killing this NPC
-                                            var npcID = ((NPC)defender).NPCID;
-                                            if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
-                                            {
-                                                for (int q = 0; q < ((Descriptor)attacker).Player.ActiveQuests.Count; q++)
-                                                {
-                                                    if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters.Keys.Contains(npcID))
-                                                    {
-                                                        if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] <= 1)
-                                                        {
-                                                            ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] = 0;
-                                                        }
-                                                        else
-                                                        {
-                                                            ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID]--;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            ((NPC)defender).Kill(true);
-                                        }
-                                        else
-                                        {
-                                            // reduce NPC HP
-                                            NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // attack missed
-                                    if (showRollInfo)
-                                    {
-                                        ((Descriptor)attacker).Send($"You rolled {hitRoll} ({hitRollFinal}) and missed {targetName}!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        ((Descriptor)attacker).Send($"Your strike misses {targetName}!{Constants.NewLine}");
-                                    }
-                                    if (defenderIsPlayer)
-                                    {
-                                        ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name}'s strike misses you!{Constants.NewLine}");
-                                    }
-                                }
+                                // one or both participants in the combat session was null so flag for removal and move on to the next one
+                                completedSessions.Add(session.Key);
+                                continue;
                             }
                         }
-                        if (critical)
+
+                        if (session.Value.Attacker is NPC)
                         {
-                            // Critical attack, natural 20
-                            if (weapon != null)
+                            var attacker = NPCManager.Instance.GetNPCByGUID((session.Value.Attacker as NPC).NPCGuid);
+                            var defender = SessionManager.Instance.GetPlayerByGUID((session.Value.Defender as Descriptor).ID);
+                            if (attacker != null && defender != null)
                             {
-                                var damage = Helpers.RollDice(weapon.NumberOfDamageDice, weapon.SizeOfDamageDice) * 2;
-                                var ability = weapon.IsFinesse ? ((Descriptor)attacker).Player.Stats.Dexterity : ((Descriptor)attacker).Player.Stats.Strength;
-                                var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                if (abilityModifier >= 1)
+                                var hpPerc = (int)Math.Round((double)attacker.CurrentHP / attacker.MaxHP * 100, 0);
+                                var article = Helpers.IsCharAVowel(attacker.Name[0]) ? "An" : "A";
+                                if (attacker.BehaviourFlags.HasFlag(NPCFlags.Coward))
                                 {
-                                    damage += Convert.ToUInt32(abilityModifier);
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Desperate Attack"))
-                                {
-                                    damage += 4;
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
-                                {
-                                    damage += 2;
-                                }
-                                if (armour != null && armour.DamageReductionModifier > 0)
-                                {
-                                    if (0 > (int)(damage - armour.DamageReductionModifier))
+                                    if (hpPerc <= 90)
                                     {
-                                        damage = 0;
-                                    }
-                                    else
-                                    {
-                                        damage -= armour.DamageReductionModifier;
-                                    }
-                                }
-                                ((Descriptor)attacker).Send($"You struck a critical blow and hit {targetName} for {damage} damage!{Constants.NewLine}");
-                                if (defenderIsPlayer)
-                                {
-                                    // defender is a player
-                                    if (((Descriptor)defender).Player.Stats.CurrentHP <= damage)
-                                    {
-                                        // Player has been killed
-                                        sessionComplete = true;
-                                        ((Descriptor)attacker).Send($"You have killed {targetName}!{Constants.NewLine}");
-                                        ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} has killed you!{Constants.NewLine}");
-                                        ((Descriptor)defender).Player.Kill();
-                                    }
-                                    else
-                                    {
-                                        // Player has been damaged
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(damage);
-                                        ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} struck a critical blow, hitting you for {damage} damage!{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    // defender is an NPC
-                                    if (((NPC)defender).Stats.CurrentHP <= damage)
-                                    {
-                                        // killed the NPC
-                                        sessionComplete = true;
-                                        ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
-                                        // Check and update any quests that might depend on killing this NPC
-                                        var npcID = ((NPC)defender).NPCID;
-                                        if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
+                                        if (attacker.FleeCombat(out uint destRid))
                                         {
-                                            for (int q = 0; q < ((Descriptor)attacker).Player.ActiveQuests.Count; q++)
+                                            defender.Send($"{article} {attacker.Name} breaks combat and flees from you!{Constants.NewLine}");
+                                            completedSessions.AddRange(GetCombatSessionsForCombatant(attacker.NPCGuid));
+                                            attacker.Move(ref attacker, attacker.CurrentRoom, destRid, false);
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            defender.Send($"{article} {attacker.Name} looks like fleeing but can't break away from you!{Constants.NewLine}");
+                                            int willCheck = (int)Helpers.RollDice(1, 20);
+                                            var willMod = Helpers.CalculateAbilityModifier(attacker.Wisdom);
+                                            willCheck += willMod;
+                                            if (willCheck < 10)
                                             {
-                                                if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters.Keys.Contains(npcID))
+                                                // abort the current round for the NPC if they fail a will check
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (attacker.Spells != null && attacker.Spells.Count > 0)
+                                {
+                                    var healSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Healing && !x.AOESpell).ToList();
+                                    var damageSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Damage && !x.AOESpell).ToList();
+                                    var buffSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Buff && !x.AOESpell).ToList();
+                                    var debuffSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Debuff && !x.AOESpell).ToList();
+                                    Spell spell = null;
+                                    if (hpPerc <= 50)
+                                    {
+                                        spell = healSpells.Where(x => x.MPCost <= attacker.CurrentMP).FirstOrDefault();
+                                        if (spell != null)
+                                        {
+                                            attacker.AdjustMP((int)spell.MPCost * -1);
+                                            var effect = spell.CalculateSpellHPEffect(attacker, attacker, out _);
+                                            attacker.AdjustHP(effect, out _);
+                                            defender.Send($"{article} {attacker.Name} heals their wounds with a spell!{Constants.NewLine}");
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            defender.Send($"{article} {attacker.Name} wants to cast a spell, but doesn't have the resources!{Constants.NewLine}");
+                                        }
+                                    }
+                                    var availDamageSpells = damageSpells.Where(x => x.MPCost <= attacker.CurrentMP).ToList();
+                                    if (availDamageSpells.Count > 0)
+                                    {
+                                        spell = availDamageSpells[new Random(DateTime.UtcNow.GetHashCode()).Next(0, availDamageSpells.Count)];
+                                        if (spell != null)
+                                        {
+                                            attacker.AdjustMP((int)spell.MPCost * -1);
+                                            var effect = spell.CalculateSpellHPEffect(attacker, defender.Player, out bool spellHitTarget);
+                                            if (spellHitTarget)
+                                            {
+                                                if (effect < 0)
                                                 {
-                                                    if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] <= 1)
+                                                    // player absorbed the attack so increment health by effect * -1
+                                                    defender.Player.AdjustHP(effect * -1, out _);
+                                                    defender.Send($"{article} {attacker.Name} hurls {spell} at you, but you absorb the effect!{Constants.NewLine}");
+                                                    continue;
+                                                }
+                                                else
+                                                {
+                                                    // spell damaged the player
+                                                    defender.Send($"{article} {attacker.Name} hurls a {spell} spell at you, blasting you for {effect} damage!{Constants.NewLine}");
+                                                    defender.Player.AdjustHP(effect * -1, out bool isKilled);
+                                                    if (isKilled)
                                                     {
-                                                        ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] = 0;
-                                                    }
-                                                    else
-                                                    {
-                                                        ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID]--;
+                                                        defender.Send($"Your wounds are serious and many and death overcomes you...{Constants.NewLine}");
+                                                        completedSessions.AddRange(GetCombatSessionsForCombatant(defender.ID));
+                                                        defender.Player.Kill();
+                                                        continue;
                                                     }
                                                 }
                                             }
+                                            else
+                                            {
+                                                defender.Send($"{article} {attacker.Name} hurls {spell} at you, but their magic fizzles and the spell misses!{Constants.NewLine}");
+                                            }
                                         }
-                                        ((NPC)defender).Kill(true);
+                                        else
+                                        {
+                                            defender.Send($"{article} {attacker.Name} wants to cast a spell, but doesn't have the resources!{Constants.NewLine}");
+                                        }
                                     }
                                     else
                                     {
-                                        // damaged the NPC
-                                        NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(damage);
+                                        defender.Send($"{article} {attacker.Name} wants to cast a spell, but doesn't have the resources!{Constants.NewLine}");
+                                    }
+                                    var availBuffSpells = buffSpells.Where(x => x.MPCost <= attacker.CurrentMP).ToList();
+                                    if (availBuffSpells.Count > 0)
+                                    {
+                                        spell = availBuffSpells[new Random(DateTime.UtcNow.GetHashCode()).Next(0, availBuffSpells.Count)];
+                                        if (spell != null)
+                                        {
+                                            spell.ApplyBuffSpell(attacker, attacker, out bool hitsTarget, out int hpModifier);
+                                            attacker.AdjustMP((int)spell.MPCost * -1);
+                                            if (hitsTarget)
+                                            {
+                                                defender.Send($"{article} {attacker.Name} buffs their abilities with the power of {spell}!{Constants.NewLine}");
+                                                if (hpModifier != 0)
+                                                {
+                                                    attacker.AdjustHP(hpModifier, out _);
+                                                }
+                                                continue;
+                                            }
+                                            else
+                                            {
+                                                defender.Send($"{article} {attacker.Name} tries to cast {spell} on themselves, but their magic fizzles and vanishes!{Constants.NewLine}");
+                                                continue;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            defender.Send($"{article} {attacker.Name} wants to cast a spell, but doesn't have the resources!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        defender.Send($"{article} {attacker.Name} wants to cast a spell, but doesn't have the resources!{Constants.NewLine}");
+                                    }
+                                    var availDebuffSpells = debuffSpells.Where(x => x.MPCost <= attacker.CurrentMP).ToList();
+                                    if (availDebuffSpells.Count > 0)
+                                    {
+                                        spell = availDebuffSpells[new Random(DateTime.UtcNow.GetHashCode()).Next(0, availDebuffSpells.Count)];
+                                        if (spell != null)
+                                        {
+                                            spell.ApplyBuffSpell(attacker, defender.Player, out bool hitsTarget, out int hpModifier);
+                                            attacker.AdjustMP((int)spell.MPCost * -1);
+                                            if (hitsTarget)
+                                            {
+                                                defender.Send($"{article} {attacker.Name} curses you with the power of {spell}!{Constants.NewLine}");
+                                                if (hpModifier != 0)
+                                                {
+                                                    defender.Player.AdjustHP(hpModifier * -1, out bool isKilled);
+                                                    if (isKilled)
+                                                    {
+                                                        defender.Send($"Your wounds are many and serious and death overcomes you...{Constants.NewLine}");
+                                                        defender.Player.Kill();
+                                                        completedSessions.AddRange(GetCombatSessionsForCombatant(defender.ID));
+                                                        continue;
+                                                    }
+                                                }
+                                                continue;
+                                            }
+                                            else
+                                            {
+                                                defender.Send($"{article} {attacker.Name} tries to curse you with {spell} but their magic fizzles and vanishes!{Constants.NewLine}");
+                                                continue;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            defender.Send($"{article} {attacker.Name} wants to cast a spell, but doesn't have the resources!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        defender.Send($"{article} {attacker.Name} wants to cast a spell, but doesn't have the resources!{Constants.NewLine}");
+                                    }
+                                }
+                                for (int a = 0; a < attacker.NumberOfAttacks; a++)
+                                {
+                                    bool hits = attacker.DoHitRoll(defender.Player, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
+                                    var wpn = attacker.EquipWeapon?.Name.ToLower() ?? "strike";
+                                    if (hits)
+                                    {
+                                        var damage = attacker.DoDamageRoll(defender.Player);
+                                        if (isCritical)
+                                        {
+                                            damage *= 2;
+                                            defender.Send($"{article} {attacker.Name} strikes a critical blow against you!{Constants.NewLine}");
+                                        }
+                                        defender.Player.AdjustHP((int)damage * -1, out bool isKilled);
+                                        if (isKilled)
+                                        {
+                                            completedSessions.AddRange(GetCombatSessionsForCombatant(defender.ID));
+                                            defender.Send($"{article} {attacker.Name}'s {wpn} hits you for lethal damage, killing you!{Constants.NewLine}");
+                                            defender.Player.Kill();
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            var pDmg = (uint)Math.Round((double)damage / defender.Player.CurrentHP * 100, 0);
+                                            if (defender.Player.ShowDetailedRollInfo || defender.Player.Level >= Constants.ImmLevel)
+                                            {
+                                                defender.Send($"{article} {attacker.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} you for {damage} damage!{Constants.NewLine}");
+                                            }
+                                            else
+                                            {
+                                                defender.Send($"{article} {attacker.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} you!{Constants.NewLine}");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        defender.Send($"{article} {attacker.Name}'s {wpn} misses you!{Constants.NewLine}");
                                     }
                                 }
                             }
                             else
                             {
-                                // no weapon, punching damage only
-                                var damage = Helpers.RollDice(1, 2) * 2;
-                                var ability = ((Descriptor)attacker).Player.Stats.Strength;
-                                var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                if (abilityModifier >= 1)
+                                // one or both participants in the round was null so flag for removal and continue on
+                                completedSessions.Add(session.Key);
+                                continue;
+                            }
+                        }
+                        continue;
+                    }
+
+                    // EVE combat, both participants are NPCs
+                    if (session.Value.Attacker is NPC && session.Value.Defender is NPC)
+                    {
+                        NPC attacker = NPCManager.Instance.GetNPCByGUID((session.Value.Attacker as NPC).NPCGuid);
+                        NPC defender = NPCManager.Instance.GetNPCByGUID((session.Value.Defender as NPC).NPCGuid);
+                        Descriptor attackerOwner = attacker.IsFollower ? SessionManager.Instance.GetPlayerByGUID(attacker.FollowingPlayer) : null;
+                        Descriptor defenderOwner = defender.IsFollower ? SessionManager.Instance.GetPlayerByGUID(defender.FollowingPlayer) : null;
+                        Spell spell = null;
+                        if (attacker != null && defender != null)
+                        {
+                            var healSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Healing && !x.AOESpell).ToList();
+                            var buffSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Buff && !x.AOESpell).ToList();
+                            var debuffSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Debuff && !x.AOESpell).ToList();
+                            var damageSpells = attacker.Spells.Where(x => x.SpellType == SpellType.Damage && !x.AOESpell).ToList();
+                            if (attacker.IsFollower)
+                            {
+                                // see if we want to heal or buff the owning player
+                                var cutOff = attackerOwner.Player.MaxHP / 2;
+                                if (attackerOwner.Player.CurrentHP < cutOff)
                                 {
-                                    damage += Convert.ToUInt32(abilityModifier);
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Desperate Attack"))
-                                {
-                                    damage += 4;
-                                }
-                                if (((Descriptor)attacker).Player.HasBuff("Bless"))
-                                {
-                                    damage += 2;
-                                }
-                                if (armour != null && armour.DamageReductionModifier > 0)
-                                {
-                                    if (0 > (int)(damage - armour.DamageReductionModifier))
+                                    if (healSpells != null && healSpells.Count > 0)
                                     {
-                                        damage = 0;
+                                        var availHealSpells = healSpells.Where(x => x.MPCost <= attacker.CurrentMP).ToList();
+                                        if (availHealSpells != null && availHealSpells.Count > 0)
+                                        {
+                                            spell = availHealSpells[new Random(DateTime.UtcNow.GetHashCode()).Next(0, availHealSpells.Count)];
+                                            if (spell != null)
+                                            {
+                                                int hpMod = spell.CalculateSpellHPEffect(attacker, attackerOwner.Player, out _);
+                                                attacker.AdjustMP((int)spell.MPCost * -1);
+                                                attackerOwner.Player.AdjustHP(hpMod, out _);
+                                                attackerOwner.Send($"{attacker.Name} heals your wounds with the power of {spell}!{Constants.NewLine}");
+                                                continue;
+                                            }
+                                            else
+                                            {
+                                                attackerOwner.Send($"{attacker.Name} wants to prepare a spell, but doesn't have the resources!{Constants.NewLine}");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            attackerOwner.Send($"{attacker.Name} wants to prepare a spell, but doesn't have the resources!{Constants.NewLine}");
+                                        }
+                                    }
+                                }
+                                var availBuffSpells = buffSpells.Where(x => x.MPCost <= attacker.CurrentMP).ToList();
+                                if (availBuffSpells != null && availBuffSpells.Count > 0)
+                                {
+                                    spell = availBuffSpells[new Random(DateTime.UtcNow.GetHashCode()).Next(0, availBuffSpells.Count)];
+                                    if (spell != null)
+                                    {
+                                        spell.ApplyBuffSpell(attacker, attackerOwner.Player, out bool hitsTarget, out int hpMod);
+                                        attacker.AdjustMP((int)spell.MPCost * -1);
+                                        if (hitsTarget)
+                                        {
+                                            attackerOwner.Send($"{attacker.Name} blesses you with the power of {spell}!{Constants.NewLine}");
+                                            if (hpMod != 0)
+                                            {
+                                                attackerOwner.Player.AdjustHP(hpMod, out _);
+                                            }
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            attackerOwner.Send($"{attacker.Name} prepares a spell to assist you, but their magic fizzles and vanishes!{Constants.NewLine}");
+                                            continue;
+                                        }
                                     }
                                     else
                                     {
-                                        damage -= armour.DamageReductionModifier;
-                                    }
-                                }
-                                ((Descriptor)attacker).Send($"You struck a critical blow and hit {targetName} for {damage} damage!{Constants.NewLine}");
-                                if (defenderIsPlayer)
-                                {
-                                    // defender is a player
-                                    if (((Descriptor)defender).Player.Stats.CurrentHP <= damage)
-                                    {
-                                        // Player has been killed
-                                        sessionComplete = true;
-                                        ((Descriptor)attacker).Send($"You have killed {targetName}!{Constants.NewLine}");
-                                        ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} has killed you!{Constants.NewLine}");
-                                        ((Descriptor)defender).Player.Kill();
-                                    }
-                                    else
-                                    {
-                                        // Player has been damaged
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(damage);
-                                        ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} struck a critical blow, hitting you for {damage} damage!{Constants.NewLine}");
+                                        attackerOwner.Send($"{attacker.Name} wants to prepare a spell, but doesn't have the resources!{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    // defender is an NPC
-                                    if (((NPC)defender).Stats.CurrentHP <= damage)
+                                    attackerOwner.Send($"{attacker.Name} wants to prepare a spell, but doesn't have the resources!{Constants.NewLine}");
+                                }
+                                continue;
+                            }
+                            var hpCutOff = attacker.MaxHP / 2;
+                            if (attacker.CurrentHP <= hpCutOff)
+                            {
+                                // NPC is less than half health so see if it can heal itself
+                                var availHealSpells = healSpells.Where(x => x.MPCost <= attacker.CurrentMP).ToList();
+                                if (availHealSpells != null && availHealSpells.Count > 0)
+                                {
+                                    spell = availHealSpells[new Random(DateTime.UtcNow.GetHashCode()).Next(0, availHealSpells.Count)];
+                                    if (spell != null)
                                     {
-                                        // killed the NPC
-                                        sessionComplete = true;
-                                        ((Descriptor)attacker).Send($"You have killed {targetName} and gained {((NPC)defender).BaseExpAward} Exp and {((NPC)defender).Stats.Gold} gold!{Constants.NewLine}");
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddExp(((NPC)defender).BaseExpAward);
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.AddGold(((NPC)defender).Stats.Gold);
-                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)attacker).Id).Player.UpdateAlignment(((NPC)defender).Alignment);
-                                        // Check and update any quests that might depend on killing this NPC
-                                        var npcID = ((NPC)defender).NPCID;
-                                        if (((Descriptor)attacker).Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npcID)))
+                                        int hpMod = spell.CalculateSpellHPEffect(attacker, attacker, out _);
+                                        attacker.AdjustMP((int)spell.MPCost * -1);
+                                        attacker.AdjustHP(hpMod, out _);
+                                        if (attacker.IsFollower)
                                         {
-                                            for (int q = 0; q < ((Descriptor)attacker).Player.ActiveQuests.Count; q++)
+                                            attackerOwner.Send($"{attacker.Name} heals their wounds with a spell!{Constants.TabStop}");
+                                        }
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        if (attacker.IsFollower)
+                                        {
+                                            attackerOwner.Send($"{attacker.Name} wants to prepare a spell, but doesn't have the resources!{Constants.NewLine}");
+                                        }
+                                    }
+                                }
+                            }
+                            if (damageSpells != null && damageSpells.Count > 0)
+                            {
+                                var availDamageSpells = damageSpells.Where(x => x.MPCost <= attacker.CurrentMP).ToList();
+                                if (availDamageSpells != null && availDamageSpells.Count > 0)
+                                {
+                                    spell = availDamageSpells[new Random(DateTime.UtcNow.GetHashCode()).Next(0, availDamageSpells.Count)];
+                                    if (spell != null)
+                                    {
+                                        attacker.AdjustMP((int)spell.MPCost * -1);
+                                        var effect = spell.CalculateSpellHPEffect(attacker, defender, out bool hitsTarget);
+                                        if (hitsTarget)
+                                        {
+                                            defender.AdjustHP(effect * -1, out bool isKilled);
+                                            if (effect < 0)
                                             {
-                                                if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters.Keys.Contains(npcID))
+                                                // spell was absorbed by target
+                                                if (attacker.IsFollower)
                                                 {
-                                                    if (((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] <= 1)
+                                                    attackerOwner.Send($"{attacker.Name} hurls {spell} at {defender.Name}, but the effect was absorbed!{Constants.NewLine}");
+                                                }
+                                                if (defender.IsFollower)
+                                                {
+                                                    defenderOwner.Send($"{attacker.Name} hurls {spell} at {defender.Name}, but they absorb the spell's effect!{Constants.NewLine}");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // spell damaged target
+                                                if (isKilled)
+                                                {
+                                                    if (attacker.IsFollower)
                                                     {
-                                                        ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID] = 0;
+                                                        attackerOwner.Send($"{attacker.Name} has slain {defender.Name}!{Constants.NewLine}");
                                                     }
-                                                    else
+                                                    if (defender.IsFollower)
                                                     {
-                                                        ((Descriptor)attacker).Player.ActiveQuests[q].Monsters[npcID]--;
+                                                        defenderOwner.Send($"{attacker.Name} has slain {defender.Name}!{Constants.NewLine}");
+                                                    }
+                                                    completedSessions.AddRange(GetCombatSessionsForCombatant(defender.NPCGuid));
+                                                    defender.Kill(true, ref attackerOwner);
+                                                    continue;
+                                                }
+                                                else
+                                                {
+                                                    if (attacker.IsFollower)
+                                                    {
+                                                        attackerOwner.Send($"{attacker.Name} hurls {spell} at {defender.Name}, blasting them for {effect} damage!{Constants.NewLine}");
+                                                    }
+                                                    if (defender.IsFollower)
+                                                    {
+                                                        defenderOwner.Send($"{attacker.Name} hurls {spell} at {defender.Name}, blasting them for {effect} damage!{Constants.NewLine}");
                                                     }
                                                 }
                                             }
                                         }
-                                        ((NPC)defender).Kill(true);
+                                        else
+                                        {
+                                            if (attacker.IsFollower)
+                                            {
+                                                attackerOwner.Send($"{attacker.Name} tries to cast {spell} at {defender.Name}, but their magic fizzles and the spell fails!{Constants.NewLine}");
+                                            }
+                                            if (defender.IsFollower)
+                                            {
+                                                defenderOwner.Send($"{attacker.Name} tries to cast {spell} at {defender.Name}, but their magic fizzles and the spell fails!{Constants.NewLine}");
+                                            }
+                                        }
+                                        continue;
+                                    }
+                                }
+                            }
+                            for (int a = 0; a < attacker.NumberOfAttacks; a++)
+                            {
+                                bool hits = attacker.DoHitRoll(defender, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
+                                var wpn = attacker.EquipWeapon?.Name.ToLower() ?? "strike";
+                                if (hits)
+                                {
+                                    var damage = attacker.DoDamageRoll(defender);
+                                    if (isCritical)
+                                    {
+                                        damage *= 2;
+                                        if (attacker.IsFollower)
+                                        {
+                                            attackerOwner.Send($"{attacker.Name} strikes a critical blow against {defender.Name}!{Constants.NewLine}");
+                                        }
+                                        if (defender.IsFollower)
+                                        {
+                                            defenderOwner.Send($"{attacker.Name} strikes a critical blow against {defender.Name}!{Constants.NewLine}");
+                                        }
+                                    }
+                                    defender.AdjustHP((int)damage * -1, out bool isKilled);
+                                    if (isKilled)
+                                    {
+                                        completedSessions.AddRange(GetCombatSessionsForCombatant(defender.NPCGuid));
+                                        if (attacker.IsFollower)
+                                        {
+                                            attackerOwner.Send($"{attacker.Name} has slain {defender.Name}!{Constants.NewLine}");
+                                        }
+                                        if (defender.IsFollower)
+                                        {
+                                            defenderOwner.Send($"{defender.Name} has been slain by {attacker.Name}!{Constants.NewLine}");
+                                        }
+                                        defender.Kill(true, ref attackerOwner);
                                     }
                                     else
                                     {
-                                        // damaged the NPC
-                                        NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(damage);
-                                    }
-                                }
-                            }
-                        }
-                        if (fumble)
-                        {
-                            // Fumbled attack, natural miss
-                            ((Descriptor)attacker).Send($"You fumbled your attack and missed {targetName} wildly!{Constants.NewLine}");
-                            if (defenderIsPlayer)
-                            {
-                                ((Descriptor)defender).Send($"{((Descriptor)attacker).Player.Name} fumbled their attack and misses you wildly!{Constants.NewLine}");
-                            }
-                        }
-                        if (sessionComplete)
-                        {
-                            // break out so we don't process more attacks if someone is dead
-                            break;
-                        }
-                    }
-                    if (sessionComplete)
-                    {
-                        // add the session ID to the list of completed sessions
-                        completedSessions.Add(session.SessionID);
-                        break;
-                    }
-                }
-                else
-                {
-                    // Attacker is an NPC
-                    if (((NPC)attacker).BehaviourFlags.HasFlag(NPCFlags.Coward))
-                    {
-                        var fleePoint = Convert.ToUInt32(Math.Round(((NPC)attacker).Stats.MaxHP * 0.18));
-                        if (((NPC)attacker).Stats.CurrentHP < fleePoint)
-                        {
-                            if (((NPC)attacker).FleeCombat(ref _loggingProvider, out uint fleeTo))
-                            {
-                                sessionComplete = true;
-                                completedSessions.Add(session.SessionID);
-                                if (defenderIsPlayer)
-                                {
-                                    ((Descriptor)defender).Send($"{((NPC)attacker).Name} breaks combat and flees!{Constants.NewLine}");
-                                    var n = (NPC)attacker;
-                                    ((NPC)attacker).Move(ref n, n.CurrentRoom, fleeTo, false);
-                                }
-                                else
-                                {
-                                    if (((NPC)defender).IsFollower)
-                                    {
-                                        SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name} breaks combat with your follower and flees!{Constants.NewLine}");
-                                        var n = (NPC)attacker;
-                                        ((NPC)attacker).Move(ref n, n.CurrentRoom, fleeTo, false);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (defenderIsPlayer)
-                                {
-                                    ((Descriptor)defender).Send($"{((NPC)attacker).Name} looks like fleeing, but can't break combat!{Constants.NewLine}");
-                                }
-                                else
-                                {
-                                    if (((NPC)defender).IsFollower)
-                                    {
-                                        SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name} looks like fleeing but can't break away from your follower!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    bool npcUsesBasicAttack = true;
-                    if (((NPC)attacker).Skills != null && ((NPC)attacker).Skills.Count > 0)
-                    {
-                        var mobPercHealth = (double)((NPC)attacker).Stats.CurrentHP / ((NPC)attacker).Stats.MaxHP * 100;
-                        if (mobPercHealth < 30 && ((NPC)attacker).HasSkill("Desperate Attack"))
-                        {
-                            if (!((NPC)attacker).HasBuff("Desperate Attack") && ((NPC)attacker).Stats.CurrentMP >= Skills.GetSkill("Desperate Attack").MPCost)
-                            {
-                                NPCManager.Instance.GetNPCByGUID(((NPC)attacker).NPCGuid).Stats.CurrentMP -= (int)Skills.GetSkill("Desperate Attack").MPCost;
-                                NPCManager.Instance.GetNPCByGUID(((NPC)attacker).NPCGuid).AddBuff("Desperate Attack");
-                                if (defenderIsPlayer)
-                                {
-                                    ((Descriptor)defender).Send($"{((NPC)attacker).Name} gets ready for a desperate attack!{Constants.NewLine}");
-                                }
-                            }
-                        }
-                    }
-                    if (((NPC)attacker).Spells != null && ((NPC)attacker).Spells.Count > 0 && !((NPC)attacker).HasBuff("Silence"))
-                    {
-                        bool healPlayer = false, healSelf = false;
-                        if (((NPC)attacker).IsFollower)
-                        {
-                            var ownerHP = SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.Stats.CurrentHP;
-                            var ownerMaxHP = SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.Stats.MaxHP;
-                            var ownerHPPerc = (double)SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.Stats.CurrentHP / SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.Stats.MaxHP * 100;
-                            if (ownerHPPerc <= 45)
-                            {
-                                var mobHealingSpells = ((NPC)attacker).Spells.Where(x => x.SpellType == SpellType.Healing).ToList();
-                                if (mobHealingSpells.Count > 0)
-                                {
-                                    var rnd = new Random(DateTime.Now.GetHashCode());
-                                    var healSpell = mobHealingSpells[rnd.Next(mobHealingSpells.Count)];
-                                    if (((NPC)attacker).Stats.CurrentMP >= healSpell.MPCost)
-                                    {
-                                        healPlayer = true;
-                                        var hpRecovered = Helpers.RollDice(healSpell.NumOfDamageDice, healSpell.SizeOfDamageDice);
-                                        NPCManager.Instance.AdjustNPCMana(((NPC)attacker).NPCGuid, (int)healSpell.MPCost * -1);
-                                        SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"{((NPC)attacker).Name} prepares a spell to heal your wounds!{Constants.NewLine}");
-                                        var abilityModifier = ActorStats.CalculateAbilityModifier(((NPC)attacker).Stats.Wisdom);
-                                        if (abilityModifier >= 1)
+                                        var pDmg = (uint)Math.Round((double)damage / defender.CurrentHP * 100, 0);
+                                        if (attacker.IsFollower)
                                         {
-                                            hpRecovered += Convert.ToUInt32(abilityModifier * healSpell.NumOfDamageDice);
+                                            if (attackerOwner.Player.ShowDetailedRollInfo || attackerOwner.Player.Level >= Constants.ImmLevel)
+                                            {
+                                                attackerOwner.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): {attacker.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} {defender.Name} for {damage} damage!{Constants.NewLine}");
+                                            }
+                                            else
+                                            {
+                                                attackerOwner.Send($"{attacker.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} {defender.Name}!{Constants.NewLine}");
+                                            }
                                         }
-                                        if (ownerHP + hpRecovered > ownerMaxHP)
+                                        if (defender.IsFollower)
                                         {
-                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.Stats.CurrentHP = (int)ownerMaxHP;
-                                        }
-                                        else
-                                        {
-                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.Stats.CurrentHP += (int)hpRecovered;
+                                            if (defenderOwner.Player.ShowDetailedRollInfo || defenderOwner.Player.Level >= Constants.ImmLevel)
+                                            {
+                                                defenderOwner.Send($"{attacker.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} {defender.Name} for {damage}!{Constants.NewLine}");
+                                            }
+                                            else
+                                            {
+                                                defenderOwner.Send($"{attacker.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} {defender.Name}!{Constants.NewLine}");
+                                            }
                                         }
                                     }
                                 }
@@ -760,816 +675,77 @@ namespace Kingdoms_of_Etrea.Core
                         }
                         else
                         {
-                            var mobCurrentHP = NPCManager.Instance.GetNPCByGUID(((NPC)attacker).NPCGuid).Stats.CurrentHP;
-                            var mobMaxHP = NPCManager.Instance.GetNPCByGUID(((NPC)attacker).NPCGuid).Stats.MaxHP;
-                            var mobPercHP = (double)mobCurrentHP / mobMaxHP * 100;
-                            if (mobPercHP < 40)
-                            {
-                                var mobHealingSpells = ((NPC)attacker).Spells.Where(x => x.SpellType == SpellType.Healing).ToList();
-                                if (mobHealingSpells.Count > 0)
-                                {
-                                    var rnd = new Random(DateTime.Now.GetHashCode());
-                                    var healSpell = mobHealingSpells[rnd.Next(mobHealingSpells.Count)];
-                                    if (((NPC)attacker).Stats.CurrentMP >= healSpell.MPCost)
-                                    {
-                                        healSelf = true;
-                                        var hpRecovered = Helpers.RollDice(healSpell.NumOfDamageDice, healSpell.SizeOfDamageDice);
-                                        NPCManager.Instance.AdjustNPCMana(((NPC)attacker).NPCGuid, (int)healSpell.MPCost * -1);
-                                        var abilityModifier = ActorStats.CalculateAbilityModifier(((NPC)attacker).Stats.Wisdom);
-                                        if (abilityModifier >= 1)
-                                        {
-                                            hpRecovered += Convert.ToUInt32(abilityModifier * healSpell.NumOfDamageDice);
-                                        }
-                                        if (mobCurrentHP + hpRecovered > mobMaxHP)
-                                        {
-                                            NPCManager.Instance.SetNPCHealthToMax(((NPC)attacker).NPCGuid);
-                                        }
-                                        else
-                                        {
-                                            NPCManager.Instance.AdjustNPCHealth(((NPC)attacker).NPCGuid, (int)(hpRecovered));
-                                        }
-                                    }
-                                }
-                            }
+                            // one or both participants in the round was null so flag for removal and continue on
+                            completedSessions.Add(session.Key);
+                            continue;
                         }
-                        npcUsesBasicAttack = !healPlayer || !healSelf; // NPC has healed itself or its owner this turn so doesn't get an attack
                     }
-                    if (npcUsesBasicAttack)
+
+                    // PVP combat, both participants are Players
+                    if (session.Value.Attacker is Descriptor && session.Value.Defender is Descriptor)
                     {
-                        // No healing used this turn, so see if we have an attack spell to use
-                        var attackSpells = ((NPC)attacker).Spells.Where(x => x.SpellType == SpellType.Damage).ToList();
-                        if (attackSpells != null && attackSpells.Count > 0 && ((NPC)attacker).HasBuff("Silence"))
+                        Descriptor attacker = session.Value.Attacker as Descriptor;
+                        Descriptor defender = session.Value.Defender as Descriptor;
+                        if (attacker != null && defender != null)
                         {
-                            var rnd = new Random(DateTime.Now.GetHashCode());
-                            var attackSpell = attackSpells[rnd.Next(attackSpells.Count)];
-                            if (((NPC)attacker).Stats.CurrentMP >= attackSpell.MPCost)
+                            for (int a = 0; a < attacker.Player.NumberOfAttacks; a++)
                             {
-                                npcUsesBasicAttack = false;
-                                NPCManager.Instance.AdjustNPCMana(((NPC)attacker).NPCGuid, (int)attackSpell.MPCost * -1);
-                                var damage = Helpers.RollDice(attackSpell.NumOfDamageDice, attackSpell.SizeOfDamageDice);
-                                var abilityModifier = ActorStats.CalculateAbilityModifier(((NPC)attacker).Stats.Intelligence);
-                                if (abilityModifier >= 1)
+                                bool hits = attacker.Player.DoHitRoll(defender.Player, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
+                                var wpn = attacker.Player.EquipWeapon?.Name.ToLower() ?? "strike";
+                                if (hits)
                                 {
-                                    damage += Convert.ToUInt32(abilityModifier * attackSpell.NumOfDamageDice);
-                                }
-                                bool spellHitsTarget = true;
-                                if (!attackSpell.AutoHitTarget)
-                                {
-                                    var toHit = Helpers.RollDice(1, 20);
-                                    var dexMod = ActorStats.CalculateAbilityModifier(((NPC)attacker).Stats.Dexterity);
-                                    if (dexMod > 0)
+                                    var damage = attacker.Player.DoDamageRoll(defender.Player);
+                                    if (isCritical)
                                     {
-                                        toHit += Convert.ToUInt32(dexMod);
+                                        damage *= 2;
+                                        attacker.Send($"You have struck a critical blow against {defender.Player.Name}!{Constants.NewLine}");
+                                        defender.Send($"{attacker.Player.Name} strikes a critical blow against you!{Constants.NewLine}");
                                     }
-                                    var targetAC = defenderIsPlayer ? ((Descriptor)defender).Player.Stats.ArmourClass : ((NPC)defender).Stats.ArmourClass;
-                                    spellHitsTarget = toHit >= targetAC;
-                                    if (spellHitsTarget)
+                                    defender.Player.AdjustHP((int)damage * -1, out bool isKilled);
+                                    if (isKilled)
                                     {
-                                        var targetHP = defenderIsPlayer ? SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP : NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP;
-                                        if (targetHP <= damage)
-                                        {
-                                            // killed the target
-                                            sessionComplete = true;
-                                            if (defenderIsPlayer)
-                                            {
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).NPCGuid).Send($"Your follower blasts {((Descriptor)defender).Player.Name} with {attackSpell.SpellName}, killing them!{Constants.NewLine}");
-                                                }
-                                                ((Descriptor)defender).Send($"{((NPC)attacker).Name} blasts you with {attackSpell.SpellName}, killing you!{Constants.NewLine}");
-                                                ((Descriptor)defender).Player.Kill();
-                                            }
-                                            else
-                                            {
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).NPCGuid).Send($"Your follower blasts {((NPC)defender).Name} with {attackSpell.SpellName}, killing them!{Constants.NewLine}");
-                                                }
-                                                if (((NPC)defender).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).NPCGuid).Send($"{((NPC)attacker).Name} blasts your follower with {attackSpell.SpellName}, killing them!{Constants.NewLine}");
-                                                }
-                                                ((NPC)defender).Kill(true);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // damaged target
-                                            if (defenderIsPlayer)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(damage);
-                                                ((Descriptor)defender).Send($"{((NPC)attacker).Name}'s {attackSpell.SpellName} blasts you for {damage} damage!{Constants.NewLine}");
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).NPCGuid).Send($"Your follower blasts {((Descriptor)defender).Player.Name} with {attackSpell.SpellName} for {damage} damage!{Constants.NewLine}");
-                                                }
-                                            }
-                                            else
-                                            {
-                                                NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(damage);
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower blasts {((NPC)defender).Name} with {attackSpell.SpellName} for {damage} damage!{Constants.NewLine}");
-                                                }
-                                                if (((NPC)defender).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name} blasts your follower with {attackSpell.SpellName} for {damage} damage!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
+                                        completedSessions.AddRange(GetCombatSessionsForCombatant(defender.ID));
+                                        completedSessions.Add(session.Key);
+                                        attacker.Send($"Your {wpn} hits {defender.Player.Name} for lethal damage, killing them!{Constants.NewLine}");
+                                        defender.Send($"{attacker.Player.Name}'s {wpn} hits you for lethal damage, killing you!{Constants.NewLine}");
+                                        defender.Player.Kill();
+                                        break;
                                     }
                                     else
                                     {
-                                        // spell missed the target
-                                        if (((NPC)attacker).IsFollower)
+                                        var pDmg = (uint)Math.Round((double)damage / defender.Player.CurrentHP * 100, 0);
+                                        if (attacker.Player.ShowDetailedRollInfo || attacker.Player.Level >= Constants.ImmLevel)
                                         {
-                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower's spell fizzles and fails!{Constants.NewLine}");
-                                        }
-                                        if (defenderIsPlayer)
-                                        {
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Send($"{((NPC)attacker).Name}'s spell fizzles and fails!{Constants.NewLine}");
+                                            attacker.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): Your {wpn} {Helpers.GetDamageString(pDmg)} {defender.Player.Name} for {damage} damage!{Constants.NewLine}");
                                         }
                                         else
                                         {
-                                            if (((NPC)defender).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name}'s spell aimed at your follower fizzles and fails!{Constants.NewLine}");
-                                            }
+                                            attacker.Send($"Your {wpn} {Helpers.GetDamageString(pDmg)} {defender.Player.Name}!{Constants.NewLine}");
                                         }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (npcUsesBasicAttack)
-                    {
-                        // try a buff spell on the NPC or its owner (if there is one)
-                        var buffSpells = ((NPC)attacker).Spells.Where(x => x.SpellType == SpellType.Buff).ToList();
-                        if (buffSpells != null && buffSpells.Count > 0 && !((NPC)attacker).HasBuff("Silence"))
-                        {
-                            bool buffPlayer = false, buffSelf = false;
-                            if (((NPC)attacker).IsFollower)
-                            {
-                                var rnd = new Random(DateTime.Now.GetHashCode());
-                                var buffSpell = buffSpells[rnd.Next(buffSpells.Count)];
-                                var mobMP = ((NPC)attacker).Stats.CurrentMP;
-                                if (mobMP >= buffSpell.MPCost)
-                                {
-                                    if (!SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.HasBuff(buffSpell.SpellName))
-                                    {
-                                        buffPlayer = true;
-                                        NPCManager.Instance.AdjustNPCMana(((NPC)attacker).NPCGuid, (int)buffSpell.MPCost * -1);
-                                        SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Player.AddBuff(buffSpell.SpellName);
-                                        SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"{((NPC)attacker).Name} blesses you with the power of {buffSpell.SpellName}!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                            if (!buffPlayer)
-                            {
-                                var rnd = new Random(DateTime.Now.GetHashCode());
-                                var buffSpell = buffSpells[rnd.Next(buffSpells.Count)];
-                                var mobMP = ((NPC)attacker).Stats.CurrentMP;
-                                if (mobMP >= buffSpell.MPCost)
-                                {
-                                    if (!NPCManager.Instance.GetNPCByGUID(((NPC)attacker).NPCGuid).HasBuff(buffSpell.SpellName))
-                                    {
-                                        buffSelf = true;
-                                        ((NPC)attacker).AddBuff(buffSpell.SpellName);
-                                        NPCManager.Instance.AdjustNPCMana(((NPC)attacker).NPCGuid, (int)buffSpell.MPCost * -1);
-                                        if (((NPC)attacker).IsFollower)
+                                        if (defender.Player.ShowDetailedRollInfo || defender.Player.Level >= Constants.ImmLevel)
                                         {
-                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"{((NPC)attacker).Name} blesses themselves with the power of {buffSpell.SpellName}!");
+                                            defender.Send($"{attacker.Player.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} you for {damage} damage!{Constants.NewLine}");
                                         }
-                                    }
-                                }
-                            }
-                            npcUsesBasicAttack = !buffPlayer || !buffSelf;
-                        }
-                    }
-                    if (npcUsesBasicAttack)
-                    {
-                        // try a debuff spell on the target
-                        var debuffSpells = ((NPC)attacker).Spells.Where(x => x.SpellType == SpellType.Debuff).ToList();
-                        if (debuffSpells != null && debuffSpells.Count > 0 && !((NPC)attacker).HasBuff("Silence"))
-                        {
-                            var rnd = new Random(DateTime.Now.GetHashCode());
-                            var debuffSpell = debuffSpells[rnd.Next(debuffSpells.Count)];
-                            var mobMP = ((NPC)attacker).Stats.CurrentMP;
-                            if (mobMP >= debuffSpell.MPCost)
-                            {
-                                if (defenderIsPlayer)
-                                {
-                                    if (!SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.HasBuff(debuffSpell.SpellName))
-                                    {
-                                        npcUsesBasicAttack = false;
-                                        NPCManager.Instance.AdjustNPCMana(((NPC)attacker).NPCGuid, (int)debuffSpell.MPCost * -1);
-                                        bool spellHits = true;
-                                        if (!debuffSpell.AutoHitTarget)
+                                        else
                                         {
-                                            var toHit = Helpers.RollDice(1, 20);
-                                            var ability = ((NPC)attacker).Stats.Dexterity;
-                                            var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                            var targetAC = ((Descriptor)defender).Player.Stats.ArmourClass;
-                                            if (abilityModifier > 0)
-                                            {
-                                                toHit += Convert.ToUInt32(abilityModifier);
-                                            }
-                                            spellHits = toHit >= targetAC;
-                                            if (spellHits)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.AddBuff(debuffSpell.SpellName);
-                                                if (debuffSpell.NumOfDamageDice > 0)
-                                                {
-                                                    var damage = Helpers.RollDice(debuffSpell.NumOfDamageDice, debuffSpell.SizeOfDamageDice);
-                                                    ability = ((NPC)attacker).Stats.Intelligence;
-                                                    abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                                    if (abilityModifier > 0)
-                                                    {
-                                                        damage += Convert.ToUInt32(abilityModifier * debuffSpell.NumOfDamageDice);
-                                                    }
-                                                    var targetHP = SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP;
-                                                    if (targetHP <= damage)
-                                                    {
-                                                        // kill the player
-                                                        sessionComplete = true;
-                                                        if (((NPC)attacker).IsFollower)
-                                                        {
-                                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has slain {((Descriptor)defender).Player.Name}!{Constants.NewLine}");
-                                                        }
-                                                        ((Descriptor)defender).Send($"{((NPC)attacker).Name} has killed you!{Constants.NewLine}");
-                                                        ((Descriptor)defender).Player.Kill();
-                                                    }
-                                                    else
-                                                    {
-                                                        // damage the player
-                                                        SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(damage);
-                                                        ((Descriptor)defender).Send($"{((NPC)attacker).Name} calls on the power of {debuffSpell.SpellName} to hinder you, causing {damage} damage!{Constants.NewLine}");
-                                                        if (((NPC)attacker).IsFollower)
-                                                        {
-                                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower calls on the power of {debuffSpell.SpellName} to hinder {((Descriptor)defender).Player.Name} and cause {damage} damage!{Constants.NewLine}");
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                // spell missed the target
-                                                SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Send($"{((NPC)attacker).Name}'s spell fizzles and fails!{Constants.NewLine}");
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower's spell fizzles and fails!{Constants.NewLine}");
-                                                }
-                                            }
+                                            defender.Send($"{attacker.Player.Name}'s {wpn} {Helpers.GetDamageString(pDmg)} you!{Constants.NewLine}");
                                         }
                                     }
                                 }
                                 else
                                 {
-                                    if (!NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).HasBuff(debuffSpell.SpellName))
-                                    {
-                                        npcUsesBasicAttack = false;
-                                        NPCManager.Instance.AdjustNPCMana(((NPC)attacker).NPCGuid, (int)debuffSpell.MPCost * -1);
-                                        bool spellHits = true;
-                                        if (!debuffSpell.AutoHitTarget)
-                                        {
-                                            var toHit = Helpers.RollDice(1, 20);
-                                            var ability = ((NPC)attacker).Stats.Dexterity;
-                                            var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                            var targetAC = ((NPC)defender).Stats.ArmourClass;
-                                            if (abilityModifier > 0)
-                                            {
-                                                toHit += Convert.ToUInt32(abilityModifier);
-                                            }
-                                            spellHits = toHit >= targetAC;
-                                            if (spellHits)
-                                            {
-                                                NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).AddBuff(debuffSpell.SpellName);
-                                                if (debuffSpell.NumOfDamageDice > 0)
-                                                {
-                                                    var damage = Helpers.RollDice(debuffSpell.NumOfDamageDice, debuffSpell.SizeOfDamageDice);
-                                                    ability = ((NPC)attacker).Stats.Dexterity;
-                                                    abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                                    if (abilityModifier > 0)
-                                                    {
-                                                        damage += Convert.ToUInt32(abilityModifier * debuffSpell.NumOfDamageDice);
-                                                    }
-                                                    var targetHP = NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP;
-                                                    if (targetHP <= damage)
-                                                    {
-                                                        // kill the npc
-                                                        sessionComplete = true;
-                                                        if (((NPC)attacker).IsFollower)
-                                                        {
-                                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has slain {((NPC)defender).Name}!{Constants.NewLine}");
-                                                        }
-                                                        if (((NPC)defender).IsFollower)
-                                                        {
-                                                            SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"Your follower has been brutally slain by {((NPC)attacker).Name}!{Constants.NewLine}");
-                                                        }
-                                                        NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Kill(true);
-                                                    }
-                                                    else
-                                                    {
-                                                        // damage the npc
-                                                        NPCManager.Instance.AdjustNPCHealth(((NPC)defender).NPCGuid, (int)damage * -1);
-                                                        if (((NPC)attacker).IsFollower)
-                                                        {
-                                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower's {debuffSpell.SpellName} has hindered {((NPC)defender).Name} and caused {damage} damage!{Constants.NewLine}");
-                                                        }
-                                                        if (((NPC)defender).IsFollower)
-                                                        {
-                                                            SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name}'s {debuffSpell.SpellName} has hindered your follower and caused {damage} damage!{Constants.NewLine}");
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                // spell missed
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower's {debuffSpell.SpellName} spell fizzles and fails!{Constants.NewLine}");
-                                                }
-                                                if (((NPC)defender).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name}'s {debuffSpell.SpellName} fizzles and failes to hit your follower!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
+                                    defender.Send($"{attacker.Player.Name}'s {wpn} misses you!{Constants.NewLine}");
                                 }
                             }
                         }
-                    }
-                    if (npcUsesBasicAttack)
-                    {
-                        for (int a = 0; a < ((NPC)attacker).NumberOfAttacks; a++)
+                        else
                         {
-                            var targetAC = defenderIsPlayer ? ((Descriptor)defender).Player.Stats.ArmourClass : ((NPC)defender).Stats.ArmourClass;
-                            var targetName = defenderIsPlayer ? ((Descriptor)defender).Player.Name : ((NPC)defender).Name;
-                            var hitRoll = Helpers.RollDice(1, 20);
-                            bool fumble = hitRoll == 1;
-                            bool critical = hitRoll == 20;
-                            InventoryItem weapon = null;
-                            InventoryItem armour = null;
-                            if (((NPC)attacker).EquippedItems != null && ((NPC)attacker).EquippedItems.Weapon != null)
-                            {
-                                weapon = ((NPC)attacker).EquippedItems.Weapon;
-                            }
-                            if (defenderIsPlayer)
-                            {
-                                if (((Descriptor)defender).Player.EquippedItems != null && ((Descriptor)defender).Player.EquippedItems.Armour != null)
-                                {
-                                    armour = ((Descriptor)defender).Player.EquippedItems.Armour;
-                                }
-                            }
-                            else
-                            {
-                                if (((NPC)defender).EquippedItems != null && ((NPC)defender).EquippedItems.Armour != null)
-                                {
-                                    armour = ((NPC)defender).EquippedItems.Armour;
-                                }
-                            }
-                            if (!fumble && !critical)
-                            {
-                                // Normal attack, not a natural 1 or 20
-                                if (weapon != null)
-                                {
-                                    var damage = Helpers.RollDice(weapon.NumberOfDamageDice, weapon.SizeOfDamageDice);
-                                    var ability = weapon.IsFinesse ? ((NPC)attacker).Stats.Dexterity : ((NPC)attacker).Stats.Strength;
-                                    var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                    var hitRollFinal = Convert.ToUInt32(hitRoll + abilityModifier);
-                                    var finalDamage = damage + abilityModifier > 0 ? Convert.ToUInt32(damage + abilityModifier) : 1;
-                                    if (((NPC)attacker).HasBuff("Truestrike"))
-                                    {
-                                        hitRollFinal += 10;
-                                    }
-                                    if (((NPC)attacker).HasBuff("Desperate Attack"))
-                                    {
-                                        hitRollFinal -= 4;
-                                        finalDamage += 4;
-                                    }
-                                    if (((NPC)attacker).HasBuff("Bless"))
-                                    {
-                                        hitRoll += 2;
-                                        finalDamage += 2;
-                                    }
-                                    if(armour != null && armour.DamageReductionModifier > 0)
-                                    {
-                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
-                                        {
-                                            finalDamage = 0;
-                                        }
-                                        else
-                                        {
-                                            finalDamage -= armour.DamageReductionModifier;
-                                        }
-                                    }
-                                    if (hitRollFinal >= targetAC)
-                                    {
-                                        // attack landed
-                                        if (defenderIsPlayer)
-                                        {
-                                            if (((Descriptor)defender).Player.Stats.CurrentHP <= finalDamage)
-                                            {
-                                                // kill the player
-                                                sessionComplete = true;
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has brutally slain {targetName}!{Constants.NewLine}");
-                                                }
-                                                ((Descriptor)defender).Send($"{((NPC)attacker).Name} has killed you!{Constants.NewLine}");
-                                                ((Descriptor)defender).Player.Kill();
-                                            }
-                                            else
-                                            {
-                                                // damage the player
-                                                SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                                ((Descriptor)defender).Send($"{((NPC)attacker).Name}'s {weapon.Name} hits you for {finalDamage} damage!{Constants.NewLine}");
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has hit {targetName} with their {weapon.Name} for {finalDamage} damage!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // NPC hit another NPC
-                                            if (((NPC)defender).Stats.CurrentHP <= finalDamage)
-                                            {
-                                                // kill the target NPC
-                                                sessionComplete = true;
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has brutally slain {targetName}!{Constants.NewLine}");
-                                                }
-                                                if (((NPC)defender).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"Your follower has been brutally slain by {((NPC)attacker).Name}!{Constants.NewLine}");
-                                                }
-                                                ((NPC)defender).Kill(true);
-                                            }
-                                            else
-                                            {
-                                                // damage the target NPC
-                                                NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has hit {targetName} with their {weapon.Name} for {finalDamage} damage!{Constants.NewLine}");
-                                                }
-                                                if (((NPC)defender).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name} has hit your follower with their {weapon.Name} for {finalDamage} damage!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // attack missed
-                                        if (defenderIsPlayer)
-                                        {
-                                            ((Descriptor)defender).Send($"{((NPC)attacker).Name} misses you with their {weapon.Name}!{Constants.NewLine}");
-                                        }
-                                        else
-                                        {
-                                            if (((NPC)defender).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name} misses your follower with their {weapon.Name}!");
-                                            }
-                                        }
-                                        if (((NPC)attacker).IsFollower)
-                                        {
-                                            SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has missed {targetName} with their {weapon.Name}!{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // no weapon, basic 1d2 + STR damage
-                                    var damage = Helpers.RollDice(1, 2);
-                                    var ability = ((NPC)attacker).Stats.Strength;
-                                    var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                    var hitRollFinal = Convert.ToUInt32(hitRoll + abilityModifier);
-                                    var finalDamage = damage + abilityModifier > 0 ? Convert.ToUInt32(damage + abilityModifier) : 1;
-                                    if (((NPC)attacker).HasBuff("Truestrike"))
-                                    {
-                                        hitRollFinal += 10;
-                                    }
-                                    if (((NPC)attacker).HasBuff("Desperate Attack"))
-                                    {
-                                        hitRollFinal -= 4;
-                                        finalDamage += 4;
-                                    }
-                                    if (((NPC)attacker).HasBuff("Bless"))
-                                    {
-                                        hitRollFinal += 2;
-                                        finalDamage += 2;
-                                    }
-                                    if (armour != null && armour.DamageReductionModifier > 0)
-                                    {
-                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
-                                        {
-                                            finalDamage = 0;
-                                        }
-                                        else
-                                        {
-                                            finalDamage -= armour.DamageReductionModifier;
-                                        }
-                                    }
-                                    if (hitRollFinal >= targetAC)
-                                    {
-                                        // attack landed
-                                        if (defenderIsPlayer)
-                                        {
-                                            if (((Descriptor)defender).Player.Stats.CurrentHP <= finalDamage)
-                                            {
-                                                // kill the player
-                                                sessionComplete = true;
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has brutally slain {targetName}!{Constants.NewLine}");
-                                                }
-                                                ((Descriptor)defender).Send($"{((NPC)attacker).Name} has killed you!{Constants.NewLine}");
-                                                ((Descriptor)defender).Player.Kill();
-                                            }
-                                            else
-                                            {
-                                                // damage the player
-                                                SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                                ((Descriptor)defender).Send($"{((NPC)attacker).Name}'s strike hits you for {finalDamage} damage!{Constants.NewLine}");
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // NPC hit another NPC
-                                            if (((NPC)defender).Stats.CurrentHP <= finalDamage)
-                                            {
-                                                // kill the target NPC
-                                                sessionComplete = true;
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has brutally slain {targetName}!{Constants.NewLine}");
-                                                }
-                                                if (((NPC)defender).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"Your follower has been brutally slain by {((NPC)attacker).Name}!{Constants.NewLine}");
-                                                }
-                                                ((NPC)defender).Kill(true);
-                                            }
-                                            else
-                                            {
-                                                // damage the target NPC
-                                                NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                                if (((NPC)attacker).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                                }
-                                                if (((NPC)defender).IsFollower)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name}'s strike has hit your follower for {finalDamage} damage!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (critical)
-                            {
-                                if (weapon != null)
-                                {
-                                    var damage = Helpers.RollDice(weapon.NumberOfDamageDice, weapon.SizeOfDamageDice) * 2;
-                                    var ability = weapon.IsFinesse ? ((NPC)attacker).Stats.Dexterity : ((NPC)attacker).Stats.Strength;
-                                    var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                    var finalDamage = damage + abilityModifier > 0 ? Convert.ToUInt32(damage + abilityModifier) : 1;
-                                    if (((NPC)attacker).HasBuff("Desperate Attack"))
-                                    {
-                                        finalDamage += 4;
-                                    }
-                                    if (((NPC)attacker).HasBuff("Bless"))
-                                    {
-                                        finalDamage += 2;
-                                    }
-                                    if (armour != null && armour.DamageReductionModifier > 0)
-                                    {
-                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
-                                        {
-                                            finalDamage = 0;
-                                        }
-                                        else
-                                        {
-                                            finalDamage -= armour.DamageReductionModifier;
-                                        }
-                                    }
-                                    if (((NPC)attacker).IsFollower)
-                                    {
-                                        SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower struck a critical blow against {targetName} hitting for {finalDamage} damage!{Constants.NewLine}");
-                                    }
-                                    if (defenderIsPlayer)
-                                    {
-                                        // defender is a player
-                                        if (((Descriptor)defender).Player.Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // kill the player
-                                            sessionComplete = true;
-                                            ((Descriptor)defender).Send($"{((NPC)attacker).Name} has killed you!{Constants.NewLine}");
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has brutally slain {targetName}!{Constants.NewLine}");
-                                            }
-                                            ((Descriptor)defender).Player.Kill();
-                                        }
-                                        else
-                                        {
-                                            // wound the player
-                                            ((Descriptor)defender).Send($"{((NPC)attacker).Name} struck a critical blow, hitting you for {finalDamage} damage!{Constants.NewLine}");
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has {targetName} with their {weapon.Name} for {finalDamage} damage!{Constants.NewLine}");
-                                            }
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // defender is an NPC
-                                        if (((NPC)defender).Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // kill the NPC
-                                            sessionComplete = true;
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has slain {targetName}!{Constants.NewLine}");
-                                            }
-                                            if (((NPC)defender).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"Your follower has been brutally slain by {((NPC)attacker).Name}!{Constants.NewLine}");
-                                            }
-                                            ((NPC)defender).Kill(true);
-                                        }
-                                        else
-                                        {
-                                            // wound the NPC
-                                            NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                            if (((NPC)defender).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name} struck a critical blow against your follower for {finalDamage} damage!{Constants.NewLine}");
-                                            }
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower hits {targetName} with their {weapon.Name} for {finalDamage} damage!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // No weapon equipped
-                                    var damage = Helpers.RollDice(1, 2) * 2;
-                                    var ability = ((NPC)attacker).Stats.Strength;
-                                    var abilityModifier = ActorStats.CalculateAbilityModifier(ability);
-                                    var hitRollFinal = Convert.ToUInt32(hitRoll + abilityModifier);
-                                    var finalDamage = damage + abilityModifier > 0 ? Convert.ToUInt32(damage + abilityModifier) : 1;
-                                    if (((NPC)attacker).HasBuff("Desperate Attack"))
-                                    {
-                                        hitRollFinal -= 4;
-                                        finalDamage += 4;
-                                    }
-                                    if (((NPC)attacker).HasBuff("Bless"))
-                                    {
-                                        finalDamage += 2;
-                                    }
-                                    if (armour != null && armour.DamageReductionModifier > 0)
-                                    {
-                                        if (0 > (int)(finalDamage - armour.DamageReductionModifier))
-                                        {
-                                            finalDamage = 0;
-                                        }
-                                        else
-                                        {
-                                            finalDamage -= armour.DamageReductionModifier;
-                                        }
-                                    }
-                                    if (defenderIsPlayer)
-                                    {
-                                        if (((Descriptor)defender).Player.Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // kill the player
-                                            sessionComplete = true;
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has brutally slain {targetName}!{Constants.NewLine}");
-                                            }
-                                            ((Descriptor)defender).Send($"{((NPC)attacker).Name} has killed you!{Constants.NewLine}");
-                                            ((Descriptor)defender).Player.Kill();
-                                        }
-                                        else
-                                        {
-                                            // damage the player
-                                            SessionManager.Instance.GetPlayerByGUID(((Descriptor)defender).Id).Player.Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                            ((Descriptor)defender).Send($"{((NPC)attacker).Name}'s strike hits you for {finalDamage} damage!{Constants.NewLine}");
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // NPC hit another NPC
-                                        if (((NPC)defender).Stats.CurrentHP <= finalDamage)
-                                        {
-                                            // kill the target NPC
-                                            sessionComplete = true;
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has brutally slain {targetName}!{Constants.NewLine}");
-                                            }
-                                            if (((NPC)defender).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"Your follower has been brutally slain by {((NPC)attacker).Name}!{Constants.NewLine}");
-                                            }
-                                            ((NPC)defender).Kill(true);
-                                        }
-                                        else
-                                        {
-                                            // damage the target NPC
-                                            NPCManager.Instance.GetNPCByGUID(((NPC)defender).NPCGuid).Stats.CurrentHP -= Convert.ToInt32(finalDamage);
-                                            if (((NPC)attacker).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower has hit {targetName} for {finalDamage} damage!{Constants.NewLine}");
-                                            }
-                                            if (((NPC)defender).IsFollower)
-                                            {
-                                                SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)attacker).Name}'s strike has hit your follower for {finalDamage} damage!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (fumble)
-                            {
-                                // fumbled and missed
-                                if (((NPC)attacker).IsFollower)
-                                {
-                                    SessionManager.Instance.GetPlayerByGUID(((NPC)attacker).FollowingPlayer).Send($"Your follower fumbles their attack and misses {targetName} wildly!{Constants.NewLine}");
-                                }
-                                if (defenderIsPlayer)
-                                {
-                                    ((Descriptor)defender).Send($"{((NPC)attacker).Name} fumbled their attack and misses you wildly!{Constants.NewLine}");
-                                }
-                                if (!defenderIsPlayer && ((NPC)defender).IsFollower)
-                                {
-                                    SessionManager.Instance.GetPlayerByGUID(((NPC)defender).FollowingPlayer).Send($"{((NPC)defender).Name} fumbled their attack and missed your follower wildly!{Constants.NewLine}");
-                                }
-                            }
-                            if (sessionComplete)
-                            {
-                                // break out so we don't process more attacks if someone is dead
-                                break;
-                            }
-                        }
-                        if (sessionComplete)
-                        {
-                            // add the session ID to the list of completed sessions
-                            completedSessions.Add(session.SessionID);
-                            break;
+                            // one or both participants in the round was null so flag for removal and continue on
+                            completedSessions.Add(session.Key);
+                            continue;
                         }
                     }
                 }
-            }
-        }
-
-        internal Dictionary<Guid, CombatSessionNew> GetCombatQueue()
-        {
-            return CombatQueue;
-        }
-
-        internal void AddCombatSession(CombatSessionNew session)
-        {
-            lock(_lockObject)
-            {
-                CombatQueue.Add(session.SessionID, session);
-            }
-        }
-
-        internal void RemoveCombatSession(Guid g)
-        {
-            lock(_lockObject)
-            {
-                if (CombatQueue[g].Attacker != null && CombatQueue[g].Attacker is Descriptor)
-                {
-                    SessionManager.Instance.GetPlayerByGUID((CombatQueue[g].Attacker as Descriptor).Id).Player.Position = ActorPosition.Standing;
-                }
-                if (CombatQueue[g].Defender != null && CombatQueue[g].Defender is Descriptor)
-                {
-                    SessionManager.Instance.GetPlayerByGUID((CombatQueue[g].Defender as Descriptor).Id).Player.Position = ActorPosition.Standing;
-                }
-                CombatQueue.Remove(g);
             }
         }
     }

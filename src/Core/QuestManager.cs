@@ -1,27 +1,27 @@
-﻿using System;
+﻿using Etrea2.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Kingdoms_of_Etrea.Entities;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class QuestManager
     {
         private static QuestManager _instance = null;
         private static readonly object _lock = new object();
-        private Dictionary<uint, Quest> quests { get; set; }
+        private Dictionary<uint, Quest> Quests { get; set; }
 
         private QuestManager()
         {
-            quests = new Dictionary<uint, Quest>();
+            Quests = new Dictionary<uint, Quest>();
         }
 
         internal static QuestManager Instance
         {
             get
             {
-                lock (_lock)
+                lock(_lock)
                 {
                     if (_instance == null)
                     {
@@ -34,129 +34,119 @@ namespace Kingdoms_of_Etrea.Core
 
         internal int GetQuestCount()
         {
-            return Instance.quests.Count;
+            lock(_lock)
+            {
+                return Instance.Quests.Count;
+            }
         }
 
-        internal Dictionary<uint, Quest> GetAllQuests()
+        internal List<Quest> GetAllQuests()
         {
-            return Instance.quests;
+            lock(_lock)
+            {
+                return Instance.Quests.Values.ToList();
+            }
         }
 
         internal bool QuestExists(uint id)
         {
-            return Instance.quests.ContainsKey(id);
+            lock(_lock)
+            {
+                return Instance.Quests.ContainsKey(id);
+            }
         }
 
         internal bool QuestExists(Guid guid)
         {
-            return Instance.quests.Values.Any(x => x.QuestGUID == guid);
+            lock(_lock)
+            {
+                return Instance.Quests.Values.Any(x => x.QuestGUID == guid);
+            }
         }
 
         internal List<Quest> GetQuestsByIDRange(uint start, uint end)
         {
-            var retval = quests.Values.Where(x => x.QuestID >= start && x.QuestID <= end).ToList();
-            return retval;
+            lock(_lock)
+            {
+                return Instance.Quests.Values.Where(x => x.QuestID >= start && x.QuestID <= end).ToList();
+            }
         }
 
-        internal List<Quest> GetQuestByNameOrDescription(string criteria)
+        internal List<Quest> GetQuestsByNameOrDescription(string term)
         {
-            var retval = quests.Values.Where(x => Regex.Match(x.QuestName, criteria, RegexOptions.IgnoreCase).Success || Regex.Match(x.QuestText, criteria, RegexOptions.IgnoreCase).Success).ToList();
-            return retval;
+            lock (_lock)
+            {
+                return Instance.Quests.Values.Where(x => Regex.IsMatch(x.QuestName, term, RegexOptions.IgnoreCase) || Regex.IsMatch(x.QuestText, term, RegexOptions.IgnoreCase)).ToList();
+            }
         }
 
         internal Quest GetQuest(uint id)
         {
-            if(quests.ContainsKey(id))
+            lock (_lock)
             {
-                return quests[id];
+                return Instance.Quests.ContainsKey(id) ? Instance.Quests[id] : null;
             }
-            return null;
         }
 
         internal Quest GetQuest(Guid id)
         {
-            var q = quests.Values.Where(x => x.QuestGUID == id).FirstOrDefault();
-            return q;
-        }
-
-        internal Quest GetQuest(string name)
-        {
-            var q = quests.Values.Where(x => Regex.Match(x.QuestName, name, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-            return q;
-        }
-
-        internal void LoadAllQuests(out bool hasErr)
-        {
-            var result = DatabaseManager.LoadAllQuests(out hasErr);
-            if(!hasErr)
+            lock (_lock)
             {
-                Instance.quests.Clear();
-                Instance.quests = result;
+                return Instance.Quests.Values.Where(x => x.QuestGUID == id).FirstOrDefault();
             }
         }
 
-        internal List<Quest> GetQuestsForZone(uint zoneId)
+        internal void LoadAllQuests(out bool hasError)
         {
-            if(Instance.quests.Count > 0)
+            var result = DatabaseManager.LoadAllQuests(out hasError);
+            if (!hasError && result != null)
             {
-                lock(_lock)
-                {
-                    var result = Instance.quests.Values.Where(x => x.QuestZone == zoneId).ToList();
-                    return result;
-                }
+                Instance.Quests.Clear();
+                Instance.Quests = result;
             }
-            return null;
         }
 
-        internal bool RemoveQuest(ref Descriptor desc, uint id)
+        internal List<Quest> GetQuestsForZone(uint zone)
+        {
+            lock (_lock)
+            {
+                return Instance.Quests.Values.Where(x => x.QuestZone == zone).ToList();
+            }
+        }
+
+        internal bool RemoveQuest(ref Descriptor desc, Guid id, string name)
+        {
+            var q = GetQuest(id);
+            if (q != null)
+            {
+                return RemoveQuest(ref desc, q.QuestID, q.QuestName);
+            }
+            Game.LogMessage($"ERROR: Player {desc.Player.Name} tried to remove Quest {id} from QuestManager but the ID was not found", LogLevel.Error, true);
+            return false;
+        }
+
+        internal bool RemoveQuest(ref Descriptor desc, uint id, string name)
         {
             try
             {
-                if(Instance.quests.ContainsKey(id))
+                lock (_lock)
                 {
-                    lock(_lock)
+                    if (Instance.Quests.ContainsKey(id))
                     {
-                        Instance.quests.Remove(id);
+                        Instance.Quests.Remove(id);
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} removed Quest {id} ({name}) from QuestManager", LogLevel.OLC, true);
+                        return true;
                     }
-                    Game.LogMessage($"INFO: Player {desc.Player} removed Quest {id} from QuestManager", LogLevel.Info, true);
-                    return true;
-                }
-                else
-                {
-                    Game.LogMessage($"WARN: Player {desc.Player} attempted to remove Quest {id} from QuestManager but this ID could not be found", LogLevel.Warning, true);
-                    return false;
-                }
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player} encountered an error removing Quest {id} from QuestManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool RemoveQuest(ref Descriptor desc, Guid id)
-        {
-            try
-            {
-                var q = Instance.quests.Values.Where(x => x.QuestGUID == id).FirstOrDefault();
-                if(q != null)
-                {
-                    lock(_lock)
+                    else
                     {
-                        Instance.quests.Remove(q.QuestID);
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} tried to remove Quest {id} ({name}) from QuestManager but the ID was not found", LogLevel.OLC, true);
+                        return true;
                     }
-                    Game.LogMessage($"INFO: Player {desc.Player} removed Quest {id} from QuestManager", LogLevel.Info, true);
-                    return true;
-                }
-                else
-                {
-                    Game.LogMessage($"WARN: Player {desc.Player} attempted to remove Quest {id} from QuestManager but this ID could not be found", LogLevel.Warning, true);
-                    return false;
                 }
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player} encountered an error removing Quest {id} from QuestManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Quest {id} ({name}) from QuestManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -165,47 +155,44 @@ namespace Kingdoms_of_Etrea.Core
         {
             try
             {
-                if(Instance.quests.ContainsKey(q.QuestID))
+                lock(_lock)
                 {
-                    lock(_lock)
+                    if (Instance.Quests.ContainsKey(q.QuestID))
                     {
-                        Instance.quests.Remove(q.QuestID);
-                        Instance.quests.Add(q.QuestID, q);
-                        Game.LogMessage($"INFO: Player {desc.Player} updated Quest {q.QuestID} in QuestManager", LogLevel.Info, true);
+                        Instance.Quests.Remove(q.QuestID);
+                        Instance.Quests.Add(q.QuestID, q);
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} updated Quest {q.QuestID} ({q.QuestName}) in QuestManager", LogLevel.OLC, true);
+                        return true;
                     }
-                    return true;
-                }
-                else
-                {
-                    Game.LogMessage($"WARN: QuestManager does not contain a Quest with ID {q.QuestID}", LogLevel.Warning, true);
-                    lock(_lock)
+                    else
                     {
-                        Instance.quests.Add(q.QuestID, q);
+                        Game.LogMessage($"OLC: QuestManager does not contain Quest {q.QuestID} to update, it will be added instead", LogLevel.OLC, true);
+                        bool OK = AddQuest(ref desc, q);
+                        return OK;
                     }
-                    return true;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error updating Quest {q.QuestID}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Quest {q.QuestID} ({q.QuestName}) in QuestManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool AddNewQuest(ref Descriptor desc, Quest q)
+        internal bool AddQuest(ref Descriptor desc, Quest q)
         {
             try
             {
                 lock(_lock)
                 {
-                    Instance.quests.Add(q.QuestID, q);
-                    Game.LogMessage($"INFO: Player {desc.Player} added Quest '{q.QuestName}' ({q.QuestID}) to QuestManager", LogLevel.Info, true);
+                    Instance.Quests.Add(q.QuestID, q);
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} added Quest {q.QuestID} ({q.QuestName}) to QuestManager", LogLevel.OLC, true);
+                    return true;
                 }
-                return true;
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player} encountered an error adding a new Quest to QuestManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding Quest {q.QuestID} ({q.QuestName}) to QuestManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }

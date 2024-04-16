@@ -1,9 +1,9 @@
-﻿using Kingdoms_of_Etrea.Core;
+﻿using Etrea2.Core;
 
-namespace Kingdoms_of_Etrea.Interfaces
+namespace Etrea2.Interfaces
 {
-    interface ILogonProvider
+    internal interface ILogonProvider
     {
-        void LogonPlayer(ref Descriptor descriptor);
+        void LogonPlayer(ref Descriptor desc);
     }
 }

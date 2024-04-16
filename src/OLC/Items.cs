@@ -1,52 +1,57 @@
-﻿using Kingdoms_of_Etrea.Core;
-using Kingdoms_of_Etrea.Entities;
+﻿using Etrea2.Core;
+using Etrea2.Entities;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text;
 
-namespace Kingdoms_of_Etrea.OLC
+namespace Etrea2.OLC
 {
     internal static partial class OLC
     {
-        #region Menus
         private static void EditExistingItem(ref Descriptor desc)
         {
-            desc.Send("Enter the ID of the item to edit: ");
+            desc.Send("Enter the ID of the item to edit or END to return: ");
             var input = desc.Read().Trim();
-            if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint id))
+            if (Helpers.ValidateInput(input) && input == "END")
             {
-                var item = ItemManager.Instance.GetItemByID(id);
-                if(item.AppliedBuffs ==  null)
+                return;
+            }
+            if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint id))
+            {
+                if (ItemManager.Instance.ItemExists(id))
                 {
-                    item.AppliedBuffs = new List<string>();
-                }
-                if(item != null)
-                {
-                    switch(item.ItemType)
+                    var item = ItemManager.Instance.GetItemByID(id).ShallowCopy();
+                    if (item.AppliedBuffs == null)
                     {
-                        case ItemType.Ring:
-                            EditRing(ref desc, item);
-                            break;
+                        item.AppliedBuffs = new List<string>();
+                    }
+                    if (item != null)
+                    {
+                        switch (item.ItemType)
+                        {
+                            case ItemType.Ring:
+                                EditRing(ref desc, item);
+                                break;
 
-                        case ItemType.Consumable:
-                            EditConsumable(ref desc, item);
-                            break;
+                            case ItemType.Consumable:
+                                EditConsumable(ref desc, item);
+                                break;
 
-                        case ItemType.Armour:
-                            EditArmour(ref desc, item);
-                            break;
+                            case ItemType.Armour:
+                                EditArmour(ref desc, item);
+                                break;
 
-                        case ItemType.Weapon:
-                            EditWeapon(ref desc, item);
-                            break;
+                            case ItemType.Weapon:
+                                EditWeapon(ref desc, item);
+                                break;
 
-                        case ItemType.Junk:
-                            EditJunk(ref desc, item);
-                            break;
+                            case ItemType.Misc:
+                                EditMiscItem(ref desc, item);
+                                break;
 
-                        case ItemType.Scroll:
-                            EditScroll(ref desc, item);
-                            break;
+                            case ItemType.Scroll:
+                                EditScroll(ref desc, item);
+                                break;
+                        }
                     }
                 }
                 else
@@ -68,9 +73,9 @@ namespace Kingdoms_of_Etrea.OLC
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("An item can be anything from a piece of equipment to a scroll, potion or");
                 sb.AppendLine("just a piece of junk. Please select the type of item you wish to create:");
-                sb.AppendLine($"1. Junk{Constants.TabStop}2. Weapon");
-                sb.AppendLine($"3. Armour{Constants.TabStop}4. Ring");
-                sb.AppendLine($"5. Scroll{Constants.TabStop}6. Potion");
+                sb.AppendLine($"1. Misc{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}2. Weapon");
+                sb.AppendLine($"3. Armour{Constants.TabStop}{Constants.TabStop}4. Ring");
+                sb.AppendLine($"5. Scroll{Constants.TabStop}{Constants.TabStop}6. Potion");
                 sb.AppendLine("7. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
@@ -82,7 +87,7 @@ namespace Kingdoms_of_Etrea.OLC
                         switch (option)
                         {
                             case 1:
-                                CreateNewJunkItem(ref desc);
+                                CreateNewMiscItem(ref desc);
                                 break;
 
                             case 2:
@@ -121,29 +126,26 @@ namespace Kingdoms_of_Etrea.OLC
                 }
             }
         }
-        #endregion
 
-        #region CreateItems
+        #region Create Items
         internal static void CreateNewConsumable(ref Descriptor desc)
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Potions are small phials of liquid which may be drunk by players. Their effects range from healing, applying buffs and causing damage. Some may have no effect at all.");
-            sb.AppendLine("All potions are single-use items and will be removed from the player inventory when they are used.");
-            sb.AppendLine("A potion has an ID number, name, short and long descriptions, base value, effect, damage dice and flags to indicate if the potion is magical or not.");
-            sb.AppendLine("Valid effects for potions are: None, Poison, Healing or Buff.");
-            sb.AppendLine("Where a potion effect is Healing, its damage role is added to the drinker's HP instead of subtraced from it.");
-            InventoryItem newPotion = new InventoryItem();
-            newPotion.ItemType = ItemType.Consumable;
-            newPotion.AppliedBuffs = new List<string>();
+            sb.AppendLine("Consumables are single-use items which are usable by all players.");
+            InventoryItem newPotion = new InventoryItem
+            {
+                ItemType = ItemType.Consumable,
+                AppliedBuffs = new List<string>()
+            };
             desc.Send(sb.ToString());
-            while(!okToReturn)
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newPotion.Id}{Constants.TabStop}Item Name: {newPotion.Name}");
+                sb.AppendLine($"Item ID: {newPotion.ID}{Constants.TabStop}Item Name: {newPotion.Name}");
                 sb.AppendLine($"Short Description: {newPotion.ShortDescription}");
-                sb.AppendLine($"Long Description: {newPotion.LongDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{newPotion.LongDescription}");
                 sb.AppendLine($"Value: {newPotion.BaseValue}{Constants.TabStop}{Constants.TabStop}Potion Effect: {newPotion.ConsumableEffect}");
                 sb.AppendLine($"Number of Damage Dice: {newPotion.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {newPotion.SizeOfDamageDice}");
                 sb.AppendLine($"Is Magical?: {newPotion.IsMagical}");
@@ -152,23 +154,22 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
                 sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine($"5. Set Value{Constants.TabStop}6. Set Potion Effect");
-                sb.AppendLine($"7. Set Number of Damage Dice{Constants.TabStop}8. Set Size of Damage Dice");
-                sb.AppendLine("9. Toggle Magical flag");
-                sb.AppendLine($"10. Add Buff{Constants.TabStop}11. Remove Buff");
-                sb.AppendLine("12. Save Potion");
-                sb.AppendLine("13. Exit without saving");
+                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}6. Set Value{Constants.TabStop}7. Set Potion Effect");
+                sb.AppendLine($"8. Set Number of Damage Dice{Constants.TabStop}9. Set Size of Damage Dice");
+                sb.AppendLine("10. Toggle Magical flag");
+                sb.AppendLine($"111. Add Buff{Constants.TabStop}12. Remove Buff");
+                sb.AppendLine($"13. Save{Constants.TabStop}{Constants.TabStop}14. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 13)
+                    if (result >= 1 && result <= 14)
                     {
                         switch (result)
                         {
                             case 1:
-                                newPotion.Id = GetAssetUintValue(ref desc, "Enter Item ID: ");
+                                newPotion.ID = GetAssetUintValue(ref desc, "Enter Item ID: ");
                                 break;
 
                             case 2:
@@ -184,40 +185,44 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
-                                newPotion.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                newPotion.LongDescription = Helpers.EditLongDescription(ref desc, newPotion.LongDescription);
                                 break;
 
                             case 6:
-                                newPotion.ConsumableEffect = GetAssetEnumValue<ConsumableEffect>(ref desc, "Enter Effect: ");
+                                newPotion.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
                                 break;
 
                             case 7:
-                                newPotion.NumberOfDamageDice = GetAssetUintValue(ref desc, "Enter number of Damage Dice: ");
+                                newPotion.ConsumableEffect = GetAssetEnumValue<ConsumableEffect>(ref desc, "Enter Effect: ");
                                 break;
 
                             case 8:
-                                newPotion.SizeOfDamageDice = GetAssetUintValue(ref desc, "Enter size of Damage Dice: ");
+                                newPotion.NumberOfDamageDice = GetAssetUintValue(ref desc, "Enter number of Damage Dice: ");
                                 break;
 
                             case 9:
-                                newPotion.IsMagical = !newPotion.IsMagical;
+                                newPotion.SizeOfDamageDice = GetAssetUintValue(ref desc, "Enter size of Damage Dice: ");
                                 break;
 
                             case 10:
+                                newPotion.IsMagical = !newPotion.IsMagical;
+                                break;
+
+                            case 11:
                                 var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
                                 {
-                                    if(!newPotion.AppliedBuffs.Contains(buff.BuffName))
+                                    if (!newPotion.AppliedBuffs.Contains(buff.BuffName))
                                     {
                                         newPotion.AppliedBuffs.Add(buff.BuffName);
                                     }
                                 }
                                 break;
 
-                            case 11:
+                            case 12:
                                 b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
+                                buff = BuffManager.Instance.GetBuff(b);
                                 if (buff != null)
                                 {
                                     if (newPotion.AppliedBuffs.Contains(buff.BuffName))
@@ -227,32 +232,29 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 12:
+                            case 13:
                                 if (ValidateConsumableItem(ref desc, ref newPotion, true))
                                 {
-                                    if (DatabaseManager.AddNewItem(newPotion))
+                                    if (DatabaseManager.AddNewItem(newPotion, ref desc))
                                     {
-                                        if (ItemManager.Instance.AddItem(newPotion.Id, newPotion))
+                                        if (ItemManager.Instance.AddItem(ref desc, newPotion))
                                         {
                                             desc.Send($"New item successfully added to ItemManager and World database{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} successfully created new Item: {newPotion.Name} ({newPotion.Id})", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
                                         {
                                             desc.Send($"Failed to add new item to ItemManager, it may not be available until the game is restarted{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} failed to add new item {newPotion.Name} ({newPotion.Id}) to the ItemManager, it may not be available until the game restarts.", LogLevel.Warning, true);
                                         }
                                     }
                                     else
                                     {
                                         desc.Send($"Failed to store item in database{Constants.NewLine}");
-                                        Game.LogMessage($"Player {desc.Player.Name} failed to store new item {newPotion.Name} ({newPotion.Id}) in the World database.", LogLevel.Error, true);
                                     }
                                 }
                                 break;
 
-                            case 13:
+                            case 14:
                                 okToReturn = true;
                                 break;
                         }
@@ -273,39 +275,40 @@ namespace Kingdoms_of_Etrea.OLC
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Scrolls are pieces of parchment containing the words required to complete a magical incantation. A Player needs the Read skill to be able to use scrolls.");
-            sb.AppendLine("Scrolls are single-use items that are removed from the Player's inventory once they have been successfully used.");
-            InventoryItem newScroll = new InventoryItem();
-            newScroll.ItemType = ItemType.Scroll;
-            newScroll.CastsSpell = string.Empty;
-            newScroll.Slot = WearSlot.None;
+            sb.AppendLine("Scrolls are single-use pieces of parchment containing the essence of a spell.");
+            InventoryItem newScroll = new InventoryItem
+            {
+                ItemType = ItemType.Scroll,
+                CastsSpell = string.Empty,
+                Slot = WearSlot.None
+            };
             desc.Send(sb.ToString());
-            while(!okToReturn)
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newScroll.Id}{Constants.TabStop}Item Name: {newScroll.Name}");
+                sb.AppendLine($"Item ID: {newScroll.ID}{Constants.TabStop}Item Name: {newScroll.Name}");
                 sb.AppendLine($"Short Description: {newScroll.ShortDescription}");
-                sb.AppendLine($"Long Description: {newScroll.LongDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{newScroll.LongDescription}");
                 sb.AppendLine($"Value: {newScroll.BaseValue}");
                 sb.AppendLine($"Casts Spell: {newScroll.CastsSpell}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
+                sb.AppendLine($"1. Set Item ID{Constants.TabStop}{Constants.TabStop}2. Set Item Name");
                 sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine("5. Set Spell");
-                sb.AppendLine($"6. Save Scroll{Constants.TabStop}7. Exit Without Saving");
+                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}6. Set Spell");
+                sb.AppendLine($"7. Save{Constants.TabStop}8. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
                 {
-                    if(option > 0 && option <= 7)
+                    if (option > 0 && option <= 8)
                     {
-                        switch(option)
+                        switch (option)
                         {
                             case 1:
-                                newScroll.Id = GetAssetUintValue(ref desc, "Enter Scroll ID: ");
+                                newScroll.ID = GetAssetUintValue(ref desc, "Enter Scroll ID: ");
                                 break;
 
                             case 2:
@@ -321,23 +324,26 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
+                                newScroll.LongDescription = Helpers.EditLongDescription(ref desc, newScroll.LongDescription);
+                                break;
+
+                            case 6:
                                 var spn = GetAssetStringValue(ref desc, "Enter Spell Name: ");
-                                var sp = Spells.GetSpell(spn);
-                                if(sp != null)
+                                var sp = SpellManager.Instance.GetSpell(spn);
+                                if (sp != null)
                                 {
                                     newScroll.CastsSpell = sp.SpellName;
                                 }
                                 break;
 
-                            case 6:
+                            case 7:
                                 if (ValidateScrollItem(ref desc, ref newScroll, true))
                                 {
                                     if (DatabaseManager.UpdateItemByID(ref desc, ref newScroll))
                                     {
-                                        if (ItemManager.Instance.UpdateItemByID(newScroll.Id, ref desc, newScroll))
+                                        if (ItemManager.Instance.UpdateItem(newScroll.ID, ref desc, newScroll))
                                         {
                                             desc.Send($"Scroll added successfully.{Constants.NewLine}");
-                                            Game.LogMessage($"INFO: Player {desc.Player} added Scroll '{newScroll.Name}' (ID: {newScroll.Id}) to World Database and ItemManager", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
@@ -352,7 +358,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 7:
+                            case 8:
                                 okToReturn = true;
                                 break;
                         }
@@ -373,18 +379,19 @@ namespace Kingdoms_of_Etrea.OLC
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Rings are items of jewelry that can be worn on the fingers. Some are exquisite and expensive, others are magical and offer a variety of bonuses while others are simple bands of common metal.");
-            sb.AppendLine("A ring has an ID number, name, short and long descriptions, base value, flag to determine if the item is magical and bonuses for Armour Class, hit rolls and damage. They may also apply buffs.");
-            InventoryItem newRing = new InventoryItem();
-            newRing.ItemType = ItemType.Ring;
-            newRing.Slot = WearSlot.FingerLeft | WearSlot.FingerRight;
-            newRing.AppliedBuffs = new List<string>();
+            sb.AppendLine("Rings are items of jewelry that can be worn on the fingers.");
+            InventoryItem newRing = new InventoryItem
+            {
+                ItemType = ItemType.Ring,
+                Slot = WearSlot.FingerLeft | WearSlot.FingerRight,
+                AppliedBuffs = new List<string>()
+            };
             desc.Send(sb.ToString());
-            while(!okToReturn)
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newRing.Id}{Constants.TabStop}Item Name: {newRing.Name}");
+                sb.AppendLine($"Item ID: {newRing.ID}{Constants.TabStop}Item Name: {newRing.Name}");
                 sb.AppendLine($"Short Description: {newRing.ShortDescription}");
                 sb.AppendLine($"Long Description: {newRing.LongDescription}");
                 sb.AppendLine($"Value: {newRing.BaseValue}{Constants.TabStop}Armour Class Modifier: {newRing.ArmourClassModifier}");
@@ -396,23 +403,23 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
                 sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine($"5. Set Value{Constants.TabStop}6. Set Armour Class Modifier");
-                sb.AppendLine($"7. Set Hit Bonus{Constants.TabStop}8. Set Damage Bonus");
-                sb.AppendLine($"9. Toggle Magical flag{Constants.TabStop}10. Toggle Monster Only flag");
-                sb.AppendLine($"11. Add Buff{Constants.TabStop}12. Remove Buff");
-                sb.AppendLine($"13. Toggle Curse flag");
-                sb.AppendLine($"14. Save Ring{Constants.TabStop}15. Exit without saving");
+                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}{Constants.TabStop}6. Set Value{Constants.TabStop}7. Set Armour Class Modifier");
+                sb.AppendLine($"8. Set Hit Bonus{Constants.TabStop}9. Set Damage Bonus");
+                sb.AppendLine($"10. Toggle Magical flag{Constants.TabStop}11. Toggle Monster Only flag");
+                sb.AppendLine($"12. Add Buff{Constants.TabStop}13. Remove Buff");
+                sb.AppendLine($"14. Toggle Curse flag");
+                sb.AppendLine($"15. Save{Constants.TabStop}16. Exit without saving");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 0 && result <= 15)
+                    if (result >= 0 && result <= 16)
                     {
                         switch (result)
                         {
                             case 1:
-                                newRing.Id = GetAssetUintValue(ref desc, "Enter Item ID: ");
+                                newRing.ID = GetAssetUintValue(ref desc, "Enter Item ID: ");
                                 break;
 
                             case 2:
@@ -428,44 +435,48 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
-                                newRing.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                newRing.LongDescription = Helpers.EditLongDescription(ref desc, newRing.LongDescription);
                                 break;
 
                             case 6:
-                                newRing.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class Modifier: ");
+                                newRing.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
                                 break;
 
                             case 7:
-                                newRing.HitModifier = GetAssetIntegerValue(ref desc, "Enter Hit Modifier: ");
+                                newRing.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class Modifier: ");
                                 break;
 
                             case 8:
-                                newRing.DamageModifier = GetAssetIntegerValue(ref desc, "Enter Damage Modifier: ");
+                                newRing.HitModifier = GetAssetIntegerValue(ref desc, "Enter Hit Modifier: ");
                                 break;
 
                             case 9:
-                                newRing.IsMagical = !newRing.IsMagical;
+                                newRing.DamageModifier = GetAssetIntegerValue(ref desc, "Enter Damage Modifier: ");
                                 break;
 
                             case 10:
-                                newRing.IsMonsterItem = !newRing.IsMonsterItem;
+                                newRing.IsMagical = !newRing.IsMagical;
                                 break;
 
                             case 11:
+                                newRing.IsMonsterItem = !newRing.IsMonsterItem;
+                                break;
+
+                            case 12:
                                 var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
                                 {
-                                    if(!newRing.AppliedBuffs.Contains(buff.BuffName))
+                                    if (!newRing.AppliedBuffs.Contains(buff.BuffName))
                                     {
                                         newRing.AppliedBuffs.Add(buff.BuffName);
                                     }
                                 }
                                 break;
 
-                            case 12:
+                            case 13:
                                 b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
+                                buff = BuffManager.Instance.GetBuff(b);
                                 if (buff != null)
                                 {
                                     if (newRing.AppliedBuffs.Contains(buff.BuffName))
@@ -475,36 +486,33 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 13:
+                            case 14:
                                 newRing.IsCursed = !newRing.IsCursed;
                                 break;
 
-                            case 14:
+                            case 15:
                                 if (ValidateRingItem(ref desc, ref newRing, true))
                                 {
-                                    if (DatabaseManager.AddNewItem(newRing))
+                                    if (DatabaseManager.AddNewItem(newRing, ref desc))
                                     {
-                                        if (ItemManager.Instance.AddItem(newRing.Id, newRing))
+                                        if (ItemManager.Instance.AddItem(ref desc, newRing))
                                         {
                                             desc.Send($"New item successfully added to ItemManager and World database{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} successfully created new Item: {newRing.Name} ({newRing.Id})", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
                                         {
                                             desc.Send($"Failed to add new item to ItemManager, it may not be available until the game is restarted{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} failed to add new item {newRing.Name} ({newRing.Id}) to the ItemManager, it may not be available until the game restarts.", LogLevel.Warning, true);
                                         }
                                     }
                                     else
                                     {
                                         desc.Send($"Failed to store item in database{Constants.NewLine}");
-                                        Game.LogMessage($"Player {desc.Player.Name} failed to store new item {newRing.Name} ({newRing.Id}) in the World database.", LogLevel.Error, true);
                                     }
                                 }
                                 break;
 
-                            case 15:
+                            case 16:
                                 okToReturn = true;
                                 break;
                         }
@@ -525,25 +533,21 @@ namespace Kingdoms_of_Etrea.OLC
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Armour is designed to protect from weapons. Wearing armour increases a player's Armour Class, making them harder to hit during combat.");
-            sb.AppendLine("Armour can be worn in several locations, each piece giving its own set of bonuses to the player wearing it. Bonuses from any equipped armour are cumulative.");
-            sb.AppendLine("Broadly speaking, Armour can be divided into three categories: light, medium and heavy. Light armour would include robes and leather jerkins, medium armour would include chainmail while heavy armour would be full plate.");
-            sb.AppendLine("Characters can wear armour they are not skilled in, but will suffer penalties for doing so.");
-            sb.AppendLine("Magical armour will give players the full Armour Class bonus even if they are not skilled at wearing that type of armour. Non-magical armour will have its Armour Class bonus reduced if worn by a player unskilled in wearing that type of armour.");
-            sb.AppendLine("In both cases, unskilled players will also suffer a penalty to their Armour Class for wearing armour they are not skilled with.");
-            sb.AppendLine("A piece of armour has an ID number, name, short and long descriptions, base value, Armour Class modifier and flag to determine if the item is magical or not.");
+            sb.AppendLine("Armour is designed to protect during combat by making the wearer harder to hit and damage.");
             sb.AppendLine("Valid entries for armour equipment slots are: Head, Neck, Torso, Hands, Waist, Legs, Feet, Held and Shield.");
-            InventoryItem newArmour = new InventoryItem();
-            newArmour.ItemType = ItemType.Armour;
-            newArmour.AppliedBuffs = new List<string>();
+            InventoryItem newArmour = new InventoryItem
+            {
+                ItemType = ItemType.Armour,
+                AppliedBuffs = new List<string>()
+            };
             desc.Send(sb.ToString());
-            while(!okToReturn)
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newArmour.Id}{Constants.TabStop}Item Name: {newArmour.Name}");
+                sb.AppendLine($"Item ID: {newArmour.ID}{Constants.TabStop}Item Name: {newArmour.Name}");
                 sb.AppendLine($"Short Description: {newArmour.ShortDescription}");
-                sb.AppendLine($"Long Description: {newArmour.LongDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{newArmour.LongDescription}");
                 sb.AppendLine($"Value: {newArmour.BaseValue}{Constants.TabStop}Armour Class Modifier: {newArmour.ArmourClassModifier}");
                 sb.AppendLine($"Is Magical?: {newArmour.IsMagical}{Constants.TabStop}Armour Type: {newArmour.BaseArmourType}");
                 sb.AppendLine($"Equip Slot: {newArmour.Slot}{Constants.TabStop}Required Skill: {newArmour.RequiredSkill}");
@@ -554,24 +558,24 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
                 sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine($"5. Set value{Constants.TabStop}6. Set Armour Class Modifier");
-                sb.AppendLine($"7. Toggle Magical flag{Constants.NewLine}8. Set Armour Type");
-                sb.AppendLine($"9. Set Equip Slot{Constants.TabStop}10. Set Required Skill");
-                sb.AppendLine($"11. Add Buff{Constants.TabStop}12. Remove Buff");
-                sb.AppendLine($"13. Set Damage Reduction{Constants.TabStop}14. Toggle Monster Only flag");
-                sb.AppendLine($"15. Toggle Cursed flag");
-                sb.AppendLine($"16. Save Armour{Constants.TabStop}17. Exit without saving");
+                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}6. Set value{Constants.TabStop}7. Set Armour Class Modifier");
+                sb.AppendLine($"8. Toggle Magical flag{Constants.NewLine}9. Set Armour Type");
+                sb.AppendLine($"10. Set Equip Slot{Constants.TabStop}11. Set Required Skill");
+                sb.AppendLine($"12. Add Buff{Constants.TabStop}13. Remove Buff");
+                sb.AppendLine($"14. Set Damage Reduction{Constants.TabStop}15. Toggle Monster Only");
+                sb.AppendLine($"16. Toggle Cursed flag");
+                sb.AppendLine($"17. Save{Constants.TabStop}18. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 17)
+                    if (result >= 1 && result <= 18)
                     {
                         switch (result)
                         {
                             case 1:
-                                newArmour.Id = GetAssetUintValue(ref desc, "Enter Item ID: ");
+                                newArmour.ID = GetAssetUintValue(ref desc, "Enter Item ID: ");
                                 break;
 
                             case 2:
@@ -587,48 +591,52 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
-                                newArmour.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                newArmour.LongDescription = Helpers.EditLongDescription(ref desc, newArmour.LongDescription);
                                 break;
 
                             case 6:
-                                newArmour.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class modifier: ");
+                                newArmour.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
                                 break;
 
                             case 7:
-                                newArmour.IsMagical = !newArmour.IsMagical;
+                                newArmour.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class modifier: ");
                                 break;
 
                             case 8:
-                                newArmour.BaseArmourType = GetAssetEnumValue<ArmourType>(ref desc, "Enter Armour Type: ");
+                                newArmour.IsMagical = !newArmour.IsMagical;
                                 break;
 
                             case 9:
-                                newArmour.Slot = GetAssetEnumValue<WearSlot>(ref desc, "Enter Equip Slot: ");
+                                newArmour.BaseArmourType = GetAssetEnumValue<ArmourType>(ref desc, "Enter Armour Type: ");
                                 break;
 
                             case 10:
-                                var skillName = GetAssetStringValue(ref desc, "Enter Skill Name: ");
-                                if(!string.IsNullOrEmpty(skillName) && Skills.SkillExists(skillName))
-                                {
-                                    newArmour.RequiredSkill = Skills.GetSkill(skillName);
-                                }
+                                newArmour.Slot = GetAssetEnumValue<WearSlot>(ref desc, "Enter Equip Slot: ");
                                 break;
 
                             case 11:
-                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
+                                var skillName = GetAssetStringValue(ref desc, "Enter Skill Name: ");
+                                if (!string.IsNullOrEmpty(skillName) && SkillManager.Instance.SkillExists(skillName))
                                 {
-                                    if(!newArmour.AppliedBuffs.Contains(buff.BuffName))
+                                    newArmour.RequiredSkill = SkillManager.Instance.GetSkill(skillName);
+                                }
+                                break;
+
+                            case 12:
+                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
+                                {
+                                    if (!newArmour.AppliedBuffs.Contains(buff.BuffName))
                                     {
                                         newArmour.AppliedBuffs.Add(buff.BuffName);
                                     }
                                 }
                                 break;
 
-                            case 12:
+                            case 13:
                                 b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
+                                buff = BuffManager.Instance.GetBuff(b);
                                 if (buff != null)
                                 {
                                     if (newArmour.AppliedBuffs.Contains(buff.BuffName))
@@ -638,44 +646,41 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 13:
+                            case 14:
                                 newArmour.DamageReductionModifier = GetAssetUintValue(ref desc, "Enter Damage Reduction Modifier: ");
                                 break;
 
-                            case 14:
+                            case 15:
                                 newArmour.IsMonsterItem = !newArmour.IsMonsterItem;
                                 break;
 
-                            case 15:
+                            case 16:
                                 newArmour.IsCursed = !newArmour.IsCursed;
                                 break;
 
-                            case 16:
+                            case 17:
                                 if (ValidateArmourItem(ref desc, ref newArmour, true))
                                 {
-                                    if (DatabaseManager.AddNewItem(newArmour))
+                                    if (DatabaseManager.AddNewItem(newArmour, ref desc))
                                     {
-                                        if (ItemManager.Instance.AddItem(newArmour.Id, newArmour))
+                                        if (ItemManager.Instance.AddItem(ref desc, newArmour))
                                         {
                                             desc.Send($"New item successfully added to ItemManager and World database{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} successfully created new Item: {newArmour.Name} ({newArmour.Id})", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
                                         {
                                             desc.Send($"Failed to add new item to ItemManager, it may not be available until the game is restarted{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} failed to add new item {newArmour.Name} ({newArmour.Id}) to the ItemManager, it may not be available until the game restarts.", LogLevel.Warning, true);
                                         }
                                     }
                                     else
                                     {
                                         desc.Send($"Failed to store item in database{Constants.NewLine}");
-                                        Game.LogMessage($"Player {desc.Player.Name} failed to store new item {newArmour.Name} ({newArmour.Id}) in the World database.", LogLevel.Error, true);
                                     }
                                 }
                                 break;
 
-                            case 17:
+                            case 18:
                                 okToReturn = true;
                                 break;
                         }
@@ -697,24 +702,22 @@ namespace Kingdoms_of_Etrea.OLC
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("Weapons are used in combat by players and NPCs. They come in various types from small daggers to huge greatswords and polearms.");
-            sb.AppendLine("Players can use weapons that they do not have skill with, but will suffer penalties for doing so. Bonuses are given where a player uses a weapon they are skilled with.");
-            sb.AppendLine("A weapon has an ID number, name, long and short descriptions, base value, weapon type, damage dice, bonus values and a flag to determine if the item is magical or not.");
-            sb.AppendLine("Magical weapons will give players the specified bonuses even if the player is not skilled with that weapon. Non-magical weapons will not give players bonuses if the player is not skilled.");
-            sb.AppendLine("In both cases, penalties will apply if the player is not skilled.");
             sb.AppendLine("Valid types for weapons are: Dagger, Sword, GreatSword, Axe, Staff, Club, Bow, Crossbow and Polearm.");
             desc.Send(sb.ToString());
-            InventoryItem newWeapon = new InventoryItem();
-            newWeapon.IsMagical = false;
-            newWeapon.ItemType = ItemType.Weapon;
-            newWeapon.Slot = WearSlot.Weapon;
-            newWeapon.AppliedBuffs = new List<string>();
-            while(!okToReturn)
+            InventoryItem newWeapon = new InventoryItem
+            {
+                IsMagical = false,
+                ItemType = ItemType.Weapon,
+                Slot = WearSlot.Weapon,
+                AppliedBuffs = new List<string>()
+            };
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newWeapon.Id}{Constants.TabStop}Item Name: {newWeapon.Name}");
+                sb.AppendLine($"Item ID: {newWeapon.ID}{Constants.TabStop}{Constants.TabStop}Item Name: {newWeapon.Name}");
                 sb.AppendLine($"Short Description: {newWeapon.ShortDescription}");
-                sb.AppendLine($"Long Description: {newWeapon.LongDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{newWeapon.LongDescription}");
                 sb.AppendLine($"Value: {newWeapon.BaseValue}");
                 sb.AppendLine($"No. of Damage Dice: {newWeapon.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {newWeapon.SizeOfDamageDice}");
                 sb.AppendLine($"Hit Bonus: {newWeapon.HitModifier}{Constants.TabStop}Damage Bonus: {newWeapon.DamageModifier}");
@@ -724,27 +727,27 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Monster Only?: {newWeapon.IsMonsterItem}{Constants.TabStop}Is Cursed?: {newWeapon.IsCursed}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
-                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine("5. Set value");
-                sb.AppendLine($"6. Set number of damage dice{Constants.TabStop}7. Set Size of Damage Dice");
-                sb.AppendLine($"8. Set hit bonus{Constants.TabStop}9. Set Damage Bonus");
-                sb.AppendLine($"10. Toggle Magical flag{Constants.TabStop}11. Toggle Two-Handed");
-                sb.AppendLine($"12. Set Weapon Type{Constants.TabStop}13. Set Required Skill");
-                sb.AppendLine($"14. Add Buff{Constants.TabStop}15. Remove Buff");
-                sb.AppendLine($"16. Toggle Monster Only flag{Constants.TabStop}17. Toggle Curse Flag");
-                sb.AppendLine($"18. Save Weapon{Constants.TabStop}19. Exit without saving");
+                sb.AppendLine($"1. Set Item ID{Constants.TabStop}{Constants.TabStop}2. Set Item Name");
+                sb.AppendLine($"3. Set Short Description{Constants.TabStop}{Constants.TabStop}4. Set Long Description");
+                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}{Constants.TabStop}6. Set value");
+                sb.AppendLine($"7. Set number of damage dice{Constants.TabStop}8. Set Size of Damage Dice");
+                sb.AppendLine($"9. Set hit bonus{Constants.TabStop}10. Set Damage Bonus");
+                sb.AppendLine($"11. Toggle Magical flag{Constants.TabStop}12. Toggle Two-Handed");
+                sb.AppendLine($"13. Set Weapon Type{Constants.TabStop}14. Set Required Skill");
+                sb.AppendLine($"15. Add Buff{Constants.TabStop}16. Remove Buff");
+                sb.AppendLine($"17. Toggle Monster Only flag{Constants.TabStop}18. Toggle Curse Flag");
+                sb.AppendLine($"19. Save{Constants.TabStop}{Constants.TabStop}20. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 19)
+                    if (result >= 1 && result <= 20)
                     {
                         switch (result)
                         {
                             case 1:
-                                newWeapon.Id = GetAssetUintValue(ref desc, "Enter Item ID: ");
+                                newWeapon.ID = GetAssetUintValue(ref desc, "Enter Item ID: ");
                                 break;
 
                             case 2:
@@ -760,60 +763,64 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
-                                newWeapon.BaseValue = GetAssetUintValue(ref desc, "Enter value: ");
+                                newWeapon.LongDescription = Helpers.EditLongDescription(ref desc, newWeapon.LongDescription);
                                 break;
 
                             case 6:
-                                newWeapon.NumberOfDamageDice = GetAssetUintValue(ref desc, "Number of damage dice: ");
+                                newWeapon.BaseValue = GetAssetUintValue(ref desc, "Enter value: ");
                                 break;
 
                             case 7:
-                                newWeapon.SizeOfDamageDice = GetAssetUintValue(ref desc, "Size of damage dice: ");
+                                newWeapon.NumberOfDamageDice = GetAssetUintValue(ref desc, "Number of damage dice: ");
                                 break;
 
                             case 8:
-                                newWeapon.HitModifier = GetAssetIntegerValue(ref desc, "Hit modifier: ");
+                                newWeapon.SizeOfDamageDice = GetAssetUintValue(ref desc, "Size of damage dice: ");
                                 break;
 
                             case 9:
-                                newWeapon.DamageModifier = GetAssetIntegerValue(ref desc, "Damage modifier: ");
+                                newWeapon.HitModifier = GetAssetIntegerValue(ref desc, "Hit modifier: ");
                                 break;
 
                             case 10:
-                                newWeapon.IsMagical = !newWeapon.IsMagical;
+                                newWeapon.DamageModifier = GetAssetIntegerValue(ref desc, "Damage modifier: ");
                                 break;
 
                             case 11:
-                                newWeapon.IsTwoHanded = !newWeapon.IsTwoHanded;
+                                newWeapon.IsMagical = !newWeapon.IsMagical;
                                 break;
 
                             case 12:
-                                newWeapon.BaseWeaponType = GetAssetEnumValue<WeaponType>(ref desc, "Enter weapon type: ");
+                                newWeapon.IsTwoHanded = !newWeapon.IsTwoHanded;
                                 break;
 
                             case 13:
-                                var skillName = GetAssetStringValue(ref desc, "Enter Skill Name: ");
-                                if(!string.IsNullOrEmpty(skillName) && Skills.SkillExists(skillName))
-                                {
-                                    newWeapon.RequiredSkill = Skills.GetSkill(skillName);
-                                }
+                                newWeapon.BaseWeaponType = GetAssetEnumValue<WeaponType>(ref desc, "Enter weapon type: ");
                                 break;
 
                             case 14:
-                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
+                                var skillName = GetAssetStringValue(ref desc, "Enter Skill Name: ");
+                                if (!string.IsNullOrEmpty(skillName) && SkillManager.Instance.SkillExists(skillName))
                                 {
-                                    if(!newWeapon.AppliedBuffs.Contains(buff.BuffName))
+                                    newWeapon.RequiredSkill = SkillManager.Instance.GetSkill(skillName);
+                                }
+                                break;
+
+                            case 15:
+                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
+                                {
+                                    if (!newWeapon.AppliedBuffs.Contains(buff.BuffName))
                                     {
                                         newWeapon.AppliedBuffs.Add(buff.BuffName);
                                     }
                                 }
                                 break;
 
-                            case 15:
+                            case 16:
                                 b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
+                                buff = BuffManager.Instance.GetBuff(b);
                                 if (buff != null)
                                 {
                                     if (newWeapon.AppliedBuffs.Contains(buff.BuffName))
@@ -823,40 +830,37 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 16:
+                            case 17:
                                 newWeapon.IsMonsterItem = !newWeapon.IsMonsterItem;
                                 break;
 
-                            case 17:
+                            case 18:
                                 newWeapon.IsCursed = !newWeapon.IsCursed;
                                 break;
 
-                            case 18:
+                            case 19:
                                 if (ValidateWeaponItem(ref desc, ref newWeapon, true))
                                 {
-                                    if (DatabaseManager.AddNewItem(newWeapon))
+                                    if (DatabaseManager.AddNewItem(newWeapon, ref desc))
                                     {
-                                        if (ItemManager.Instance.AddItem(newWeapon.Id, newWeapon))
+                                        if (ItemManager.Instance.AddItem(ref desc, newWeapon))
                                         {
                                             desc.Send($"New item successfully added to ItemManager and World database{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} successfully created new Item: {newWeapon.Name} ({newWeapon.Id})", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
                                         {
                                             desc.Send($"Failed to add new item to ItemManager, it may not be available until the game is restarted{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} failed to add new item {newWeapon.Name} ({newWeapon.Id}) to the ItemManager, it may not be available until the game restarts.", LogLevel.Warning, true);
                                         }
                                     }
                                     else
                                     {
                                         desc.Send($"Failed to store item in database{Constants.NewLine}");
-                                        Game.LogMessage($"Player {desc.Player.Name} failed to store new item {newWeapon.Name} ({newWeapon.Id}) in the World database.", LogLevel.Error, true);
                                     }
                                 }
                                 break;
 
-                            case 19:
+                            case 20:
                                 okToReturn = true;
                                 break;
                         }
@@ -873,42 +877,42 @@ namespace Kingdoms_of_Etrea.OLC
             }
         }
 
-        private static void CreateNewJunkItem(ref Descriptor desc)
+        private static void CreateNewMiscItem(ref Descriptor desc)
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Junk items are things that serve no real purpose to the adventurers of Etrea, but they can still be traded or given away, or sold to top up one's coin purse.");
-            sb.AppendLine("A junk item has an ID number, name, long and short descriptions and a base value. All properties except the ID can be changed later in other areas of OLC.");
+            sb.AppendLine("Miscellaneous items can be anything from keys to junk. They may be important, or may serve no purpose at all.");
             desc.Send(sb.ToString());
-            InventoryItem newItem = new InventoryItem();
-            newItem.Slot = WearSlot.None;
-            newItem.ItemType = ItemType.Junk;
-            while(!okToReturn)
+            InventoryItem newItem = new InventoryItem
+            {
+                Slot = WearSlot.None,
+                ItemType = ItemType.Misc
+            };
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {newItem.Id}{Constants.TabStop}Item Name: {newItem.Name}");
+                sb.AppendLine($"Item ID: {newItem.ID}{Constants.TabStop}Item Name: {newItem.Name}");
                 sb.AppendLine($"Short Description: {newItem.ShortDescription}");
                 sb.AppendLine($"Long Description: {newItem.LongDescription}");
                 sb.AppendLine($"Value: {newItem.BaseValue}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
+                sb.AppendLine($"1. Set Item ID{Constants.TabStop}{Constants.TabStop}{Constants.TabStop} 2. Set Item Name");
                 sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine("5. Set Value");
-                sb.AppendLine("6. Save Item");
-                sb.AppendLine("7. Exit without saving");
+                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}{Constants.TabStop}6.Set Value"); // TODO: Edit long desc
+                sb.AppendLine($"7. Save{Constants.TabStop}{Constants.TabStop}8. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 7)
+                    if (result >= 1 && result <= 8)
                     {
                         switch (result)
                         {
                             case 1:
-                                newItem.Id = GetAssetUintValue(ref desc, "Enter Item ID: ");
+                                newItem.ID = GetAssetUintValue(ref desc, "Enter Item ID: ");
                                 break;
 
                             case 2:
@@ -924,35 +928,36 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 5:
-                                newItem.BaseValue = GetAssetUintValue(ref desc, "Enter value: ");
+                                newItem.LongDescription = Helpers.EditLongDescription(ref desc, newItem.LongDescription);
                                 break;
 
                             case 6:
+                                newItem.BaseValue = GetAssetUintValue(ref desc, "Enter value: ");
+                                break;
+
+                            case 7:
                                 if (ValidateJunkItem(ref desc, ref newItem, true))
                                 {
-                                    if (DatabaseManager.AddNewItem(newItem))
+                                    if (DatabaseManager.AddNewItem(newItem, ref desc))
                                     {
-                                        if (ItemManager.Instance.AddItem(newItem.Id, newItem))
+                                        if (ItemManager.Instance.AddItem(ref desc, newItem))
                                         {
                                             desc.Send($"New item successfully added to ItemManager and World database{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} successfully created new Item: {newItem.Name} ({newItem.Id})", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
                                         {
                                             desc.Send($"Failed to add new item to ItemManager, it may not be available until the game is restarted{Constants.NewLine}");
-                                            Game.LogMessage($"Player {desc.Player.Name} failed to add new item {newItem.Name} ({newItem.Id}) to the ItemManager, it may not be available until the game restarts.", LogLevel.Warning, true);
                                         }
                                     }
                                     else
                                     {
                                         desc.Send($"Failed to store item in database{Constants.NewLine}");
-                                        Game.LogMessage($"Player {desc.Player.Name} failed to store new item {newItem.Name} ({newItem.Id}) in the World database.", LogLevel.Error, true);
                                     }
                                 }
                                 break;
 
-                            case 7:
+                            case 8:
                                 okToReturn = true;
                                 break;
                         }
@@ -970,35 +975,34 @@ namespace Kingdoms_of_Etrea.OLC
         }
         #endregion
 
-        #region EditItems
+        #region Edit Items
         private static void EditScroll(ref Descriptor desc, InventoryItem s)
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            while(!okToReturn)
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {s.Id}{Constants.TabStop}2. Item Name: {s.Name}");
+                sb.AppendLine($"Item ID: {s.ID}{Constants.TabStop}{Constants.TabStop} 2. Item Name: {s.Name}");
                 sb.AppendLine($"Short Description: {s.ShortDescription}");
-                sb.AppendLine($"Long Description: {s.LongDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{s.LongDescription}");
                 sb.AppendLine($"Value: {s.BaseValue}");
                 sb.AppendLine($"Casts Spell: {s.CastsSpell}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item Name");
-                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
-                sb.AppendLine("4. Set Spell");
-                sb.AppendLine("5. Save Scroll");
-                sb.AppendLine("6. Exit Without Saving");
+                sb.AppendLine($"1. Set Item Name{Constants.TabStop}{Constants.TabStop}2. Set Short Description");
+                sb.AppendLine($"3. Set Long Description{Constants.TabStop}{Constants.TabStop}4. Edit Long Description");
+                sb.AppendLine("5. Set Spell");
+                sb.AppendLine($"6. Save{Constants.TabStop}{Constants.TabStop}7. Exit");
                 sb.AppendLine("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
                 {
-                    if(option >= 1 && option <= 6)
+                    if (option >= 1 && option <= 7)
                     {
-                        switch(option)
+                        switch (option)
                         {
                             case 1:
                                 s.Name = GetAssetStringValue(ref desc, "Enter Scroll Name:");
@@ -1013,23 +1017,26 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 4:
+                                s.LongDescription = Helpers.EditLongDescription(ref desc, s.LongDescription);
+                                break;
+
+                            case 5:
                                 var spn = GetAssetStringValue(ref desc, "Enter Spell Name:");
-                                var sp = Spells.GetSpell(spn);
-                                if(sp != null)
+                                var sp = SpellManager.Instance.GetSpell(spn);
+                                if (sp != null)
                                 {
                                     s.CastsSpell = sp.SpellName;
                                 }
                                 break;
 
-                            case 5:
-                                if(ValidateScrollItem(ref desc, ref s, false))
+                            case 6:
+                                if (ValidateScrollItem(ref desc, ref s, false))
                                 {
-                                    if(DatabaseManager.UpdateItemByID(ref desc, ref s))
+                                    if (DatabaseManager.UpdateItemByID(ref desc, ref s))
                                     {
-                                        if(ItemManager.Instance.UpdateItemByID(s.Id, ref desc, s))
+                                        if (ItemManager.Instance.UpdateItem(s.ID, ref desc, s))
                                         {
                                             desc.Send($"Scroll updated successfully.{Constants.NewLine}");
-                                            Game.LogMessage($"INFO: Player {desc.Player} updated Scroll '{s.Name}' (ID: {s.Id}) in World Database and ItemManager", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
@@ -1044,90 +1051,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 6:
-                                okToReturn = true;
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"{Constants.InvalidChoice}{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void EditJunk(ref Descriptor desc, InventoryItem j)
-        {
-            bool okToReturn = false;
-            StringBuilder sb = new StringBuilder();
-            while(!okToReturn)
-            {
-                sb.Clear();
-                sb.AppendLine();
-                sb.AppendLine($"Item ID: {j.Id}{Constants.TabStop}Item Name: {j.Name}");
-                sb.AppendLine($"Short Description: {j.ShortDescription}");
-                sb.AppendLine($"Long Description: {j.LongDescription}");
-                sb.AppendLine($"Value: {j.BaseValue}");
-                sb.AppendLine();
-                sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item Name");
-                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
-                sb.AppendLine("4. Set Value");
-                sb.AppendLine("5. Save Item");
-                sb.AppendLine("6. Exit without saving");
-                sb.Append("Selection: ");
-                desc.Send(sb.ToString());
-                var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
-                {
-                    if(result >= 1 && result <= 6)
-                    {
-                        switch(result)
-                        {
-                            case 1:
-                                j.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
-                                break;
-
-                            case 2:
-                                j.ShortDescription = GetAssetStringValue(ref desc, "Enter Short Description: ");
-                                break;
-
-                            case 3:
-                                j.ShortDescription = Helpers.GetLongDescription(ref desc);
-                                break;
-
-                            case 4:
-                                j.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
-                                break;
-
-                            case 5:
-                                if (ValidateJunkItem(ref desc, ref j, false))
-                                {
-                                    if (DatabaseManager.UpdateItemByID(ref desc, ref j))
-                                    {
-                                        if (ItemManager.Instance.UpdateItemByID(j.Id, ref desc, j))
-                                        {
-                                            desc.Send($"Item has been updated successfully{Constants.NewLine}");
-                                            okToReturn = true;
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"There was an error updating the item in the World database{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"There was an error updating the item in Item Manager{Constants.NewLine}");
-                                    }
-                                }
-                                break;
-
-                            case 6:
+                            case 7:
                                 okToReturn = true;
                                 break;
                         }
@@ -1152,9 +1076,9 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {w.Id}{Constants.TabStop}Item Name: {w.Name}");
+                sb.AppendLine($"Item ID: {w.ID}{Constants.TabStop}{Constants.TabStop}Item Name: {w.Name}");
                 sb.AppendLine($"Short Description: {w.ShortDescription}");
-                sb.AppendLine($"Long Description: {w.LongDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{w.LongDescription}");
                 sb.AppendLine($"Value: {w.BaseValue}");
                 sb.AppendLine($"No. of Damage Dice: {w.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {w.SizeOfDamageDice}");
                 sb.AppendLine($"Hit Bonus: {w.HitModifier}{Constants.TabStop}Damage Bonus: {w.DamageModifier}");
@@ -1165,24 +1089,24 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Monster Only?: {w.IsMonsterItem}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item Name");
-                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description{Constants.TabStop}4. Set Value");
-                sb.AppendLine($"5. Set number of damage dice{Constants.TabStop}6. Set Size of Damage Dice");
-                sb.AppendLine($"7. Set hit bonus{Constants.TabStop}8. Set Damage Bonus");
-                sb.AppendLine($"9. Toggle Magical flag{Constants.TabStop}10. Toggle Two-Handed");
-                sb.AppendLine($"11. Set Weapon Type{Constants.TabStop}12. Set Required Skill");
-                sb.AppendLine($"13. Add Buff{Constants.TabStop}14. Remove Buff");
-                sb.AppendLine($"15. Toggle Monster Only flag{Constants.TabStop}16. Toggle Finesse flag");
-                sb.AppendLine($"17. Toggle Curse flag");
-                sb.AppendLine($"18. Save Weapon{Constants.TabStop}19. Exit without saving");
+                sb.AppendLine($"1. Set Item Name{Constants.TabStop}{Constants.TabStop}2. Set Short Description");
+                sb.AppendLine($"3. Set Long Description{Constants.TabStop}{Constants.TabStop}4. Edit Long Description");
+                sb.AppendLine($"5. Set Value{Constants.TabStop}{Constants.TabStop}6. Set number of Damage Dice");
+                sb.AppendLine($"7. Set Size of Damage Dice{Constants.TabStop}{Constants.TabStop}8. Set hit bonus");
+                sb.AppendLine($"9. Set Damage Bonus{Constants.TabStop}{Constants.TabStop}10. Toggle Magical");
+                sb.AppendLine($"11. Toggle Two-Handed{Constants.TabStop}{Constants.TabStop}12. Set Weapon Type");
+                sb.AppendLine($"13. Set Required Skill{Constants.TabStop}{Constants.TabStop}14. Add Buff");
+                sb.AppendLine($"15. Remove Buff{Constants.TabStop}{Constants.TabStop}16. Toggle Monster Only");
+                sb.AppendLine($"17. Toggle Finesse flag{Constants.TabStop}{Constants.TabStop}18. Toggle Curse");
+                sb.AppendLine($"19. Save{Constants.TabStop}{Constants.TabStop}20. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if(result >= 1 && result <= 19)
+                    if (result >= 1 && result <= 20)
                     {
-                        switch(result)
+                        switch (result)
                         {
                             case 1:
                                 w.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
@@ -1197,60 +1121,64 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 4:
-                                w.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                w.LongDescription = Helpers.EditLongDescription(ref desc, w.LongDescription);
                                 break;
 
                             case 5:
-                                w.NumberOfDamageDice = GetAssetUintValue(ref desc, "Enter Number of Damage Dice: ");
+                                w.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
                                 break;
 
                             case 6:
-                                w.SizeOfDamageDice = GetAssetUintValue(ref desc, "Enter Size of Damage Dice: ");
+                                w.NumberOfDamageDice = GetAssetUintValue(ref desc, "Enter Number of Damage Dice: ");
                                 break;
 
                             case 7:
-                                w.HitModifier = GetAssetIntegerValue(ref desc, "Enter Hit Modifier: ");
+                                w.SizeOfDamageDice = GetAssetUintValue(ref desc, "Enter Size of Damage Dice: ");
                                 break;
 
                             case 8:
-                                w.DamageModifier = GetAssetIntegerValue(ref desc, "Enter Damage Modifier: ");
+                                w.HitModifier = GetAssetIntegerValue(ref desc, "Enter Hit Modifier: ");
                                 break;
 
                             case 9:
-                                w.IsMagical = !w.IsMagical;
+                                w.DamageModifier = GetAssetIntegerValue(ref desc, "Enter Damage Modifier: ");
                                 break;
 
                             case 10:
-                                w.IsTwoHanded = !w.IsTwoHanded;
+                                w.IsMagical = !w.IsMagical;
                                 break;
 
                             case 11:
-                                w.BaseWeaponType = GetAssetEnumValue<WeaponType>(ref desc, "Enter Weapon Type: ");
+                                w.IsTwoHanded = !w.IsTwoHanded;
                                 break;
 
                             case 12:
-                                var skillName = GetAssetStringValue(ref desc, "Enter Skill Name: ");
-                                if(!string.IsNullOrEmpty(skillName) && Skills.SkillExists(skillName))
-                                {
-                                    w.RequiredSkill = Skills.GetSkill(skillName);
-                                }
+                                w.BaseWeaponType = GetAssetEnumValue<WeaponType>(ref desc, "Enter Weapon Type: ");
                                 break;
 
                             case 13:
-                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
+                                var skillName = GetAssetStringValue(ref desc, "Enter Skill Name: ");
+                                if (!string.IsNullOrEmpty(skillName) && SkillManager.Instance.SkillExists(skillName))
                                 {
-                                    if(!w.AppliedBuffs.Contains(buff.BuffName))
+                                    w.RequiredSkill = SkillManager.Instance.GetSkill(skillName);
+                                }
+                                break;
+
+                            case 14:
+                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
+                                {
+                                    if (!w.AppliedBuffs.Contains(buff.BuffName))
                                     {
                                         w.AppliedBuffs.Add(buff.BuffName);
                                     }
                                 }
                                 break;
 
-                            case 14:
+                            case 15:
                                 b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
+                                buff = BuffManager.Instance.GetBuff(b);
                                 if (buff != null)
                                 {
                                     if (w.AppliedBuffs.Contains(buff.BuffName))
@@ -1260,24 +1188,24 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 15:
+                            case 16:
                                 w.IsMonsterItem = !w.IsMonsterItem;
                                 break;
 
-                            case 16:
+                            case 17:
                                 w.IsFinesseWeapon = !w.IsFinesseWeapon;
                                 break;
 
-                            case 17:
+                            case 18:
                                 w.IsCursed = !w.IsCursed;
                                 break;
 
-                            case 18:
+                            case 19:
                                 if (ValidateWeaponItem(ref desc, ref w, false))
                                 {
                                     if (DatabaseManager.UpdateItemByID(ref desc, ref w))
                                     {
-                                        if (ItemManager.Instance.UpdateItemByID(w.Id, ref desc, w))
+                                        if (ItemManager.Instance.UpdateItem(w.ID, ref desc, w))
                                         {
                                             desc.Send($"Item has been updated successfully{Constants.NewLine}");
                                             okToReturn = true;
@@ -1294,7 +1222,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 19:
+                            case 20:
                                 okToReturn = true;
                                 break;
                         }
@@ -1319,9 +1247,9 @@ namespace Kingdoms_of_Etrea.OLC
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {a.Id}{Constants.TabStop}Item Name: {a.Name}");
+                sb.AppendLine($"Item ID: {a.ID}{Constants.TabStop}{Constants.TabStop}Item Name: {a.Name}");
                 sb.AppendLine($"Short Description: {a.ShortDescription}");
-                sb.AppendLine($"Long Description: {a.LongDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{a.LongDescription}");
                 sb.AppendLine($"Value: {a.BaseValue}{Constants.TabStop}Armour Class Modifier: {a.ArmourClassModifier}");
                 sb.AppendLine($"Is Magical?: {a.IsMagical}{Constants.NewLine}Armour Type: {a.BaseArmourType}");
                 sb.AppendLine($"Required Skill: {a.RequiredSkill}{Constants.TabStop}Equip Slot: {a.Slot}");
@@ -1329,22 +1257,22 @@ namespace Kingdoms_of_Etrea.OLC
                 sb.AppendLine($"Monster Only?: {a.IsMonsterItem}{Constants.TabStop}Is Cursed?: {a.IsCursed}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item Name");
-                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
-                sb.AppendLine($"4. Set value{Constants.TabStop}5. Set Armour Class Modifier");
-                sb.AppendLine($"6. Toggle Magical flag{Constants.TabStop}7. Set Armour Type");
-                sb.AppendLine($"8. Set Required Skill{Constants.TabStop}9. Set Equip Slot");
-                sb.AppendLine($"10. Add Buff{Constants.TabStop}11. Remove Buff");
-                sb.AppendLine($"12. Toggle Monster Only flag{Constants.TabStop}13. Toggle Curse flag");
-                sb.AppendLine($"14. Save Armour{Constants.TabStop}15. Exit without saving");
+                sb.AppendLine($"1. Set Item Name{Constants.TabStop}{Constants.TabStop}2. Set Short Description");
+                sb.AppendLine($"3. Set Long Description{Constants.TabStop}{Constants.TabStop}4. Edit Long Description");
+                sb.AppendLine($"5. Set value{Constants.TabStop}6. Set Armour Class Modifier");
+                sb.AppendLine($"6. Toggle Magical flag{Constants.TabStop}8. Set Armour Type");
+                sb.AppendLine($"7. Set Required Skill{Constants.TabStop}10. Set Equip Slot");
+                sb.AppendLine($"11. Add Buff{Constants.TabStop}12. Remove Buff");
+                sb.AppendLine($"13. Toggle Monster Only{Constants.TabStop}14. Toggle Curse flag");
+                sb.AppendLine($"15. Save{Constants.TabStop}{Constants.TabStop}16. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
                 if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 15)
+                    if (result >= 1 && result <= 16)
                     {
-                        switch(result)
+                        switch (result)
                         {
                             case 1:
                                 a.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
@@ -1359,48 +1287,52 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 4:
-                                a.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                a.LongDescription = Helpers.EditLongDescription(ref desc, a.LongDescription);
                                 break;
 
                             case 5:
-                                a.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class Modifier: ");
+                                a.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
                                 break;
 
                             case 6:
-                                a.IsMagical = !a.IsMagical;
+                                a.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class Modifier: ");
                                 break;
 
                             case 7:
-                                a.BaseArmourType = GetAssetEnumValue<ArmourType>(ref desc, "Enter Armour Type: ");
+                                a.IsMagical = !a.IsMagical;
                                 break;
 
                             case 8:
-                                var skillName = GetAssetStringValue(ref desc, "Enter Require Skill: ");
-                                if(!string.IsNullOrEmpty(skillName) && Skills.SkillExists(skillName))
-                                {
-                                    a.RequiredSkill = Skills.GetSkill(skillName);
-                                }
+                                a.BaseArmourType = GetAssetEnumValue<ArmourType>(ref desc, "Enter Armour Type: ");
                                 break;
 
                             case 9:
-                                a.Slot = GetAssetEnumValue<WearSlot>(ref desc, "Enter Equip Slot: ");
+                                var skillName = GetAssetStringValue(ref desc, "Enter Require Skill: ");
+                                if (!string.IsNullOrEmpty(skillName) && SkillManager.Instance.SkillExists(skillName))
+                                {
+                                    a.RequiredSkill = SkillManager.Instance.GetSkill(skillName);
+                                }
                                 break;
 
                             case 10:
+                                a.Slot = GetAssetEnumValue<WearSlot>(ref desc, "Enter Equip Slot: ");
+                                break;
+
+                            case 11:
                                 var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
                                 {
-                                    if(!a.AppliedBuffs.Contains(buff.BuffName))
+                                    if (!a.AppliedBuffs.Contains(buff.BuffName))
                                     {
                                         a.AppliedBuffs.Add(buff.BuffName);
                                     }
                                 }
                                 break;
 
-                            case 11:
+                            case 12:
                                 b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
+                                buff = BuffManager.Instance.GetBuff(b);
                                 if (buff != null)
                                 {
                                     if (a.AppliedBuffs.Contains(buff.BuffName))
@@ -1410,20 +1342,294 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 12:
+                            case 13:
                                 a.IsMonsterItem = !a.IsMonsterItem;
                                 break;
 
-                            case 13:
+                            case 14:
                                 a.IsCursed = !a.IsCursed;
                                 break;
 
-                            case 14:
+                            case 15:
                                 if (ValidateArmourItem(ref desc, ref a, false))
                                 {
                                     if (DatabaseManager.UpdateItemByID(ref desc, ref a))
                                     {
-                                        if (ItemManager.Instance.UpdateItemByID(a.Id, ref desc, a))
+                                        if (ItemManager.Instance.UpdateItem(a.ID, ref desc, a))
+                                        {
+                                            desc.Send($"Item has been updated successfully{Constants.NewLine}");
+                                            okToReturn = true;
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"There was an error updating the item in the World database{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"There was an error updating the item in Item Manager{Constants.NewLine}");
+                                    }
+                                }
+                                break;
+
+                            case 16:
+                                okToReturn = true;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"{Constants.InvalidChoice}{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                }
+            }
+        }
+
+        private static void EditConsumable(ref Descriptor desc, InventoryItem p)
+        {
+            bool okToReturn = false;
+            StringBuilder sb = new StringBuilder();
+            while (!okToReturn)
+            {
+                sb.Clear();
+                sb.AppendLine();
+                sb.AppendLine($"Item ID: {p.ID}{Constants.TabStop}{Constants.TabStop}Item Name: {p.Name}");
+                sb.AppendLine($"Short Description: {p.ShortDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{p.LongDescription}");
+                sb.AppendLine($"Value: {p.BaseValue}{Constants.TabStop}{Constants.TabStop}Potion Effect: {p.ConsumableEffect}");
+                sb.AppendLine($"Number of Damage Dice: {p.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {p.SizeOfDamageDice}");
+                sb.AppendLine($"Is Magical?: {p.IsMagical}");
+                sb.AppendLine($"Buffs: {string.Join(", ", p.AppliedBuffs)}");
+                sb.AppendLine();
+                sb.AppendLine("Options:");
+                sb.AppendLine($"1. Set Item Name{Constants.TabStop}{Constants.TabStop}2. Set Short Description");
+                sb.AppendLine($"3. Set Long Description{Constants.TabStop}{Constants.TabStop}4. Edit Long Description");
+                sb.AppendLine($"5. Set Value{Constants.TabStop}{Constants.TabStop}6. Set Potion Effect");
+                sb.AppendLine($"7. Set Number of Damage Dice{Constants.TabStop}8. Set Size of Damage Dice");
+                sb.AppendLine("9. Toggle Magical flag");
+                sb.AppendLine($"10. Add Buff{Constants.TabStop}{Constants.TabStop}11. Remove Buff");
+                sb.AppendLine($"12. Save{Constants.TabStop}{Constants.TabStop}13. Exit");
+                sb.Append("Selection: ");
+                desc.Send(sb.ToString());
+                var input = desc.Read().Trim();
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                {
+                    if (result >= 1 && result <= 13)
+                    {
+                        switch (result)
+                        {
+                            case 1:
+                                p.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
+                                break;
+
+                            case 2:
+                                p.ShortDescription = GetAssetStringValue(ref desc, "Enter Short Description: ");
+                                break;
+
+                            case 3:
+                                p.LongDescription = Helpers.GetLongDescription(ref desc);
+                                break;
+
+                            case 4:
+                                p.LongDescription = Helpers.EditLongDescription(ref desc, p.LongDescription);
+                                break;
+
+                            case 5:
+                                p.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                break;
+
+                            case 6:
+                                p.ConsumableEffect = GetAssetEnumValue<ConsumableEffect>(ref desc, "Enter Potion Effect: ");
+                                break;
+
+                            case 7:
+                                p.NumberOfDamageDice = GetAssetUintValue(ref desc, "Enter Number of Damage Dice: ");
+                                break;
+
+                            case 8:
+                                p.SizeOfDamageDice = GetAssetUintValue(ref desc, "Enter Size of Damage Dice: ");
+                                break;
+
+                            case 9:
+                                p.IsMagical = !p.IsMagical;
+                                break;
+
+                            case 10:
+                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
+                                {
+                                    if (!p.AppliedBuffs.Contains(buff.BuffName))
+                                    {
+                                        p.AppliedBuffs.Add(buff.BuffName);
+                                    }
+                                }
+                                break;
+
+                            case 11:
+                                b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
+                                buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
+                                {
+                                    if (p.AppliedBuffs.Contains(buff.BuffName))
+                                    {
+                                        p.AppliedBuffs.Remove(buff.BuffName);
+                                    }
+                                }
+                                break;
+
+                            case 12:
+                                if (ValidateConsumableItem(ref desc, ref p, false))
+                                {
+                                    if (DatabaseManager.UpdateItemByID(ref desc, ref p))
+                                    {
+                                        if (ItemManager.Instance.UpdateItem(p.ID, ref desc, p))
+                                        {
+                                            desc.Send($"Item has been updated successfully{Constants.NewLine}");
+                                            okToReturn = true;
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"There was an error updating the item in the World database{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"There was an error updating the item in Item Manager{Constants.NewLine}");
+                                    }
+                                }
+                                break;
+
+                            case 13:
+                                okToReturn = true;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"{Constants.InvalidChoice}{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                }
+            }
+        }
+
+        private static void EditRing(ref Descriptor desc, InventoryItem r)
+        {
+            bool okToReturn = false;
+            StringBuilder sb = new StringBuilder();
+            while (!okToReturn)
+            {
+                sb.Clear();
+                sb.AppendLine();
+                sb.AppendLine($"Item ID: {r.ID}{Constants.TabStop}{Constants.TabStop}Item Name: {r.Name}");
+                sb.AppendLine($"Short Description: {r.ShortDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{r.LongDescription}");
+                sb.AppendLine($"Value: {r.BaseValue}{Constants.TabStop}Armour Class Modifier: {r.ArmourClassModifier}");
+                sb.AppendLine($"Hit Bonus: {r.HitModifier}{Constants.TabStop}Damage Bonus: {r.DamageModifier}");
+                sb.AppendLine($"Is Magical?: {r.IsMagical}{Constants.TabStop}Is Cursed?: {r.IsCursed}");
+                sb.AppendLine($"Buffs: {string.Join(", ", r.AppliedBuffs)}");
+                sb.AppendLine($"Monster Only?: {r.IsMonsterItem}");
+                sb.AppendLine();
+                sb.AppendLine("Options:");
+                sb.AppendLine($"1. Set Item Name{Constants.TabStop}{Constants.TabStop}2. Set Short Description");
+                sb.AppendLine($"3. Set Long Description{Constants.TabStop}{Constants.TabStop}4. Edit Long Description");
+                sb.AppendLine($"5. Set Value{Constants.TabStop}{Constants.TabStop}6. Set Armour Class Modifier");
+                sb.AppendLine($"7. Set Hit Bonus{Constants.TabStop}{Constants.TabStop}8. Set Damage Bonus");
+                sb.AppendLine($"9. Toggle Magical flag{Constants.TabStop}{Constants.TabStop}10.Add Buff");
+                sb.AppendLine($"11. Remove Buff{Constants.TabStop}{Constants.TabStop}12. Toggle Monster Only");
+                sb.AppendLine($"13. Toggle Curse Flag");
+                sb.AppendLine($"14. Save{Constants.TabStop}{Constants.TabStop}15. Exit");
+                sb.Append("Selection: ");
+                desc.Send(sb.ToString());
+                var input = desc.Read().Trim();
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                {
+                    if (result >= 1 && result <= 15)
+                    {
+                        switch (result)
+                        {
+                            case 1:
+                                r.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
+                                break;
+
+                            case 2:
+                                r.ShortDescription = GetAssetStringValue(ref desc, "Enter Short Description: ");
+                                break;
+
+                            case 3:
+                                r.LongDescription = Helpers.GetLongDescription(ref desc);
+                                break;
+
+                            case 4:
+                                r.LongDescription = Helpers.EditLongDescription(ref desc, r.LongDescription);
+                                break;
+
+                            case 5:
+                                r.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                break;
+
+                            case 6:
+                                r.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class Modifier: ");
+                                break;
+
+                            case 7:
+                                r.HitModifier = GetAssetIntegerValue(ref desc, "Enter Hit Modifier: ");
+                                break;
+
+                            case 8:
+                                r.DamageModifier = GetAssetIntegerValue(ref desc, "Enter Damage Modifier: ");
+                                break;
+
+                            case 9:
+                                r.IsMagical = !r.IsMagical;
+                                break;
+
+                            case 10:
+                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
+                                var buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
+                                {
+                                    if (!r.AppliedBuffs.Contains(buff.BuffName))
+                                    {
+                                        r.AppliedBuffs.Add(buff.BuffName);
+                                    }
+                                }
+                                break;
+
+                            case 11:
+                                b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
+                                buff = BuffManager.Instance.GetBuff(b);
+                                if (buff != null)
+                                {
+                                    if (r.AppliedBuffs.Contains(buff.BuffName))
+                                    {
+                                        r.AppliedBuffs.Remove(buff.BuffName);
+                                    }
+                                }
+                                break;
+
+                            case 12:
+                                r.IsMonsterItem = !r.IsMonsterItem;
+                                break;
+
+                            case 13:
+                                r.IsCursed = !r.IsCursed;
+                                break;
+
+                            case 14:
+                                if (ValidateRingItem(ref desc, ref r, false))
+                                {
+                                    if (DatabaseManager.UpdateItemByID(ref desc, ref r))
+                                    {
+                                        if (ItemManager.Instance.UpdateItem(r.ID, ref desc, r))
                                         {
                                             desc.Send($"Item has been updated successfully{Constants.NewLine}");
                                             okToReturn = true;
@@ -1457,102 +1663,58 @@ namespace Kingdoms_of_Etrea.OLC
             }
         }
 
-        private static void EditConsumable(ref Descriptor desc, InventoryItem p)
+        private static void EditMiscItem(ref Descriptor desc, InventoryItem j)
         {
             bool okToReturn = false;
             StringBuilder sb = new StringBuilder();
-            while(!okToReturn)
+            while (!okToReturn)
             {
                 sb.Clear();
                 sb.AppendLine();
-                sb.AppendLine($"Item ID: {p.Id}{Constants.TabStop}Item Name: {p.Name}");
-                sb.AppendLine($"Short Description: {p.ShortDescription}");
-                sb.AppendLine($"Long Description: {p.LongDescription}");
-                sb.AppendLine($"Value: {p.BaseValue}{Constants.TabStop}Potion Effect: {p.ConsumableEffect}");
-                sb.AppendLine($"Number of Damage Dice: {p.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {p.SizeOfDamageDice}");
-                sb.AppendLine($"Is Magical?: {p.IsMagical}");
-                sb.AppendLine($"Buffs: {string.Join(", ", p.AppliedBuffs)}");
+                sb.AppendLine($"Item ID: {j.ID}{Constants.TabStop}{Constants.TabStop}Item Name: {j.Name}");
+                sb.AppendLine($"Short Description: {j.ShortDescription}");
+                sb.AppendLine($"Long Description:{Constants.NewLine}{j.LongDescription}");
+                sb.AppendLine($"Value: {j.BaseValue}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item Name");
-                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
-                sb.AppendLine($"4. Set Value{Constants.TabStop}5. Set Potion Effect");
-                sb.AppendLine($"6. Set Number of Damage Dice{Constants.TabStop}7. Set Size of Damage Dice");
-                sb.AppendLine("8. Toggle Magical flag");
-                sb.AppendLine($"9. Add Buff{Constants.TabStop}10. Remove Buff");
-                sb.AppendLine("11. Save Potion");
-                sb.AppendLine("12. Exit without saving");
+                sb.AppendLine($"1. Set Item Name{Constants.TabStop}{Constants.TabStop}2. Set Short Description");
+                sb.AppendLine($"3. Edit Long Description{Constants.TabStop}4. Set Long Description");
+                sb.AppendLine($"5. Set Value{Constants.TabStop}{Constants.TabStop}6. Save{Constants.TabStop}{Constants.TabStop}7. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
                 {
-                    if (result >= 1 && result <= 12)
+                    if (result >= 1 && result <= 7)
                     {
                         switch (result)
                         {
                             case 1:
-                                p.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
+                                j.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
                                 break;
 
                             case 2:
-                                p.ShortDescription = GetAssetStringValue(ref desc, "Enter Short Description: ");
+                                j.ShortDescription = GetAssetStringValue(ref desc, "Enter Short Description: ");
                                 break;
 
                             case 3:
-                                p.LongDescription = Helpers.GetLongDescription(ref desc);
+                                j.LongDescription = Helpers.EditLongDescription(ref desc, j.LongDescription);
                                 break;
 
                             case 4:
-                                p.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
+                                j.LongDescription = Helpers.GetLongDescription(ref desc);
                                 break;
 
                             case 5:
-                                p.ConsumableEffect = GetAssetEnumValue<ConsumableEffect>(ref desc, "Enter Potion Effect: ");
+                                j.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
                                 break;
 
                             case 6:
-                                p.NumberOfDamageDice = GetAssetUintValue(ref desc, "Enter Number of Damage Dice: ");
-                                break;
-
-                            case 7:
-                                p.SizeOfDamageDice = GetAssetUintValue(ref desc, "Enter Size of Damage Dice: ");
-                                break;
-
-                            case 8:
-                                p.IsMagical = !p.IsMagical;
-                                break;
-
-                            case 9:
-                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
+                                if (ValidateJunkItem(ref desc, ref j, false))
                                 {
-                                    if(!p.AppliedBuffs.Contains(buff.BuffName))
+                                    if (DatabaseManager.UpdateItemByID(ref desc, ref j))
                                     {
-                                        p.AppliedBuffs.Add(buff.BuffName);
-                                    }
-                                }
-                                break;
-
-                            case 10:
-                                b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
-                                if (buff != null)
-                                {
-                                    if (p.AppliedBuffs.Contains(buff.BuffName))
-                                    {
-                                        p.AppliedBuffs.Remove(buff.BuffName);
-                                    }
-                                }
-                                break;
-
-                            case 11:
-                                if (ValidateConsumableItem(ref desc, ref p, false))
-                                {
-                                    if (DatabaseManager.UpdateItemByID(ref desc, ref p))
-                                    {
-                                        if (ItemManager.Instance.UpdateItemByID(p.Id, ref desc, p))
+                                        if (ItemManager.Instance.UpdateItem(j.ID, ref desc, j))
                                         {
                                             desc.Send($"Item has been updated successfully{Constants.NewLine}");
                                             okToReturn = true;
@@ -1569,145 +1731,7 @@ namespace Kingdoms_of_Etrea.OLC
                                 }
                                 break;
 
-                            case 12:
-                                okToReturn = true;
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"{Constants.InvalidChoice}{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void EditRing(ref Descriptor desc, InventoryItem r)
-        {
-            bool okToReturn = false;
-            StringBuilder sb = new StringBuilder();
-            while(!okToReturn)
-            {
-                sb.Clear();
-                sb.AppendLine();
-                sb.AppendLine($"Item ID: {r.Id}{Constants.TabStop}Item Name: {r.Name}");
-                sb.AppendLine($"Short Description: {r.ShortDescription}");
-                sb.AppendLine($"Long Description: {r.LongDescription}");
-                sb.AppendLine($"Value: {r.BaseValue}{Constants.TabStop}Armour Class Modifier: {r.ArmourClassModifier}");
-                sb.AppendLine($"Hit Bonus: {r.HitModifier}{Constants.TabStop}Damage Bonus: {r.DamageModifier}");
-                sb.AppendLine($"Is Magical?: {r.IsMagical}{Constants.TabStop}Is Cursed?: {r.IsCursed}");
-                sb.AppendLine($"Buffs: {string.Join(", ", r.AppliedBuffs)}");
-                sb.AppendLine($"Monster Only?: {r.IsMonsterItem}");
-                sb.AppendLine();
-                sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Item Name");
-                sb.AppendLine($"2. Set Short Description{Constants.TabStop}3. Set Long Description");
-                sb.AppendLine($"4. Set Value{Constants.TabStop}5. Set Armour Class Modifier");
-                sb.AppendLine($"6. Set Hit Bonus{Constants.TabStop}7. Set Damage Bonus");
-                sb.AppendLine("8. Toggle Magical flag");
-                sb.AppendLine($"9. Add Buff{Constants.TabStop}10. Remove Buff");
-                sb.AppendLine($"11. Toggle Monster Only flag{Constants.TabStop}12. Toggle Curse Flag");
-                sb.AppendLine($"13. Save changes{Constants.TabStop}14. Exit without saving");
-                sb.Append("Selection: ");
-                desc.Send(sb.ToString());
-                var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
-                {
-                    if(result >= 1 && result <= 14)
-                    {
-                        switch(result)
-                        {
-                            case 1:
-                                r.Name = GetAssetStringValue(ref desc, "Enter Item Name: ");
-                                break;
-
-                            case 2:
-                                r.ShortDescription = GetAssetStringValue(ref desc, "Enter Short Description: ");
-                                break;
-
-                            case 3:
-                                r.LongDescription = Helpers.GetLongDescription(ref desc);
-                                break;
-
-                            case 4:
-                                r.BaseValue = GetAssetUintValue(ref desc, "Enter Value: ");
-                                break;
-
-                            case 5:
-                                r.ArmourClassModifier = GetAssetIntegerValue(ref desc, "Enter Armour Class Modifier: ");
-                                break;
-
-                            case 6:
-                                r.HitModifier = GetAssetIntegerValue(ref desc, "Enter Hit Modifier: ");
-                                break;
-
                             case 7:
-                                r.DamageModifier = GetAssetIntegerValue(ref desc, "Enter Damage Modifier: ");
-                                break;
-
-                            case 8:
-                                r.IsMagical = !r.IsMagical;
-                                break;
-
-                            case 9:
-                                var b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                var buff = Buffs.GetBuff(b);
-                                if(buff != null)
-                                {
-                                    if(!r.AppliedBuffs.Contains(buff.BuffName))
-                                    {
-                                        r.AppliedBuffs.Add(buff.BuffName);
-                                    }
-                                }
-                                break;
-
-                            case 10:
-                                b = GetAssetStringValue(ref desc, "Enter Buff Name: ");
-                                buff = Buffs.GetBuff(b);
-                                if (buff != null)
-                                {
-                                    if (r.AppliedBuffs.Contains(buff.BuffName))
-                                    {
-                                        r.AppliedBuffs.Remove(buff.BuffName);
-                                    }
-                                }
-                                break;
-
-                            case 11:
-                                r.IsMonsterItem = !r.IsMonsterItem;
-                                break;
-
-                            case 12:
-                                r.IsCursed = !r.IsCursed;
-                                break;
-
-                            case 13:
-                                if(ValidateRingItem(ref desc, ref r, false))
-                                {
-                                    if(DatabaseManager.UpdateItemByID(ref desc, ref r))
-                                    {
-                                        if(ItemManager.Instance.UpdateItemByID(r.Id, ref desc, r))
-                                        {
-                                            desc.Send($"Item has been updated successfully{Constants.NewLine}");
-                                            okToReturn = true;
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"There was an error updating the item in the World database{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"There was an error updating the item in Item Manager{Constants.NewLine}");
-                                    }
-                                }
-                                break;
-
-                            case 14:
                                 okToReturn = true;
                                 break;
                         }
@@ -1725,19 +1749,23 @@ namespace Kingdoms_of_Etrea.OLC
         }
         #endregion
 
-        #region DeleteItems
+        #region Delete Items
         private static void DeleteItem(ref Descriptor desc)
         {
-            desc.Send("Enter the ID of the item to delete: ");
+            desc.Send("Enter the ID of the item to delete or END to return: ");
             var input = desc.Read().Trim();
-            if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+            if (Helpers.ValidateInput(input) && input == "END")
+            {
+                return;
+            }
+            if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
             {
                 var i = ItemManager.Instance.GetItemByID(result);
-                if(i != null)
+                if (i != null)
                 {
-                    if(DatabaseManager.DeleteItemByID(ref desc, i.Id))
+                    if (DatabaseManager.DeleteItemByID(ref desc, i.ID))
                     {
-                        if(ItemManager.Instance.RemoveItemByID(i.Id, ref desc))
+                        if (ItemManager.Instance.RemoveItem(ref desc, i.ID))
                         {
                             desc.Send($"Item has been successfully removed from Item Manager and the World database{Constants.NewLine}");
                         }
@@ -1763,21 +1791,21 @@ namespace Kingdoms_of_Etrea.OLC
         }
         #endregion
 
-        #region Functions
+        #region Validation Functions
         private static bool ValidateScrollItem(ref Descriptor desc, ref InventoryItem s, bool isNewItem)
         {
             bool isValid = true;
-            if(ItemManager.Instance.ItemExists(s.Id) && isNewItem)
+            if (ItemManager.Instance.ItemExists(s.ID) && isNewItem)
             {
                 isValid = false;
                 desc.Send($"The specified ID is already in use.{Constants.NewLine}");
             }
-            if(s.Id == 0)
+            if (s.ID == 0)
             {
                 isValid = false;
                 desc.Send($"The specified ID is not valid.{Constants.NewLine}");
             }
-            if(string.IsNullOrEmpty(s.Name) || string.IsNullOrEmpty(s.ShortDescription) || string.IsNullOrEmpty(s.LongDescription) || string.IsNullOrEmpty(s.CastsSpell))
+            if (string.IsNullOrEmpty(s.Name) || string.IsNullOrEmpty(s.ShortDescription) || string.IsNullOrEmpty(s.LongDescription) || string.IsNullOrEmpty(s.CastsSpell))
             {
                 isValid = false;
                 desc.Send($"One or more attributes are missing values.{Constants.NewLine}");
@@ -1785,10 +1813,66 @@ namespace Kingdoms_of_Etrea.OLC
             return isValid;
         }
 
+        private static bool ValidateWeaponItem(ref Descriptor desc, ref InventoryItem w, bool isNewItem)
+        {
+            bool isValid = true;
+            if ((isNewItem && !ItemManager.Instance.ItemExists(w.ID) && w.ID != 0) || !isNewItem)
+            {
+                if (string.IsNullOrEmpty(w.Name) || string.IsNullOrEmpty(w.ShortDescription) || string.IsNullOrEmpty(w.LongDescription))
+                {
+                    desc.Send($"One or more required attributes are missing values{Constants.NewLine}");
+                    isValid = false;
+                }
+                else
+                {
+                    if (w.NumberOfDamageDice == 0 || w.SizeOfDamageDice == 0)
+                    {
+                        desc.Send($"Number and size of damage dice must be greater than 0{Constants.NewLine}");
+                        isValid = false;
+                    }
+                }
+            }
+            else
+            {
+                desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
+                isValid = false;
+            }
+            if (w.IsCursed && !w.IsMagical)
+            {
+                desc.Send($"If the weapon is cursed it must also be magical.{Constants.NewLine}");
+                isValid = false;
+            }
+            return isValid;
+        }
+
+        private static bool ValidateArmourItem(ref Descriptor desc, ref InventoryItem a, bool isNewItem)
+        {
+            bool isValid = true;
+            if ((isNewItem && !ItemManager.Instance.ItemExists(a.ID) && a.ID != 0) || !isNewItem)
+            {
+                if (string.IsNullOrEmpty(a.Name) || string.IsNullOrEmpty(a.ShortDescription) || string.IsNullOrEmpty(a.LongDescription))
+                {
+                    desc.Send($"One or more required attributes are missing values{Constants.NewLine}");
+                    isValid = false;
+                }
+            }
+            else
+            {
+                desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
+                isValid = false;
+            }
+            if (a.IsCursed && !a.IsMagical)
+            {
+                desc.Send($"If the armour is cursed, it must also be magical.{Constants.NewLine}");
+                isValid = false;
+            }
+            return isValid;
+        }
+
         private static bool ValidateConsumableItem(ref Descriptor desc, ref InventoryItem p, bool isNewItem)
         {
             bool isValid = true;
-            if ((isNewItem && !ItemManager.Instance.ItemExists(p.Id) && p.Id != 0) || !isNewItem)
+            if ((isNewItem && !ItemManager.Instance.ItemExists(p.ID) && p.ID != 0) || !isNewItem)
             {
                 if (string.IsNullOrEmpty(p.Name) || string.IsNullOrEmpty(p.ShortDescription) || string.IsNullOrEmpty(p.LongDescription))
                 {
@@ -1797,9 +1881,9 @@ namespace Kingdoms_of_Etrea.OLC
                 }
                 else
                 {
-                    if(p.ConsumableEffect.HasFlag(ConsumableEffect.Healing) || p.ConsumableEffect.HasFlag(ConsumableEffect.SPHealing) || p.ConsumableEffect.HasFlag(ConsumableEffect.MPHealing) || p.ConsumableEffect.HasFlag(ConsumableEffect.Poison))
+                    if (p.ConsumableEffect.HasFlag(ConsumableEffect.Healing) || p.ConsumableEffect.HasFlag(ConsumableEffect.SPHealing) || p.ConsumableEffect.HasFlag(ConsumableEffect.MPHealing) || p.ConsumableEffect.HasFlag(ConsumableEffect.Poison))
                     {
-                        if(p.NumberOfDamageDice == 0 || p.SizeOfDamageDice == 0)
+                        if (p.NumberOfDamageDice == 0 || p.SizeOfDamageDice == 0)
                         {
                             desc.Send($"If a Consumable heals or poisons it needs to have damage dice{Constants.NewLine}");
                             isValid = false;
@@ -1807,9 +1891,9 @@ namespace Kingdoms_of_Etrea.OLC
                     }
                     else
                     {
-                        if(p.ConsumableEffect == ConsumableEffect.None || p.ConsumableEffect == ConsumableEffect.Buff)
+                        if (p.ConsumableEffect == ConsumableEffect.None || p.ConsumableEffect == ConsumableEffect.Buff)
                         {
-                            if(p.NumberOfDamageDice > 0 || p.SizeOfDamageDice > 0)
+                            if (p.NumberOfDamageDice > 0 || p.SizeOfDamageDice > 0)
                             {
                                 desc.Send($"Consumable which apply buffs or have no effect do not need damage dice{Constants.NewLine}");
                                 isValid = false;
@@ -1826,10 +1910,29 @@ namespace Kingdoms_of_Etrea.OLC
             return isValid;
         }
 
+        private static bool ValidateJunkItem(ref Descriptor desc, ref InventoryItem i, bool isNewItem)
+        {
+            bool isValid = true;
+            if ((isNewItem && !ItemManager.Instance.ItemExists(i.ID) && i.ID != 0) || !isNewItem)
+            {
+                if (string.IsNullOrEmpty(i.Name) || string.IsNullOrEmpty(i.LongDescription) || string.IsNullOrEmpty(i.ShortDescription))
+                {
+                    desc.Send($"One or more required attributes are missing values{Constants.NewLine}");
+                    isValid = false;
+                }
+            }
+            else
+            {
+                desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
+                isValid = false;
+            }
+            return isValid;
+        }
+
         private static bool ValidateRingItem(ref Descriptor desc, ref InventoryItem r, bool isNewItem)
         {
             bool isValid = true;
-            if ((isNewItem && !ItemManager.Instance.ItemExists(r.Id) && r.Id != 0) || !isNewItem)
+            if ((isNewItem && !ItemManager.Instance.ItemExists(r.ID) && r.ID != 0) || !isNewItem)
             {
                 if (string.IsNullOrEmpty(r.Name) || string.IsNullOrEmpty(r.ShortDescription) || string.IsNullOrEmpty(r.LongDescription))
                 {
@@ -1842,84 +1945,9 @@ namespace Kingdoms_of_Etrea.OLC
                 desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
                 isValid = false;
             }
-            if(r.IsCursed && !r.IsMagical)
+            if (r.IsCursed && !r.IsMagical)
             {
                 desc.Send($"If the Ring has the Cursed flag, it should also have the Magical flag{Constants.NewLine}");
-                isValid = false;
-            }
-            return isValid;
-        }
-
-        private static bool ValidateArmourItem(ref Descriptor desc, ref InventoryItem a, bool isNewItem)
-        {
-            bool isValid = true;
-            if((isNewItem && !ItemManager.Instance.ItemExists(a.Id) && a.Id != 0) || !isNewItem)
-            {
-                if(string.IsNullOrEmpty(a.Name) || string.IsNullOrEmpty(a.ShortDescription) || string.IsNullOrEmpty(a.LongDescription))
-                {
-                    desc.Send($"One or more required attributes are missing values{Constants.NewLine}");
-                    isValid = false;
-                }
-            }
-            else
-            {
-                desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
-                isValid = false;
-            }
-            if(a.IsCursed && !a.IsMagical)
-            {
-                desc.Send($"If the armour is cursed, it must also be magical.{Constants.NewLine}");
-                isValid = false;
-            }
-            return isValid;
-        }
-
-        private static bool ValidateWeaponItem(ref Descriptor desc, ref InventoryItem w, bool isNewItem)
-        {
-            bool isValid = true;
-            if((isNewItem && !ItemManager.Instance.ItemExists(w.Id) && w.Id != 0) || !isNewItem)
-            {
-                if (string.IsNullOrEmpty(w.Name) || string.IsNullOrEmpty(w.ShortDescription) || string.IsNullOrEmpty(w.LongDescription))
-                {
-                    desc.Send($"One or more required attributes are missing values{Constants.NewLine}");
-                    isValid = false;
-                }
-                else
-                {
-                    if(w.NumberOfDamageDice == 0 || w.SizeOfDamageDice == 0)
-                    {
-                        desc.Send($"Number and size of damage dice must be greater than 0{Constants.NewLine}");
-                        isValid = false;
-                    }
-                }
-            }
-            else
-            {
-                desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
-                isValid = false;
-            }
-            if(w.IsCursed && !w.IsMagical)
-            {
-                desc.Send($"If the weapon is cursed it must also be magical.{Constants.NewLine}");
-                isValid = false;
-            }
-            return isValid;
-        }
-
-        private static bool ValidateJunkItem(ref Descriptor desc, ref InventoryItem i, bool isNewItem)
-        {
-            bool isValid = true;
-            if((isNewItem && !ItemManager.Instance.ItemExists(i.Id) && i.Id != 0) || !isNewItem)
-            {
-                if(string.IsNullOrEmpty(i.Name) || string.IsNullOrEmpty(i.LongDescription) || string.IsNullOrEmpty(i.ShortDescription))
-                {
-                    desc.Send($"One or more required attributes are missing values{Constants.NewLine}");
-                    isValid = false;
-                }
-            }
-            else
-            {
-                desc.Send($"Item ID was 0 or the Item ID is already in use{Constants.NewLine}");
                 isValid = false;
             }
             return isValid;

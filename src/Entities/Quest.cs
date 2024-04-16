@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Kingdoms_of_Etrea.Entities
+namespace Etrea2.Entities
 {
     [Serializable]
     internal class Quest
@@ -39,6 +39,12 @@ namespace Kingdoms_of_Etrea.Entities
             Monsters = new Dictionary<uint, uint>();
             RewardItems = new List<InventoryItem>();
             IsCompleted = false;
+        }
+
+        internal Quest ShallowCopy()
+        {
+            var q = (Quest)this.MemberwiseClone();
+            return q;
         }
     }
 }

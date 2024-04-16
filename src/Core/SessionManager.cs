@@ -1,30 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Net;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class SessionManager
     {
         private static SessionManager _instance = null;
-        private static readonly object _lockObject = new object();
+        private static readonly object _lock = new object();
+        private Dictionary<Guid, Descriptor> Descriptors;
+        internal List<Descriptor> Connections => Descriptors.Values.ToList();
 
         private SessionManager()
         {
-            Descriptors = new HashSet<Descriptor>();
+            Descriptors = new Dictionary<Guid, Descriptor>();
         }
 
         internal static SessionManager Instance
         {
-            get 
+            get
             {
-                lock(_lockObject)
+                lock ( _lock)
                 {
-                    if(_instance == null)
+                    if ( _instance == null )
                     {
                         _instance = new SessionManager();
                     }
@@ -35,87 +37,100 @@ namespace Kingdoms_of_Etrea.Core
 
         internal List<Descriptor> GetAllPlayers()
         {
-            return Instance.Descriptors.Where(x => x.IsConnected && x.Player != null).ToList();
+            lock (_lock)
+            {
+                return Instance.Descriptors.Values.Where(x => x.IsConnected && x.Player != null).ToList();
+            }
         }
 
         internal Descriptor GetPlayerByGUID(Guid guid)
         {
-            return Instance.Descriptors.Where(x => x.Id == guid).FirstOrDefault();
+            lock (_lock)
+            {
+                return Descriptors.ContainsKey(guid) ? Descriptors[guid] : null;
+            }
         }
 
         internal List<Descriptor> GetDisconnectedSessions()
         {
-            return Instance.Descriptors.Where(x => !x.IsConnected || (x.Player == null && x.State != ConnectionState.CreatingCharacter)).ToList();
+            lock(_lock)
+            {
+                return Instance.Descriptors.Values.Where(x => !x.IsConnected || (x.Player == null && x.State != ConnectionState.CreatingCharacter)).ToList();
+            }
         }
 
-        internal Descriptor GetPlayer(string playerName)
+        internal Descriptor GetPlayer(string name)
         {
-            var result = Instance.Descriptors.Where(x => x.Player != null && Regex.Match(x.Player.Name, playerName, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-            return result;
+            lock (_lock)
+            {
+                return Instance.Descriptors.Values.Where(x => x.Player != null && Regex.IsMatch(x.Player.Name, name, RegexOptions.IgnoreCase)).FirstOrDefault();
+            }
         }
 
-        internal HashSet<Descriptor> Descriptors { get; set; }
-
-        internal async Task NewDescriptorAsync(TcpClient client)
+        internal async Task NewDescriptor(TcpClient client)
         {
             var newDescriptor = new Descriptor(client);
-            Descriptors.Add(newDescriptor);
-            _ = new Connection(newDescriptor);
+            lock(_lock)
+            {
+                Instance.Descriptors.Add(newDescriptor.ID, newDescriptor);
+                _ = new Connection(newDescriptor);
+            }
         }
 
         internal List<Descriptor> GetPlayersInRoom(uint rid)
         {
-            List<Descriptor> result = new List<Descriptor>();
-            lock(_lockObject)
+            lock (_lock)
             {
-                result = Instance.Descriptors.Where(x => x.Player != null && x.Player.CurrentRoom == rid).ToList();
+                return Instance.Descriptors.Values.Where(x => x.Player != null && x.Player.CurrentRoom == rid).ToList();
             }
-            return result;
         }
 
-        internal void Close(Descriptor descriptor)
+        internal void Close(Descriptor desc)
         {
-            EndPoint endpoint = null;
+            EndPoint endPoint = null;
             try
             {
-                endpoint = descriptor.Client.Client.RemoteEndPoint;
-                var charName = descriptor.Player == null ? string.Empty : descriptor.Player.ToString();
-                if (descriptor.Player != null)
+                endPoint = desc.Client.Client.RemoteEndPoint;
+                var charName = desc.Player == null ? string.Empty : desc.Player.Name;
+                if (desc.Player != null)
                 {
-                    if(descriptor.Player.FollowerID != Guid.Empty)
+                    if (desc.Player.FollowerID != Guid.Empty)
                     {
-                        NPCManager.Instance.SetNPCFollowing(ref descriptor, false);
+                        NPCManager.Instance.SetNPCFollowing(ref desc, false);
                     }
-                    if(DatabaseManager.SavePlayerNew(ref descriptor, false))
+                    if (DatabaseManager.SavePlayer(ref desc, false))
                     {
-                        Game.LogMessage($"INFO: Player {descriptor.Player.Name} at {descriptor.Client.Client.RemoteEndPoint} saved on disconnection", LogLevel.Info, true);
+                        Game.LogMessage($"INFO: Player {desc.Player.Name} at {desc.Client.Client.RemoteEndPoint} saved on disconnection", LogLevel.Info, true);
                     }
                     else
                     {
-                        Game.LogMessage($"ERROR: Player at {descriptor.Player.Name} at {descriptor.Client.Client.RemoteEndPoint} failed to save on disconnection. Player data may be out of date on reload", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Player {desc.Player.Name} at {desc.Client.Client.RemoteEndPoint} failed to save on disconnect, player data may be out of date on reload", LogLevel.Error, true);
                     }
                 }
-                descriptor.Client.Close();
-                Descriptors.Remove(descriptor);
-                descriptor = null;
-                string logMsg = string.IsNullOrEmpty(charName) ? $"INFO: Connection from {endpoint} closed, no player was associated with the connection"
-                    : $"INFO: Connection from {endpoint} closed, player {charName} has left the game";
+                desc.Client.Close();
+                lock (_lock)
+                {
+                    Instance.Descriptors.Remove(desc.ID);
+                }
+                desc = null;
+                string logMsg = string.IsNullOrEmpty(charName) ? $"CONNECTION: Connection from {endPoint} closed, no player associated with the connection"
+                    : $"CONNECTION: Connection from {endPoint} closed, player {charName} has left the game";
                 Game.LogMessage(logMsg, LogLevel.Connection, true);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Could not close connection from {endpoint}", LogLevel.Connection, true);
-                Game.LogMessage($"ERROR: Exception at SessionManger.Close(): {ex.Message}", LogLevel.Connection, true);
+                Game.LogMessage($"ERROR: Exception at SessionManager.Close() processing disconnection of {endPoint}: {ex.Message}", LogLevel.Error , true);
             }
         }
 
-        internal void SendToAllClients(string message)
+        internal void SendToAllClients(string msg)
         {
-            foreach (var client in from client in Descriptors
-                                   where client.IsConnected && client.Player != null
-                                   select client)
+            lock(_lock)
             {
-                client.Send(message);
+                foreach(var client in from client in Instance.Descriptors.Values where client.IsConnected && client.Player != null select client)
+                {
+                    client.Send(msg);
+                }
             }
         }
     }

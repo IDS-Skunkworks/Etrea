@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Kingdoms of Etrea")]
+[assembly: AssemblyTitle("Kingdoms of Etrea 2")]
 [assembly: AssemblyDescription("Kingdoms of Etrea MUD")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("AndiNet Software")]
-[assembly: AssemblyProduct("Kingdoms of Etrea")]
-[assembly: AssemblyCopyright("Copyright ©  2022")]
+[assembly: AssemblyProduct("Etrea2")]
+[assembly: AssemblyCopyright("Copyright © AndiNet Software 2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("65402e18-46cd-4444-9059-abae6d9f9561")]
+[assembly: Guid("f14ed9dc-1568-402e-b6d4-c42a783c0a4e")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]

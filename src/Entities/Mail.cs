@@ -1,11 +1,11 @@
-﻿using Kingdoms_of_Etrea.Core;
+﻿using Etrea2.Core;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Entities
+namespace Etrea2.Entities
 {
     [Serializable]
     internal class Mail
@@ -39,13 +39,13 @@ namespace Kingdoms_of_Etrea.Entities
                 mail.MailFrom = desc.Player.Name;
                 mail.MailRead = false;
                 bool valid = false;
-                while(!valid)
+                while (!valid)
                 {
                     desc.Send($"Send to (END to abort): ");
                     var to = desc.Read().Trim();
-                    if(Helpers.ValidateInput(to) && DatabaseManager.CharacterExistsInDatabase(to))
+                    if (Helpers.ValidateInput(to) && DatabaseManager.CharacterExistsInDatabase(to))
                     {
-                        if(to.ToUpper() == "END")
+                        if (to.ToUpper() == "END")
                         {
                             return null;
                         }
@@ -58,13 +58,13 @@ namespace Kingdoms_of_Etrea.Entities
                     }
                 }
                 valid = false;
-                while(!valid)
+                while (!valid)
                 {
                     desc.Send("Subject (END to abort): ");
                     var subj = desc.Read().Trim();
-                    if(Helpers.ValidateInput(subj))
+                    if (Helpers.ValidateInput(subj))
                     {
-                        if(subj.ToUpper() == "END")
+                        if (subj.ToUpper() == "END")
                         {
                             return null;
                         }
@@ -74,23 +74,23 @@ namespace Kingdoms_of_Etrea.Entities
                 }
                 mail.MailBody = Helpers.GetMailBody(ref desc);
                 valid = false;
-                while(!valid)
+                while (!valid)
                 {
                     desc.Send($"Amount of gold to send: ");
                     var gp = desc.Read().Trim();
-                    if(Helpers.ValidateInput(gp) && uint.TryParse(gp, out uint _sendGP))
+                    if (Helpers.ValidateInput(gp) && uint.TryParse(gp, out uint _sendGP))
                     {
                         // if we don't have the amount of gold we're trying to send + 5 gold for the cost of sending, we can't do it
                         // we can send with 0 gold attached as long as we have the 5 gold to cover the sending cost
-                        if(_sendGP > 0 && _sendGP + 5 <= desc.Player.Stats.Gold)
+                        if (_sendGP > 0 && _sendGP + 5 <= desc.Player.Gold)
                         {
                             mail.AttachedGold = _sendGP;
-                            desc.Player.Stats.Gold -= _sendGP;
+                            desc.Player.Gold -= _sendGP;
                             valid = true;
                         }
                         else
                         {
-                            if(_sendGP > 0)
+                            if (_sendGP > 0)
                             {
                                 desc.Send($"You cannot affort to send that much gold!{Constants.NewLine}");
                             }
@@ -106,26 +106,26 @@ namespace Kingdoms_of_Etrea.Entities
                     }
                 }
                 valid = false;
-                while(!valid)
+                while (!valid)
                 {
                     desc.Send($"Attach Item (END to skip): ");
                     var itemName = desc.Read().Trim();
-                    if(Helpers.ValidateInput(itemName))
+                    if (Helpers.ValidateInput(itemName))
                     {
-                        if(itemName.ToUpper() == "END")
+                        if (itemName.ToUpper() == "END")
                         {
                             valid = true;
                         }
                         else
                         {
                             var i = desc.Player.Inventory.Where(x => Regex.Match(x.Name, itemName, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                            if(i != null)
+                            if (i != null)
                             {
                                 desc.Send($"Attach '{i.Name}' to the mail?{Constants.NewLine}");
                                 var conf = desc.Read().Trim();
-                                if(Helpers.ValidateInput(conf))
+                                if (Helpers.ValidateInput(conf))
                                 {
-                                    if(conf.ToUpper() == "Y" || conf.ToUpper() == "YES")
+                                    if (conf.ToUpper() == "Y" || conf.ToUpper() == "YES")
                                     {
                                         mail.AttachedItems.Add(i);
                                         desc.Player.Inventory.Remove(i);
@@ -137,7 +137,7 @@ namespace Kingdoms_of_Etrea.Entities
                 }
                 return mail;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Game.LogMessage($"ERROR: Player {desc.Player} encountered an error composing a mail: {ex.Message}", LogLevel.Error, true);
                 return null;

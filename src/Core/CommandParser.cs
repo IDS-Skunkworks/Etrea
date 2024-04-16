@@ -1,18 +1,18 @@
-﻿using System;
+﻿using Etrea2.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Kingdoms_of_Etrea.Entities;
-using static Kingdoms_of_Etrea.OLC.OLC;
+using static Etrea2.OLC.OLC;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal static partial class CommandParser
     {
         internal static void ParseCommand(ref Descriptor desc, string input)
         {
-            switch(GetVerb(ref input).ToLower())
+            switch (GetVerb(ref input).ToLower())
             {
                 #region MiscCommands
                 case "exorcise":
@@ -114,11 +114,11 @@ namespace Kingdoms_of_Etrea.Core
                     break;
 
                 case "save":
-                    desc.Send($"Saving your character...{DatabaseManager.SavePlayerNew(ref desc, false)}{Constants.NewLine}");
+                    desc.Send($"Saving your character...{DatabaseManager.SavePlayer(ref desc, false)}{Constants.NewLine}");
                     break;
 
                 case "quit":
-                    DatabaseManager.SavePlayerNew(ref desc, false);
+                    DatabaseManager.SavePlayer(ref desc, false);
                     desc.Send($"Goodbye, we hope to see you again soon!{Constants.NewLine}");
                     RoomManager.Instance.UpdatePlayersInRoom(desc.Player.CurrentRoom, ref desc, true, false, true, false);
                     SessionManager.Instance.Close(desc);
@@ -339,6 +339,14 @@ namespace Kingdoms_of_Etrea.Core
 
                 // IMM only commands
                 #region ImmOnlyCommands
+                case "shopstats":
+                    ShowShopStats(ref desc, ref input);
+                    break;
+
+                case "pulseshop":
+                    PulseShop(ref desc, ref input);
+                    break;
+
                 case "motd":
                     MOTD(ref desc, ref input);
                     break;
@@ -394,6 +402,11 @@ namespace Kingdoms_of_Etrea.Core
 
                 case "uptime":
                     ShowUptimeInfo(ref desc);
+                    break;
+
+                case "rss":
+                case "resourceusage":
+                    ShowMudResourceUsage(ref desc);
                     break;
 
                 case "imminv":
@@ -485,10 +498,10 @@ namespace Kingdoms_of_Etrea.Core
                     break;
 
                 default:
-                    if(input.Length > 1)
+                    if (input.Length > 1)
                     {
                         var verb = GetVerb(ref input);
-                        if(desc.Player.CommandAliases.ContainsKey(verb))
+                        if (desc.Player.CommandAliases.ContainsKey(verb))
                         {
                             var command = desc.Player.CommandAliases[verb];
                             var line = input.Remove(0, verb.Length).Trim();
@@ -554,9 +567,14 @@ namespace Kingdoms_of_Etrea.Core
         private static string GetSkillOrSpellName(ref string input)
         {
             Regex rx = new Regex("\"(.*?)\"");
-            if(rx.Match(input).Success)
+            Regex rx2 = new Regex("'(.*?)'");
+            if (rx.Match(input).Success)
             {
                 return rx.Match(input).Groups[1].Value.Trim();
+            }
+            if (rx2.Match(input).Success)
+            {
+                return rx2.Match(input).Groups[1].Value.Trim();
             }
             return string.Empty;
         }
@@ -593,7 +611,7 @@ namespace Kingdoms_of_Etrea.Core
                     return RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Game.LogMessage($"ERROR: Player {desc.Player} encountered an error in CommandParser.GetTargetNPC(): {ex.Message}", LogLevel.Error, true);
             }
@@ -631,18 +649,18 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 else
                 {
-                    if(fromVault)
+                    if (fromVault)
                     {
-                        if(!string.IsNullOrEmpty(targetNo))
+                        if (!string.IsNullOrEmpty(targetNo))
                         {
-                            if(int.TryParse(targetNo, out int index))
+                            if (int.TryParse(targetNo, out int index))
                             {
                                 target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
                                 target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
                                 var vaultItems = desc.Player.VaultStore.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
-                                if(index >= 0)
+                                if (index >= 0)
                                 {
-                                    if(vaultItems.Count >= 0 && vaultItems.Count >= index)
+                                    if (vaultItems.Count >= 0 && vaultItems.Count >= index)
                                     {
                                         return vaultItems[index];
                                     }
@@ -681,7 +699,7 @@ namespace Kingdoms_of_Etrea.Core
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Game.LogMessage($"ERROR: Player {desc.Player} encountered an error in CommandParser.GetTargetItem(): {ex.Message}", LogLevel.Error, true);
             }

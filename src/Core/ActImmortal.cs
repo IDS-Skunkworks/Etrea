@@ -1,17 +1,104 @@
 ﻿using System;
 using System.Linq;
-using System.Text;
+using System.Diagnostics;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
-using Kingdoms_of_Etrea.Entities;
+using Etrea2.Entities;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal static partial class CommandParser
     {
+        private static void PulseShop(ref Descriptor desc, ref string input)
+        {
+            if (desc.Player.Level >= Constants.ImmLevel)
+            {
+                var verb = GetVerb(ref input);
+                var shopID = input.Remove(0, verb.Length).Trim();
+                if (uint.TryParse(shopID, out uint sid))
+                {
+                    var s = ShopManager.Instance.GetShop(sid);
+                    if (s != null)
+                    {
+                        s.RestockShop();
+                        desc.Send($"Shop restock process complete{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        desc.Send($"No Shop with that ID could be found{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"That doesn't seem like a valid Shop ID!{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
+            }
+        }
+
+        private static void ShowShopStats(ref Descriptor desc, ref string input)
+        {
+            if (desc.Player.Level >= Constants.ImmLevel)
+            {
+                var verb = GetVerb(ref input);
+                var shop = input.Remove(0, verb.Length).Trim();
+                if (uint.TryParse(shop, out uint shopID))
+                {
+                    var s = ShopManager.Instance.GetShop(shopID);
+                    if (s != null)
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.AppendLine($"  {new string('=', 77)}");
+                        sb.AppendLine($"|| Name: {s.ShopName}");
+                        sb.AppendLine($"|| Gold: {s.CurrentGold}");
+                        sb.AppendLine($"|| Inventory:");
+                        foreach(var i in s.InventoryItems)
+                        {
+                            sb.AppendLine($"|| {i.Value} x {ItemManager.Instance.GetItemByID(i.Key).Name}");
+                        }
+                        sb.AppendLine($"  {new string('=', 77)}");
+                        desc.Send(sb.ToString());
+                    }
+                    else
+                    {
+                        desc.Send($"No matching Shop could be found...{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"That isn't a valid Shop ID!{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
+            }
+        }
+
+        private static void ShowMudResourceUsage(ref Descriptor desc)
+        {
+            if (desc.Player.Level < Constants.ImmLevel)
+            {
+                desc.Send($"Only the Gods can do that...{Constants.NewLine}");
+                Game.LogMessage($"WARN: Player {desc.Player.Name} attempted to query MUD resource usage", LogLevel.Warning, true);
+                return;
+            }
+            else
+            {
+                using (Process p = Process.GetCurrentProcess())
+                {
+                    desc.Send($"Current RAM Usage: {p.WorkingSet64 / 1024:N0} KB; CPU Time: {p.TotalProcessorTime.TotalSeconds:N0} seconds");
+                }
+            }
+        }
+
         private static void MOTD(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level < Constants.ImmLevel)
+            if (desc.Player.Level < Constants.ImmLevel)
             {
                 var motd = DatabaseManager.GetMOTD();
                 if (!string.IsNullOrEmpty(motd))
@@ -118,13 +205,13 @@ namespace Kingdoms_of_Etrea.Core
             var verb = GetVerb(ref input);
             var line = input.Remove(0, verb.Length).Trim();
             var tokens = TokeniseInput(ref line);
-            if(tokens.Length == 2)
+            if (tokens.Length == 2)
             {
                 var playerName = tokens[0];
                 var langName = tokens[1];
-                if(Enum.TryParse<Languages>(langName, true, out Languages lang))
+                if (Enum.TryParse<Languages>(langName, true, out Languages lang))
                 {
-                    if(lang != Languages.Common)
+                    if (lang != Languages.Common)
                     {
                         var p = SessionManager.Instance.GetPlayer(playerName);
                         if (p != null)
@@ -199,22 +286,22 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void AddRecipeToPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 var lineElements = TokeniseInput(ref line);
-                if(lineElements.Length >= 2)
+                if (lineElements.Length >= 2)
                 {
                     var tp = SessionManager.Instance.GetPlayer(lineElements[0].Trim());
-                    if(tp != null)
+                    if (tp != null)
                     {
                         var recipeName = line.Replace(lineElements[0], string.Empty).Trim();
-                        if(RecipeManager.Instance.GetRecipe(recipeName) != null)
+                        if (RecipeManager.Instance.GetRecipe(recipeName) != null)
                         {
                             if (!tp.Player.KnowsRecipe(recipeName))
                             {
                                 var r = RecipeManager.Instance.GetRecipe(recipeName);
-                                tp.Player.KnownRecipes.Add(r);
+                                tp.Player.Recipes.Add(r);
                                 tp.Send($"{desc.Player} has granted you knowledge of crafting {r.RecipeName}!{Constants.NewLine}");
                             }
                             else
@@ -245,7 +332,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void RemoveRecipeFromPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 var lineElements = TokeniseInput(ref line);
@@ -253,15 +340,15 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     var tpName = lineElements[0].Trim();
                     var tp = SessionManager.Instance.GetPlayer(tpName);
-                    if(tp != null)
+                    if (tp != null)
                     {
                         var recipeName = line.Replace(tpName, string.Empty).Trim();
                         var r = RecipeManager.Instance.GetRecipe(recipeName);
-                        if(r != null)
+                        if (r != null)
                         {
-                            if(tp.Player.KnowsRecipe(recipeName))
+                            if (tp.Player.KnowsRecipe(recipeName))
                             {
-                                SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.KnownRecipes.Remove(r);
+                                SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.Recipes.Remove(r);
                                 tp.Send($"{desc.Player} has removed your knowledge of crafting {r.RecipeName}!{Constants.NewLine}");
                             }
                             else
@@ -292,11 +379,11 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void AddResouceNodeToRoom(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode == null)
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode == null)
                 {
-                    var n = NodeManager.Instance.GetNode(Helpers.RollDice(1,100));
+                    var n = NodeManager.Instance.GetNode(Helpers.RollDice(1, 100));
                     RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode = n;
                     desc.Send($"Calling on the Winds of Magic you create a {n.NodeName} node for mining!{Constants.NewLine}");
                     Game.LogMessage($"INFO: Player {desc.Player} created a {n.NodeName} node (Depth: {n.NodeDepth}) in Room {desc.Player.CurrentRoom}", LogLevel.Info, true);
@@ -314,7 +401,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ClearCharacterDescription(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var target = TokeniseInput(ref input).Last().Trim();
                 var p = SessionManager.Instance.GetPlayer(target);
@@ -323,6 +410,7 @@ namespace Kingdoms_of_Etrea.Core
                     p.Player.LongDescription = string.Empty;
                     p.Send($"{desc.Player.Name} has wiped your character's long description!{Constants.NewLine}");
                     desc.Send($"You have wiped {p.Player.Name}'s long description!{Constants.NewLine}");
+                    Game.LogMessage($"INFO: {desc.Player.Name} has wiped the long description of player {p.Player.Name}", LogLevel.Info, true);
                 }
                 else
                 {
@@ -341,15 +429,15 @@ namespace Kingdoms_of_Etrea.Core
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"  {new string('=', 77)}");
-                var npcsInGame = NPCManager.Instance.GetAllNPCIDS().Values;
+                var npcsInGame = NPCManager.Instance.GetAllNPCInstances().Values;
                 if (npcsInGame != null && npcsInGame.Count > 0)
                 {
                     foreach (var n in npcsInGame.Select(x => new { x.NPCID, x.Name }).Distinct().OrderBy(x => x.Name))
                     {
                         var npcLocations = npcsInGame.Where(x => x.NPCID == n.NPCID).Select(x => x.CurrentRoom).Distinct().OrderBy(x => x).ToList();
-                        if(npcLocations.Count > 1)
+                        if (npcLocations.Count > 1)
                         {
-                            foreach(var loc in npcLocations)
+                            foreach (var loc in npcLocations)
                             {
                                 var cnt = npcsInGame.Where(x => x.NPCID == n.NPCID && x.CurrentRoom == loc).Count();
                                 sb.AppendLine($"|| {cnt} x {n.Name} (ID: {n.NPCID}) in Room {loc}");
@@ -380,20 +468,20 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void TransferPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var elements = TokeniseInput(ref input);
-                if(elements.Length < 2)
+                if (elements.Length < 2)
                 {
                     desc.Send($"Usage: transport <target> <rid>{Constants.NewLine}");
                     return;
                 }
                 var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if(target != null)
+                if (target != null)
                 {
                     if (uint.TryParse(elements[2].Trim(), out uint tRid))
                     {
-                        if(RoomManager.Instance.RoomExists(tRid))
+                        if (RoomManager.Instance.RoomExists(tRid))
                         {
                             var tCurrentRID = target.Player.CurrentRoom;
                             target.Send($"{desc.Player.Name} has transported you elsewhere!{Constants.NewLine}");
@@ -419,15 +507,15 @@ namespace Kingdoms_of_Etrea.Core
             else
             {
                 desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }    
+            }
         }
 
         private static void AddSkillToPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var elements = TokeniseInput(ref input);
-                if(elements.Length < 2)
+                if (elements.Length < 2)
                 {
                     desc.Send($"Usage: addskill <target> <skill name>{Constants.NewLine}");
                     return;
@@ -435,14 +523,14 @@ namespace Kingdoms_of_Etrea.Core
                 var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
                 if (target != null)
                 {
-                    if(target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
+                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
                     {
                         desc.Send($"You cannot set the skills of a higher level character!{Constants.NewLine}");
                     }
                     else
                     {
                         var skill = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if (Skills.SkillExists(skill))
+                        if (SkillManager.Instance.SkillExists(skill))
                         {
                             if (!target.Player.HasSkill(skill))
                             {
@@ -475,7 +563,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void RemoveSkillFromPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var elements = TokeniseInput(ref input);
                 if (elements.Length < 2)
@@ -486,14 +574,14 @@ namespace Kingdoms_of_Etrea.Core
                 var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
                 if (target != null)
                 {
-                    if(target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
+                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
                     {
                         desc.Send($"You cannot set the skills of a higher level character!{Constants.NewLine}");
                     }
                     else
                     {
                         var skill = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if (Skills.SkillExists(skill))
+                        if (SkillManager.Instance.SkillExists(skill))
                         {
                             if (target.Player.HasSkill(skill))
                             {
@@ -511,7 +599,7 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             desc.Send($"That skill does not exist!{Constants.NewLine}");
                         }
-                    }    
+                    }
                 }
                 else
                 {
@@ -526,10 +614,10 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void AddSpellToPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var elements = TokeniseInput(ref input);
-                if(elements.Length < 2)
+                if (elements.Length < 2)
                 {
                     desc.Send($"Usage: addspell <target> <spellname>{Constants.NewLine}");
                     return;
@@ -537,16 +625,16 @@ namespace Kingdoms_of_Etrea.Core
                 var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
                 if (target != null)
                 {
-                    if(target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
+                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
                     {
                         desc.Send($"You cannot set the spells of a higher level character!{Constants.NewLine}");
                     }
                     else
                     {
                         var spell = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if(Spells.SpellExists(spell))
+                        if (SpellManager.Instance.SpellExists(spell))
                         {
-                            if(!target.Player.HasSpell(spell))
+                            if (!target.Player.HasSpell(spell))
                             {
                                 target.Player.AddSpell(spell);
                                 desc.Send($"You have granted knowledge of the spell {spell} to {target.Player.Name}{Constants.NewLine}");
@@ -580,7 +668,7 @@ namespace Kingdoms_of_Etrea.Core
             if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var elements = TokeniseInput(ref input);
-                if(elements.Length < 2)
+                if (elements.Length < 2)
                 {
                     desc.Send($"Usage: removespell <target> <spellname>{Constants.NewLine}");
                     return;
@@ -588,22 +676,22 @@ namespace Kingdoms_of_Etrea.Core
                 var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
                 if (target != null)
                 {
-                    if(target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
+                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
                     {
                         desc.Send($"You cannot set the spells of a higher level character!{Constants.NewLine}");
                     }
                     else
                     {
                         var spell = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if(Spells.SpellExists(spell))
+                        if (SpellManager.Instance.SpellExists(spell))
                         {
-                            if(target.Player.HasSpell(spell))
+                            if (target.Player.HasSpell(spell))
                             {
                                 target.Player.RemoveSpell(spell);
                                 desc.Send($"You have removed {target.Player.Name}'s knowledge of the spell {spell}!{Constants.NewLine}");
                                 target.Send($"{desc.Player.Name} has removed your knowledge of the spell {spell}!{Constants.NewLine}");
                                 Game.LogMessage($"INFO: {desc.Player.Name} has removed the spell '{spell}' from player {target.Player.Name}", LogLevel.Info, true);
-                            }   
+                            }
                             else
                             {
                                 desc.Send($"{target.Player.Name} does not know that spell!{Constants.NewLine}");
@@ -628,18 +716,18 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void GetCurrentConnections(ref Descriptor desc)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"  {new string('=', 77)}");
                 int i = 0;
-                foreach(var con in SessionManager.Instance.Descriptors)
+                foreach (var con in SessionManager.Instance.Connections)
                 {
                     sb.AppendLine($"|| Endpoint: {con.Client.Client.RemoteEndPoint}");
                     sb.AppendLine($"|| Connect Time: {con.ConnectionTime} UTC");
                     sb.AppendLine($"|| Player: {(con.Player == null ? "No Player" : con.Player.Name)}");
                     i++;
-                    if(i < SessionManager.Instance.Descriptors.Count)
+                    if (i < SessionManager.Instance.Connections.Count)
                     {
                         sb.AppendLine($"||{new string('=', 77)}");
                     }
@@ -657,7 +745,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ShowLastBackup(ref Descriptor desc)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 if (Game.GetBackupInfo(out DateTime bkTime, out uint bkTick))
                 {
@@ -683,18 +771,18 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DoImmInv(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 // imminv <npc | player> <target>
                 //var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 var elements = TokeniseInput(ref input);
-                if(elements.Length < 3)
+                if (elements.Length < 3)
                 {
                     desc.Send($"Usage: imminv <npc | player> <target>{Constants.NewLine}");
                     return;
                 }
                 var target = elements.Last().Trim();
-                if(!string.IsNullOrEmpty(target))
+                if (!string.IsNullOrEmpty(target))
                 {
                     if (elements[1].ToLower() == "npc")
                     {
@@ -706,10 +794,10 @@ namespace Kingdoms_of_Etrea.Core
                             if (objNpc.Inventory != null && objNpc.Inventory.Count > 0)
                             {
                                 sb.AppendLine($"|| {objNpc.Name} is carrying:");
-                                foreach (var i in objNpc.Inventory.Select(x => new { x.Id, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
+                                foreach (var i in objNpc.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
                                 {
-                                    var cnt = objNpc.Inventory.Where(y => y.Id == i.Id).Count();
-                                    sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription} ({i.Id})");
+                                    var cnt = objNpc.Inventory.Where(y => y.ID == i.ID).Count();
+                                    sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription} ({i.ID})");
                                 }
                                 sb.AppendLine($"  {new string('=', 77)}");
                                 desc.Send(sb.ToString());
@@ -734,10 +822,10 @@ namespace Kingdoms_of_Etrea.Core
                             if (objTgt.Player.Inventory != null && objTgt.Player.Inventory.Count > 0)
                             {
                                 sb.AppendLine($"|| {objTgt.Player.Name} is carrying:");
-                                foreach (var i in objTgt.Player.Inventory.Select(x => new { x.Id, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
+                                foreach (var i in objTgt.Player.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
                                 {
-                                    var cnt = objTgt.Player.Inventory.Where(y => y.Id == i.Id).Count();
-                                    sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription} ({i.Id})");
+                                    var cnt = objTgt.Player.Inventory.Where(y => y.ID == i.ID).Count();
+                                    sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription} ({i.ID})");
                                 }
                                 sb.AppendLine($"  {new string('=', 77)}");
                                 desc.Send(sb.ToString());
@@ -782,7 +870,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DoWhereCheck(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 // usage: where <item | npc | node> <search string>
                 var elements = TokeniseInput(ref input);
@@ -794,7 +882,7 @@ namespace Kingdoms_of_Etrea.Core
                 if (elements[1].ToLower() == "npc")
                 {
                     var target = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
-                    var result = NPCManager.Instance.GetAllNPCIDS().Values.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
+                    var result = NPCManager.Instance.GetAllNPCInstances().Values.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
                     if (result != null && result.Count > 0)
                     {
                         StringBuilder sb = new StringBuilder();
@@ -826,7 +914,7 @@ namespace Kingdoms_of_Etrea.Core
                                                select i
                                            select (r, i))
                     {
-                        sb.AppendLine($"|| {i.Id} - {i.Name} in room {r.RoomID}");
+                        sb.AppendLine($"|| {i.ID} - {i.Name} in room {r.RoomID}");
                         matchingItems++;
                     }
 
@@ -845,11 +933,11 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     var target = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
                     var result = RoomManager.Instance.GetAllRooms().Values.Where(x => x.ResourceNode != null && Regex.Match(x.ResourceNode.NodeName, target, RegexOptions.IgnoreCase).Success).ToList();
-                    if(result != null && result.Count > 0)
+                    if (result != null && result.Count > 0)
                     {
                         StringBuilder sb = new StringBuilder();
                         sb.AppendLine($"  {new string('=', 77)}");
-                        foreach(var r in result)
+                        foreach (var r in result)
                         {
                             sb.AppendLine($"|| {r.ResourceNode.NodeName} in Room {r.RoomID}");
                         }
@@ -873,7 +961,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ImmSight(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var verb = GetVerb(ref input);
                 var target = input.Remove(0, verb.Length).Trim();
@@ -885,15 +973,15 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         sb.AppendLine($"  {new string('=', 77)}");
                         sb.AppendLine($"|| Name: {p.Player.Name}{Constants.TabStop}{Constants.TabStop}Gender: {p.Player.Gender}{Constants.TabStop}Class: {p.Player.Class}{Constants.TabStop}Race: {p.Player.Race}");
-                        sb.AppendLine($"|| Level: {p.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {p.Player.Stats.Exp}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(p.Player.Level, p.Player.Stats.Exp)}");
-                        sb.AppendLine($"|| Alignment: {p.Player.Alignment}({p.Player.AlignmentScale}){Constants.TabStop}Gold: {p.Player.Stats.Gold}");
+                        sb.AppendLine($"|| Level: {p.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {p.Player.Exp}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(p.Player.Level, p.Player.Exp)}");
+                        sb.AppendLine($"|| Alignment: {p.Player.Alignment}({p.Player.AlignmentScale}){Constants.TabStop}Gold: {p.Player.Gold}");
                         sb.AppendLine($"||");
                         sb.AppendLine($"|| Stats:");
-                        sb.AppendLine($"|| STR: {p.Player.Stats.Strength} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {p.Player.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {p.Player.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Constitution)})");
-                        sb.AppendLine($"|| INT: {p.Player.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {p.Player.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {p.Player.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(p.Player.Stats.Charisma)})");
-                        sb.AppendLine($"|| Current HP: {p.Player.Stats.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {p.Player.Stats.MaxHP}");
-                        sb.AppendLine($"|| Current MP: {p.Player.Stats.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {p.Player.Stats.MaxMP}");
-                        sb.AppendLine($"|| Armour Class: {p.Player.Stats.ArmourClass}{Constants.TabStop}No. Of Attacks: {p.Player.NumberOfAttacks}");
+                        sb.AppendLine($"|| STR: {p.Player.Strength} ({Helpers.CalculateAbilityModifier(p.Player.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {p.Player.Dexterity} ({Helpers.CalculateAbilityModifier(p.Player.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {p.Player.Constitution} ({Helpers.CalculateAbilityModifier(p.Player.Constitution)})");
+                        sb.AppendLine($"|| INT: {p.Player.Intelligence} ({Helpers.CalculateAbilityModifier(p.Player.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {p.Player.Wisdom} ({Helpers.CalculateAbilityModifier(p.Player.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {p.Player.Charisma} ({Helpers.CalculateAbilityModifier(p.Player.Charisma)})");
+                        sb.AppendLine($"|| Current HP: {p.Player.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {p.Player.MaxHP}");
+                        sb.AppendLine($"|| Current MP: {p.Player.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {p.Player.MaxMP}");
+                        sb.AppendLine($"|| Armour Class: {p.Player.ArmourClass}{Constants.TabStop}No. Of Attacks: {p.Player.NumberOfAttacks}");
                         sb.AppendLine($"  {new string('=', 77)}");
                         desc.Send(sb.ToString());
                     }
@@ -908,12 +996,12 @@ namespace Kingdoms_of_Etrea.Core
                             sb.AppendLine($"|| Template: {n.NPCID}");
                             sb.AppendLine($"||");
                             sb.AppendLine($"|| Stats:");
-                            sb.AppendLine($"|| STR: {n.Stats.Strength} ({ActorStats.CalculateAbilityModifier(n.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {n.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(n.Stats.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {n.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(n.Stats.Constitution)})");
-                            sb.AppendLine($"|| INT: {n.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(n.Stats.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {n.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(n.Stats.Wisdom)}){Constants.TabStop}{Constants.TabStop}CHA: {n.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(n.Stats.Charisma)})");
-                            sb.AppendLine($"|| Hit Dice: {n.NumberOfHitDice}d{n.SizeOfHitDice}");
-                            sb.AppendLine($"|| Current HP: {n.Stats.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {n.Stats.MaxHP}");
-                            sb.AppendLine($"|| Current MP: {n.Stats.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {n.Stats.MaxMP}");
-                            sb.AppendLine($"|| Armour Class: {n.Stats.ArmourClass}{Constants.TabStop}Exp: {n.BaseExpAward}{Constants.TabStop}Gold: {n.Stats.Gold}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
+                            sb.AppendLine($"|| STR: {n.Strength} ({Helpers.CalculateAbilityModifier(n.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {n.Dexterity} ({Helpers.CalculateAbilityModifier(n.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {n.Constitution} ({Helpers.CalculateAbilityModifier(n.Constitution)})");
+                            sb.AppendLine($"|| INT: {n.Intelligence} ({Helpers.CalculateAbilityModifier(n.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {n.Wisdom} ({Helpers.CalculateAbilityModifier(n.Wisdom)}){Constants.TabStop}{Constants.TabStop}CHA: {n.Charisma} ({Helpers.CalculateAbilityModifier(n.Charisma)})");
+                            sb.AppendLine($"|| Hit Dice: {n.NumberOfHitDice}d{n.HitDieSize}");
+                            sb.AppendLine($"|| Current HP: {n.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {n.MaxHP}");
+                            sb.AppendLine($"|| Current MP: {n.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {n.MaxMP}");
+                            sb.AppendLine($"|| Armour Class: {n.ArmourClass}{Constants.TabStop}Exp: {n.BaseExpAward}{Constants.TabStop}Gold: {n.Gold}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
                             sb.AppendLine($"  {new string('=', 77)}");
                             desc.Send(sb.ToString());
                         }
@@ -936,7 +1024,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void GetObjectList(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 // list <item | room | zone | npc | skills | spells | node | recipe | quest> <id | string>
                 string v = GetVerb(ref input);
@@ -953,13 +1041,53 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             case "quest":
                                 var q = QuestManager.Instance.GetQuest(targetID);
-                                if(q != null)
+                                if (q != null)
                                 {
                                     sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var p in q.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                                    sb.AppendLine($"|| GUID: {q.QuestGUID}");
+                                    sb.AppendLine($"|| ID: {q.QuestID}");
+                                    sb.AppendLine($"|| Name: {q.QuestName}");
+                                    sb.AppendLine($"|| Quest Text:");
+                                    foreach(var l in q.QuestText.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
                                     {
-                                        sb.AppendLine($"|| {p.Name}: {p.GetValue(q, null)}");
+                                        sb.AppendLine($"|| {Constants.TabStop}{l.Trim()}");
                                     }
+                                    sb.AppendLine($"|| Zone: {q.QuestZone}");
+                                    sb.AppendLine($"|| Type: {q.QuestType}");
+                                    if (q.FetchItems != null && q.FetchItems.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Required Items:");
+                                        foreach (var qi in q.FetchItems)
+                                        {
+                                            var fi = ItemManager.Instance.GetItemByID(qi.Key);
+                                            if (fi != null)
+                                            {
+                                                sb.AppendLine($"||{Constants.TabStop}{qi.Value} x {fi.Name}");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Required Items: None");
+                                    }
+                                    if (q.Monsters != null && q.Monsters.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Monsters:");
+                                        foreach (var m in q.Monsters)
+                                        {
+                                            var qm = NPCManager.Instance.GetNPCByID(m.Key);
+                                            if (qm != null)
+                                            {
+                                                sb.AppendLine($"||{Constants.TabStop}{m.Value} x {qm.Name}");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Monsters: None");
+                                    }
+                                    sb.AppendLine($"|| Reward Gold: {q.RewardGold}");
+                                    sb.AppendLine($"|| Reward Exp: {q.RewardExp}");
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     desc.Send(sb.ToString());
                                 }
@@ -974,10 +1102,35 @@ namespace Kingdoms_of_Etrea.Core
                                 if (i != null)
                                 {
                                     sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var p in i.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                                    sb.AppendLine($"|| ID: {i.ID}");
+                                    sb.AppendLine($"|| Name: {i.Name}");
+                                    sb.AppendLine($"|| Item Type: {i.ItemType}");
+                                    sb.AppendLine($"|| Short Description: {i.ShortDescription}");
+                                    sb.AppendLine($"|| Long Description:");
+                                    foreach(var l in i.LongDescription.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
                                     {
-                                        sb.AppendLine($"|| {p.Name}: {p.GetValue(i, null)}");
+                                        sb.AppendLine($"|| {Constants.TabStop}{l}");
                                     }
+                                    sb.AppendLine($"|| Base Value: {i.BaseValue}");
+                                    sb.AppendLine($"|| Item Slot: {i.Slot}");
+                                    sb.AppendLine($"|| No. of Damage Dice: {i.NumberOfDamageDice}");
+                                    sb.AppendLine($"|| Size of Damage Dice: {i.SizeOfDamageDice}");
+                                    sb.AppendLine($"|| Is Magical?: {i.IsMagical}");
+                                    sb.AppendLine($"|| Is Cursed?: {i.IsCursed}");
+                                    sb.AppendLine($"|| Is Two Handed? {i.IsTwoHanded}");
+                                    sb.AppendLine($"|| Is Finesse?: {i.IsFinesse}");
+                                    sb.AppendLine($"|| Is Monster Item: {i.IsMonsterItem}");
+                                    sb.AppendLine($"|| Base Weapon Type: {i.BaseWeaponType}");
+                                    sb.AppendLine($"|| Base Armour Type: {i.BaseArmourType}");
+                                    sb.AppendLine($"|| Required Skill: {i.RequiredSkill?.Name ?? string.Empty}");
+                                    sb.AppendLine($"|| Hit Modifier: {i.HitModifier}");
+                                    sb.AppendLine($"|| Damage Modifier: {i.DamageModifier}");
+                                    sb.AppendLine($"|| Damage Reduction Modifier: {i.DamageReductionModifier}");
+                                    sb.AppendLine($"|| Armour Class Modifier: {i.ArmourClassModifier}");
+                                    sb.AppendLine($"|| Consumable Effect: {i.ConsumableEffect}");
+                                    sb.AppendLine($"|| Is Toxic?: {i.IsToxic}");
+                                    sb.AppendLine($"|| Casts Spell: {i.CastsSpell}");
+                                    sb.AppendLine($"|| Applies Buff: {(i.AppliedBuffs != null && i.AppliedBuffs.Count > 0 ? String.Join(", ", i.AppliedBuffs) : "Nothing")}");
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     desc.Send(sb.ToString());
                                 }
@@ -992,10 +1145,77 @@ namespace Kingdoms_of_Etrea.Core
                                 if (r != null)
                                 {
                                     sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var p in r.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                                    sb.AppendLine($"|| ID: {r.RoomID}");
+                                    sb.AppendLine($"|| Zone: {r.ZoneID}");
+                                    sb.AppendLine($"|| Name: {r.RoomName}");
+                                    sb.AppendLine($"|| Short Description: {r.ShortDescription}");
+                                    sb.AppendLine($"|| Long Description:");
+                                    foreach(var l in r.LongDescription.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
                                     {
-                                        sb.AppendLine($"|| {p.Name}: {p.GetValue(r, null)}");
+                                        sb.AppendLine($"|| {Constants.TabStop}{l}");
                                     }
+                                    if (r.RoomExits != null && r.RoomExits.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Exits:");
+                                        foreach(var x in r.RoomExits)
+                                        {
+                                            sb.AppendLine($"|| {Constants.TabStop}{x.ExitDirection} to {x.DestinationRoomID}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Exits: None");
+                                    }
+                                    sb.AppendLine($"|| Flags: {r.Flags}");
+                                    if (r.SpawnNPCsAtStart != null && r.SpawnNPCsAtStart.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Loaded NPCs:");
+                                        foreach(var ln in r.SpawnNPCsAtStart)
+                                        {
+                                            var lnpc = NPCManager.Instance.GetNPCByID(ln.Key);
+                                            if (lnpc != null)
+                                            {
+                                                sb.AppendLine($"|| {Constants.TabStop}{ln.Value} x {lnpc.Name} ({ln.Key})");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Loaded NPCs: None");
+                                    }
+                                    if (r.SpawnNPCsAtTick != null && r.SpawnNPCsAtTick.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Tick NPCs:");
+                                        foreach(var tn in r.SpawnNPCsAtTick)
+                                        {
+                                            var tnpc = NPCManager.Instance.GetNPCByID(tn.Key);
+                                            if (tnpc != null)
+                                            {
+                                                sb.AppendLine($"|| {Constants.TabStop}{tn.Value} x {tnpc.Name} ({tn.Key})");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Tick NPCs: None");
+                                    }
+                                    if (r.SpawnItemsAtTick != null && r.SpawnItemsAtTick.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Tick Items:");
+                                        foreach(var ti in r.SpawnItemsAtTick)
+                                        {
+                                            var titem = ItemManager.Instance.GetItemByID(ti.Key);
+                                            if (titem != null)
+                                            {
+                                                sb.AppendLine($"|| {Constants.TabStop}{ti.Value} x {titem.Name} ({ti.Key})");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Tick Items: None");
+                                    }
+                                    sb.AppendLine($"|| Shop ID: {(r.ShopID.HasValue ? r.ShopID.Value.ToString() : "None")}");
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     desc.Send(sb.ToString());
                                 }
@@ -1028,10 +1248,46 @@ namespace Kingdoms_of_Etrea.Core
                                 if (n != null)
                                 {
                                     sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var p in n.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                                    sb.AppendLine($"|| ID: {n.NPCID}");
+                                    sb.AppendLine($"|| Name: {n.Name}");
+                                    sb.AppendLine($"|| Level: {n.Level}");
+                                    sb.AppendLine($"|| Short Description: {n.ShortDescription}");
+                                    sb.AppendLine($"|| Long Description:");
+                                    foreach(var l in n.LongDescription.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
                                     {
-                                        sb.AppendLine($"|| {p.Name}: {p.GetValue(n, null)}");
+                                        sb.AppendLine($"||{Constants.TabStop}{l}");
                                     }
+                                    sb.AppendLine($"|| Flags: {n.BehaviourFlags}");
+                                    sb.AppendLine($"|| STR: {n.Strength}{Constants.TabStop}DEX: {n.Dexterity}{Constants.TabStop}{Constants.TabStop}CON: {n.Constitution}");
+                                    sb.AppendLine($"|| INT: {n.Intelligence}{Constants.TabStop}WIS: {n.Wisdom}{Constants.TabStop}{Constants.TabStop}CHA: {n.Charisma}");
+                                    sb.AppendLine($"|| Zone: {n.AppearsInZone}{Constants.TabStop}Number of Attacks: {n.NumberOfAttacks}");
+                                    sb.AppendLine($"|| Frequency: {n.AppearChance}{Constants.TabStop}{Constants.TabStop}Max Number: {n.MaxNumber}");
+                                    sb.AppendLine($"|| Number of Hit Dice: {n.NumberOfHitDice}{Constants.TabStop}Size of Hit Dice: {n.HitDieSize}");
+                                    sb.AppendLine($"|| Base Armour Class: {n.BaseArmourClass}{Constants.TabStop}Exp Award: {n.BaseExpAward}{Constants.TabStop}Gold: {n.Gold}");
+                                    sb.AppendLine($"|| Alignment: {n.Alignment}");
+                                    if (n.Skills != null && n.Skills.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Skills: {string.Join(", ", n.Skills)}");
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Skills: None");
+                                    }
+                                    if (n.Spells != null && n.Spells.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Spells: {string.Join(", ", n.Spells)}");
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Spells: None");
+                                    }
+                                    sb.AppendLine($"|| Equip Head: {n.EquipHead?.Name ?? "Nothing"}{Constants.TabStop}{Constants.TabStop}Equip Neck: {n.EquipNeck?.Name ?? "Nothing"}");
+                                    sb.AppendLine($"|| Equp Armour: {n.EquipArmour?.Name ?? "Nothing"}{Constants.TabStop}{Constants.TabStop}Equip Weapon: {n.EquipWeapon?.Name ?? "Nothing"}");
+                                    sb.AppendLine($"|| Finger (L): {n.EquipLeftFinger?.Name ?? "Nothing"}{Constants.TabStop}{Constants.TabStop}Finger (R): {n.EquipRightFinger?.Name ?? "Nothing"}");
+                                    sb.AppendLine($"|| Held: {n.EquipHeld?.Name ?? "Nothing"}");
+                                    sb.AppendLine($"|| Resistances:");
+                                    sb.AppendLine($"|| {Constants.TabStop}Fire: {n.ResistFire}{Constants.TabStop}{Constants.TabStop}Ice: {n.ResistIce}{Constants.TabStop}{Constants.TabStop}Lightning: {n.ResistLightning}");
+                                    sb.AppendLine($"|| {Constants.TabStop}Earth: {n.ResistEarth}{Constants.TabStop}Dark: {n.ResistDark}{Constants.TabStop}{Constants.TabStop}Holy: {n.ResistHoly}");
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     desc.Send(sb.ToString());
                                 }
@@ -1048,7 +1304,8 @@ namespace Kingdoms_of_Etrea.Core
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     foreach (var e in emote.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                                     {
-                                        sb.AppendLine($"|| {e.Name}: {e.GetValue(emote, null)}");
+                                        sb.AppendLine($"|| {e.Name}:");
+                                        sb.AppendLine($"||{Constants.TabStop}{e.GetValue(emote, null)}");
                                     }
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     desc.Send(sb.ToString());
@@ -1061,12 +1318,22 @@ namespace Kingdoms_of_Etrea.Core
 
                             case "node":
                                 var node = NodeManager.Instance.GetNodeByID(targetID);
-                                if(node != null)
+                                if (node != null)
                                 {
                                     sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var ni in node.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                                    sb.AppendLine($"|| ID: {node.ID}");
+                                    sb.AppendLine($"|| Appearance Chance: {node.AppearanceChance}");
+                                    if (node.CanFind != null && node.CanFind.Count > 0)
                                     {
-                                        sb.AppendLine($"|| {ni.Name}: {ni.GetValue(node, null)}");
+                                        sb.AppendLine($"|| Can Find:");
+                                        foreach(var cf in node.CanFind)
+                                        {
+                                            sb.AppendLine($"||{Constants.TabStop}{cf.Name}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Can Find: Nothing");
                                     }
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     desc.Send(sb.ToString());
@@ -1082,9 +1349,34 @@ namespace Kingdoms_of_Etrea.Core
                                 if (recipe != null)
                                 {
                                     sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var ri in recipe.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                                    sb.AppendLine($"|| ID: {recipe.RecipeID}");
+                                    sb.AppendLine($"|| Name: {recipe.RecipeName}");
+                                    sb.AppendLine($"|| Type: {recipe.RecipeType}");
+                                    sb.AppendLine($"|| Description: {recipe.RecipeDescription}");
+                                    var recipeResult = ItemManager.Instance.GetItemByID(recipe.RecipeResult);
+                                    if (recipeResult != null)
                                     {
-                                        sb.AppendLine($"|| {ri.Name}: {ri.GetValue(recipe, null)}");
+                                        sb.AppendLine($"|| Produces: {recipeResult.Name} ({recipeResult.ID})");
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Produced: Nothing - this is broken, report to an Imm");
+                                    }
+                                    if (recipe.RequiredMaterials != null && recipe.RequiredMaterials.Count > 0)
+                                    {
+                                        sb.AppendLine($"|| Required Materials:");
+                                        foreach(var material in recipe.RequiredMaterials)
+                                        {
+                                            var reqMat = ItemManager.Instance.GetItemByID(material.Key);
+                                            if (reqMat != null)
+                                            {
+                                                sb.AppendLine($"||{Constants.TabStop}{material.Value} x {reqMat.Name}");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sb.AppendLine($"|| Required Materials: None - this is broken, report to an Imm");
                                     }
                                     sb.AppendLine($"  {new string('=', 77)}");
                                     desc.Send(sb.ToString());
@@ -1108,17 +1400,19 @@ namespace Kingdoms_of_Etrea.Core
                             var targetParts = target.Split('-');
                             uint.TryParse(targetParts[0], out uint rangeStart);
                             uint.TryParse(targetParts[1], out uint rangeEnd);
-                            switch(objectType.ToLower())
+                            switch (objectType.ToLower())
                             {
                                 case "quest":
                                     var questRange = QuestManager.Instance.GetQuestsByIDRange(rangeStart, rangeEnd).OrderBy(x => x.QuestID).ToList();
-                                    if(questRange != null && questRange.Count > 0)
+                                    if (questRange != null && questRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var q in questRange)
                                         {
                                             sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {questRange.Count} Quests found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1130,13 +1424,15 @@ namespace Kingdoms_of_Etrea.Core
 
                                 case "room":
                                     var roomRange = RoomManager.Instance.GetRoomsByIDRange(rangeStart, rangeEnd).OrderBy(x => x.RoomID).ToList();
-                                    if(roomRange != null && roomRange.Count > 0)
+                                    if (roomRange != null && roomRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var i in roomRange)
                                         {
                                             sb.AppendLine($"|| {i.RoomID} - {i.RoomName}, {i.ShortDescription}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {roomRange.Count} Rooms found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1147,14 +1443,16 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "item":
-                                    var itemRange = ItemManager.Instance.GetItemByIDRange(rangeStart, rangeEnd).OrderBy(x => x.Id).ToList();
-                                    if(itemRange != null && itemRange.Count > 0)
+                                    var itemRange = ItemManager.Instance.GetItemByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ID).ToList();
+                                    if (itemRange != null && itemRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var i in itemRange)
                                         {
-                                            sb.AppendLine($"|| {i.Id} - {i.Name}");
+                                            sb.AppendLine($"|| {i.ID} - {i.Name}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {itemRange.Count} Items found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1166,13 +1464,15 @@ namespace Kingdoms_of_Etrea.Core
 
                                 case "zone":
                                     var zoneRange = ZoneManager.Instance.GetZoneByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ZoneID).ToList();
-                                    if(zoneRange != null && zoneRange.Count > 0)
+                                    if (zoneRange != null && zoneRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var i in zoneRange)
                                         {
                                             sb.AppendLine($"|| {i.ZoneID} - {i.ZoneName}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {zoneRange.Count} Zones found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1184,13 +1484,15 @@ namespace Kingdoms_of_Etrea.Core
 
                                 case "npc":
                                     var npcRange = NPCManager.Instance.GetNPCByIDRange(rangeStart, rangeEnd).OrderBy(x => x.NPCID).ToList();
-                                    if(npcRange != null && npcRange.Count > 0)
+                                    if (npcRange != null && npcRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var i in npcRange)
                                         {
                                             sb.AppendLine($"|| {i.NPCID} - {i.Name}, {i.ShortDescription}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {npcRange.Count} NPCs found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1201,14 +1503,16 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "shop":
-                                    var shopRange = ShopManager.Instance.GetShopByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ShopID).ToList();
-                                    if(shopRange != null && shopRange.Count > 0)
+                                    var shopRange = ShopManager.Instance.GetShopByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ID).ToList();
+                                    if (shopRange != null && shopRange.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var i in shopRange)
                                         {
-                                            sb.AppendLine($"|| ID: {i.ShopID}{Constants.TabStop}Name: {i.ShopName}");
+                                            sb.AppendLine($"|| ID: {i.ID}{Constants.TabStop}Name: {i.ShopName}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {shopRange.Count} Shops found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1224,7 +1528,7 @@ namespace Kingdoms_of_Etrea.Core
                             switch (objectType.ToLower())
                             {
                                 case "quest":
-                                    var matchingQuests = QuestManager.Instance.GetQuestByNameOrDescription(target).OrderBy(x => x.QuestID).ToList();
+                                    var matchingQuests = QuestManager.Instance.GetQuestsByNameOrDescription(target).OrderBy(x => x.QuestID).ToList();
                                     if (matchingQuests != null && matchingQuests.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1232,6 +1536,8 @@ namespace Kingdoms_of_Etrea.Core
                                         {
                                             sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingQuests.Count} Quests found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1241,15 +1547,37 @@ namespace Kingdoms_of_Etrea.Core
                                     }
                                     break;
 
+                                case "buff":
+                                    var allBuffs = BuffManager.Instance.GetAllBuffs();
+                                    if (allBuffs != null && allBuffs.Count > 0)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        foreach (var b in allBuffs)
+                                        {
+                                            sb.AppendLine($"|| {b.BuffName} ({b.BuffDuration}): {b.Description}");
+                                        }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {allBuffs.Count} Items found");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"No Buffs could be found{Constants.NewLine}");
+                                    }
+                                    break;
+
                                 case "item":
-                                    var matchingItems = ItemManager.Instance.GetItemByNameOrDescription(target).OrderBy(x => x.Id).ToList();
+                                    var matchingItems = ItemManager.Instance.GetItemByNameOrDescription(target).OrderBy(x => x.ID).ToList();
                                     if (matchingItems != null && matchingItems.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var i in matchingItems)
                                         {
-                                            sb.AppendLine($"|| {i.Id} - {i.Name}, {i.ShortDescription}");
+                                            sb.AppendLine($"|| {i.ID} - {i.Name}, {i.ShortDescription}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingItems.Count} Items found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1268,6 +1596,8 @@ namespace Kingdoms_of_Etrea.Core
                                         {
                                             sb.AppendLine($"|| {i.RoomID} - {i.RoomName}, {i.ShortDescription}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingRooms.Count} Rooms found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1286,6 +1616,8 @@ namespace Kingdoms_of_Etrea.Core
                                         {
                                             sb.AppendLine($"|| {i.ZoneID} - {i.ZoneName}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingZones.Count} Zones found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1304,6 +1636,8 @@ namespace Kingdoms_of_Etrea.Core
                                         {
                                             sb.AppendLine($"|| {i.NPCID} - {i.Name}, {i.ShortDescription}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingNPCs.Count} NPCs found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1314,14 +1648,16 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "shop":
-                                    var matchingShops = ShopManager.Instance.GetShopsByName(target).OrderBy(x => x.ShopID).ToList();
+                                    var matchingShops = ShopManager.Instance.GetShopsByName(target).OrderBy(x => x.ID).ToList();
                                     if (matchingShops != null && matchingShops.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var i in matchingShops)
                                         {
-                                            sb.AppendLine($"|| ID: {i.ShopID}{Constants.TabStop}Name: {i.ShopName}");
+                                            sb.AppendLine($"|| ID: {i.ID}{Constants.TabStop}Name: {i.ShopName}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingShops.Count} Shops found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1338,8 +1674,10 @@ namespace Kingdoms_of_Etrea.Core
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var e in matchingEmotes)
                                         {
-                                            sb.AppendLine($"|| {e.EmoteID} - {e.EmoteName}");
+                                            sb.AppendLine($"|| {e.ID} - {e.EmoteName}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingEmotes.Count} Emotes found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1351,7 +1689,7 @@ namespace Kingdoms_of_Etrea.Core
 
                                 case "skills":
                                 case "skill":
-                                    var skills = Skills.GetAllSkills(target).OrderBy(x => x.Name).ToList();
+                                    var skills = SkillManager.Instance.GetSkillByNameOrDescription(target).OrderBy(x => x.Name).ToList();
                                     if (skills != null && skills.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1359,6 +1697,8 @@ namespace Kingdoms_of_Etrea.Core
                                         {
                                             sb.AppendLine($"|| {skill.Name} - {skill.Description}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {skills.Count} Skills found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1370,14 +1710,20 @@ namespace Kingdoms_of_Etrea.Core
 
                                 case "spells":
                                 case "spell":
-                                    var matchingSpells = Spells.GetAllSpells(target).OrderBy(x => x.SpellName).ToList();
+                                    var matchingSpells = SpellManager.Instance.GetSpells(target).OrderBy(x => x.SpellName).ToList();
                                     if (matchingSpells != null && matchingSpells.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var s in matchingSpells)
                                         {
-                                            sb.AppendLine($"|| {s.SpellName} - {s.Description}");
+                                            sb.AppendLine($"|| Name: {s.SpellName}{Constants.TabStop}MP: {s.MPCost}");
+                                            sb.AppendLine($"|| Type: {s.SpellType}{Constants.TabStop}{Constants.TabStop}Damage Dice: {s.NumOfDamageDice}D{s.SizeOfDamageDice}");
+                                            sb.AppendLine($"|| Additional Damage: {s.AdditionalDamage}{Constants.TabStop}{Constants.TabStop}Gold: {s.GoldToLearn}");
+                                            sb.AppendLine($"|| Auto-Hit: {s.AutoHitTarget}{Constants.TabStop}Element: {s.SpellElement}");
+                                            sb.AppendLine($"|| AOE: {s.AOESpell}{Constants.TabStop}Bypass Resistance: {s.BypassResistCheck}{Constants.TabStop}Apply Ability Modifier: {s.ApplyAbilityModifier}");
+                                            sb.AppendLine($"||{new string('=', 77)}");
                                         }
+                                        sb.AppendLine($"|| {matchingSpells.Count} Spells found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1388,14 +1734,16 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
 
                                 case "node":
-                                    var matchingNodes = NodeManager.Instance.GetAllResourceNodes(target).OrderBy(x => x.NodeName).ToList();
+                                    var matchingNodes = NodeManager.Instance.GetNodeByNameOrDescription(target).OrderBy(x => x.NodeName).ToList();
                                     if (matchingNodes != null && matchingNodes.Count > 0)
                                     {
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         foreach (var n in matchingNodes)
                                         {
-                                            sb.AppendLine($"|| ID: {n.Id}{Constants.TabStop}Name: {n.NodeName}");
+                                            sb.AppendLine($"|| ID: {n.ID}{Constants.TabStop}Name: {n.NodeName}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingNodes.Count} Nodes found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1414,6 +1762,8 @@ namespace Kingdoms_of_Etrea.Core
                                         {
                                             sb.AppendLine($"|| ID: {r.RecipeID}{Constants.TabStop}Name: {r.RecipeName}");
                                         }
+                                        sb.AppendLine($"||{new string('=', 77)}");
+                                        sb.AppendLine($"|| {matchingRecipes.Count} Recipies found");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                     }
@@ -1443,7 +1793,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void Purge(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 string msgToPlayer = string.Empty;
@@ -1466,7 +1816,7 @@ namespace Kingdoms_of_Etrea.Core
                         if (n != null)
                         {
                             targetFound = true;
-                            n.Kill(false);
+                            n.Kill();
                             msgToPlayer = $"With arcane fire you burn {n.Name} from the fabric of the world!{Constants.NewLine}";
                             msgToOthers[0] = $"{desc.Player.Name} makes occult gestures and {n.Name} is consumed by arcane fire!{Constants.NewLine}";
                             msgToOthers[1] = $"The Winds of Magic shift and {n.Name} is burned from the world by arcane fire!{Constants.NewLine}";
@@ -1475,7 +1825,7 @@ namespace Kingdoms_of_Etrea.Core
                     if (targetFound)
                     {
                         desc.Send(msgToPlayer);
-                        var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom);
+                        var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
                         if (playersInRoom != null && playersInRoom.Count > 1)
                         {
                             foreach (var p in playersInRoom)
@@ -1523,16 +1873,16 @@ namespace Kingdoms_of_Etrea.Core
                         while (NPCManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom).Count > 0)
                         {
                             var n = NPCManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom)[0];
-                            if(n.FollowingPlayer == Guid.Empty)
+                            if (n.FollowingPlayer == Guid.Empty)
                             {
-                                NPCManager.Instance.RemoveNPCFromWorld(n.NPCGuid, n, desc.Player.CurrentRoom);
+                                NPCManager.Instance.RemoveNPCFromWorld(n.NPCGuid);
                             }
                         }
                     }
                     if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
                     {
                         var gp = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
-                        RoomManager.Instance.GetGoldFromRoom(desc.Player.CurrentRoom, gp);
+                        RoomManager.Instance.RemoveGoldFromRoom(desc.Player.CurrentRoom, gp);
                     }
                     desc.Send($"Calling on the Winds of Magic, you purge the area with holy fire!{Constants.NewLine}");
                 }
@@ -1545,7 +1895,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ImmInvis(ref Descriptor desc)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                 string toPlayer = desc.Player.Visible ? $"You shimmer and fade from view...{Constants.NewLine}" :
@@ -1573,7 +1923,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ImmSetStat(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var inputElements = TokeniseInput(ref input);
                 if (inputElements.Length != 4)
@@ -1581,330 +1931,46 @@ namespace Kingdoms_of_Etrea.Core
                     desc.Send($"Usage: set <target> <attribute> <value>{Constants.NewLine}");
                     return;
                 }
-                var targetPlayer = SessionManager.Instance.GetPlayer(inputElements[1].Trim());
-                uint value = 0;
-                string msgToPlayer = string.Empty;
-                string msgToTarget = string.Empty;
-                if (inputElements.Length == 4)
+                Descriptor targetPlayer = SessionManager.Instance.GetPlayer(inputElements[1].Trim());
+                NPC targetNPC = null;
+                if (targetPlayer == null)
                 {
-                    if (targetPlayer != null)
+                    targetNPC = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).NPCsInRoom.Where(x => Regex.IsMatch(x.Name, inputElements[1].Trim(), RegexOptions.IgnoreCase)).FirstOrDefault();
+                }
+                if (targetPlayer == null && targetNPC == null)
+                {
+                    desc.Send($"No matching player or NPC could be found with that name!{Constants.NewLine}");
+                    return;
+                }
+                if (targetPlayer != null)
+                {
+                    if (targetPlayer.Player.Level < desc.Player.Level || targetPlayer.ID == desc.ID)
                     {
-                        if (targetPlayer.Player.Level < desc.Player.Level || targetPlayer.Player.Name == desc.Player.Name)
+                        string stat = inputElements[2].Trim().ToLower();
+                        string value = inputElements[3].Trim();
+                        targetPlayer.Player.SetStat(stat, value, ref desc, out bool changeSuccess, out string statChanged, out string newValue);
+                        if (changeSuccess)
                         {
-                            switch (inputElements[2].Trim().ToLower())
-                            {
-                                case "hp":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.CurrentHP = (int)value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s current HP to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your current HP to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s HP to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for HP{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "maxhp":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.MaxHP = value;
-                                        targetPlayer.Player.Stats.CurrentMaxHP = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s max HP to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your max HP to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s Max HP to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for max HP{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "sp":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.CurrentSP = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s current SP to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your current SP to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s SP to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for SP{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "maxsp":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.MaxSP = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s max SP to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your max SP to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s max SP to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for max SP{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "mp":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.CurrentMP = (int)value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s current MP to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your current MP to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s MP to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for MP{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "maxmp":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.MaxMP = value;
-                                        targetPlayer.Player.Stats.CurrentMaxMP = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s max MP to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your max MP to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s max MP to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for max MP{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "strength":
-                                case "str":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Strength = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s strength to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your strengh to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s strength to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for strength{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "dexterity":
-                                case "dex":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Dexterity = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s dexterity to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your dexterity to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s dexterity to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for dexterity{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "constitution":
-                                case "con":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Constitution = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s constitution to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your constitution to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s constitution to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for constitution{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "intelligence":
-                                case "int":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Intelligence = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s intelligence to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your intelligence to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s intelligence to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for intelligence{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "wisdom":
-                                case "wis":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Wisdom = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s wisdom to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your wisdom to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s wisdom to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for wisdom{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "charisma":
-                                case "cha":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Charisma = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s charisma to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your charisma to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s charisma to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for charisma{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "gold":
-                                case "gp":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Gold = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s gold balance to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your gold balance to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s gold balance to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for gold coins{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "level":
-                                case "lvl":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        if (value >= desc.Player.Level)
-                                        {
-                                            // can't set someone to be a higher level than you
-                                            msgToPlayer = $"You cannot make someone more powerful than you!{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            targetPlayer.Player.Level = value;
-                                            msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s level to {value}{Constants.NewLine}";
-                                            if (value >= Constants.ImmLevel)
-                                            {
-                                                msgToTarget = $"{desc.Player.Name} has changed your level to {value}!{Constants.NewLine}You now have access to God Powers, please see an Immortal for advice on using them!{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToTarget = $"{desc.Player.Name} has changed your level to {value}!{Constants.NewLine}";
-                                            }
-                                            Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s level to {value}", LogLevel.Info, true);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for gold coins{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "exp":
-                                case "xp":
-                                case "experience":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.Exp = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s experience points to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your experience points to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s experience points to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for experience points{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "armourclass":
-                                case "ac":
-                                    if (uint.TryParse(inputElements[3], out value))
-                                    {
-                                        targetPlayer.Player.Stats.ArmourClass = value;
-                                        msgToPlayer = $"You have changed {targetPlayer.Player.Name}'s armour class to {value}{Constants.NewLine}";
-                                        msgToTarget = $"{desc.Player.Name} has changed your armour class to {value}!{Constants.NewLine}";
-                                        Game.LogMessage($"INFO: {desc.Player.Name} set {targetPlayer.Player.Name}'s armour class to {value}", LogLevel.Info, true);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That is not a valid value for armour class{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "alignment":
-                                case "align":
-                                    if (Enum.TryParse<ActorAlignment>(inputElements[3], true, out ActorAlignment alignment))
-                                    {
-                                        switch(alignment)
-                                        {
-                                            case ActorAlignment.Neutral:
-                                                targetPlayer.Player.Alignment = ActorAlignment.Neutral;
-                                                targetPlayer.Player.AlignmentScale = 0;
-                                                targetPlayer.Send($"{desc.Player.Name} has changed your Alignment to Neutral!{Constants.NewLine}");
-                                                desc.Send($"You have changed {targetPlayer.Player.Name}'s Alignment to Neutral!{Constants.NewLine}");
-                                                break;
-
-                                            case ActorAlignment.Evil:
-                                                targetPlayer.Player.Alignment = ActorAlignment.Evil;
-                                                targetPlayer.Player.AlignmentScale = -100;
-                                                targetPlayer.Send($"{desc.Player.Name} has changed your Alignment to Evil!{Constants.NewLine}");
-                                                desc.Send($"You have changed {targetPlayer.Player.Name}'s Alignment to Evil!{Constants.NewLine}");
-                                                break;
-
-                                            case ActorAlignment.Good:
-                                                targetPlayer.Player.Alignment = ActorAlignment.Good;
-                                                targetPlayer.Player.AlignmentScale = 100;
-                                                targetPlayer.Send($"{desc.Player.Name} has changed your Alignmnet to Good!{Constants.NewLine}");
-                                                desc.Send($"You have changed {targetPlayer.Player.Name}'s Alignment to Good!{Constants.NewLine}");
-                                                break;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"That doesn't seem to be a valid alignment!{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                default:
-                                    desc.Send($"{inputElements[2]} doesn't look like something you can change...{Constants.NewLine}");
-                                    break;
-                            }
-                            if (!string.IsNullOrEmpty(msgToPlayer))
-                            {
-                                desc.Send(msgToPlayer);
-                            }
-                            if (!string.IsNullOrEmpty(msgToTarget))
-                            {
-                                targetPlayer.Send(msgToTarget);
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"You don't have the power to change {targetPlayer.Player.Name}'s stats!{Constants.NewLine}");
+                            targetPlayer.Send($"{desc.Player.Name} has changed your {statChanged} to {newValue}!{Constants.NewLine}");
+                            Game.LogMessage($"INFO: {desc.Player.Name} has changed {targetPlayer.Player.Name}'s {statChanged} to {newValue}", LogLevel.Info, true);
                         }
                     }
                     else
                     {
-                        desc.Send($"That person doesn't seem to be in the realms at the moment{Constants.NewLine}");
+                        desc.Send($"You don't have the power to change {targetPlayer.Player.Name}'s stats!{Constants.NewLine}");
                     }
+                    return;
                 }
-                else
+                if (targetNPC != null)
                 {
-                    desc.Send($"Set what to what on who now?{Constants.NewLine}");
+                    string stat = inputElements[2].Trim().ToLower();
+                    string value = inputElements[3].Trim();
+                    targetNPC.SetStat(stat, value, ref desc, out bool changeSuccess, out string statChanged, out string setValue);
+                    if (changeSuccess)
+                    {
+                        Game.LogMessage($"INFO: {desc.Player.Name} has changed {targetNPC.Name}'s {statChanged} to {setValue}", LogLevel.Info, true);
+                    }
+                    return;
                 }
             }
             else
@@ -1915,7 +1981,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static bool SaveAllPlayers(ref Descriptor desc)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 bool OK = true;
                 var connectedPlayers = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected).ToList();
@@ -1924,7 +1990,7 @@ namespace Kingdoms_of_Etrea.Core
                     foreach (var player in connectedPlayers)
                     {
                         var p = player;
-                        if (DatabaseManager.SavePlayerNew(ref p, false))
+                        if (DatabaseManager.SavePlayer(ref p, false))
                         {
                             Game.LogMessage($"INFO: SaveAllPlayers called by {desc.Player.Name}: Successfully saved player {p.Player.Name}", LogLevel.Info, true);
                         }
@@ -1952,7 +2018,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ImmSummonPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var inputElements = TokeniseInput(ref input);
                 string target = inputElements.Length > 1 ? inputElements[1] : string.Empty;
@@ -1991,7 +2057,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ImmTeleportToPlayer(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var inputElements = TokeniseInput(ref input);
                 string target = inputElements.Length > 1 ? inputElements[1] : string.Empty;
@@ -2037,7 +2103,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void Slay(ref Descriptor desc, ref string line)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var inputElements = TokeniseInput(ref line);
                 string target = inputElements.Length > 1 ? inputElements[1].Trim() : string.Empty;
@@ -2152,7 +2218,7 @@ namespace Kingdoms_of_Etrea.Core
                                     }
                                 }
                                 targetPlayer.Send($"You feel the gaze of {desc.Player.Name} upon you as your life ebbs away...{Constants.NewLine}");
-                                targetPlayer.Player.Stats.CurrentHP = 0;
+                                targetPlayer.Player.CurrentHP = 0;
                                 targetPlayer.Player.Kill();
                             }
                             else
@@ -2179,7 +2245,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ShutdownWorld(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 if (SaveAllPlayers(ref desc))
                 {
@@ -2208,7 +2274,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void VoiceOfGod(ref Descriptor desc, ref string line)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var verb = GetVerb(ref line).Trim();
                 var msg = line.Remove(0, verb.Length).Trim();
@@ -2223,7 +2289,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DoForce(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 var elements = TokeniseInput(ref input);
                 if (elements.Length < 3)
@@ -2268,7 +2334,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ImmHeal(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 string targetPlayer = TokeniseInput(ref input).LastOrDefault();
                 string msgToPlayer = string.Empty;
@@ -2280,10 +2346,10 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         tp.Send($"You feel a swell of energy as {desc.Player.Name} restores you with holy power!{Constants.NewLine}");
                         desc.Send($"With holy power you restore {tp.Player.Name}{Constants.NewLine}");
-                        SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Stats.CurrentHP = (int)tp.Player.Stats.MaxHP;
-                        SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Stats.CurrentMP = (int)tp.Player.Stats.MaxMP;
-                        SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Stats.CurrentSP = tp.Player.Stats.MaxSP;
-                        SessionManager.Instance.GetPlayerByGUID(tp.Id).Player.Position = ActorPosition.Standing;
+                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.CurrentHP = tp.Player.MaxHP;
+                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.CurrentMP = tp.Player.MaxMP;
+                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.CurrentSP = tp.Player.MaxSP;
+                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.Position = ActorPosition.Standing;
                         Game.LogMessage($"INFO: {desc.Player.Name} has restored {tp.Player.Name}", LogLevel.Info, true);
                     }
                 }
@@ -2297,7 +2363,7 @@ namespace Kingdoms_of_Etrea.Core
         private static void ImmSpawnItem(ref Descriptor desc, ref string input)
         {
             // create <item | npc> <id | string>
-            if(desc.Player.Level >= Constants.ImmLevel)
+            if (desc.Player.Level >= Constants.ImmLevel)
             {
                 string msgToPlayer = string.Empty;
                 bool targetCreated = false;
@@ -2322,7 +2388,7 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         if (ItemManager.Instance.ItemExists(uid))
                         {
-                            var i = ItemManager.Instance.GetItemByID(uid);
+                            var i = ItemManager.Instance.GetItemByID(uid).ShallowCopy();
                             RoomManager.Instance.AddItemToRoomInventory(desc.Player.CurrentRoom, ref i);
                             msgToPlayer = $"With arcane power you create {i.Name}{Constants.NewLine}";
                             msgToOthers[0] = $"{desc.Player.Name} makes an arcane gesture and creates {i.Name}{Constants.NewLine}";

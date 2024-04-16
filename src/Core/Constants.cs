@@ -1,6 +1,6 @@
 ﻿using System.Configuration;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal static class Constants
     {
@@ -30,9 +30,9 @@ namespace Kingdoms_of_Etrea.Core
         internal static uint PlayerStartRoom()                          // Get the RID of the start room for players or return the default 100 if we can't read it
         {
             var rid = ConfigurationManager.AppSettings["playerStartRoom"];
-            if(!string.IsNullOrEmpty(rid))
+            if (!string.IsNullOrEmpty(rid))
             {
-                if(uint.TryParse(rid, out uint startRoom))
+                if (uint.TryParse(rid, out uint startRoom))
                 {
                     return startRoom;
                 }
@@ -43,12 +43,12 @@ namespace Kingdoms_of_Etrea.Core
         internal static uint LimboRID()                                 // Get the RID of Limbo, or return the default of 0 if we can't read it
         {
             var rid = ConfigurationManager.AppSettings["limboRID"];
-            if(!string.IsNullOrEmpty(rid))
+            if (!string.IsNullOrEmpty(rid))
             {
-                if(uint.TryParse(rid, out uint limbRID))
+                if (uint.TryParse(rid, out uint limbRID))
                 {
                     return limbRID;
-                }    
+                }
             }
             return 0;
         }
@@ -56,9 +56,9 @@ namespace Kingdoms_of_Etrea.Core
         internal static uint DonationRoomRid()                          // Get the RID of the donation room, or return the default of 150 if we can't read it
         {
             var rid = ConfigurationManager.AppSettings["donationRoomRID"];
-            if(!string.IsNullOrEmpty(rid))
+            if (!string.IsNullOrEmpty(rid))
             {
-                if(uint.TryParse(rid, out uint donationRoom))
+                if (uint.TryParse(rid, out uint donationRoom))
                 {
                     return donationRoom;
                 }
@@ -69,12 +69,12 @@ namespace Kingdoms_of_Etrea.Core
         internal static uint MaxIdleTickCount()                         // Get the max number of autosave ticks a player can be idle for before being disconnected, default 20
         {
             var tickCount = ConfigurationManager.AppSettings["maxIdleTickCount"];
-            if(!string.IsNullOrEmpty(tickCount))
+            if (!string.IsNullOrEmpty(tickCount))
             {
-                if(uint.TryParse(tickCount, out uint maxIdleTickCount))
+                if (uint.TryParse(tickCount, out uint maxIdleTickCount))
                 {
                     return maxIdleTickCount;
-                }    
+                }
             }
             return 20;
         }
@@ -82,9 +82,9 @@ namespace Kingdoms_of_Etrea.Core
         internal static bool DisconnectIdleImms()                       // Get the setting to determine if we should disconnect idle Immortal players, default false
         {
             var disconImms = ConfigurationManager.AppSettings["disconIdleImms"];
-            if(!string.IsNullOrEmpty(disconImms))
+            if (!string.IsNullOrEmpty(disconImms))
             {
-                if(bool.TryParse(disconImms, out bool disconnected))
+                if (bool.TryParse(disconImms, out bool disconnected))
                 {
                     return disconnected;
                 }

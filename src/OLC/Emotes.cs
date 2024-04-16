@@ -1,58 +1,11 @@
-﻿using Kingdoms_of_Etrea.Core;
-using Kingdoms_of_Etrea.Entities;
+﻿using Etrea2.Core;
+using Etrea2.Entities;
 using System.Text;
 
-namespace Kingdoms_of_Etrea.OLC
+namespace Etrea2.OLC
 {
     internal static partial class OLC
     {
-        #region Delete
-        private static void DeleteEmote(ref Descriptor desc)
-        {
-            desc.Send($"{Constants.RedText}This is a permanent change to the World and cannot be undone unless a backup of the database is restored!{Constants.PlainText}{Constants.NewLine}");
-            desc.Send($"Enter the ID or name of the Emote to delete: ");
-            var input = desc.Read().Trim();
-            if(Helpers.ValidateInput(input))
-            {
-                Emote e = null;
-                if(uint.TryParse(input, out uint emoteID))
-                {
-                    e = EmoteManager.Instance.GetEmoteByID(emoteID);
-                }
-                else
-                {
-                    e = EmoteManager.Instance.GetEmoteByName(input);
-                }
-                if(e != null)
-                {
-                    if(DatabaseManager.DeleteEmoteByID(ref desc, e.EmoteID))
-                    {
-                        if(EmoteManager.Instance.RemoveEmote(emoteID))
-                        {
-                            desc.Send($"Emote successfully removed from EmoteManager and World database.{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Send($"Unable to remove Emote from the EmoteManager{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Unable to remove Emote from the World database{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"No Emote with that ID or name could be found.{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-            }
-        }
-        #endregion
-
         #region Create
         private static void CreateNewEmote(ref Descriptor desc)
         {
@@ -64,49 +17,44 @@ namespace Kingdoms_of_Etrea.OLC
             sb.AppendLine("and will be replaced with relevant values when the Emote is used.");
             desc.Send(sb.ToString());
             Emote e = new Emote();
-            while(!okToReturn)
+            while (!okToReturn)
             {
                 sb.Clear();
-                sb.AppendLine($"Emote ID: {e.EmoteID}{Constants.TabStop}Emote Name: {e.EmoteName}");
-                sb.AppendLine($"Message to Player with Target:{Constants.NewLine}{e.MsgToPlayerWithTarget}");
-                sb.AppendLine($"Message to Player with no Target:{Constants.NewLine}{e.MsgToPlayerWithNoTarget}");
-                sb.AppendLine($"Message to Target:{Constants.NewLine}{e.MsgToTarget}");
-                sb.AppendLine($"Message to Others with Target:{Constants.NewLine}{e.MsgToOthersWithTarget}");
-                sb.AppendLine($"Message to Others with no Target:{Constants.NewLine}{e.MsgToOthersWithNoTarget}");
-                sb.AppendLine($"Message to Others with Vis Player and Invis Target:{Constants.NewLine}{e.MsgToOthersWithVisPlayerAndInvisTarget}");
-                sb.AppendLine($"Message to Others with Invis Player and Invis Target:{Constants.NewLine}{e.MsgToOthersWithInvisPlayerAndTarget}");
-                sb.AppendLine($"Message to Player Target not found:{Constants.NewLine}{e.MsgToPlayerTargetNotFound}");
-                sb.AppendLine($"Message to Others Target not found:{Constants.NewLine}{e.MsgToOthersTargetNotFound}");
-                sb.AppendLine($"Message to Others when Target is Player:{Constants.NewLine}{e.MsgToOthersWhenTargetIsPlayer}");
-                sb.AppendLine($"Message to Player when Target is Player:{Constants.NewLine}{e.MsgToPlayerWhenTargetIsPlayer}");
+                sb.AppendLine($"Emote ID: {e.ID}{Constants.TabStop}Emote Name: {e.EmoteName}");
+                sb.AppendLine($"Message to Player with Target:{Constants.NewLine}{e.MsgToPlayerWithTarget.Trim()}");
+                sb.AppendLine($"Message to Player with no Target:{Constants.NewLine}{e.MsgToPlayerWithNoTarget.Trim()}");
+                sb.AppendLine($"Message to Target:{Constants.NewLine}{e.MsgToTarget.Trim()}");
+                sb.AppendLine($"Message to Others with Target:{Constants.NewLine}{e.MsgToOthersWithTarget.Trim()}");
+                sb.AppendLine($"Message to Others with no Target:{Constants.NewLine}{e.MsgToOthersWithNoTarget.Trim()}");
+                sb.AppendLine($"Message to Others with Vis Player and Invis Target:{Constants.NewLine}{e.MsgToOthersWithVisPlayerAndInvisTarget.Trim()}");
+                sb.AppendLine($"Message to Others with Invis Player and Invis Target:{Constants.NewLine}{e.MsgToOthersWithInvisPlayerAndTarget.Trim()}");
+                sb.AppendLine($"Message to Player Target not found:{Constants.NewLine}{e.MsgToPlayerTargetNotFound.Trim()}");
+                sb.AppendLine($"Message to Others Target not found:{Constants.NewLine}{e.MsgToOthersTargetNotFound.Trim()}");
+                sb.AppendLine($"Message to Others when Target is Player:{Constants.NewLine}{e.MsgToOthersWhenTargetIsPlayer.Trim()}");
+                sb.AppendLine($"Message to Player when Target is Player:{Constants.NewLine}{e.MsgToPlayerWhenTargetIsPlayer.Trim()}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Emote ID");
-                sb.AppendLine("2. Set Emote Name");
-                sb.AppendLine("3. Set Message to Player with Target");
-                sb.AppendLine("4. Set Message to Player with no Target");
-                sb.AppendLine("5. Set Message to Target");
-                sb.AppendLine("6. Set Message to Others with Target");
-                sb.AppendLine("7. Set Message to Others with no Target");
-                sb.AppendLine("8. Set Message to Others with Vis Player and Invis Target");
-                sb.AppendLine("9. Set Message to Others with Invis Player and Invis Target");
-                sb.AppendLine("10. Set Message to Player Target not found");
-                sb.AppendLine("11. Set Message to Others Target not found");
-                sb.AppendLine("12. Set Message to Others when Target is Player");
+                sb.AppendLine($"1. Set Emote ID{Constants.TabStop}{Constants.TabStop}2. Set Emote Name");
+                sb.AppendLine($"3. Set Message to Player with Target{Constants.TabStop}4. Set Message to Player with no Target");
+                sb.AppendLine($"5. Set Message to Target{Constants.TabStop}6. Set Message to Others with Target");
+                sb.AppendLine($"7. Set Message to Others with no Target");
+                sb.AppendLine("8. Set Message to others with Vis Player and Inivs Target");
+                sb.AppendLine($"9. Set Message to Others with Invis Player and Invis Target");
+                sb.AppendLine($"10. Set Message to Player when Target not Found{Constants.TabStop}11. Set Message to Others when Target not found");
+                sb.AppendLine($"11. Set Message to Others Target not found{Constants.TabStop}12. Set Message to Others when Target is Player");
                 sb.AppendLine("13. Set Message to Player when Target is Player");
-                sb.AppendLine("14. Save Emote");
-                sb.AppendLine("15. Exit without saving");
+                sb.AppendLine($"14. Save{Constants.TabStop}15. Exit");
                 sb.AppendLine("Selection: ");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
                 {
-                    if(option >=1 && option <= 15)
+                    if (option >= 1 && option <= 15)
                     {
-                        switch(option)
+                        switch (option)
                         {
                             case 1:
-                                e.EmoteID = GetAssetUintValue(ref desc, "Enter Emote ID: ");
+                                e.ID = GetAssetUintValue(ref desc, "Enter Emote ID: ");
                                 break;
 
                             case 2:
@@ -158,14 +106,13 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 14:
-                                if(ValidateEmoteAsset(ref desc, e, true))
+                                if (ValidateEmoteAsset(ref desc, e, true))
                                 {
-                                    if(DatabaseManager.AddNewEmote(ref desc, e))
+                                    if (DatabaseManager.AddNewEmote(ref desc, e))
                                     {
-                                        if(EmoteManager.Instance.AddEmote(e.EmoteID, e))
+                                        if (EmoteManager.Instance.AddEmote(e, ref desc))
                                         {
                                             desc.Send($"Emote saved successfully{Constants.NewLine}");
-                                            Game.LogMessage($"INFO: Player {desc.Player.Name} has added Emote {e.EmoteName} ({e.EmoteID}) to the World Database and EmoteManager", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
@@ -201,27 +148,37 @@ namespace Kingdoms_of_Etrea.OLC
         #region Edit
         private static void EditExistingEmote(ref Descriptor descriptor)
         {
-            descriptor.Send($"Enter the ID or Emote Name to edit: ");
+            descriptor.Send($"Enter the ID or Emote Name to edit or END to return: ");
             var input = descriptor.Read().Trim();
-            if(Helpers.ValidateInput(input))
+            if (Helpers.ValidateInput(input))
             {
-                Emote e = null;
-                if(uint.TryParse(input, out uint emoteID))
+                if (input == "END")
                 {
-                    e = EmoteManager.Instance.GetEmoteByID(emoteID);
+                    return;
+                }
+                Emote e = null;
+                if (uint.TryParse(input, out uint emoteID))
+                {
+                    if (EmoteManager.Instance.EmoteExists(emoteID))
+                    {
+                        e = EmoteManager.Instance.GetEmoteByID(emoteID).ShallowCopy();
+                    }
                 }
                 else
                 {
-                    e = EmoteManager.Instance.GetEmoteByName(input);
+                    if (EmoteManager.Instance.EmoteExists(input))
+                    {
+                        e = EmoteManager.Instance.GetEmoteByName(input).ShallowCopy();
+                    }
                 }
-                if(e != null)
+                if (e != null)
                 {
                     bool okToReturn = false;
                     StringBuilder sb = new StringBuilder();
-                    while(!okToReturn)
+                    while (!okToReturn)
                     {
                         sb.Clear();
-                        sb.AppendLine($"Emote ID: {e.EmoteID}{Constants.TabStop}Emote Name: {e.EmoteName}");
+                        sb.AppendLine($"Emote ID: {e.ID}{Constants.TabStop}Emote Name: {e.EmoteName}");
                         sb.AppendLine($"Message to Player with Target:{Constants.NewLine}{e.MsgToPlayerWithTarget}");
                         sb.AppendLine($"Message to Player with no Target:{Constants.NewLine}{e.MsgToPlayerWithNoTarget}");
                         sb.AppendLine($"Message to Target:{Constants.NewLine}{e.MsgToTarget}");
@@ -235,28 +192,21 @@ namespace Kingdoms_of_Etrea.OLC
                         sb.AppendLine($"Message to Player when Target is Player:{Constants.NewLine}{e.MsgToPlayerWhenTargetIsPlayer}");
                         sb.AppendLine();
                         sb.AppendLine("Options:");
-                        sb.AppendLine("1. Change Emote Name");
-                        sb.AppendLine("2. Change Message to Player with Target");
-                        sb.AppendLine("3. Change Message to Player with no Target");
-                        sb.AppendLine("4. Change Message to Target");
-                        sb.AppendLine("5. Change Message to Others with Target");
-                        sb.AppendLine("6. Change Message to Others with no Target");
-                        sb.AppendLine("7. Change Message to Others with Vis Player and Invis Target");
-                        sb.AppendLine("8. Change Message to Others with Invis Player and Invis Target");
-                        sb.AppendLine("9. Change Message to Player Target not found");
-                        sb.AppendLine("10. Change Message to Others Target not found");
-                        sb.AppendLine("11. Change Message to Others when Target is Player");
-                        sb.AppendLine("12. Change Message to Player when Target is Player");
-                        sb.AppendLine("13. Save Emote");
-                        sb.AppendLine("14. Exit without saving");
+                        sb.AppendLine($"1. Set Emote Name{Constants.TabStop}2. Set Message to Player with Target");
+                        sb.AppendLine($"3. Set Message to Player with no Target{Constants.TabStop}4. Set Message to Target");
+                        sb.AppendLine($"5. Set Message to Others with Target{Constants.TabStop}6. Set Message to Others with no Target");
+                        sb.AppendLine($"7. Set Message to others with Vis Player and Inivs Target{Constants.TabStop}8. Set Message to Others with Invis Player and Invis Target");
+                        sb.AppendLine($"9. Set Message to Player when Target not found{Constants.TabStop}10. Set Message to Others Target not found");
+                        sb.AppendLine($"11. Set Message to Others when Target is Player{Constants.TabStop}12. Set Message to Player when Target is Player");
+                        sb.AppendLine($"13. Save{Constants.TabStop}14. Exit");
                         sb.Append("Selection: ");
                         descriptor.Send(sb.ToString());
                         var choice = descriptor.Read().Trim();
-                        if(Helpers.ValidateInput(choice) && uint.TryParse(choice, out uint option))
+                        if (Helpers.ValidateInput(choice) && uint.TryParse(choice, out uint option))
                         {
-                            if(option >= 1 && option <= 14)
+                            if (option >= 1 && option <= 14)
                             {
-                                switch(option)
+                                switch (option)
                                 {
                                     case 1:
                                         e.EmoteName = GetAssetStringValue(ref descriptor, "Enter Emote Name: ");
@@ -307,14 +257,13 @@ namespace Kingdoms_of_Etrea.OLC
                                         break;
 
                                     case 13:
-                                        if(ValidateEmoteAsset(ref descriptor, e))
+                                        if (ValidateEmoteAsset(ref descriptor, e))
                                         {
-                                            if(DatabaseManager.UpdateEmoteByID(ref descriptor, ref e))
+                                            if (DatabaseManager.UpdateEmoteByID(ref descriptor, ref e))
                                             {
-                                                if(EmoteManager.Instance.UpdateEmoteByID(e.EmoteID, ref descriptor, e))
+                                                if (EmoteManager.Instance.UpdateEmoteByID(e.ID, ref descriptor, e))
                                                 {
                                                     descriptor.Send($"Emote updated successfully.{Constants.NewLine}");
-                                                    Game.LogMessage($"INFO: Player {descriptor.Player.Name} successfully updated Emote {e.EmoteName} ({e.EmoteID})", LogLevel.Info, true);
                                                     okToReturn = true;
                                                 }
                                                 else
@@ -349,34 +298,77 @@ namespace Kingdoms_of_Etrea.OLC
         }
         #endregion
 
-        #region Functions
+        #region Delete
+        private static void DeleteEmote(ref Descriptor desc)
+        {
+            desc.Send($"{Constants.RedText}This is a permanent change to the World and cannot be undone unless a backup of the database is restored!{Constants.PlainText}{Constants.NewLine}");
+            desc.Send($"Enter the ID of the Emote to delete or END to return: ");
+            var input = desc.Read().Trim();
+            if (Helpers.ValidateInput(input) && input == "END")
+            {
+                return;
+            }
+            if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint emoteID))
+            {
+                Emote e = EmoteManager.Instance.GetEmoteByID(emoteID);
+                if (e != null)
+                {
+                    if (DatabaseManager.DeleteEmoteByID(ref desc, e.ID))
+                    {
+                        if (EmoteManager.Instance.RemoveEmote(emoteID, ref desc))
+                        {
+                            desc.Send($"Emote successfully removed from EmoteManager and World database.{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            desc.Send($"Unable to remove Emote from the EmoteManager{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"Unable to remove Emote from the World database{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"No Emote with that ID or name could be found.{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+            }
+        }
+        #endregion
+
+        #region Validation Functions
         private static bool ValidateEmoteAsset(ref Descriptor descriptor, Emote e, bool newEmote = false)
         {
             if (e == null)
             {
                 return false;
             }
-            if(e.EmoteID == 0)
+            if (e.ID == 0)
             {
                 descriptor.Send($"EmoteID cannot be 0{Constants.NewLine}");
                 return false;
             }
-            if(newEmote && EmoteManager.Instance.GetEmoteByID(e.EmoteID) != null)
+            if (newEmote && EmoteManager.Instance.GetEmoteByID(e.ID) != null)
             {
-                descriptor.Send($"EmoteID {e.EmoteID} is already in use{Constants.NewLine}");
+                descriptor.Send($"EmoteID {e.ID} is already in use{Constants.NewLine}");
                 return false;
             }
-            if(string.IsNullOrEmpty(e.EmoteName))
+            if (string.IsNullOrEmpty(e.EmoteName))
             {
                 descriptor.Send($"EmoteName requires a value{Constants.NewLine}");
                 return false;
             }
-            if(newEmote && EmoteManager.Instance.GetEmoteByName(e.EmoteName) != null)
+            if (newEmote && EmoteManager.Instance.GetEmoteByName(e.EmoteName) != null)
             {
                 descriptor.Send($"EmoteName '{e.EmoteName}' is already in use{Constants.NewLine}");
                 return false;
             }
-            if(string.IsNullOrEmpty(e.MsgToPlayerWithTarget) || string.IsNullOrEmpty(e.MsgToPlayerWithNoTarget) || string.IsNullOrEmpty(e.MsgToTarget)
+            if (string.IsNullOrEmpty(e.MsgToPlayerWithTarget) || string.IsNullOrEmpty(e.MsgToPlayerWithNoTarget) || string.IsNullOrEmpty(e.MsgToTarget)
                 || string.IsNullOrEmpty(e.MsgToOthersWithTarget) || string.IsNullOrEmpty(e.MsgToOthersWithNoTarget) || string.IsNullOrEmpty(e.MsgToOthersWithVisPlayerAndInvisTarget)
                 || string.IsNullOrEmpty(e.MsgToOthersWithInvisPlayerAndTarget) || string.IsNullOrEmpty(e.MsgToPlayerTargetNotFound) || string.IsNullOrEmpty(e.MsgToOthersTargetNotFound)
                 || string.IsNullOrEmpty(e.MsgToOthersWhenTargetIsPlayer))
@@ -384,7 +376,6 @@ namespace Kingdoms_of_Etrea.OLC
                 descriptor.Send($"One or more requires messages are empty{Constants.NewLine}");
                 return false;
             }
-
             return true;
         }
         #endregion

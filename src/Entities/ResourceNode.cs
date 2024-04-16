@@ -1,15 +1,13 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace Kingdoms_of_Etrea.Entities
+namespace Etrea2.Entities
 {
-    [Serializable]
     internal class ResourceNode
     {
         [JsonProperty]
-        internal uint Id {  get; set; }
+        internal uint ID { get; set; }
         [JsonProperty]
         internal string NodeName { get; set; }
         [JsonProperty]
@@ -20,6 +18,11 @@ namespace Kingdoms_of_Etrea.Entities
         internal uint AppearanceChance { get; set; }
         [JsonProperty]
         internal List<InventoryItem> CanFind { get; set; }
+
+        internal ResourceNode()
+        {
+            CanFind = new List<InventoryItem>();
+        }
 
         public override string ToString()
         {
@@ -34,7 +37,7 @@ namespace Kingdoms_of_Etrea.Entities
 
         internal InventoryItem Mine()
         {
-            if(CanFind != null && CanFind.Count > 0)
+            if (CanFind != null && CanFind.Count > 0)
             {
                 var rnd = new Random(DateTime.Now.GetHashCode());
                 return CanFind[rnd.Next(CanFind.Count)];

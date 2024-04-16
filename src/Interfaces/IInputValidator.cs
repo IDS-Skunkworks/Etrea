@@ -1,4 +1,4 @@
-﻿namespace Kingdoms_of_Etrea.Interfaces
+﻿namespace Etrea2.Interfaces
 {
     internal interface IInputValidator
     {

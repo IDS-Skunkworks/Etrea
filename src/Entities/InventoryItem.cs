@@ -1,15 +1,15 @@
 ﻿using Newtonsoft.Json;
+using Etrea2.Core;
 using System.Collections.Generic;
 using System;
-using Kingdoms_of_Etrea.Core;
 
-namespace Kingdoms_of_Etrea.Entities
+namespace Etrea2.Entities
 {
     [Serializable]
     internal class InventoryItem
     {
         [JsonProperty]
-        internal uint Id { get; set; }
+        internal uint ID { get; set; }
         [JsonProperty]
         internal string Name { get; set; }
         [JsonProperty]
@@ -44,7 +44,7 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal ArmourType BaseArmourType { get; set; }
         [JsonProperty]
-        internal Skills.Skill RequiredSkill { get; set; }
+        internal Skill RequiredSkill { get; set; }
         [JsonProperty]
         internal int HitModifier { get; set; }
         [JsonProperty]
@@ -74,41 +74,47 @@ namespace Kingdoms_of_Etrea.Entities
         internal bool AppliesBuff
         {
             get
-            { 
+            {
                 return AppliedBuffs != null && AppliedBuffs.Count > 0;
             }
+        }
+
+        internal InventoryItem ShallowCopy()
+        {
+            var i = (InventoryItem)this.MemberwiseClone();
+            return i;
         }
 
         internal bool CanPlayerEquip(ref Descriptor desc, WearSlot slot, out string msg)
         {
             msg = string.Empty;
-            if(!this.Slot.HasFlag(slot))
+            if (!this.Slot.HasFlag(slot))
             {
                 msg = $"{Name} can't be equipped in {slot}!{Constants.NewLine}";
                 return false;
             }
-            if(IsTwoHanded)
+            if (IsTwoHanded)
             {
-                if(desc.Player.EquippedItems.Held != null && !desc.Player.HasSkill("Monkey Grip"))
+                if (desc.Player.EquipHeld != null && !desc.Player.HasSkill("Monkey Grip"))
                 {
                     msg = $"You can't use a two-handed item while holding something!{Constants.NewLine}";
                     return false;
                 }
             }
-            if(RequiredSkill != null)
+            if (RequiredSkill != null)
             {
-                if(!desc.Player.HasSkill(RequiredSkill.Name))
+                if (!desc.Player.HasSkill(RequiredSkill.Name))
                 {
                     msg = $"You lack the skill to use this item!{Constants.NewLine}";
                     return false;
                 }
             }
-            if(this.Slot.HasFlag(slot))
+            if (this.Slot.HasFlag(slot))
             {
-                switch(Slot)
+                switch (Slot)
                 {
                     case WearSlot.Head:
-                        if(desc.Player.EquippedItems.Head != null)
+                        if (desc.Player.EquipHead != null)
                         {
                             msg = $"You already have something equipped there!{Constants.NewLine}";
                             return false;
@@ -116,7 +122,7 @@ namespace Kingdoms_of_Etrea.Entities
                         break;
 
                     case WearSlot.Neck:
-                        if (desc.Player.EquippedItems.Neck != null)
+                        if (desc.Player.EquipNeck != null)
                         {
                             msg = $"You already have something equipped there!{Constants.NewLine}";
                             return false;
@@ -124,7 +130,7 @@ namespace Kingdoms_of_Etrea.Entities
                         break;
 
                     case WearSlot.Weapon:
-                        if (desc.Player.EquippedItems.Weapon != null)
+                        if (desc.Player.EquipWeapon != null)
                         {
                             msg = $"You already have something equipped there!{Constants.NewLine}";
                             return false;
@@ -132,7 +138,7 @@ namespace Kingdoms_of_Etrea.Entities
                         break;
 
                     case WearSlot.Armour:
-                        if (desc.Player.EquippedItems.Armour != null)
+                        if (desc.Player.EquipArmour != null)
                         {
                             msg = $"You already have something equipped there!{Constants.NewLine}";
                             return false;
@@ -140,7 +146,7 @@ namespace Kingdoms_of_Etrea.Entities
                         break;
 
                     case WearSlot.FingerLeft:
-                        if (desc.Player.EquippedItems.FingerLeft != null)
+                        if (desc.Player.EquipLeftFinger != null)
                         {
                             msg = $"You already have something equipped there!{Constants.NewLine}";
                             return false;
@@ -148,7 +154,7 @@ namespace Kingdoms_of_Etrea.Entities
                         break;
 
                     case WearSlot.FingerRight:
-                        if (desc.Player.EquippedItems.FingerRight != null)
+                        if (desc.Player.EquipRightFinger != null)
                         {
                             msg = $"You already have something equipped there!{Constants.NewLine}";
                             return false;
@@ -156,7 +162,7 @@ namespace Kingdoms_of_Etrea.Entities
                         break;
 
                     case WearSlot.Held:
-                        if (desc.Player.EquippedItems.Held != null)
+                        if (desc.Player.EquipHeld != null)
                         {
                             msg = $"You already have something equipped there!{Constants.NewLine}";
                             return false;
@@ -165,11 +171,6 @@ namespace Kingdoms_of_Etrea.Entities
                 }
             }
             return true;
-        }
-
-        public override string ToString()
-        {
-            return $"{Name}, {ShortDescription}";
         }
     }
 }

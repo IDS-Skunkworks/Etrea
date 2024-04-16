@@ -1,170 +1,270 @@
-﻿using Kingdoms_of_Etrea.Interfaces;
-using Kingdoms_of_Etrea.Entities;
+﻿using Etrea2.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.IO;
-using System.Runtime.Serialization;
+using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class NPCManager
     {
         private static NPCManager _instance = null;
-        private static readonly object _lockObject = new object();
-        private ILoggingProvider _loggingProvider;
-        private Dictionary<uint, NPC> NPCs { get; set; }
-        private Dictionary<Guid, NPC> NPCIDs { get; set; }
+        private static readonly object _lock = new object();
+        private Dictionary<uint, NPC> _NPCTemplates { get; set; }
+        private Dictionary<Guid, NPC> _NPCInstances { get; set; }
 
-        private NPCManager(ILoggingProvider loggingProvider)
+        private NPCManager()
         {
-            _loggingProvider = loggingProvider;
-            NPCs = new Dictionary<uint, NPC>();
-            NPCIDs = new Dictionary<Guid, NPC>();
+            _NPCTemplates = new Dictionary<uint, NPC>();
+            _NPCInstances = new Dictionary<Guid, NPC>();
         }
 
         internal static NPCManager Instance
         {
             get
             {
-                lock(_lockObject)
+                lock (_lock)
                 {
                     if (_instance == null)
                     {
-                        _instance = new NPCManager(new LoggingProvider());
+                        _instance = new NPCManager();
                     }
                     return _instance;
                 }
             }
         }
 
+        internal List<NPC> GetNPCsForZone(uint zoneId)
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    return (from x in Instance._NPCTemplates.Values where x.AppearsInZone == zoneId select x).ToList();
+                }
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error looking up NPCs for Zone {zoneId}: {ex.Message}", LogLevel.Error, true);
+                return null;
+            }
+        }
+
+        internal List<NPC> GetNPCByNameOrDescription(string name)
+        {
+            lock(_lock)
+            {
+                return Instance._NPCTemplates.Values.Where(x => Regex.IsMatch(x.Name, name, RegexOptions.IgnoreCase)
+                || Regex.IsMatch(x.ShortDescription, name, RegexOptions.IgnoreCase) || Regex.IsMatch(x.LongDescription, name, RegexOptions.IgnoreCase)).ToList();
+            }
+        }
+
+        internal NPC GetNPCByGUID(Guid guid)
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    if (Instance._NPCInstances.ContainsKey(guid))
+                    {
+                        return Instance._NPCInstances[guid];
+                    }
+                }
+                return null;
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error finding NPC Instance {guid}: {ex.Message}", LogLevel.Error, true);
+                return null;
+            }
+        }
+
+        internal NPC GetNPCByID(uint id)
+        {
+            lock (_lock)
+            {
+                if (Instance._NPCTemplates.ContainsKey(id))
+                {
+                    return Instance._NPCTemplates[id];
+                }
+            }
+            return null;
+        }
+
+        internal List<NPC> GetNPCByIDRange(uint start, uint end)
+        {
+            lock(_lock)
+            {
+                return Instance._NPCTemplates.Values.Where(x => x.NPCID >= start && x.NPCID <= end).ToList();
+            }
+        }
+
         internal List<NPC> GetNPCsInRoom(uint rid)
         {
-            List<NPC> result = new List<NPC>();
-            lock(_lockObject)
+            lock ( _lock)
             {
-                result = Instance.NPCIDs.Values.Where(x => x.CurrentRoom == rid).ToList();
-            }
-            return result;
-        }
-
-        internal void SetNPCHealthToMax(Guid npcID)
-        {
-            if(Instance.NPCIDs.ContainsKey(npcID))
-            {
-                lock(_lockObject)
-                {
-                    Instance.NPCIDs[npcID].Stats.CurrentHP = (int)Instance.NPCIDs[npcID].Stats.MaxHP;
-                }
-            }
-        }
-
-        internal void AdjustNPCHealth(Guid NPCID, int amount)
-        {
-            if(Instance.NPCIDs.ContainsKey(NPCID))
-            {
-                lock(_lockObject)
-                {
-                    Instance.NPCIDs[NPCID].Stats.CurrentHP += amount;
-                }
-            }
-        }
-
-        internal void AdjustNPCMana(Guid NPCID, int amount)
-        {
-            if (Instance.NPCIDs.ContainsKey(NPCID))
-            {
-                lock (_lockObject)
-                {
-                    Instance.NPCIDs[NPCID].Stats.CurrentMP += amount;
-                }
+                return Instance._NPCInstances.Values.Where(x => x.CurrentRoom == rid).ToList();
             }
         }
 
         internal void SetNPCFollowing(ref Descriptor desc, bool isFollowing)
         {
             var fid = desc.Player.FollowerID;
-            lock(_lockObject)
+            lock (_lock)
             {
-                if (Instance.NPCIDs.ContainsKey(desc.Player.FollowerID))
+                if (Instance._NPCInstances.ContainsKey(fid))
                 {
-                    Instance.NPCIDs[desc.Player.FollowerID].FollowingPlayer = isFollowing ? desc.Id : Guid.Empty;
+                    Instance._NPCInstances[fid].FollowingPlayer = isFollowing ? desc.ID : Guid.Empty;
                 }
             }
         }
 
-        internal Dictionary<Guid, NPC> GetAllNPCIDS()
+        internal Dictionary<Guid, NPC> GetAllNPCInstances()
         {
-            return Instance.NPCIDs;
+            lock(_lock)
+            {
+                return Instance._NPCInstances;
+            }
         }
 
         internal void LoadAllNPCs(out bool hasError)
         {
             var result = DatabaseManager.LoadAllNPCS(out hasError);
-            if(!hasError && result != null && result.Count > 0)
+            if (!hasError && result != null)
             {
-                Instance.NPCs.Clear();
-                Instance.NPCs = result;
+                Instance._NPCTemplates.Clear();
+                Instance._NPCTemplates = result;
             }
         }
 
         internal int GetCountOfNPCsInWorld(uint npcID)
         {
-            return Instance.NPCIDs.Where(x => x.Value.NPCID == npcID).Count();
+            lock( _lock)
+            {
+                return Instance._NPCInstances.Where(x => x.Value.NPCID == npcID).Count();
+            }
+        }
+
+        internal int GetNPCTemplateCount()
+        {
+            lock (_lock)
+            {
+                return Instance._NPCTemplates.Count;
+            }
+        }
+
+        internal bool NPCExists(uint npcID)
+        {
+            lock (_lock)
+            {
+                return Instance._NPCTemplates.ContainsKey(npcID);
+            }
+        }
+
+        internal bool AddNPC(ref Descriptor desc, NPC n)
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    Instance._NPCTemplates.Add(n.NPCID, n);
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} has added NPC {n.NPCID} ({n.Name}) to NPCManager", LogLevel.OLC, true);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encounterd an error adding NPC {n.NPCID} ({n.Name}) to NPCManager: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
         }
 
         internal bool UpdateNPC(ref Descriptor desc, NPC n)
         {
             try
             {
-                if(Instance.NPCs.ContainsKey(n.NPCID))
+                lock (_lock)
                 {
-                    lock(_lockObject)
+                    if (Instance._NPCTemplates.ContainsKey(n.NPCID))
                     {
-                        Instance.NPCs.Remove(n.NPCID);
-                        Instance.NPCs.Add(n.NPCID, n);
-                        _loggingProvider.LogMessage($"INFO: Player {desc.Player.Name} updated NPC with ID {n.NPCID} in the NPC Manager", LogLevel.Info, true);
+                        Instance._NPCTemplates.Remove(n.NPCID);
+                        Instance._NPCTemplates.Add(n.NPCID, n);
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} has updated NPC {n.NPCID} ({n.Name}) in NPCManager", LogLevel.OLC, true);
+                        return true;
                     }
-                    return true;
-                }
-                else
-                {
-                    _loggingProvider.LogMessage($"WARN: NPC Manager does not contain an NPC with ID {n.NPCID}", LogLevel.Warning, true);
-                    lock(_lockObject)
+                    else
                     {
-                        Instance.NPCs.Add(n.NPCID, n);
+                        Game.LogMessage($"OLC: NPCManager does not contain an NPC with ID {n.NPCID} to update, it will be added instead", LogLevel.OLC, true);
+                        bool OK = AddNPC(ref desc, n);
+                        return OK;
                     }
-                    return true;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _loggingProvider.LogMessage($"ERROR: Error updating NPC {n.NPCID}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating NPC {n.NPCID} ({n.Name}) in NPCManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool RemoveNPCByID(ref Descriptor desc, uint id)
+        internal bool RemoveNPC(ref Descriptor desc, uint npcID, string npcName)
         {
             try
             {
-                if (Instance.NPCs.ContainsKey(id))
+                lock (_lock)
                 {
-                    lock(_lockObject)
-                    {
-                        Instance.NPCs.Remove(id);
-                    }
-                    _loggingProvider.LogMessage($"INFO: Player {desc.Player.Name} removed NPC ID {id} from the NPC Manager", LogLevel.Info, true);
+                    Instance._NPCTemplates.Remove(npcID);
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} remove NPC {npcID} ({npcName}) from NPCManager", LogLevel.OLC, true);
                     return true;
                 }
-                _loggingProvider.LogMessage($"WARN: Player {desc.Player.Name} was unable to remove NPC ID {id} from the NPC Manager, the ID could not be found", LogLevel.Warning, true);
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing NPC {npcID} ({npcName}) from NCPManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
-            catch(Exception ex)
+        }
+
+        internal bool RemoveNPCFromWorld(Guid npcGUID)
+        {
+            try
             {
-                _loggingProvider.LogMessage($"ERROR: Error removing NPC {id}: {ex.Message}", LogLevel.Error, true);
+                lock (_lock)
+                {
+                    if (Instance._NPCInstances.ContainsKey(npcGUID))
+                    {
+                        Instance._NPCInstances.Remove(npcGUID);
+                        Game.LogMessage($"INFO: NPC Instance {npcGUID} was removed from the world", LogLevel.Info, false);
+                    }
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error removing NPC Instance {npcGUID} from the world: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        internal bool MoveNPCToNewRID(Guid npcID, uint targetRID)
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    if (Instance._NPCInstances.ContainsKey(npcID))
+                    {
+                        Instance._NPCInstances[npcID].CurrentRoom = targetRID;
+                    }
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error updating RID of NPC Instance {npcID} to {targetRID}: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -174,27 +274,22 @@ namespace Kingdoms_of_Etrea.Core
             try
             {
                 n.NPCGuid = Guid.NewGuid();
-                var hp = Helpers.RollDice(n.NumberOfHitDice, n.SizeOfHitDice);
+                var hp = Helpers.RollDice(n.NumberOfHitDice, n.HitDieSize);
                 var mp = Helpers.RollDice(n.NumberOfHitDice, 8);
-                var hpModifier = ActorStats.CalculateAbilityModifier(n.Stats.Constitution) * n.NumberOfHitDice;
-                var mpModifier = ActorStats.CalculateAbilityModifier(n.Stats.Intelligence) * n.NumberOfHitDice;
+                var hpModifier = Helpers.CalculateAbilityModifier(n.Constitution) * n.NumberOfHitDice;
+                var mpModifier = Helpers.CalculateAbilityModifier(n.Intelligence) * n.NumberOfHitDice;
                 var hpFinal = (hpModifier + hp) <= 0 ? 1 : hpModifier += hp;
                 var mpFinal = (mpModifier + mp) <= 0 ? 1 : mpModifier += mp;
-                if (n.EquippedItems == null)
-                {
-                    n.EquippedItems = new EquippedItems();
-                }
-                n.Stats.MaxHP = Convert.ToUInt32(hpFinal);
-                n.Stats.CurrentHP = (int)hpFinal;
-                n.Stats.MaxMP = Convert.ToUInt32(mpFinal);
-                n.Stats.CurrentMP = (int)mpFinal;
+                n.MaxHP = (int)hpFinal;
+                n.CurrentHP = (int)hpFinal;
+                n.MaxMP = (int)mpFinal;
+                n.CurrentMP = (int)mpFinal;
                 n.CurrentRoom = rid;
-                NPCManager.Instance.GetNPCsInRoom(rid).Add(n);
                 n.CalculateArmourClass();
-                lock (_lockObject)
+                lock (_lock)
                 {
-                    NPCIDs.Add(n.NPCGuid, n);
-                    _loggingProvider.LogMessage($"INFO: Added {n.Name} to room {rid}", LogLevel.Info, true);
+                    Instance._NPCInstances.Add(n.NPCGuid, n);
+                    Game.LogMessage($"INFO: Added NPC {n.Name} to Room {rid}", LogLevel.Info, true);
                 }
                 var playersToNotify = RoomManager.Instance.GetPlayersInRoom(rid);
                 if (playersToNotify != null && playersToNotify.Count > 0)
@@ -207,9 +302,9 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _loggingProvider.LogMessage($"ERROR: Error adding NPC to world: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error adding NPC {n.Name} to Room {rid}: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -218,7 +313,7 @@ namespace Kingdoms_of_Etrea.Core
         {
             try
             {
-                var newNPC = Instance.NPCs[npcID].ShallowCopy();
+                var newNPC = Instance._NPCTemplates[npcID].ShallowCopy();
                 NPC toAdd = null;
                 using (var ms = new MemoryStream())
                 {
@@ -229,41 +324,37 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 toAdd.NPCGuid = Guid.NewGuid();
 
-                var hp = Helpers.RollDice(toAdd.NumberOfHitDice, toAdd.SizeOfHitDice);
+                var hp = Helpers.RollDice(toAdd.NumberOfHitDice, toAdd.HitDieSize);
                 var mp = Helpers.RollDice(toAdd.NumberOfHitDice, 10);
-                var hpModifier = ActorStats.CalculateAbilityModifier(toAdd.Stats.Constitution) * toAdd.NumberOfHitDice;
-                var mpModifier = ActorStats.CalculateAbilityModifier(toAdd.Stats.Intelligence) * toAdd.NumberOfHitDice;
+                var hpModifier = Helpers.CalculateAbilityModifier(toAdd.Constitution) * toAdd.NumberOfHitDice;
+                var mpModifier = Helpers.CalculateAbilityModifier(toAdd.Intelligence) * toAdd.NumberOfHitDice;
                 var hpFinal = (hpModifier + hp) <= 0 ? 1 : hpModifier += hp;
                 var mpFinal = (mpModifier + mp) <= 0 ? 1 : mpModifier += mp;
-                if(toAdd.EquippedItems == null)
-                {
-                    toAdd.EquippedItems = new EquippedItems();
-                }
-                toAdd.Stats.MaxHP = (uint)hpFinal;
-                toAdd.Stats.CurrentHP = (int)hpFinal;
-                toAdd.Stats.MaxMP = (uint)mpFinal;
-                toAdd.Stats.CurrentMP = (int)mpFinal;
+                toAdd.MaxHP = (int)hpFinal;
+                toAdd.CurrentHP = (int)hpFinal;
+                toAdd.MaxMP = (int)mpFinal;
+                toAdd.CurrentMP = (int)mpFinal;
                 toAdd.CurrentRoom = rid;
                 toAdd.CalculateArmourClass();
-                lock(_lockObject)
+                lock (_lock)
                 {
-                    NPCIDs.Add(toAdd.NPCGuid, toAdd);
-                    _loggingProvider.LogMessage($"INFO: Added {toAdd.Name} to room {rid}", LogLevel.Info, true);
+                    Instance._NPCInstances.Add(toAdd.NPCGuid, toAdd);
+                    Game.LogMessage($"INFO: Added NPC {toAdd.Name} to Room {rid}", LogLevel.Info, true);
                 }
                 var playersToNotify = RoomManager.Instance.GetPlayersInRoom(rid);
-                if(playersToNotify != null &&  playersToNotify.Count > 0)
+                if (playersToNotify != null && playersToNotify.Count > 0)
                 {
                     var article = Helpers.IsCharAVowel(toAdd.Name[0]) ? "an" : "a";
-                    foreach(var p in playersToNotify)
+                    foreach (var p in playersToNotify)
                     {
                         p.Send($"{Constants.NewLine}The Winds of Magic swirl and give life to {article} {toAdd.Name}!{Constants.NewLine}");
                     }
                 }
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _loggingProvider.LogMessage($"ERROR: Error adding NPC: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error adding NPC {npcID} to Room {rid}: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -272,19 +363,17 @@ namespace Kingdoms_of_Etrea.Core
         {
             NPC hireling = new NPC();
             hireling.NumberOfAttacks = (uint)Math.Round((double)desc.Player.Level / 2, 0) <= 5 ? (uint)Math.Round((double)desc.Player.Level / 2, 0) : 5;
-            if(hireling.NumberOfAttacks < 1)
+            if (hireling.NumberOfAttacks < 1)
             {
                 // Ensure hireling NPCs always have at least one attack per round
                 hireling.NumberOfAttacks = 1;
             }
-            hireling.NumberOfHitDice = desc.Player.Level;
-            hireling.Skills = new List<Skills.Skill>();
-            hireling.Spells = new List<Spells.Spell>();
+            hireling.Skills = new List<Skill>();
+            hireling.Spells = new List<Spell>();
             hireling.Inventory = new List<InventoryItem>();
-            hireling.EquippedItems = new EquippedItems();
-            hireling.FollowingPlayer = desc.Id;
-            hireling.Stats.Gold = 100;
-            hireling.Type = ActorType.NonPlayer;
+            hireling.FollowingPlayer = desc.ID;
+            hireling.Gold = 100;
+            hireling.ActorType = ActorType.NonPlayer;
             hireling.Level = desc.Player.Level;
             hireling.Position = ActorPosition.Standing;
             hireling.Race = ActorRace.Human;
@@ -292,17 +381,17 @@ namespace Kingdoms_of_Etrea.Core
             hireling.Name = HirelingNames[rnd.Next(HirelingNames.Count)];
             hireling.ShortDescription = $"{desc.Player}'s follower";
             hireling.ArrivalMessage = $"{hireling.Name} arrives, following {desc.Player}";
-            hireling.DepartMessage = $"{hireling.Name} leaves, following {desc.Player}";
-            if(Regex.Match(npcType, "fighter", RegexOptions.IgnoreCase).Success)
+            hireling.DepartureMessage = $"{hireling.Name} leaves, following {desc.Player}";
+            if (Regex.IsMatch(npcType, "fighter", RegexOptions.IgnoreCase))
             {
                 hireling.Title = "Fighter";
-                hireling.SizeOfHitDice = 10;
-                hireling.Stats.Strength = Helpers.RollDice(3, 6) + 2;
-                hireling.Stats.Dexterity = Helpers.RollDice(3, 6);
-                hireling.Stats.Intelligence = Helpers.RollDice(3, 6);
-                hireling.Stats.Constitution = Helpers.RollDice(3, 6) + 2;
-                hireling.Stats.Wisdom = Helpers.RollDice(3, 6);
-                hireling.Stats.Charisma = Helpers.RollDice(3, 6);
+                hireling.HitDieSize = 10;
+                hireling.Strength = Helpers.RollDice(3, 6) + 2;
+                hireling.Dexterity = Helpers.RollDice(3, 6);
+                hireling.Intelligence = Helpers.RollDice(3, 6);
+                hireling.Constitution = Helpers.RollDice(3, 6) + 2;
+                hireling.Wisdom = Helpers.RollDice(3, 6);
+                hireling.Charisma = Helpers.RollDice(3, 6);
                 hireling.Class = ActorClass.Fighter;
                 hireling.AddSkill("Desperate Attack");
                 hireling.AddSkill("Awareness");
@@ -310,16 +399,16 @@ namespace Kingdoms_of_Etrea.Core
                 hireling.LongDescription = $"{hireling.Title} {hireling.Name} is {desc.Player}'s follower!";
                 return hireling;
             }
-            if (Regex.Match(npcType, "mage", RegexOptions.IgnoreCase).Success)
+            if (Regex.IsMatch(npcType, "mage", RegexOptions.IgnoreCase))
             {
                 hireling.Title = "Sorceror";
-                hireling.SizeOfHitDice = 4;
-                hireling.Stats.Strength = Helpers.RollDice(3, 6);
-                hireling.Stats.Dexterity = Helpers.RollDice(3, 6);
-                hireling.Stats.Intelligence = Helpers.RollDice(3, 6) + 4;
-                hireling.Stats.Constitution = Helpers.RollDice(3, 6);
-                hireling.Stats.Wisdom = Helpers.RollDice(3, 6);
-                hireling.Stats.Charisma = Helpers.RollDice(3, 6);
+                hireling.HitDieSize = 4;
+                hireling.Strength = Helpers.RollDice(3, 6);
+                hireling.Dexterity = Helpers.RollDice(3, 6);
+                hireling.Intelligence = Helpers.RollDice(3, 6) + 4;
+                hireling.Constitution = Helpers.RollDice(3, 6);
+                hireling.Wisdom = Helpers.RollDice(3, 6);
+                hireling.Charisma = Helpers.RollDice(3, 6);
                 hireling.Class = ActorClass.Wizard;
                 hireling.AddSpell("Magic Missile");
                 hireling.AddSpell("Truestrike");
@@ -328,16 +417,16 @@ namespace Kingdoms_of_Etrea.Core
                 hireling.LongDescription = $"{hireling.Title} {hireling.Name} is {desc.Player}'s follower!";
                 return hireling;
             }
-            if (Regex.Match(npcType, "thief", RegexOptions.IgnoreCase).Success)
+            if (Regex.IsMatch(npcType, "thief", RegexOptions.IgnoreCase))
             {
                 hireling.Title = "Thief";
-                hireling.SizeOfHitDice = 6;
-                hireling.Stats.Strength = Helpers.RollDice(3, 6);
-                hireling.Stats.Dexterity = Helpers.RollDice(3, 6) + 4;
-                hireling.Stats.Intelligence = Helpers.RollDice(3, 6);
-                hireling.Stats.Constitution = Helpers.RollDice(3, 6);
-                hireling.Stats.Wisdom = Helpers.RollDice(3, 6);
-                hireling.Stats.Charisma = Helpers.RollDice(3, 6);
+                hireling.HitDieSize = 6;
+                hireling.Strength = Helpers.RollDice(3, 6);
+                hireling.Dexterity = Helpers.RollDice(3, 6) + 4;
+                hireling.Intelligence = Helpers.RollDice(3, 6);
+                hireling.Constitution = Helpers.RollDice(3, 6);
+                hireling.Wisdom = Helpers.RollDice(3, 6);
+                hireling.Charisma = Helpers.RollDice(3, 6);
                 hireling.Class = ActorClass.Thief;
                 hireling.AddSkill("Awareness");
                 hireling.AddSkill("Parry");
@@ -346,16 +435,16 @@ namespace Kingdoms_of_Etrea.Core
                 hireling.LongDescription = $"{hireling.Title} {hireling.Name} is {desc.Player}'s follower!";
                 return hireling;
             }
-            if (Regex.Match(npcType, "priest", RegexOptions.IgnoreCase).Success)
+            if (Regex.IsMatch(npcType, "priest", RegexOptions.IgnoreCase))
             {
                 hireling.Title = "Cleric";
-                hireling.SizeOfHitDice = 8;
-                hireling.Stats.Strength = Helpers.RollDice(3, 6) + 1;
-                hireling.Stats.Dexterity = Helpers.RollDice(3, 6) + 1;
-                hireling.Stats.Intelligence = Helpers.RollDice(3, 6) + 1;
-                hireling.Stats.Constitution = Helpers.RollDice(3, 6);
-                hireling.Stats.Wisdom = Helpers.RollDice(3, 6) + 1;
-                hireling.Stats.Charisma = Helpers.RollDice(3, 6);
+                hireling.HitDieSize = 8;
+                hireling.Strength = Helpers.RollDice(3, 6) + 1;
+                hireling.Dexterity = Helpers.RollDice(3, 6) + 1;
+                hireling.Intelligence = Helpers.RollDice(3, 6) + 1;
+                hireling.Constitution = Helpers.RollDice(3, 6);
+                hireling.Wisdom = Helpers.RollDice(3, 6) + 1;
+                hireling.Charisma = Helpers.RollDice(3, 6);
                 hireling.Class = ActorClass.Cleric;
                 hireling.AddSpell("Cure Light Wounds");
                 hireling.AddSpell("Cure Moderate Wounds");
@@ -366,127 +455,6 @@ namespace Kingdoms_of_Etrea.Core
                 return hireling;
             }
             return null;
-        }
-
-        internal bool MoveNPCToNewRID(Guid npcid, uint rid)
-        {
-            try
-            {
-                lock(_lockObject)
-                {
-                    if(Instance.NPCIDs.ContainsKey(npcid))
-                    {
-                        Instance.NPCIDs[npcid].CurrentRoom = rid;
-                    }
-                }
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        internal NPC GetNPCByGUID(Guid npcGuid)
-        {
-            try
-            {
-                lock(_lockObject)
-                {
-                    if(Instance.NPCIDs.ContainsKey(npcGuid))
-                    {
-                        return Instance.NPCIDs[npcGuid];
-                    }
-                    return null;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        internal List<NPC> GetNPCsForZone(uint zoneId)
-        {
-            var retval = new List<NPC>();
-            retval.AddRange((from x in Instance.NPCs where x.Value.AppearsInZone == zoneId select x.Value).ToList());
-            return retval;
-        }
-
-        internal bool RemoveNPCFromWorld(Guid g, NPC npcid, uint rid)
-        {
-            try
-            {
-                lock(_lockObject)
-                {
-                    if(Instance.NPCIDs.ContainsKey(g))
-                    {
-                        Instance.NPCIDs.Remove(g);
-                    }
-                }
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        internal bool AddNewNPC(NPC n)
-        {
-            try
-            {
-                lock(_lockObject)
-                {
-                    Instance.NPCs.Add(n.NPCID, n);
-                }
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        internal List<NPC> GetNPCByIDRange(uint start, uint end)
-        {
-            var retval = NPCs.Values.Where(x => x.NPCID >= start && x.NPCID <= end).ToList();
-            return retval;
-        }
-
-        internal List<NPC> GetNPCByNameOrDescription(string criteria)
-        {
-            var retval = new List<NPC>();
-            retval.AddRange(from NPC n in Instance.NPCs.Values
-                            where Regex.Match(n.Name, criteria, RegexOptions.IgnoreCase).Success
-                            || Regex.Match(n.ShortDescription, criteria, RegexOptions.IgnoreCase).Success
-                            || Regex.Match(n.LongDescription, criteria, RegexOptions.IgnoreCase).Success
-                            select n);
-            return retval;
-        }
-
-        internal int GetNPCCount()
-        {
-            return Instance.NPCs.Count;
-        }
-
-        internal NPC GetNPCByID(uint id)
-        {
-            if(Instance.NPCs.ContainsKey(id))
-            {
-                return Instance.NPCs[id];
-            }
-            return null;
-        }
-
-        internal Dictionary<uint, NPC> GetAllNPCs()
-        {
-            return Instance.NPCs;
-        }
-
-        internal bool NPCExists(uint id)
-        {
-            return Instance.NPCs.ContainsKey(id);
         }
 
         private static List<string> HirelingNames = new List<string>
@@ -512,7 +480,8 @@ namespace Kingdoms_of_Etrea.Core
             "Petra",
             "Stephanie",
             "Thane",
-            "Felicity"
+            "Felicity",
+            "Bartram"
         };
     }
 }

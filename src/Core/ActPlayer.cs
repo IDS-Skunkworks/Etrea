@@ -1,17 +1,18 @@
-﻿using Kingdoms_of_Etrea.Entities;
+﻿using Etrea2.Entities;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal static partial class CommandParser
     {
         private static void ExorciseCursedItem(ref Descriptor desc, ref string input)
         {
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Exorcist))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Exorcist))
             {
                 var verb = GetVerb(ref input);
                 var targetSlot = input.Remove(0, verb.Length).Trim();
@@ -23,131 +24,128 @@ namespace Kingdoms_of_Etrea.Core
                         desc.Send($"The priest looks solemn. \"Removing this curse will cost {p:N0} gold.\"{Constants.NewLine}");
                         return;
                     }
-                    if (desc.Player.EquippedItems != null)
+                    InventoryItem i = null;
+                    switch (targetSlot.ToLower())
                     {
-                        InventoryItem i = null;
-                        switch (targetSlot.ToLower())
-                        {
-                            case "head":
-                                if (desc.Player.EquippedItems.Head != null && desc.Player.EquippedItems.Head != null && desc.Player.EquippedItems.Head.IsCursed)
-                                {
-                                    i = desc.Player.EquippedItems.Head;
-                                }
-                                else
-                                {
-                                    desc.Send($"You aren't wearing anything cursed on your head!{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "neck":
-                                if (desc.Player.EquippedItems.Neck != null && desc.Player.EquippedItems.Neck != null && desc.Player.EquippedItems.Neck.IsCursed)
-                                {
-                                    i = desc.Player.EquippedItems.Neck;
-                                }
-                                else
-                                {
-                                    desc.Send($"You aren't wearing anything cursed around your neck!{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "armour":
-                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.Armour != null && desc.Player.EquippedItems.Armour.IsCursed)
-                                {
-                                    i = desc.Player.EquippedItems.Armour;
-                                }
-                                else
-                                {
-                                    desc.Send($"Your armour isn't cursed!{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "weapon":
-                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.Weapon != null && desc.Player.EquippedItems.Weapon.IsCursed)
-                                {
-                                    i = desc.Player.EquippedItems.Weapon;
-                                }
-                                else
-                                {
-                                    desc.Send($"Your weapon isn't cursed!{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "held":
-                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.Held != null && desc.Player.EquippedItems.Held.IsCursed)
-                                {
-                                    i = desc.Player.EquippedItems.Held;
-                                }
-                                else
-                                {
-                                    desc.Send($"You aren't holding anything cursed!{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "fingerright":
-                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.FingerRight != null && desc.Player.EquippedItems.FingerRight.IsCursed)
-                                {
-                                    i = desc.Player.EquippedItems.FingerRight;
-                                }
-                                else
-                                {
-                                    desc.Send($"You aren't wearing anything with a curse on your right hand!{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "fingerleft":
-                                if (desc.Player.EquippedItems != null && desc.Player.EquippedItems.FingerLeft != null && desc.Player.EquippedItems.FingerLeft.IsCursed)
-                                {
-                                    i = desc.Player.EquippedItems.FingerLeft;
-                                }
-                                else
-                                {
-                                    desc.Send($"You aren't wearing anything with a curse on your left hand!{Constants.NewLine}");
-                                }
-                                break;
-                        }
-                        if (i != null)
-                        {
-                            var removePrice = Helpers.GetNewPurchasePrice(ref desc, 2500);
-                            if (removePrice > desc.Player.Stats.Gold)
+                        case "head":
+                            if (desc.Player.EquipHead != null && desc.Player.EquipHead.IsCursed)
                             {
-                                desc.Send($"The exorcist gives you a solemn look. \"You can't afford that, it seems.\"{Constants.NewLine}");
+                                i = desc.Player.EquipHead;
                             }
                             else
                             {
-                                desc.Send($"The exorcist stashes your gold in his robe. \"Excellent! One moment...\"{Constants.NewLine}");
-                                desc.Player.Stats.Gold -= removePrice;
-                                desc.Player.Inventory.Add(i);
-                                switch (targetSlot.ToLower())
-                                {
-                                    case "head":
-                                        desc.Player.EquippedItems.Head = null;
-                                        break;
+                                desc.Send($"You aren't wearing anything cursed on your head!{Constants.NewLine}");
+                            }
+                            break;
 
-                                    case "neck":
-                                        desc.Player.EquippedItems.Neck = null;
-                                        break;
+                        case "neck":
+                            if (desc.Player.EquipNeck != null && desc.Player.EquipNeck.IsCursed)
+                            {
+                                i = desc.Player.EquipNeck;
+                            }
+                            else
+                            {
+                                desc.Send($"You aren't wearing anything cursed around your neck!{Constants.NewLine}");
+                            }
+                            break;
 
-                                    case "armour":
-                                        desc.Player.EquippedItems.Armour = null;
-                                        break;
+                        case "armour":
+                            if (desc.Player.EquipArmour != null && desc.Player.EquipArmour.IsCursed)
+                            {
+                                i = desc.Player.EquipArmour;
+                            }
+                            else
+                            {
+                                desc.Send($"Your armour isn't cursed!{Constants.NewLine}");
+                            }
+                            break;
 
-                                    case "weapon":
-                                        desc.Player.EquippedItems.Weapon = null;
-                                        break;
+                        case "weapon":
+                            if (desc.Player.EquipWeapon != null && desc.Player.EquipWeapon.IsCursed)
+                            {
+                                i = desc.Player.EquipWeapon;
+                            }
+                            else
+                            {
+                                desc.Send($"Your weapon isn't cursed!{Constants.NewLine}");
+                            }
+                            break;
 
-                                    case "held":
-                                        desc.Player.EquippedItems.Held = null;
-                                        break;
+                        case "held":
+                            if (desc.Player.EquipHeld != null && desc.Player.EquipHeld.IsCursed)
+                            {
+                                i = desc.Player.EquipHeld;
+                            }
+                            else
+                            {
+                                desc.Send($"You aren't holding anything cursed!{Constants.NewLine}");
+                            }
+                            break;
 
-                                    case "fingerright":
-                                        desc.Player.EquippedItems.FingerRight = null;
-                                        break;
+                        case "fingerright":
+                            if (desc.Player.EquipRightFinger != null && desc.Player.EquipRightFinger.IsCursed)
+                            {
+                                i = desc.Player.EquipRightFinger;
+                            }
+                            else
+                            {
+                                desc.Send($"You aren't wearing anything with a curse on your right hand!{Constants.NewLine}");
+                            }
+                            break;
 
-                                    case "fingerleft":
-                                        desc.Player.EquippedItems.FingerLeft = null;
-                                        break;
+                        case "fingerleft":
+                            if (desc.Player.EquipLeftFinger != null && desc.Player.EquipLeftFinger.IsCursed)
+                            {
+                                i = desc.Player.EquipLeftFinger;
+                            }
+                            else
+                            {
+                                desc.Send($"You aren't wearing anything with a curse on your left hand!{Constants.NewLine}");
+                            }
+                            break;
+                    }
+                    if (i != null)
+                    {
+                        var removePrice = Helpers.GetNewPurchasePrice(ref desc, 2500);
+                        if (removePrice > desc.Player.Gold)
+                        {
+                            desc.Send($"The exorcist gives you a solemn look. \"You can't afford that, it seems.\"{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            desc.Send($"The exorcist stashes your gold in his robe. \"Excellent! One moment...\"{Constants.NewLine}");
+                            desc.Player.Gold -= removePrice;
+                            desc.Player.Inventory.Add(i);
+                            switch (targetSlot.ToLower())
+                            {
+                                case "head":
+                                    desc.Player.EquipHead = null;
+                                    break;
 
-                                }
+                                case "neck":
+                                    desc.Player.EquipNeck = null;
+                                    break;
+
+                                case "armour":
+                                    desc.Player.EquipArmour = null;
+                                    break;
+
+                                case "weapon":
+                                    desc.Player.EquipWeapon = null;
+                                    break;
+
+                                case "held":
+                                    desc.Player.EquipHeld = null;
+                                    break;
+
+                                case "fingerright":
+                                    desc.Player.EquipRightFinger = null;
+                                    break;
+
+                                case "fingerleft":
+                                    desc.Player.EquipLeftFinger = null;
+                                    break;
+
                             }
                         }
                     }
@@ -167,7 +165,7 @@ namespace Kingdoms_of_Etrea.Core
         {
             var verb = GetVerb(ref input);
             var line = input.Remove(0, verb.Length).Trim();
-            if(string.IsNullOrEmpty(line))
+            if (string.IsNullOrEmpty(line))
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"You are currently speaking {desc.Player.SpokenLanguage}");
@@ -177,7 +175,7 @@ namespace Kingdoms_of_Etrea.Core
             else
             {
                 var lang = ParseEnumValue<Languages>(ref line);
-                if(desc.Player.KnownLanguages.HasFlag(lang))
+                if (desc.Player.KnownLanguages.HasFlag(lang))
                 {
                     desc.Player.SpokenLanguage = lang;
                     desc.Send($"You are now speaking {lang}.{Constants.NewLine}");
@@ -191,15 +189,15 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void PlayerVault(ref Descriptor desc, ref string input)
         {
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.ItemVault))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.ItemVault))
             {
                 var verb = GetVerb(ref input);
                 var line = input.Remove(0, verb.Length).Trim();
                 var tokens = TokeniseInput(ref line);
                 // vault deposit fox
-                if(tokens.Length >= 1)
+                if (tokens.Length >= 1)
                 {
-                    switch(tokens[0].ToLower().Trim())
+                    switch (tokens[0].ToLower().Trim())
                     {
                         case "check":
                         case "c":
@@ -208,9 +206,9 @@ namespace Kingdoms_of_Etrea.Core
                                 StringBuilder sb = new StringBuilder();
                                 sb.AppendLine($"The vault wardern rifles through his paperwork. \"You have the following things in storage.\"");
                                 sb.AppendLine($"  {new string('=', 77)}");
-                                foreach (var o in desc.Player.VaultStore.Select(x => new {x.Id, x.Name, x.ShortDescription}).Distinct().OrderBy(j => j.Name))
+                                foreach (var o in desc.Player.VaultStore.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
                                 {
-                                    var cnt = desc.Player.VaultStore.Where(x => x.Id == o.Id).Count();
+                                    var cnt = desc.Player.VaultStore.Where(x => x.ID == o.ID).Count();
                                     sb.AppendLine($"|| {cnt} x {o.Name}, {o.ShortDescription}");
                                 }
                                 sb.AppendLine($"  {new string('=', 77)}");
@@ -226,7 +224,7 @@ namespace Kingdoms_of_Etrea.Core
                         case "s":
                             var item = line.Remove(0, tokens[0].Length).Trim();
                             var i = GetTargetItem(ref desc, item, true);
-                            if(i != null)
+                            if (i != null)
                             {
                                 desc.Player.Inventory.Remove(i);
                                 desc.Player.VaultStore.Add(i);
@@ -242,7 +240,7 @@ namespace Kingdoms_of_Etrea.Core
                         case "w":
                             var vItem = line.Remove(0, tokens[0].Length).Trim();
                             var vaultItem = GetTargetItem(ref desc, vItem, false, true);
-                            if(vaultItem != null)
+                            if (vaultItem != null)
                             {
                                 desc.Player.VaultStore.Remove(vaultItem);
                                 desc.Player.Inventory.Add(vaultItem);
@@ -274,14 +272,14 @@ namespace Kingdoms_of_Etrea.Core
         {
             // bank balance
             // bank <deposit | withdraw> <amount>
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Banker))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Banker))
             {
                 var verb = GetVerb(ref input);
                 var line = input.Remove(0, verb.Length).Trim();
                 var tokens = TokeniseInput(ref line);
-                if(tokens.Length >= 1)
+                if (tokens.Length >= 1)
                 {
-                    switch(tokens[0].ToLower().Trim())
+                    switch (tokens[0].ToLower().Trim())
                     {
                         case "b":
                         case "balance":
@@ -290,13 +288,13 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "d":
                         case "deposit":
-                            if(tokens.Length == 2)
+                            if (tokens.Length == 2)
                             {
-                                if(uint.TryParse(tokens[1].Trim(), out uint depositAmount))
+                                if (uint.TryParse(tokens[1].Trim(), out uint depositAmount))
                                 {
-                                    if (depositAmount > 0 && depositAmount <= desc.Player.Stats.Gold)
+                                    if (depositAmount > 0 && depositAmount <= desc.Player.Gold)
                                     {
-                                        desc.Player.Stats.Gold -= depositAmount;
+                                        desc.Player.Gold -= depositAmount;
                                         desc.Player.BankBalance += depositAmount;
                                         desc.Send($"You have successfully deposited {depositAmount} gold in your account!{Constants.NewLine}");
                                     }
@@ -326,7 +324,7 @@ namespace Kingdoms_of_Etrea.Core
                                     if (withdrawAmount > 0 && withdrawAmount <= desc.Player.BankBalance)
                                     {
                                         desc.Player.BankBalance -= withdrawAmount;
-                                        desc.Player.Stats.Gold += withdrawAmount;
+                                        desc.Player.Gold += withdrawAmount;
                                         desc.Send($"You have successfully withdrawn {withdrawAmount} gold from your account!{Constants.NewLine}");
                                     }
                                     else
@@ -367,9 +365,9 @@ namespace Kingdoms_of_Etrea.Core
         {
             var verb = GetVerb(ref input).Trim().ToLower();
             string direction = string.Empty;
-            if(verb.Length <= 2)
+            if (verb.Length <= 2)
             {
-                switch(verb)
+                switch (verb)
                 {
                     case "s":
                         direction = "south";
@@ -407,12 +405,12 @@ namespace Kingdoms_of_Etrea.Core
             {
                 direction = verb;
             }
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion(direction))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection(direction))
             {
-                if(desc.Player.Position == ActorPosition.Standing)
+                if (desc.Player.Position == ActorPosition.Standing)
                 {
                     var s = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RequiredSkill;
-                    if(s == null || desc.Player.HasSkill(s.Name))
+                    if (s == null || desc.Player.HasSkill(s.Name))
                     {
                         var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor;
                         if (d == null || (d != null && d.IsOpen))
@@ -480,16 +478,16 @@ namespace Kingdoms_of_Etrea.Core
                         break;
                 }
             }
-            if(!string.IsNullOrEmpty(direction))
+            if (!string.IsNullOrEmpty(direction))
             {
                 var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-                if(r.HasExitInDiretion(direction))
+                if (r.HasExitInDirection(direction))
                 {
                     var d = r.GetRoomExit(direction).RoomDoor;
-                    if(d != null)
+                    if (d != null)
                     {
                         List<Descriptor> localPlayers;
-                        switch(verb.ToLower())
+                        switch (verb.ToLower())
                         {
                             case "open":
                                 if (d.IsLocked)
@@ -600,12 +598,12 @@ namespace Kingdoms_of_Etrea.Core
             if (!string.IsNullOrEmpty(direction))
             {
                 var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-                if(r.HasExitInDiretion(direction))
+                if (r.HasExitInDirection(direction))
                 {
                     var d = r.GetRoomExit(direction).RoomDoor;
-                    if(d != null)
+                    if (d != null)
                     {
-                        switch(verb.ToLower())
+                        switch (verb.ToLower())
                         {
                             case "lock":
                                 if (!d.IsOpen)
@@ -712,13 +710,13 @@ namespace Kingdoms_of_Etrea.Core
             var line = input.Remove(0, verb.Length).Trim();
             var elements = TokeniseInput(ref line);
             var operation = elements.Length >= 1 ? elements[0].ToLower().Trim() : string.Empty;
-            if(!string.IsNullOrEmpty(operation))
+            if (!string.IsNullOrEmpty(operation))
             {
                 var questList = QuestManager.Instance.GetQuestsForZone(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ZoneID);
                 switch (operation)
                 {
                     case "list":
-                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
                         {
                             var completedQuestIds = desc.Player.CompletedQuests;
                             var zoneQuests = new List<Quest>();
@@ -794,7 +792,7 @@ namespace Kingdoms_of_Etrea.Core
                         break;
 
                     case "accept":
-                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
                         {
                             var iIndex = elements.Last();
                             if (int.TryParse(iIndex, out int qID))
@@ -825,7 +823,7 @@ namespace Kingdoms_of_Etrea.Core
                         break;
 
                     case "return":
-                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
                         {
                             var iIndex = elements.Last();
                             if (int.TryParse(iIndex, out int qID))
@@ -845,7 +843,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         foreach (var i in q.FetchItems)
                                         {
-                                            if (desc.Player.Inventory.Where(x => x.Id == i.Key).Count() < i.Value)
+                                            if (desc.Player.Inventory.Where(x => x.ID == i.Key).Count() < i.Value)
                                             {
                                                 isComplete = false;
                                                 break;
@@ -857,14 +855,14 @@ namespace Kingdoms_of_Etrea.Core
                                         StringBuilder sb = new StringBuilder();
                                         desc.Player.CompletedQuests.Add(q.QuestGUID);
                                         desc.Player.ActiveQuests.Remove(q);
-                                        desc.Player.AddExp(q.RewardExp);
-                                        desc.Player.AddGold(q.RewardGold);
-                                        if(q.FetchItems != null && q.FetchItems.Count > 0)
+                                        desc.Player.AddExp(q.RewardExp, true, true);
+                                        desc.Player.AddGold(q.RewardGold, true);
+                                        if (q.FetchItems != null && q.FetchItems.Count > 0)
                                         {
-                                            foreach(var i in q.FetchItems)
+                                            foreach (var i in q.FetchItems)
                                             {
-                                                var item = desc.Player.Inventory.Where(x => x.Id == i.Key).FirstOrDefault();
-                                                for(int n = 0; n < i.Value; n++)
+                                                var item = desc.Player.Inventory.Where(x => x.ID == i.Key).FirstOrDefault();
+                                                for (int n = 0; n < i.Value; n++)
                                                 {
                                                     desc.Player.Inventory.Remove(item);
                                                 }
@@ -907,7 +905,7 @@ namespace Kingdoms_of_Etrea.Core
                         var inputIndex = elements.Last();
                         if (int.TryParse(inputIndex, out int qid))
                         {
-                            if(qid > 0 && qid <= desc.Player.ActiveQuests.Count)
+                            if (qid > 0 && qid <= desc.Player.ActiveQuests.Count)
                             {
                                 var q = desc.Player.ActiveQuests[qid - 1];
                                 desc.Player.ActiveQuests.Remove(q);
@@ -932,43 +930,43 @@ namespace Kingdoms_of_Etrea.Core
             else
             {
                 // no operation so show list of active quests the player has
-                if(desc.Player.ActiveQuests != null && desc.Player.ActiveQuests.Count > 0)
+                if (desc.Player.ActiveQuests != null && desc.Player.ActiveQuests.Count > 0)
                 {
                     StringBuilder sb = new StringBuilder();
                     sb.AppendLine($"  {new string('=', 77)}");
                     int i = 0, n = 1;
-                    foreach(var q in desc.Player.ActiveQuests)
+                    foreach (var q in desc.Player.ActiveQuests)
                     {
                         sb.AppendLine($"|| Number: {n}");
                         sb.AppendLine($"|| Name: {q.QuestName}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(q.QuestZone).ZoneName}");
-                        if(q.Monsters != null && q.Monsters.Count > 0)
+                        if (q.Monsters != null && q.Monsters.Count > 0)
                         {
                             sb.AppendLine($"|| Kill Monsters:");
-                            foreach(var m in q.Monsters)
+                            foreach (var m in q.Monsters)
                             {
                                 sb.AppendLine($"|| {m.Value} x {NPCManager.Instance.GetNPCByID(m.Key).Name}");
                             }
                         }
-                        if(q.FetchItems != null && q.FetchItems.Count > 0)
+                        if (q.FetchItems != null && q.FetchItems.Count > 0)
                         {
                             sb.AppendLine("|| Obtain Items:");
-                            foreach(var item in q.FetchItems)
+                            foreach (var item in q.FetchItems)
                             {
                                 sb.AppendLine($"|| {item.Value} x {ItemManager.Instance.GetItemByID(item.Key).Name}");
                             }
                         }
                         sb.AppendLine($"|| Gold: {q.RewardGold}{Constants.TabStop}Exp: {q.RewardExp}");
-                        if(q.RewardItems != null && q.RewardItems.Count > 0)
+                        if (q.RewardItems != null && q.RewardItems.Count > 0)
                         {
                             sb.AppendLine($"|| Items:");
-                            foreach(var item in q.RewardItems)
+                            foreach (var item in q.RewardItems)
                             {
                                 sb.AppendLine($"|| {item.Name}");
                             }
                         }
                         i++;
                         n++;
-                        if(i < desc.Player.ActiveQuests.Count)
+                        if (i < desc.Player.ActiveQuests.Count)
                         {
                             sb.AppendLine($"||{new string('=', 77)}");
                         }
@@ -983,22 +981,21 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-
         private static void PlayerMail(ref Descriptor desc, ref string input)
         {
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.PostBox))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.PostBox))
             {
                 // usage: mail <list | read | write | delete>
                 var elements = TokeniseInput(ref input);
                 string operation = string.Empty;
                 uint id = 0;
-                if(elements.Length > 1)
+                if (elements.Length > 1)
                 {
                     operation = elements[1].Trim();
                 }
-                if(elements.Length >= 3)
+                if (elements.Length >= 3)
                 {
-                    if(!uint.TryParse(elements[2].Trim(), out id))
+                    if (!uint.TryParse(elements[2].Trim(), out id))
                     {
                         desc.Send($"The given ID could not be understood.{Constants.NewLine}");
                         return;
@@ -1013,22 +1010,22 @@ namespace Kingdoms_of_Etrea.Core
                     desc.Send($"mail delete <id> - to delete the specified mail{Constants.NewLine}");
                     return;
                 }
-                switch(operation.ToLower())
+                switch (operation.ToLower())
                 {
                     case "list":
                         var allMails = DatabaseManager.GetAllPlayerMail(ref desc);
-                        if(allMails != null && allMails.Count > 0)
+                        if (allMails != null && allMails.Count > 0)
                         {
                             StringBuilder sb = new StringBuilder();
                             sb.AppendLine($"  {new string('=', 77)}");
                             int index = 0;
-                            foreach(var m in allMails)
+                            foreach (var m in allMails)
                             {
                                 sb.AppendLine($"|| ID: {m.Key}{Constants.TabStop}{Constants.TabStop}From: {m.Value.MailFrom}{Constants.TabStop}Sent: {m.Value.MailSent}");
                                 sb.AppendLine($"|| Subject: {m.Value.MailSubject}");
                                 sb.AppendLine($"|| Attached Items: {m.Value.AttachedItems != null && m.Value.AttachedItems.Count > 0}{Constants.TabStop}Attached Gold: {m.Value.AttachedGold}");
                                 index++;
-                                if(index < allMails.Count)
+                                if (index < allMails.Count)
                                 {
                                     sb.AppendLine($"||{new string('=', 77)}");
                                 }
@@ -1045,19 +1042,19 @@ namespace Kingdoms_of_Etrea.Core
                     case "read":
                         allMails = DatabaseManager.GetAllPlayerMail(ref desc);
                         var mailItem = allMails.ContainsKey(id) ? allMails[id] : null;
-                        if(mailItem != null)
+                        if (mailItem != null)
                         {
-                            if(!mailItem.MailRead)
+                            if (!mailItem.MailRead)
                             {
                                 DatabaseManager.MarkMailAsRead(ref desc, mailItem.MailID);
-                                if(mailItem.AttachedGold > 0)
+                                if (mailItem.AttachedGold > 0)
                                 {
                                     desc.Send($"You take {mailItem.AttachedGold} gold from the mail!{Constants.NewLine}");
-                                    desc.Player.Stats.Gold += mailItem.AttachedGold;
+                                    desc.Player.Gold += mailItem.AttachedGold;
                                 }
-                                if(mailItem.AttachedItems != null && mailItem.AttachedItems.Count > 0)
+                                if (mailItem.AttachedItems != null && mailItem.AttachedItems.Count > 0)
                                 {
-                                    foreach(var i in mailItem.AttachedItems)
+                                    foreach (var i in mailItem.AttachedItems)
                                     {
                                         desc.Player.Inventory.Add(i);
                                         desc.Send($"You take {i.Name} from the mail!{Constants.NewLine}");
@@ -1069,10 +1066,10 @@ namespace Kingdoms_of_Etrea.Core
                             sb.AppendLine($"|| From: {mailItem.MailFrom}{Constants.TabStop}{Constants.TabStop}Sent: {mailItem.MailSent}");
                             sb.AppendLine($"|| Subject: {mailItem.MailSubject}");
                             sb.AppendLine($"|| Message:");
-                            if(!string.IsNullOrEmpty(mailItem.MailBody))
+                            if (!string.IsNullOrEmpty(mailItem.MailBody))
                             {
                                 var bodyLines = mailItem.MailBody.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-                                foreach(var line in bodyLines)
+                                foreach (var line in bodyLines)
                                 {
                                     sb.AppendLine($"||{Constants.TabStop}{line}");
                                 }
@@ -1087,31 +1084,31 @@ namespace Kingdoms_of_Etrea.Core
                         break;
 
                     case "write":
-                        if(desc.Player.Stats.Gold < 5)
+                        if (desc.Player.Gold < 5)
                         {
                             desc.Send($"It costs 5 gold to send a mail!{Constants.NewLine}");
                             return;
                         }
                         var newMail = Mail.Compose(ref desc);
-                        if(newMail != null)
+                        if (newMail != null)
                         {
                             bool ok = false;
                             bool returnItems = false;
-                            while(!ok)
+                            while (!ok)
                             {
                                 desc.Send($"Send this mail (Y/N)?{Constants.NewLine}");
                                 var response = desc.Read().Trim();
-                                if(Helpers.ValidateInput(response))
+                                if (Helpers.ValidateInput(response))
                                 {
-                                    if(response.ToLower() == "y" || response.ToLower() == "yes")
+                                    if (response.ToLower() == "y" || response.ToLower() == "yes")
                                     {
                                         // check we have 5 gold and send
-                                        if(desc.Player.Stats.Gold >= 5)
+                                        if (desc.Player.Gold >= 5)
                                         {
                                             newMail.MailSent = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                                             if (DatabaseManager.SendNewMail(ref desc, ref newMail))
                                             {
-                                                desc.Player.Stats.Gold -= 5;
+                                                desc.Player.Gold -= 5;
                                                 desc.Send($"The Winds of Magic swirl around your letter and it vanishes!{Constants.NewLine}");
                                                 ok = true;
                                             }
@@ -1127,21 +1124,21 @@ namespace Kingdoms_of_Etrea.Core
                                             returnItems = true;
                                         }
                                     }
-                                    if(response.ToLower() == "n" || response.ToLower() == "no")
+                                    if (response.ToLower() == "n" || response.ToLower() == "no")
                                     {
                                         returnItems = true;
                                     }
-                                    if(returnItems)
+                                    if (returnItems)
                                     {
                                         // give the player back any attached items and gold
-                                        if(newMail.AttachedGold > 0)
+                                        if (newMail.AttachedGold > 0)
                                         {
-                                            desc.Player.Stats.Gold += newMail.AttachedGold;
+                                            desc.Player.Gold += newMail.AttachedGold;
                                             desc.Send($"{newMail.AttachedGold} gold has been returned to you.{Constants.NewLine}");
                                         }
-                                        if(newMail.AttachedItems != null && newMail.AttachedItems.Count > 0)
+                                        if (newMail.AttachedItems != null && newMail.AttachedItems.Count > 0)
                                         {
-                                            foreach(var i in newMail.AttachedItems)
+                                            foreach (var i in newMail.AttachedItems)
                                             {
                                                 desc.Player.Inventory.Add(i);
                                                 desc.Send($"{i.Name} has been returned to you.{Constants.NewLine}");
@@ -1161,9 +1158,9 @@ namespace Kingdoms_of_Etrea.Core
                     case "delete":
                         allMails = DatabaseManager.GetAllPlayerMail(ref desc);
                         mailItem = allMails.ContainsKey(id) ? allMails[id] : null;
-                        if(mailItem != null)
+                        if (mailItem != null)
                         {
-                            if(DatabaseManager.DeleteMailByID(ref desc, mailItem.MailID))
+                            if (DatabaseManager.DeleteMailByID(ref desc, mailItem.MailID))
                             {
                                 desc.Send($"The Winds of Magic swirl and swallow the message, it is gone forever!{Constants.NewLine}");
                             }
@@ -1193,9 +1190,9 @@ namespace Kingdoms_of_Etrea.Core
         {
             var verb = GetVerb(ref input).Trim();
             var op = input.Remove(0, verb.Length).Trim();
-            if(!string.IsNullOrEmpty(op))
+            if (!string.IsNullOrEmpty(op))
             {
-                if(op.ToLower() == "on")
+                if (op.ToLower() == "on")
                 {
                     desc.Player.PVP = true;
                     desc.Send($"PVP flag set to ON, PVP is enabled.{Constants.NewLine}");
@@ -1208,7 +1205,7 @@ namespace Kingdoms_of_Etrea.Core
             }
             else
             {
-                if(desc.Player.PVP)
+                if (desc.Player.PVP)
                 {
                     desc.Send($"Your PVP flag is currently enabled!{Constants.NewLine}");
                 }
@@ -1223,7 +1220,7 @@ namespace Kingdoms_of_Etrea.Core
         {
             StringBuilder sb = new StringBuilder();
             var n = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-            if(n != null)
+            if (n != null)
             {
                 var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 var elements = TokeniseInput(ref line);
@@ -1241,12 +1238,12 @@ namespace Kingdoms_of_Etrea.Core
                                         sb.AppendLine($"|| Name: {n.Name}");
                                         sb.AppendLine($"||");
                                         sb.AppendLine($"|| Stats:");
-                                        sb.AppendLine($"|| Strength: {n.Stats.Strength} ({ActorStats.CalculateAbilityModifier(n.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}Dexterity: {n.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(n.Stats.Dexterity)})");
-                                        sb.AppendLine($"|| Constitution: {n.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(n.Stats.Constitution)}){Constants.TabStop}{Constants.TabStop}Intelligence: {n.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(n.Stats.Intelligence)})");
-                                        sb.AppendLine($"|| Wisdom: {n.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(n.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}Charisma: {n.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(n.Stats.Charisma)})");
-                                        sb.AppendLine($"|| HP: {n.NumberOfHitDice}d{n.SizeOfHitDice} ({n.Stats.CurrentHP}/{n.Stats.MaxHP})");
-                                        sb.AppendLine($"|| MP: {n.NumberOfHitDice}d8 ({n.Stats.CurrentMP}/{n.Stats.MaxMP})");
-                                        sb.AppendLine($"|| Armour Class: {n.Stats.ArmourClass}{Constants.TabStop}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
+                                        sb.AppendLine($"|| Strength: {n.Strength} ({Helpers.CalculateAbilityModifier(n.Strength)}){Constants.TabStop}{Constants.TabStop}Dexterity: {n.Dexterity} ({Helpers.CalculateAbilityModifier(n.Dexterity)})");
+                                        sb.AppendLine($"|| Constitution: {n.Constitution} ({Helpers.CalculateAbilityModifier(n.Constitution)}){Constants.TabStop}{Constants.TabStop}Intelligence: {n.Intelligence} ({Helpers.CalculateAbilityModifier(n.Intelligence)})");
+                                        sb.AppendLine($"|| Wisdom: {n.Wisdom} ({Helpers.CalculateAbilityModifier(n.Wisdom)}){Constants.TabStop} {Constants.TabStop}Charisma: {n.Charisma} ({Helpers.CalculateAbilityModifier(n.Charisma)})");
+                                        sb.AppendLine($"|| HP: {n.NumberOfHitDice}d{n.HitDieSize} ({n.CurrentHP}/{n.MaxHP})");
+                                        sb.AppendLine($"|| MP: {n.NumberOfHitDice}d8 ({n.CurrentMP}/{n.MaxMP})");
+                                        sb.AppendLine($"|| Armour Class: {n.ArmourClass}{Constants.TabStop}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
                                         sb.AppendLine($"  {new string('=', 77)}");
                                         desc.Send(sb.ToString());
                                         break;
@@ -1254,19 +1251,16 @@ namespace Kingdoms_of_Etrea.Core
                                     case "equip":
                                     case "eq":
                                     case "equipment":
-                                        if (n.EquippedItems != null)
-                                        {
-                                            sb.AppendLine($"  {new string('=', 77)}");
-                                            sb.AppendLine($"|| Head: {n.EquippedItems.Head?.Name}");
-                                            sb.AppendLine($"|| Neck: {n.EquippedItems.Neck?.Name}");
-                                            sb.AppendLine($"|| Armour: {n.EquippedItems.Armour?.Name}");
-                                            sb.AppendLine($"|| Finger (L): {n.EquippedItems.FingerLeft?.Name}");
-                                            sb.AppendLine($"|| Finger (R): {n.EquippedItems.FingerRight?.Name}");
-                                            sb.AppendLine($"|| Weapon: {n.EquippedItems.Weapon?.Name}");
-                                            sb.AppendLine($"|| Held: {n.EquippedItems.Held?.Name}");
-                                            sb.AppendLine($"  {new string('=', 77)}");
-                                            desc.Send(sb.ToString());
-                                        }
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        sb.AppendLine($"|| Head: {n.EquipHead?.Name ?? "Nothing"}");
+                                        sb.AppendLine($"|| Neck: {n.EquipNeck?.Name ?? "Nothing"}");
+                                        sb.AppendLine($"|| Armour: {n.EquipArmour?.Name ?? "Nothing"}");
+                                        sb.AppendLine($"|| Finger (L): {n.EquipLeftFinger?.Name ?? "Nothing"}");
+                                        sb.AppendLine($"|| Finger (R): {n.EquipRightFinger?.Name ?? "Nothing"}");
+                                        sb.AppendLine($"|| Weapon: {n.EquipWeapon?.Name ?? "Nothing"}");
+                                        sb.AppendLine($"|| Held: {n.EquipHeld?.Name ?? "Nothing"}");
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        desc.Send(sb.ToString());
                                         break;
 
                                     case "inv":
@@ -1275,9 +1269,9 @@ namespace Kingdoms_of_Etrea.Core
                                         {
                                             sb.AppendLine($"  {new string('=', 77)}");
                                             sb.AppendLine($"|| {n.Name} is carrying:");
-                                            foreach (var i in n.Inventory.Select(x => new { x.Id, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
+                                            foreach (var i in n.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
                                             {
-                                                var cnt = n.Inventory.Where(y => y.Id == i.Id).Count();
+                                                var cnt = n.Inventory.Where(y => y.ID == i.ID).Count();
                                                 sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription}");
                                             }
                                             sb.AppendLine($"  {new string('=', 77)}");
@@ -1293,22 +1287,22 @@ namespace Kingdoms_of_Etrea.Core
 
                             case "use":
                                 var itemStr = line.Replace("use", string.Empty).Trim();
-                                if(!string.IsNullOrEmpty(itemStr))
+                                if (!string.IsNullOrEmpty(itemStr))
                                 {
                                     var invItem = n.Inventory.Where(x => Regex.Match(x.Name, itemStr, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                                    if(invItem != null)
+                                    if (invItem != null)
                                     {
                                         if (invItem.Slot != WearSlot.None)
                                         {
                                             switch (invItem.Slot)
                                             {
                                                 case WearSlot.Head:
-                                                    if(n.EquippedItems.Head == null)
+                                                    if (n.EquipHead == null)
                                                     {
                                                         n.Inventory.Remove(invItem);
-                                                        n.EquippedItems.Head = invItem;
+                                                        n.EquipHead = invItem;
                                                         n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} start using {invItem.Name}.{Constants.NewLine}");
+                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
                                                     }
                                                     else
                                                     {
@@ -1317,40 +1311,40 @@ namespace Kingdoms_of_Etrea.Core
                                                     break;
 
                                                 case WearSlot.Neck:
-                                                    if (n.EquippedItems.Neck == null)
+                                                    if (n.EquipNeck == null)
                                                     {
                                                         n.Inventory.Remove(invItem);
-                                                        n.EquippedItems.Neck = invItem;
+                                                        n.EquipNeck = invItem;
                                                         n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} start using {invItem.Name}.{Constants.NewLine}");
+                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
                                                     }
                                                     else
                                                     {
-                                                        desc.Send($"Your follower is already wearing an item on their neck!{Constants.NewLine}");
+                                                        desc.Send($"Your follower is already wearing something around their neck!{Constants.NewLine}");
                                                     }
                                                     break;
 
                                                 case WearSlot.Weapon:
-                                                    if (n.EquippedItems.Weapon == null)
+                                                    if (n.EquipWeapon == null)
                                                     {
                                                         n.Inventory.Remove(invItem);
-                                                        n.EquippedItems.Weapon = invItem;
+                                                        n.EquipWeapon = invItem;
                                                         n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} start using {invItem.Name}.{Constants.NewLine}");
+                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
                                                     }
                                                     else
                                                     {
-                                                        desc.Send($"Your follower is already wielding a weapon!{Constants.NewLine}");
+                                                        desc.Send($"Your follower is already using a weapon!{Constants.NewLine}");
                                                     }
                                                     break;
 
                                                 case WearSlot.Armour:
-                                                    if (n.EquippedItems.Armour == null)
+                                                    if (n.EquipArmour == null)
                                                     {
                                                         n.Inventory.Remove(invItem);
-                                                        n.EquippedItems.Armour = invItem;
+                                                        n.EquipArmour = invItem;
                                                         n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} start using {invItem.Name}.{Constants.NewLine}");
+                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
                                                     }
                                                     else
                                                     {
@@ -1360,23 +1354,23 @@ namespace Kingdoms_of_Etrea.Core
 
                                                 case WearSlot.FingerLeft:
                                                 case WearSlot.FingerRight:
-                                                    if(n.EquippedItems.FingerLeft == null)
+                                                    if (n.EquipLeftFinger == null)
                                                     {
                                                         n.Inventory.Remove(invItem);
-                                                        n.EquippedItems.FingerLeft = invItem;
+                                                        n.EquipLeftFinger = invItem;
                                                         n.CalculateArmourClass();
                                                         RoomManager.Instance.ProcessEnvironmentBuffs(n.CurrentRoom);
-                                                        desc.Send($"{n.Name} start using {invItem.Name}.{Constants.NewLine}");
+                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
                                                     }
                                                     else
                                                     {
-                                                        if(n.EquippedItems.FingerRight == null)
+                                                        if (n.EquipRightFinger == null)
                                                         {
                                                             n.Inventory.Remove(invItem);
-                                                            n.EquippedItems.FingerRight = invItem;
+                                                            n.EquipRightFinger = invItem;
                                                             n.CalculateArmourClass();
                                                             RoomManager.Instance.ProcessEnvironmentBuffs(n.CurrentRoom);
-                                                            desc.Send($"{n.Name} start using {invItem.Name}.{Constants.NewLine}");
+                                                            desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
                                                         }
                                                         else
                                                         {
@@ -1386,13 +1380,13 @@ namespace Kingdoms_of_Etrea.Core
                                                     break;
 
                                                 case WearSlot.Held:
-                                                    if (n.EquippedItems.Held == null)
+                                                    if (n.EquipHeld == null)
                                                     {
                                                         n.Inventory.Remove(invItem);
-                                                        n.EquippedItems.Held = invItem;
+                                                        n.EquipHeld = invItem;
                                                         n.CalculateArmourClass();
                                                         RoomManager.Instance.ProcessEnvironmentBuffs(n.CurrentRoom);
-                                                        desc.Send($"{n.Name} start using {invItem.Name}.{Constants.NewLine}");
+                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
                                                     }
                                                     else
                                                     {
@@ -1419,10 +1413,10 @@ namespace Kingdoms_of_Etrea.Core
 
                             case "give":
                                 itemStr = line.Replace("give", string.Empty).Trim();
-                                if(!string.IsNullOrEmpty(itemStr))
+                                if (!string.IsNullOrEmpty(itemStr))
                                 {
                                     var tradeItem = n.Inventory.Where(x => Regex.Match(x.Name, itemStr, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                                    if(tradeItem != null)
+                                    if (tradeItem != null)
                                     {
                                         n.Inventory.Remove(tradeItem);
                                         desc.Player.Inventory.Add(tradeItem);
@@ -1441,16 +1435,16 @@ namespace Kingdoms_of_Etrea.Core
 
                             case "remove":
                                 var slot = TokeniseInput(ref line).LastOrDefault();
-                                if(!string.IsNullOrEmpty(slot))
+                                if (!string.IsNullOrEmpty(slot))
                                 {
                                     InventoryItem eqItem = null;
-                                    switch(slot.Trim().ToLower())
+                                    switch (slot.Trim().ToLower())
                                     {
                                         case "head":
-                                            eqItem = n.EquippedItems.Head;
-                                            if(eqItem != null)
+                                            eqItem = n.EquipHead;
+                                            if (eqItem != null)
                                             {
-                                                n.EquippedItems.Head = null;
+                                                n.EquipHead = null;
                                                 n.Inventory.Add(eqItem);
                                                 n.CalculateArmourClass();
                                                 desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
@@ -1462,10 +1456,10 @@ namespace Kingdoms_of_Etrea.Core
                                             break;
 
                                         case "neck":
-                                            eqItem = n.EquippedItems.Neck;
+                                            eqItem = n.EquipNeck;
                                             if (eqItem != null)
                                             {
-                                                n.EquippedItems.Neck = null;
+                                                n.EquipNeck = null;
                                                 n.Inventory.Add(eqItem);
                                                 n.CalculateArmourClass();
                                                 desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
@@ -1477,10 +1471,10 @@ namespace Kingdoms_of_Etrea.Core
                                             break;
 
                                         case "armour":
-                                            eqItem = n.EquippedItems.Armour;
+                                            eqItem = n.EquipArmour;
                                             if (eqItem != null)
                                             {
-                                                n.EquippedItems.Armour = null;
+                                                n.EquipArmour = null;
                                                 n.Inventory.Add(eqItem);
                                                 n.CalculateArmourClass();
                                                 desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
@@ -1492,10 +1486,10 @@ namespace Kingdoms_of_Etrea.Core
                                             break;
 
                                         case "weapon":
-                                            eqItem = n.EquippedItems.Weapon;
+                                            eqItem = n.EquipWeapon;
                                             if (eqItem != null)
                                             {
-                                                n.EquippedItems.Weapon = null;
+                                                n.EquipWeapon = null;
                                                 n.Inventory.Add(eqItem);
                                                 n.CalculateArmourClass();
                                                 desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
@@ -1507,10 +1501,10 @@ namespace Kingdoms_of_Etrea.Core
                                             break;
 
                                         case "held":
-                                            eqItem = n.EquippedItems.Held;
+                                            eqItem = n.EquipHeld;
                                             if (eqItem != null)
                                             {
-                                                n.EquippedItems.Held = null;
+                                                n.EquipHeld = null;
                                                 n.Inventory.Add(eqItem);
                                                 n.CalculateArmourClass();
                                                 desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
@@ -1522,10 +1516,11 @@ namespace Kingdoms_of_Etrea.Core
                                             break;
 
                                         case "fingerleft":
-                                            eqItem = n.EquippedItems.FingerLeft;
+                                        case "leftfinger":
+                                            eqItem = n.EquipLeftFinger;
                                             if (eqItem != null)
                                             {
-                                                n.EquippedItems.FingerLeft = null;
+                                                n.EquipLeftFinger = null;
                                                 n.Inventory.Add(eqItem);
                                                 n.CalculateArmourClass();
                                                 desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
@@ -1537,10 +1532,11 @@ namespace Kingdoms_of_Etrea.Core
                                             break;
 
                                         case "fingerright":
-                                            eqItem = n.EquippedItems.FingerRight;
+                                        case "rightfinger":
+                                            eqItem = n.EquipRightFinger;
                                             if (eqItem != null)
                                             {
-                                                n.EquippedItems.FingerRight = null;
+                                                n.EquipRightFinger = null;
                                                 n.Inventory.Add(eqItem);
                                                 n.CalculateArmourClass();
                                                 desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
@@ -1588,18 +1584,18 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void MineResourceNode(ref Descriptor desc, ref string input)
         {
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
             {
                 var nodeName = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeName;
                 if (desc.Player.HasSkill("Mining"))
                 {
                     var i = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.Mine();
-                    if(i != null)
+                    if (i != null)
                     {
                         desc.Player.Inventory.Add(i);
                         RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeDepth--;
                         desc.Send($"You mine the {nodeName} node and find {i.Name}!{Constants.NewLine}");
-                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeDepth == 0)
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeDepth == 0)
                         {
                             RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode = null;
                         }
@@ -1619,15 +1615,15 @@ namespace Kingdoms_of_Etrea.Core
         private static void CraftItem(ref Descriptor desc, ref string input)
         {
             var recipeName = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            if(!string.IsNullOrEmpty(recipeName))
+            if (!string.IsNullOrEmpty(recipeName))
             {
                 var recipe = RecipeManager.Instance.GetRecipe(recipeName);
-                if(recipe != null)
+                if (recipe != null)
                 {
-                    if(desc.Player.KnowsRecipe(recipe.RecipeName))
+                    if (desc.Player.KnowsRecipe(recipe.RecipeName))
                     {
                         bool canCraft = false;
-                        switch(recipe.RecipeType)
+                        switch (recipe.RecipeType)
                         {
                             case RecipeType.Jewelcrafting:
                                 canCraft = desc.Player.HasSkill("Jewelcrafting");
@@ -1645,15 +1641,15 @@ namespace Kingdoms_of_Etrea.Core
                                 canCraft = desc.Player.HasSkill("Alchemy");
                                 break;
                         }
-                        if(canCraft)
+                        if (canCraft)
                         {
                             bool hasMats = true;
-                            foreach(var mat in recipe.RequiredMaterials)
+                            foreach (var mat in recipe.RequiredMaterials)
                             {
-                                if(desc.Player.HasItemInInventory(mat.Key))
+                                if (desc.Player.HasItemInInventory(mat.Key))
                                 {
-                                    var cnt = Convert.ToUInt32((from i in desc.Player.Inventory where i.Id == mat.Key select i).Count());
-                                    if(cnt < mat.Value)
+                                    var cnt = Convert.ToUInt32((from i in desc.Player.Inventory where i.ID == mat.Key select i).Count());
+                                    if (cnt < mat.Value)
                                     {
                                         hasMats = false;
                                         break;
@@ -1665,13 +1661,13 @@ namespace Kingdoms_of_Etrea.Core
                                     break;
                                 }
                             }
-                            if(hasMats)
+                            if (hasMats)
                             {
-                                foreach(var mat in recipe.RequiredMaterials)
+                                foreach (var mat in recipe.RequiredMaterials)
                                 {
-                                    for(int i = 0; i < mat.Value; i++)
+                                    for (int i = 0; i < mat.Value; i++)
                                     {
-                                        var remItem = (from invItem in desc.Player.Inventory where invItem.Id == mat.Key select invItem).FirstOrDefault();
+                                        var remItem = (from invItem in desc.Player.Inventory where invItem.ID == mat.Key select invItem).FirstOrDefault();
                                         desc.Player.Inventory.Remove(remItem);
                                     }
                                 }
@@ -1708,11 +1704,11 @@ namespace Kingdoms_of_Etrea.Core
         private static void HireFollower(ref Descriptor desc, ref string input)
         {
             var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            if(string.IsNullOrEmpty(target))
+            if (string.IsNullOrEmpty(target))
             {
                 if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Mercenary))
                 {
-                    if(desc.Player.FollowerID == Guid.Empty)
+                    if (desc.Player.FollowerID == Guid.Empty)
                     {
                         StringBuilder sb = new StringBuilder();
                         sb.AppendLine("The Mercenary Commander grins. 'You want hired muscle? Sure...'");
@@ -1749,12 +1745,12 @@ namespace Kingdoms_of_Etrea.Core
             }
             else
             {
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Mercenary))
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Mercenary))
                 {
-                    if(desc.Player.FollowerID == Guid.Empty)
+                    if (desc.Player.FollowerID == Guid.Empty)
                     {
                         var p = Helpers.GetNewPurchasePrice(ref desc, desc.Player.Level * 1000);
-                        if(desc.Player.Stats.Gold >= p)
+                        if (desc.Player.Gold >= p)
                         {
                             NPC hireling = null;
                             if (Regex.Match(target, "fighter", RegexOptions.IgnoreCase).Success)
@@ -1773,9 +1769,9 @@ namespace Kingdoms_of_Etrea.Core
                             {
                                 hireling = NPCManager.Instance.GetHirelingNPC(ref desc, "priest");
                             }
-                            if(hireling != null)
+                            if (hireling != null)
                             {
-                                desc.Player.Stats.Gold -= p;
+                                desc.Player.Gold -= p;
                                 NPCManager.Instance.AddNPCToWorld(hireling, desc.Player.CurrentRoom);
                                 desc.Player.FollowerID = hireling.NPCGuid;
                                 desc.Send($"You have hired {hireling.Title} {hireling.Name} as your follower!{Constants.NewLine}");
@@ -1798,17 +1794,17 @@ namespace Kingdoms_of_Etrea.Core
                 else
                 {
                     var n = GetTargetNPC(ref desc, target);
-                    if(n != null)
+                    if (n != null)
                     {
-                        if(desc.Player.FollowerID == Guid.Empty)
+                        if (desc.Player.FollowerID == Guid.Empty)
                         {
-                            if(n.BehaviourFlags.HasFlag(NPCFlags.Mercenary))
+                            if (n.BehaviourFlags.HasFlag(NPCFlags.Mercenary))
                             {
                                 var baseCost = n.NumberOfHitDice * 1000;
                                 var modCost = Helpers.GetNewPurchasePrice(ref desc, baseCost);
-                                if(desc.Player.Stats.Gold >= modCost)
+                                if (desc.Player.Gold >= modCost)
                                 {
-                                    desc.Player.Stats.Gold -= modCost;
+                                    desc.Player.Gold -= modCost;
                                     desc.Player.FollowerID = n.NPCGuid;
                                     NPCManager.Instance.SetNPCFollowing(ref desc, true);
                                     desc.Send($"You hand over {modCost} gold and hire {n.Name} as your follower!{Constants.NewLine}");
@@ -1838,11 +1834,11 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DismissFollower(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.FollowerID != Guid.Empty)
+            if (desc.Player.FollowerID != Guid.Empty)
             {
                 var n = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
                 desc.Send($"You dismiss {n.Name} from your service.{Constants.NewLine}");
-                NPCManager.Instance.RemoveNPCFromWorld(desc.Player.FollowerID, n, desc.Player.CurrentRoom);
+                NPCManager.Instance.RemoveNPCFromWorld(desc.Player.FollowerID);
                 desc.Player.FollowerID = Guid.Empty;
                 desc.Send($"{n.Name} is swallowed by the Winds of Magic!{Constants.NewLine}");
             }
@@ -1856,19 +1852,19 @@ namespace Kingdoms_of_Etrea.Core
         {
             desc.Send($"Your current Title is: {desc.Player.Title}{Constants.NewLine}");
             bool titleOK = false;
-            while(!titleOK)
+            while (!titleOK)
             {
                 desc.Send($"Enter new Title (exit to abort): ");
                 var newTitle = desc.Read().Trim();
-                if(ValidateInput(newTitle))
+                if (ValidateInput(newTitle))
                 {
-                    if(newTitle.ToLower() == "exit")
+                    if (newTitle.ToLower() == "exit")
                     {
                         titleOK = true;
                     }
                     else
                     {
-                        if(newTitle.Length <= 15)
+                        if (newTitle.Length <= 15)
                         {
                             desc.Player.Title = newTitle;
                             titleOK = true;
@@ -1889,19 +1885,19 @@ namespace Kingdoms_of_Etrea.Core
         private static void ChangePlayerPassword(ref Descriptor desc, ref string input)
         {
             bool pwOK = false;
-            while(!pwOK)
+            while (!pwOK)
             {
                 desc.Send($"Enter current password: ");
                 var curPW = desc.Read().Trim();
-                if(ValidateInput(curPW))
+                if (ValidateInput(curPW))
                 {
                     if (DatabaseManager.ValidatePlayerPassword(desc.Player.Name, curPW))
                     {
                         desc.Send($"Enter new password: ");
                         var newPW = desc.Read().Trim();
-                        if(ValidateInput(newPW))
+                        if (ValidateInput(newPW))
                         {
-                            if(DatabaseManager.UpdatePlayerPassword(ref desc, newPW))
+                            if (DatabaseManager.UpdatePlayerPassword(ref desc, newPW))
                             {
                                 desc.Send($"Your password has been updated successfully.{Constants.NewLine}");
                                 Game.LogMessage($"INFO: Player {desc.Player} has successfully changed their password", LogLevel.Info, true);
@@ -1935,22 +1931,22 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ShowPlayerRecipes(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.KnownRecipes != null && desc.Player.KnownRecipes.Count > 0)
+            if (desc.Player.Recipes != null && desc.Player.Recipes.Count > 0)
             {
                 var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                if(string.IsNullOrEmpty(target))
+                if (string.IsNullOrEmpty(target))
                 {
                     StringBuilder sb = new StringBuilder();
                     sb.AppendLine($"  {new string('=', 77)}");
-                    var sk = (from kr in desc.Player.KnownRecipes select kr.RecipeType.ToString()).Distinct().ToList();
+                    var sk = (from kr in desc.Player.Recipes select kr.RecipeType.ToString()).Distinct().ToList();
                     bool first = true;
-                    foreach(var skill in sk)
+                    foreach (var skill in sk)
                     {
-                        if(first)
+                        if (first)
                         {
                             sb.AppendLine($"|| {Constants.GreenText}{skill}{Constants.PlainText}");
                             sb.AppendLine($"||{new string('=', 77)}");
-                            foreach (var r in desc.Player.KnownRecipes.Where(x => x.RecipeType.ToString() == skill).ToList())
+                            foreach (var r in desc.Player.Recipes.Where(x => x.RecipeType.ToString() == skill).ToList())
                             {
                                 sb.AppendLine($"|| {r.RecipeName}");
                             }
@@ -1961,7 +1957,7 @@ namespace Kingdoms_of_Etrea.Core
                             sb.AppendLine($"||{new string('=', 77)}");
                             sb.AppendLine($"|| {Constants.GreenText}{skill}{Constants.PlainText}");
                             sb.AppendLine($"||{new string('=', 77)}");
-                            foreach (var r in desc.Player.KnownRecipes.Where(x => x.RecipeType.ToString() == skill).ToList())
+                            foreach (var r in desc.Player.Recipes.Where(x => x.RecipeType.ToString() == skill).ToList())
                             {
                                 sb.AppendLine($"|| {r.RecipeName}");
                             }
@@ -1972,8 +1968,8 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 else
                 {
-                    var r = (from kr in desc.Player.KnownRecipes where Regex.Match(kr.RecipeName, target, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
-                    if(r != null)
+                    var r = (from kr in desc.Player.Recipes where Regex.Match(kr.RecipeName, target, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
+                    if (r != null)
                     {
                         StringBuilder sb = new StringBuilder();
                         sb.AppendLine($"  {new string('=', 77)}");
@@ -1981,7 +1977,7 @@ namespace Kingdoms_of_Etrea.Core
                         sb.AppendLine($"|| Description: {r.RecipeDescription}");
                         sb.AppendLine($"|| Produces: {ItemManager.Instance.GetItemByID(r.RecipeResult).Name}");
                         sb.AppendLine($"|| Requires:");
-                        foreach(var req in r.RequiredMaterials)
+                        foreach (var req in r.RequiredMaterials)
                         {
                             sb.AppendLine($"||{Constants.TabStop}{req.Value} x {ItemManager.Instance.GetItemByID(req.Key).Name}");
                         }
@@ -2002,7 +1998,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void ReadScroll(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.HasSkill("Read"))
+            if (desc.Player.HasSkill("Read"))
             {
                 var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 var target = TokeniseInput(ref input).Last().Trim();
@@ -2012,7 +2008,7 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     if (!string.IsNullOrEmpty(target))
                     {
-                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe) || RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe) || RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
                         {
                             desc.Send($"Some mystical force prevents you from reading the scroll...{Constants.NewLine}");
                         }
@@ -2050,7 +2046,7 @@ namespace Kingdoms_of_Etrea.Core
             desc.Send($"Enter a new short description for your character. This should be");
             desc.Send($"no longer than 30 characters:");
             var sDesc = desc.Read().Trim();
-            if(Helpers.ValidateInput(sDesc))
+            if (Helpers.ValidateInput(sDesc))
             {
                 desc.Player.ShortDescription = sDesc;
             }
@@ -2058,426 +2054,345 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void Backstab(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.HasSkill("Backstab"))
+            Skill backstab = SkillManager.Instance.GetSkill("Backstab");
+            if (!desc.Player.HasSkill("Backstab"))
             {
-                if(desc.Player.EquippedItems != null && desc.Player.EquippedItems.Weapon != null)
+                desc.Send($"You lack the skill to do that!{Constants.NewLine}");
+                return;
+            }
+            if (desc.Player.EquipWeapon == null)
+            {
+                desc.Send($"Backstab with what? You don't have a weapon!{Constants.NewLine}");
+                return;
+            }
+            if (desc.Player.EquipWeapon.BaseWeaponType != WeaponType.Dagger || desc.Player.EquipWeapon.BaseWeaponType != WeaponType.Sword)
+            {
+                desc.Send($"You can't backstab someone with that weapon!{Constants.NewLine}");
+                return;
+            }
+            if (desc.Player.Visible || desc.Player.Position != ActorPosition.Standing)
+            {
+                desc.Send($"You're not in a position to do that right now!{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+            {
+                desc.Send($"Some mystical force prevents you from doing that!{Constants.NewLine}");
+                return;
+            }
+            var verb = GetVerb(ref input);
+            var target = input.Remove(0, verb.Length).Trim();
+            if (string.IsNullOrEmpty(target))
+            {
+                desc.Send($"Backstab what, exactly?{Constants.NewLine}");
+                return;
+            }
+            var npc = GetTargetNPC(ref desc, target);
+            if (npc != null)
+            {
+                if (desc.Player.CurrentMP < backstab.MPCost)
                 {
-                    if (!desc.Player.Visible && !desc.Player.IsInCombat && desc.Player.Position == ActorPosition.Standing)
+                    desc.Send($"You don't have the energy for that right now!{Constants.NewLine}");
+                    return;
+                }
+                if (npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack) || npc.IsInCombat)
+                {
+                    desc.Send($"Your target isn't available...{Constants.NewLine}");
+                    return;
+                }
+                if (npc.IsFollower && (!SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Player.PVP) || !desc.Player.PVP)
+                {
+                    desc.Send($"Some mysical force prevents you from harming {npc.Name}...{Constants.NewLine}");
+                    return;
+                }
+                desc.Player.AdjustMP((int)backstab.MPCost * -1);
+                desc.Send($"You become visible again...{Constants.NewLine}");
+                desc.Player.Visible = true;
+                bool hits = desc.Player.DoHitRoll(npc, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
+                string wpn = desc.Player.EquipWeapon.Name.ToLower();
+                if (hits)
+                {
+                    var damage = desc.Player.DoDamageRoll(npc);
+                    damage *= 4;
+                    if (isCritical)
                     {
-                        if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
-                        {
-                            var verb = GetVerb(ref input);
-                            var target = input.Remove(0, verb.Length).Trim();
-                            if (!string.IsNullOrEmpty(target))
-                            {
-                                var npc = GetTargetNPC(ref desc, target);
-                                if (npc != null)
-                                {
-                                    if(!npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack) && !npc.IsNPCInCombat)
-                                    {
-                                        if(desc.Player.Stats.CurrentMP >= Skills.GetSkill("Backstab").MPCost)
-                                        {
-                                            bool startCombat = false;
-                                            desc.Player.Visible = true;
-                                            desc.Send($"You become visible again{Constants.NewLine}");
-                                            var hitRoll = Helpers.RollDice(1, 20);
-                                            var modHitRoll = hitRoll + 5;
-                                            if (ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity) > 0)
-                                            {
-                                                modHitRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                            }
-                                            if (hitRoll == 20 || modHitRoll >= npc.Stats.ArmourClass)
-                                            {
-                                                // player hit, check for critical, do damage and start combat if NPC survives
-                                                var w = desc.Player.EquippedItems.Weapon;
-                                                var damRoll = Helpers.RollDice(w.NumberOfDamageDice, w.SizeOfDamageDice);
-                                                if (w.IsFinesse)
-                                                {
-                                                    if (ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity) > 0)
-                                                    {
-                                                        damRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if (ActorStats.CalculateAbilityModifier(desc.Player.Stats.Strength) > 0)
-                                                    {
-                                                        damRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(desc.Player.Stats.Strength));
-                                                    }
-                                                }
-                                                if (hitRoll == 20)
-                                                {
-                                                    damRoll *= 4;
-                                                }
-                                                if (damRoll >= npc.Stats.CurrentHP)
-                                                {
-                                                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                                                    {
-                                                        desc.Send($"You roll {hitRoll} (Modified: {modHitRoll}) and deal {damRoll} damage killing {npc.Name} instantly!{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Send($"Your backstab destroys {npc.Name}, killing them instantly!{Constants.NewLine}");
-                                                    }
-                                                    desc.Send($"You earn {npc.BaseExpAward} Exp and {npc.Stats.Gold} gold!{Constants.NewLine}");
-                                                    desc.Player.AddExp(npc.BaseExpAward);
-                                                    desc.Player.AddGold(npc.Stats.Gold);
-                                                    desc.Player.UpdateAlignment(npc.Alignment);
-                                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                                    if (localPlayers != null && localPlayers.Count > 1)
-                                                    {
-                                                        foreach (var p in localPlayers)
-                                                        {
-                                                            if (p.Player.Name != desc.Player.Name)
-                                                            {
-                                                                p.Send($"There is a sickening scream as {npc.Name} is slaughtered!{Constants.NewLine}");
-                                                            }
-                                                        }
-                                                    }
-                                                    npc.Kill(true);
-                                                    if(desc.Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(npc.NPCID)))
-                                                    {
-                                                        for (int n = 0; n < desc.Player.ActiveQuests.Count; n++)
-                                                        {
-                                                            if (desc.Player.ActiveQuests[n].Monsters.Keys.Contains(npc.NPCID))
-                                                            {
-                                                                if (desc.Player.ActiveQuests[n].Monsters[npc.NPCID] <= 1)
-                                                                {
-                                                                    desc.Player.ActiveQuests[n].Monsters[npc.NPCID] = 0;
-                                                                }
-                                                                else
-                                                                {
-                                                                    desc.Player.ActiveQuests[n].Monsters[npc.NPCID]--;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    NPCManager.Instance.AdjustNPCHealth(npc.NPCGuid, (int)damRoll);
-                                                    startCombat = true;
-                                                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                                                    {
-                                                        desc.Send($"You roll {hitRoll} (Modified: {modHitRoll}) and deal {damRoll} damage to {npc.Name}!{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        var percDamage = (uint)Math.Round((double)(damRoll / npc.Stats.CurrentHP) * 100);
-                                                        desc.Send($"Your backstab {Helpers.GetDamageString(percDamage)} {npc.Name}!{Constants.NewLine}");
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                // backstab missed, make player visible and start combat
-                                                startCombat = true;
-                                                desc.Player.Visible = true;
-                                                desc.Send($"You become visible again{Constants.NewLine}");
-                                                if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                                                {
-                                                    desc.Send($"You roll {hitRoll} (Modified: {modHitRoll}) and your Backstab misses {npc.Name}!{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    desc.Send($"Your Backstab misses {npc.Name}!{Constants.NewLine}");
-                                                }
-                                            }
-                                            if (startCombat)
-                                            {
-                                                if (!desc.Player.Visible)
-                                                {
-                                                    desc.Player.Visible = true;
-                                                    desc.Send($"You shimmer and become visible again.{Constants.NewLine}");
-                                                }
-                                                var pSession = new CombatSessionNew(desc, npc, desc.Id, npc.NPCGuid);
-                                                var mSession = new CombatSessionNew(npc, desc, npc.NPCGuid, desc.Id);
-                                                CombatManager.Instance.AddCombatSession(pSession);
-                                                CombatManager.Instance.AddCombatSession(mSession);
-                                                if(desc.Player.FollowerID != Guid.Empty)
-                                                {
-                                                    var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                    if (f != null)
-                                                    {
-                                                        var fSession = new CombatSessionNew(f, npc, f.NPCGuid, npc.NPCGuid);
-                                                        var nfSession = new CombatSessionNew(npc, f, npc.NPCGuid, f.NPCGuid);
-                                                        CombatManager.Instance.AddCombatSession(fSession);
-                                                        CombatManager.Instance.AddCombatSession(nfSession);
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Player.FollowerID = Guid.Empty;
-                                                        Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
-                                                    }
-                                                }
-                                                desc.Player.Position = ActorPosition.Fighting;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"You don't have enough MP to use that skill!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"Some mysical force prevents you from attacking {npc.Name}...{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"Backstab what, exactly?{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"Backstab what, exactly?{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"Some mystical force prevents this, it is impossible to fight here!{Constants.NewLine}");
-                        }
+                        damage *= 2;
+                    }
+                    var pDmg = (uint)Math.Round((double)damage / npc.CurrentHP * 100, 0);
+                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
+                    {
+                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): You backstab {npc.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them for {damage} damage!{Constants.NewLine}");
                     }
                     else
                     {
-                        desc.Send($"You're not in a position to do that right now{Constants.NewLine}");
+                        desc.Send($"You backstab {npc.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them!{Constants.NewLine}");
+                    }
+                    if (npc.IsFollower)
+                    {
+                        SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player.Name}'s backstab {Helpers.GetDamageString(pDmg)} your follower for {damage} damage!{Constants.NewLine}");
+                    }
+                    npc.AdjustHP((int)damage * -1, out bool isKilled);
+                    if (isKilled)
+                    {
+                        desc.Send($"{npc.Name}'s wounds are many and serious and they give in to death...{Constants.NewLine}");
+                        desc.Send($"You gain {npc.BaseExpAward} Exp and {npc.Gold} gold{Constants.NewLine}");
+                        desc.Player.AddExp(npc.BaseExpAward, false, false);
+                        desc.Player.AddGold(npc.Gold, false);
+                        npc.Kill(true, ref desc);
+                        return;
+                    }
+                    else
+                    {
+                        CombatSession s1 = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
+                        CombatSession s2 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
+                        CombatManager.Instance.AddCombatSession(s1);
+                        CombatManager.Instance.AddCombatSession(s2);
+                        if (desc.Player.FollowerID != Guid.Empty)
+                        {
+                            var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                            CombatSession s3 = new CombatSession(fNPC, npc, fNPC.NPCGuid, npc.NPCGuid);
+                            CombatSession s4 = new CombatSession(npc, fNPC, npc.NPCGuid, fNPC.NPCGuid);
+                            CombatManager.Instance.AddCombatSession(s3);
+                            CombatManager.Instance.AddCombatSession(s4);
+                        }
+                    }
+                    return;
+                }
+                else
+                {
+                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
+                    {
+                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): Your backstab misses {npc.Name} - prepare to fight!{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        desc.Send($"Your backstab missed {npc.Name} - prepare to fight!{Constants.NewLine}");
+                    }
+                    if (npc.IsFollower)
+                    {
+                        SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player.Name}'s backstab attempt missed your follower!{Constants.NewLine}");
+                    }
+                    CombatSession s1 = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
+                    CombatSession s2 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
+                    CombatManager.Instance.AddCombatSession(s1);
+                    CombatManager.Instance.AddCombatSession(s2);
+                    if (desc.Player.FollowerID != Guid.Empty)
+                    {
+                        var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                        CombatSession s3 = new CombatSession(fNPC, npc, fNPC.NPCGuid, npc.NPCGuid);
+                        CombatSession s4 = new CombatSession(npc, fNPC, npc.NPCGuid, fNPC.NPCGuid);
+                        CombatManager.Instance.AddCombatSession(s3);
+                        CombatManager.Instance.AddCombatSession(s4);
+                    }
+                    return;
+                }
+            }
+            var pid = desc.ID;
+            var targetPlayer = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Where(x => Regex.IsMatch(x.Player.Name, target, RegexOptions.IgnoreCase) && x.ID != pid && x.Player.Visible).FirstOrDefault();
+            if (targetPlayer != null)
+            {
+                if (desc.Player.CurrentMP < backstab.MPCost)
+                {
+                    desc.Send($"You don't have the energy for that right now!{Constants.NewLine}");
+                    return;
+                }
+                if (!desc.Player.PVP || !targetPlayer.Player.PVP)
+                {
+                    desc.Send($"Some mystical force prevents you from harming {desc.Player.Name}...{Constants.NewLine}");
+                    return;
+                }
+                desc.Player.AdjustMP((int)backstab.MPCost * -1);
+                desc.Send($"You become visible again...{Constants.NewLine}");
+                desc.Player.Visible = true;
+                bool hits = desc.Player.DoHitRoll(targetPlayer.Player, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
+                if (hits)
+                {
+                    string wpn = desc.Player.EquipWeapon.Name.ToLower();
+                    var damage = desc.Player.DoDamageRoll(targetPlayer.Player);
+                    damage *= 4;
+                    if (isCritical)
+                    {
+                        damage *= 2;
+                    }
+                    var pDmg = (uint)Math.Round((double)damage / targetPlayer.Player.CurrentHP * 100, 0);
+                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
+                    {
+                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): You backstab {targetPlayer.Player.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them for {damage} damage!{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        desc.Send($"You backstab {targetPlayer.Player.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them!{Constants.NewLine}");
+                    }
+                    if (targetPlayer.Player.Level >= Constants.ImmLevel || targetPlayer.Player.ShowDetailedRollInfo)
+                    {
+                        desc.Send($"{desc.Player.Name}'s backstab {Helpers.GetDamageString(pDmg)} you for {damage} damage!{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        desc.Send($"{desc.Player.Name}'s backstab {Helpers.GetDamageString(pDmg)} you!{Constants.NewLine}");
+                    }
+                    targetPlayer.Player.AdjustHP((int)damage * -1, out bool isKilled);
+                    if (isKilled)
+                    {
+                        desc.Send($"Your strike has dealt lethal damage to {targetPlayer.Player.Name} and they are taken by Death!{Constants.NewLine}");
+                        targetPlayer.Send($"{desc.Player.Name} has dealt lethal damage and you feel the icy hand of Death upon you...{Constants.NewLine}");
+                        targetPlayer.Player.Kill();
+                        return;
+                    }
+                    else
+                    {
+                        CombatSession s1 = new CombatSession(desc, targetPlayer, desc.ID, targetPlayer.ID);
+                        CombatSession s2 = new CombatSession(targetPlayer, desc, targetPlayer.ID, desc.ID);
+                        CombatManager.Instance.AddCombatSession(s1);
+                        CombatManager.Instance.AddCombatSession(s2);
+                        if (desc.Player.FollowerID != Guid.Empty)
+                        {
+                            var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                            CombatSession s3 = new CombatSession(fNPC, targetPlayer, fNPC.NPCGuid, targetPlayer.ID);
+                            CombatSession s4 = new CombatSession(targetPlayer, fNPC, targetPlayer.ID, fNPC.NPCGuid);
+                            CombatManager.Instance.AddCombatSession(s3);
+                            CombatManager.Instance.AddCombatSession(s4);
+                        }
+                        if (targetPlayer.Player.FollowerID != Guid.Empty)
+                        {
+                            var tfNPC = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
+                            CombatSession s5 = new CombatSession(tfNPC, desc, tfNPC.NPCGuid, desc.ID);
+                            CombatSession s6 = new CombatSession(desc, tfNPC, desc.ID, tfNPC.NPCGuid);
+                            CombatManager.Instance.AddCombatSession(s5);
+                            CombatManager.Instance.AddCombatSession(s6);
+                        }
+                        return;
                     }
                 }
                 else
                 {
-                    desc.Send($"That skill requires you to have an equipped weapon{Constants.NewLine}");
+                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
+                    {
+                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): Your backstab misses {targetPlayer.Player.Name} - prepare to fight!{Constants.NewLine}");
+                    }
+                    targetPlayer.Send($"{desc.Player.Name}'s backstab attempt on you missed!{Constants.NewLine}");
+                    CombatSession s1 = new CombatSession(desc, targetPlayer, desc.ID, targetPlayer.ID);
+                    CombatSession s2 = new CombatSession(targetPlayer, desc, targetPlayer.ID, desc.ID);
+                    CombatManager.Instance.AddCombatSession(s1);
+                    CombatManager.Instance.AddCombatSession(s2);
+                    if (desc.Player.FollowerID != Guid.Empty)
+                    {
+                        var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                        CombatSession s3 = new CombatSession(fNPC, targetPlayer, fNPC.NPCGuid, targetPlayer.ID);
+                        CombatSession s4 = new CombatSession(targetPlayer, fNPC, targetPlayer.ID, fNPC.NPCGuid);
+                        CombatManager.Instance.AddCombatSession(s3);
+                        CombatManager.Instance.AddCombatSession(s4);
+                    }
+                    if (targetPlayer.Player.FollowerID != Guid.Empty)
+                    {
+                        var tfNPC = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
+                        CombatSession s5 = new CombatSession(tfNPC, desc, tfNPC.NPCGuid, desc.ID);
+                        CombatSession s6 = new CombatSession(desc, tfNPC, desc.ID, tfNPC.NPCGuid);
+                        CombatManager.Instance.AddCombatSession(s5);
+                        CombatManager.Instance.AddCombatSession(s6);
+                    }
+                    return;
                 }
             }
             else
             {
-                desc.Send($"You don't know how to do that!{Constants.NewLine}");
+                desc.Send($"Backstab who, exactly?{Constants.NewLine}");
+                return;
             }
         }
 
         private static void Pickpocket(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.HasSkill("Pickpocket") && desc.Player.Position == ActorPosition.Standing)
+            Skill pickpocket = SkillManager.Instance.GetSkill("Pickpocket");
+            if (!desc.Player.HasSkill(pickpocket.Name))
             {
-                if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+                desc.Send($"You lack the skill to do that!{Constants.NewLine}");
+                return;
+            }
+            if (desc.Player.Position != ActorPosition.Standing)
+            {
+                desc.Send($"You're not in a position to do that right now!{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+            {
+                desc.Send($"Some mystical force prevents you from doing that...{Constants.NewLine}");
+                return;
+            }
+            if (desc.Player.CurrentMP < pickpocket.MPCost)
+            {
+                desc.Send($"You don't have the energy to do that right now!{Constants.NewLine}");
+                return;
+            }
+            var verb = GetVerb(ref input);
+            var target = input.Remove(0, verb.Length).Trim();
+            if (string.IsNullOrEmpty(target))
+            {
+                desc.Send($"Pickpocket who, exactly?{Constants.NewLine}");
+                return;
+            }
+            var targetNPC = GetTargetNPC(ref desc, target);
+            if (targetNPC == null)
+            {
+                desc.Send($"You can't pickpocket something that isn't here!{Constants.NewLine}");
+                return;
+            }
+            if (targetNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack) || targetNPC.IsFollower)
+            {
+                desc.Send($"Some mystical force prevents you from doing that to {targetNPC.Name}...{Constants.NewLine}");
+                return;
+            }
+            if (targetNPC.Gold == 0 || targetNPC.Inventory == null || targetNPC.Inventory.Count == 0)
+            {
+                desc.Send($"{targetNPC.Name} doesn't have anything to steal!{Constants.NewLine}");
+                return;
+            }
+            desc.Player.AdjustMP((int)pickpocket.MPCost * -1);
+            int playerSkillRoll = (int)Helpers.RollDice(1, 20);
+            playerSkillRoll += Helpers.CalculateAbilityModifier(desc.Player.Dexterity);
+            if (!desc.Player.Visible)
+            {
+                playerSkillRoll += 4;
+            }
+            int npcSkillRoll = (int)Helpers.RollDice(1, 20);
+            npcSkillRoll += Helpers.CalculateAbilityModifier(targetNPC.Dexterity);
+            if (playerSkillRoll >= npcSkillRoll)
+            {
+                if (targetNPC.Gold > 0)
                 {
-                    var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                    if(!string.IsNullOrEmpty(target))
-                    {
-                        var npc = GetTargetNPC(ref desc, target);
-                        if(npc != null)
-                        {
-                            if(!npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
-                            {
-                                if(desc.Player.Stats.CurrentMP >= Skills.GetSkill("Pickpocket").MPCost)
-                                {
-                                    desc.Player.Stats.CurrentMP -= (int)Skills.GetSkill("Pickpocket").MPCost;
-                                    if (npc.Inventory != null && npc.Inventory.Count > 0)
-                                    {
-                                        var skillRoll = Helpers.RollDice(1, 20);
-                                        var modSkillRoll = skillRoll;
-                                        if (ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity) > 0)
-                                        {
-                                            modSkillRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                        }
-                                        if (!desc.Player.Visible)
-                                        {
-                                            // bonus if the player is not visible
-                                            modSkillRoll += 4;
-                                        }
-                                        var npcRoll = Helpers.RollDice(1, 20);
-                                        var modNpcRoll = npcRoll;
-                                        if (ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity) > 0)
-                                        {
-                                            modSkillRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity));
-                                        }
-                                        bool success = false;
-                                        if (skillRoll == 20 || modSkillRoll > modNpcRoll)
-                                        {
-                                            success = true;
-                                        }
-                                        if (success)
-                                        {
-                                            var rnd = new Random(DateTime.Now.GetHashCode());
-                                            var item = npc.Inventory[rnd.Next(npc.Inventory.Count)];
-                                            npc.Inventory.Remove(item);
-                                            desc.Player.Inventory.Add(item);
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                                            {
-                                                desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
-
-                                            }
-                                            desc.Send($"You successfully steal {item.Name} from {npc.Name}!{Constants.NewLine}");
-                                        }
-                                        else
-                                        {
-                                            // player failed to steal, so make them visible (if necessary) and start a fight with the target NPC
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                                            {
-                                                desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
-                                            }
-                                            if (skillRoll == 1)
-                                            {
-                                                desc.Send($"You failed to steal an item and have been noticed!{Constants.NewLine}");
-                                                if (!desc.Player.Visible)
-                                                {
-                                                    desc.Send($"You become visible again.{Constants.NewLine}");
-                                                    desc.Player.Visible = true;
-                                                }
-                                                desc.Send($"{npc.Name} notices you trying to steal from them and attacks!{Constants.NewLine}");
-                                                var pSession = new CombatSessionNew(desc, npc, desc.Id, npc.NPCGuid);
-                                                var mSession = new CombatSessionNew(npc, desc, npc.NPCGuid, desc.Id);
-                                                CombatManager.Instance.AddCombatSession(pSession);
-                                                CombatManager.Instance.AddCombatSession(mSession);
-                                                if (desc.Player.FollowerID != Guid.Empty)
-                                                {
-                                                    var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                    if (f != null)
-                                                    {
-                                                        var fSession = new CombatSessionNew(f, npc, f.NPCGuid, npc.NPCGuid);
-                                                        var mfSession = new CombatSessionNew(npc, f, npc.NPCGuid, f.NPCGuid);
-                                                        CombatManager.Instance.AddCombatSession(fSession);
-                                                        CombatManager.Instance.AddCombatSession(mfSession);
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Player.FollowerID = Guid.Empty;
-                                                        Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
-                                                    }
-                                                }
-                                                desc.Player.Position = ActorPosition.Fighting;
-                                            }
-                                            else
-                                            {
-                                                // we failed but haven't been noticed by the NPC so inform player but don't start combat
-                                                desc.Send($"Lucky! {npc.Name} didn't spot you trying to steal from them!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // TODO: If the NPC isn't carrying any items, try and take their gold instead
-                                        if (npc.Stats.Gold > 0)
-                                        {
-                                            var skillRoll = Helpers.RollDice(1, 20);
-                                            var modSkillRoll = skillRoll;
-                                            if (ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity) > 0)
-                                            {
-                                                modSkillRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity));
-                                            }
-                                            if (!desc.Player.Visible)
-                                            {
-                                                // bonus if the player is not visible
-                                                modSkillRoll += 4;
-                                            }
-                                            var npcRoll = Helpers.RollDice(1, 20);
-                                            var modNpcRoll = npcRoll;
-                                            if (ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity) > 0)
-                                            {
-                                                modSkillRoll += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(npc.Stats.Dexterity));
-                                            }
-                                            bool success = false;
-                                            if (skillRoll == 20 || modSkillRoll > modNpcRoll)
-                                            {
-                                                success = true;
-                                            }
-                                            if (success)
-                                            {
-                                                var gp = npc.Stats.Gold;
-                                                NPCManager.Instance.GetNPCByGUID(npc.NPCGuid).Stats.Gold = 0;
-                                                desc.Player.Stats.Gold += gp;
-                                                if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                                                {
-                                                    desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
-
-                                                }
-                                                desc.Send($"You successfully steal {gp} gold from {npc.Name}!{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                // player failed to steal, so make them visible (if necessary) and start a fight with the target NPC
-                                                if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                                                {
-                                                    desc.Send($"You rolled {skillRoll} (Modified: {modSkillRoll}) against {npc.Name}'s roll of {npcRoll} (Modified: {modNpcRoll}){Constants.NewLine}");
-                                                }
-                                                if (skillRoll == 1)
-                                                {
-                                                    desc.Send($"You failed to steal an item and have been noticed!{Constants.NewLine}");
-                                                    if (!desc.Player.Visible)
-                                                    {
-                                                        desc.Send($"You become visible again.{Constants.NewLine}");
-                                                        desc.Player.Visible = true;
-                                                    }
-                                                    desc.Send($"{npc.Name} notices you trying to steal from them and attacks!{Constants.NewLine}");
-                                                    var pSession = new CombatSessionNew(desc, npc, desc.Id, npc.NPCGuid);
-                                                    var mSession = new CombatSessionNew(npc, desc, npc.NPCGuid, desc.Id);
-                                                    CombatManager.Instance.AddCombatSession(pSession);
-                                                    CombatManager.Instance.AddCombatSession(mSession);
-                                                    if (desc.Player.FollowerID != Guid.Empty)
-                                                    {
-                                                        var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                        if (f != null)
-                                                        {
-                                                            var fSession = new CombatSessionNew(f, npc, f.NPCGuid, npc.NPCGuid);
-                                                            var mfSession = new CombatSessionNew(npc, f, npc.NPCGuid, f.NPCGuid);
-                                                            CombatManager.Instance.AddCombatSession(fSession);
-                                                            CombatManager.Instance.AddCombatSession(mfSession);
-                                                        }
-                                                        else
-                                                        {
-                                                            desc.Player.FollowerID = Guid.Empty;
-                                                            Game.LogMessage($"DEBUG: Setting {desc.Player}'s FollowerID to Guid.Empty as no matching NPC could be found", LogLevel.Debug, true);
-                                                        }
-                                                    }
-                                                    desc.Player.Position = ActorPosition.Fighting;
-                                                }
-                                                else
-                                                {
-                                                    // we failed but haven't been noticed by the NPC so inform player but don't start combat
-                                                    desc.Send($"Lucky! {npc.Name} didn't spot you trying to steal from them!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"{npc.Name} isn't carrying anything you can steal...{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"You don't have enough MP to use that skill1{Constants.NewLine}");
-                                }
-                                
-                            }
-                            else
-                            {
-                                desc.Send($"Some mystical force prevents you from taking things from {npc.Name}{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That doesn't seem to be here...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Pickpocket who, exactly?{Constants.NewLine}");
-                    }
+                    var stolenGold = Helpers.RollDice(1, (uint)targetNPC.Gold);
+                    desc.Player.AddGold(stolenGold, true);
+                    targetNPC.Gold -= stolenGold;
+                    desc.Send($"You have stolen {stolenGold:N0} gold from {targetNPC.Name}!{Constants.NewLine}");
+                    return;
                 }
-                else
+                if (targetNPC.Inventory != null && targetNPC.Inventory.Count > 0)
                 {
-                    desc.Send($"You cannot do that here...{Constants.NewLine}");
+                    var item = targetNPC.Inventory[new Random(DateTime.UtcNow.GetHashCode()).Next(targetNPC.Inventory.Count)];
+                    desc.Player.Inventory.Add(item);
+                    targetNPC.Inventory.Remove(item);
+                    var article = Helpers.IsCharAVowel(item.Name[0]) ? "an" : "a";
+                    desc.Send($"You have stolen {article} {item.Name.ToLower()} from {targetNPC.Name}!{Constants.NewLine}");
+                    return;
                 }
             }
             else
             {
-                desc.Send($"You don't know how to do that!{Constants.NewLine}");
+                desc.Send($"You have failed to steal anything from {targetNPC.Name}!{Constants.NewLine}");
+                if (playerSkillRoll <= 1)
+                {
+                    desc.Send($"{targetNPC.Name} has spotted you trying to steal from them!{Constants.NewLine}");
+                    CombatSession s1 = new CombatSession(targetNPC, desc, targetNPC.NPCGuid, desc.ID);
+                    CombatSession s2 = new CombatSession(desc, targetNPC, desc.ID, targetNPC.NPCGuid);
+                    CombatManager.Instance.AddCombatSession(s1);
+                    CombatManager.Instance.AddCombatSession(s2);
+                }
             }
         }
 
         private static void TrainPlayerStat(ref Descriptor desc, ref string input)
         {
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.StatTrainer))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.StatTrainer))
             {
                 var stat = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 StringBuilder sb = new StringBuilder();
@@ -2488,32 +2403,32 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         case "str":
                         case "strength":
-                            cost = Convert.ToUInt32((desc.Player.Stats.Strength + 1) * 1000);
+                            cost = Convert.ToUInt32((desc.Player.Strength + 1) * 1000);
                             break;
 
                         case "dex":
                         case "dexterity":
-                            cost = Convert.ToUInt32((desc.Player.Stats.Dexterity + 1) * 1000);
+                            cost = Convert.ToUInt32((desc.Player.Dexterity + 1) * 1000);
                             break;
 
                         case "int":
                         case "intelligence":
-                            cost = Convert.ToUInt32((desc.Player.Stats.Intelligence + 1) * 1000);
+                            cost = Convert.ToUInt32((desc.Player.Intelligence + 1) * 1000);
                             break;
 
                         case "wisdom":
                         case "wis":
-                            cost = Convert.ToUInt32((desc.Player.Stats.Wisdom + 1) * 1000);
+                            cost = Convert.ToUInt32((desc.Player.Wisdom + 1) * 1000);
                             break;
 
                         case "constitution":
                         case "con":
-                            cost = Convert.ToUInt32((desc.Player.Stats.Constitution + 1) * 1000);
+                            cost = Convert.ToUInt32((desc.Player.Constitution + 1) * 1000);
                             break;
 
                         case "charisma":
                         case "cha":
-                            cost = Convert.ToUInt32((desc.Player.Stats.Charisma + 1) * 1000);
+                            cost = Convert.ToUInt32((desc.Player.Charisma + 1) * 1000);
                             break;
 
                         case "hp":
@@ -2529,46 +2444,46 @@ namespace Kingdoms_of_Etrea.Core
                             desc.Send($"'I can't help you train that,' the gym master says.{Constants.NewLine}");
                             return;
                     }
-                    if (desc.Player.Stats.Gold >= cost)
+                    if (desc.Player.Gold >= cost)
                     {
                         desc.Send($"The gym master smiles. 'Certainly! Follow me...'{Constants.NewLine}");
-                        desc.Player.Stats.Gold -= cost;
+                        desc.Player.Gold -= cost;
                         switch (stat.ToLower())
                         {
                             case "str":
                             case "strength":
-                                desc.Player.Stats.Strength++;
-                                desc.Send($"Your Strength increases to {desc.Player.Stats.Strength}{Constants.NewLine}");
+                                desc.Player.Strength++;
+                                desc.Send($"Your Strength increases to {desc.Player.Strength}{Constants.NewLine}");
                                 break;
 
                             case "dex":
                             case "dexterity":
-                                desc.Player.Stats.Dexterity++;
-                                desc.Send($"Your Dexterity increases to {desc.Player.Stats.Dexterity}{Constants.NewLine}");
+                                desc.Player.Dexterity++;
+                                desc.Send($"Your Dexterity increases to {desc.Player.Dexterity}{Constants.NewLine}");
                                 break;
 
                             case "int":
                             case "intelligence":
-                                desc.Player.Stats.Intelligence++;
-                                desc.Send($"Your Intelligence increases to {desc.Player.Stats.Intelligence}{Constants.NewLine}");
+                                desc.Player.Intelligence++;
+                                desc.Send($"Your Intelligence increases to {desc.Player.Intelligence}{Constants.NewLine}");
                                 break;
 
                             case "wisdom":
                             case "wis":
-                                desc.Player.Stats.Wisdom++;
-                                desc.Send($"Your Wisdom increases to {desc.Player.Stats.Wisdom}{Constants.NewLine}");
+                                desc.Player.Wisdom++;
+                                desc.Send($"Your Wisdom increases to {desc.Player.Wisdom}{Constants.NewLine}");
                                 break;
 
                             case "constitution":
                             case "con":
-                                desc.Player.Stats.Constitution++;
-                                desc.Send($"Your Constitution increases to {desc.Player.Stats.Constitution}{Constants.NewLine}");
+                                desc.Player.Constitution++;
+                                desc.Send($"Your Constitution increases to {desc.Player.Constitution}{Constants.NewLine}");
                                 break;
 
                             case "charisma":
                             case "cha":
-                                desc.Player.Stats.Charisma++;
-                                desc.Send($"Your Charisma increases to {desc.Player.Stats.Charisma}{Constants.NewLine}");
+                                desc.Player.Charisma++;
+                                desc.Send($"Your Charisma increases to {desc.Player.Charisma}{Constants.NewLine}");
                                 break;
 
                             case "hp":
@@ -2576,34 +2491,34 @@ namespace Kingdoms_of_Etrea.Core
                                 switch (desc.Player.Class)
                                 {
                                     case ActorClass.Wizard:
-                                        var hpInc = Helpers.RollDice(1, 4) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        var hpInc = Helpers.RollDice(1, 4) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
                                         hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.Stats.CurrentHP += (int)hpInc;
-                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Player.CurrentHP += (int)hpInc;
+                                        desc.Player.MaxHP += (int)hpInc;
                                         desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
                                         break;
 
                                     case ActorClass.Cleric:
-                                        hpInc = Helpers.RollDice(1, 8) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        hpInc = Helpers.RollDice(1, 8) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
                                         hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.Stats.CurrentHP += (int)hpInc;
-                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Player.CurrentHP += (int)hpInc;
+                                        desc.Player.MaxHP += (int)hpInc;
                                         desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
                                         break;
 
                                     case ActorClass.Thief:
-                                        hpInc = Helpers.RollDice(1, 6) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        hpInc = Helpers.RollDice(1, 6) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
                                         hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.Stats.CurrentHP += (int)hpInc;
-                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Player.CurrentHP += (int)hpInc;
+                                        desc.Player.MaxHP += (int)hpInc;
                                         desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
                                         break;
 
                                     case ActorClass.Fighter:
-                                        hpInc = Helpers.RollDice(1, 10) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                        hpInc = Helpers.RollDice(1, 10) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
                                         hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.Stats.CurrentHP += (int)hpInc;
-                                        desc.Player.Stats.MaxHP += Convert.ToUInt32(hpInc);
+                                        desc.Player.CurrentHP += (int)hpInc;
+                                        desc.Player.MaxHP += (int)hpInc;
                                         desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
                                         break;
                                 }
@@ -2614,34 +2529,34 @@ namespace Kingdoms_of_Etrea.Core
                                 switch (desc.Player.Class)
                                 {
                                     case ActorClass.Wizard:
-                                        var mpInc = Helpers.RollDice(1, 10) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                        var mpInc = Helpers.RollDice(1, 10) + Helpers.CalculateAbilityModifier(desc.Player.Intelligence);
                                         mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.Stats.CurrentMP += (int)mpInc;
-                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Player.CurrentMP += (int)mpInc;
+                                        desc.Player.MaxMP += (int)mpInc;
                                         desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
                                         break;
 
                                     case ActorClass.Cleric:
-                                        mpInc = Helpers.RollDice(1, 8) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
+                                        mpInc = Helpers.RollDice(1, 8) + Helpers.CalculateAbilityModifier(desc.Player.Wisdom);
                                         mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.Stats.CurrentMP += (int)mpInc;
-                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Player.CurrentMP += (int)mpInc;
+                                        desc.Player.MaxMP += (int)mpInc;
                                         desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
                                         break;
 
                                     case ActorClass.Thief:
-                                        mpInc = Helpers.RollDice(1, 6) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                        mpInc = Helpers.RollDice(1, 6) + Helpers.CalculateAbilityModifier(desc.Player.Intelligence);
                                         mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.Stats.CurrentMP += (int)mpInc;
-                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Player.CurrentMP += (int)mpInc;
+                                        desc.Player.MaxMP += (int)mpInc;
                                         desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
                                         break;
 
                                     case ActorClass.Fighter:
-                                        mpInc = Helpers.RollDice(1, 4) + ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
+                                        mpInc = Helpers.RollDice(1, 4) + Helpers.CalculateAbilityModifier(desc.Player.Intelligence);
                                         mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.Stats.CurrentMP += (int)mpInc;
-                                        desc.Player.Stats.MaxMP += Convert.ToUInt32(mpInc);
+                                        desc.Player.CurrentMP += (int)mpInc;
+                                        desc.Player.MaxMP += (int)mpInc;
                                         desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
                                         break;
                                 }
@@ -2650,13 +2565,13 @@ namespace Kingdoms_of_Etrea.Core
                             case "sp":
                             case "stamina":
                                 var spInc = Helpers.RollDice(1, 10);
-                                var mod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution);
+                                var mod = Helpers.CalculateAbilityModifier(desc.Player.Constitution);
                                 if (mod > 0)
                                 {
                                     spInc += (uint)mod;
                                 }
-                                desc.Player.Stats.MaxSP += spInc;
-                                desc.Player.Stats.CurrentSP += spInc;
+                                desc.Player.MaxSP += (int)spInc;
+                                desc.Player.CurrentSP += (int)spInc;
                                 desc.Send($"Your stamina increases by {spInc}!{Constants.NewLine}");
                                 break;
                         }
@@ -2673,60 +2588,60 @@ namespace Kingdoms_of_Etrea.Core
                     sb.AppendLine($"The gym master flexes. 'Sure I can help you improve, but it will cost you...'");
                     sb.AppendLine($"  {new string('=', 77)}");
                     sb.AppendLine($"|| Price{Constants.TabStop}|| Stat");
-                    var strIncPrice = (desc.Player.Stats.Strength + 1) * 1000;
-                    var dexIncPrice = (desc.Player.Stats.Dexterity + 1) * 1000;
-                    var intIncPrice = (desc.Player.Stats.Intelligence + 1) * 1000;
-                    var wisIncPrice = (desc.Player.Stats.Wisdom + 1) * 1000;
-                    var conIncPrice = (desc.Player.Stats.Constitution + 1) * 1000;
-                    var chaIncPrice = (desc.Player.Stats.Charisma + 1) * 1000;
+                    var strIncPrice = (desc.Player.Strength + 1) * 1000;
+                    var dexIncPrice = (desc.Player.Dexterity + 1) * 1000;
+                    var intIncPrice = (desc.Player.Intelligence + 1) * 1000;
+                    var wisIncPrice = (desc.Player.Wisdom + 1) * 1000;
+                    var conIncPrice = (desc.Player.Constitution + 1) * 1000;
+                    var chaIncPrice = (desc.Player.Charisma + 1) * 1000;
                     sb.AppendLine($"||==============||{new string('=', 61)}");
                     if (strIncPrice.ToString().Length > 4)
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Strength + 1) * 1000}{Constants.TabStop}|| Strength");
+                        sb.AppendLine($"|| {(desc.Player.Strength + 1) * 1000}{Constants.TabStop}|| Strength");
                     }
                     else
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Strength + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Strength");
+                        sb.AppendLine($"|| {(desc.Player.Strength + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Strength");
                     }
                     if (dexIncPrice.ToString().Length > 4)
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Dexterity + 1) * 1000}{Constants.TabStop}|| Dexterity");
+                        sb.AppendLine($"|| {(desc.Player.Dexterity + 1) * 1000}{Constants.TabStop}|| Dexterity");
                     }
                     else
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Dexterity + 1) * 1000}{Constants.TabStop}{Constants.NewLine}|| Dexterity");
+                        sb.AppendLine($"|| {(desc.Player.Dexterity + 1) * 1000}{Constants.TabStop}{Constants.NewLine}|| Dexterity");
                     }
                     if (intIncPrice.ToString().Length > 4)
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Intelligence + 1) * 1000}{Constants.TabStop}|| Intelligence");
+                        sb.AppendLine($"|| {(desc.Player.Intelligence + 1) * 1000}{Constants.TabStop}|| Intelligence");
                     }
                     else
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Intelligence + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Intelligence");
+                        sb.AppendLine($"|| {(desc.Player.Intelligence + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Intelligence");
                     }
                     if (wisIncPrice.ToString().Length > 4)
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Wisdom + 1) * 1000}{Constants.TabStop}|| Wisdom");
+                        sb.AppendLine($"|| {(desc.Player.Wisdom + 1) * 1000}{Constants.TabStop}|| Wisdom");
                     }
                     else
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Wisdom + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Wisdom");
+                        sb.AppendLine($"|| {(desc.Player.Wisdom + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Wisdom");
                     }
                     if (conIncPrice.ToString().Length > 4)
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Constitution + 1) * 1000}{Constants.TabStop}|| Constitution");
+                        sb.AppendLine($"|| {(desc.Player.Constitution + 1) * 1000}{Constants.TabStop}|| Constitution");
                     }
                     else
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Constitution + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Constitution");
+                        sb.AppendLine($"|| {(desc.Player.Constitution + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Constitution");
                     }
                     if (chaIncPrice.ToString().Length > 4)
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Charisma + 1) * 1000}{Constants.TabStop}|| Charisma");
+                        sb.AppendLine($"|| {(desc.Player.Charisma + 1) * 1000}{Constants.TabStop}|| Charisma");
                     }
                     else
                     {
-                        sb.AppendLine($"|| {(desc.Player.Stats.Charisma + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Charisma");
+                        sb.AppendLine($"|| {(desc.Player.Charisma + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Charisma");
                     }
                     sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra HP");
                     sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra MP");
@@ -2745,13 +2660,13 @@ namespace Kingdoms_of_Etrea.Core
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"  {new string('=', 77)}");
-            if(desc.Player.Skills.Count > 0)
+            if (desc.Player.Skills.Count > 0)
             {
                 sb.AppendLine($"|| Skill {Constants.TabStop}{Constants.TabStop}|| MP{Constants.TabStop}|| Description");
                 sb.AppendLine($"||{new string('=', 77)}");
                 foreach (var s in desc.Player.Skills)
                 {
-                    if(s.Name.Length <= 4)
+                    if (s.Name.Length <= 4)
                     {
                         sb.AppendLine($"|| {s.Name}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
                     }
@@ -2780,7 +2695,7 @@ namespace Kingdoms_of_Etrea.Core
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"  {new string('=', 77)}");
-            if(desc.Player.Spells.Count > 0)
+            if (desc.Player.Spells.Count > 0)
             {
                 sb.AppendLine($"|| Spell {Constants.TabStop}{Constants.TabStop}|| MP{Constants.TabStop}|| Description");
                 sb.AppendLine($"||{new string('=', 77)}");
@@ -2815,11 +2730,11 @@ namespace Kingdoms_of_Etrea.Core
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"  {new string('=', 77)}");
-            if(desc.Player.Buffs != null && desc.Player.Buffs.Count > 0)
+            if (desc.Player.Buffs != null && desc.Player.Buffs.Count > 0)
             {
-                foreach(var b in desc.Player.Buffs)
+                foreach (var b in desc.Player.Buffs)
                 {
-                    if(b.Value == -1)
+                    if (b.Value == -1)
                     {
                         sb.AppendLine($"|| {b.Key}: Permanent");
                     }
@@ -2838,818 +2753,902 @@ namespace Kingdoms_of_Etrea.Core
             desc.Send(sb.ToString());
         }
 
-        private static void EatFood(ref Descriptor desc, ref string input)
-        {
-            desc.Send($"Tell Zohar to finish EatFood()!{Constants.NewLine}");
-        }
-
         private static void CastSpell(ref Descriptor desc, ref string input, bool overrideSkillCheck = false)
         {
-            if(!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
             {
-                if(!desc.Player.HasBuff("Silence"))
+                desc.Send($"Some mystical force prevents the use of magic here...{Constants.NewLine}");
+                return;
+            }
+            if (desc.Player.HasBuff("Silence"))
+            {
+                desc.Send($"You have been silenced and cannot use magic right now!{Constants.NewLine}");
+                return;
+            }
+            var verb = GetVerb(ref input);
+            var line = input.Remove(0, verb.Length);
+            var lineElements = TokeniseInput(ref line);
+            var spellName = GetSkillOrSpellName(ref line);
+            spellName = string.IsNullOrEmpty(spellName) ? lineElements[0].Trim() : spellName;
+            if (!string.IsNullOrEmpty(spellName))
+            {
+                var spell = SpellManager.Instance.GetSpell(spellName);
+                if (spell == null)
                 {
-                    // we aren't in a room that has the NoMagic flag and we aren't silenced so we can cast a spell
-                    var verb = GetVerb(ref input);
-                    var line = input.Remove(0, verb.Length).Trim();
-                    var lineElements = TokeniseInput(ref line);
-                    var spellName = GetSkillOrSpellName(ref line);
-                    spellName = string.IsNullOrEmpty(spellName) ? lineElements[0].Trim() : spellName;
-                    if(!string.IsNullOrEmpty(spellName))
+                    desc.Send($"No such spell exists in the Realms!{Constants.NewLine}");
+                    return;
+                }
+                if (!desc.Player.HasSpell(spell.SpellName))
+                {
+                    desc.Send($"You don't know that spell!{Constants.NewLine}");
+                    return;
+                }
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe) && (spell.SpellType == SpellType.Debuff || spell.SpellType == SpellType.Damage))
+                {
+                    desc.Send($"Some mystical force prevents you from casting that here...{Constants.NewLine}");
+                    return;
+                }
+                if (desc.Player.CurrentMP < spell.MPCost)
+                {
+                    desc.Send($"You don't have the MP required to cast that spell!{Constants.NewLine}");
+                    return;
+                }
+                var target = line.Replace(spellName, string.Empty).Replace("\"", string.Empty).Replace("'", string.Empty).Trim();
+                if (string.IsNullOrEmpty(target) && !spell.AOESpell)
+                {
+                    desc.Send($"Cast that spell on what, exactly?{Constants.NewLine}");
+                    return;
+                }
+                dynamic targetActor = null;
+                bool targetIsSelf = false;
+                if (target.ToLower() == "self" || target.ToLower() == desc.Player.Name.ToLower())
+                {
+                    targetActor = desc;
+                    targetIsSelf = true;
+                }
+                if ((spell.SpellType == SpellType.Debuff || spell.SpellType == SpellType.Damage) && targetActor != null && targetIsSelf)
+                {
+                    desc.Send($"You can't cast damaging spells on yourself!{Constants.NewLine}");
+                    return;
+                }
+                if (!spell.AOESpell && targetActor == null)
+                {
+                    // try to find a target NPC first
+                    targetActor = GetTargetNPC(ref desc, target);
+                }
+                if (!spell.AOESpell && targetActor == null)
+                {
+                    // didn't get a target NPC so try a target player instead
+                    var tp = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Where(x => Regex.IsMatch(x.Player.Name, target, RegexOptions.IgnoreCase) && x.Player.Visible).FirstOrDefault();
+                    if (tp != null)
                     {
-                        var spell = Spells.GetSpell(spellName);
-                        if(spell != null)
+                        targetActor = tp;
+                    }
+                }
+                if (!spell.AOESpell && targetActor == null)
+                {
+                    desc.Send($"The target of your magic cannot be found...{Constants.NewLine}");
+                    return;
+                }
+                switch (spell.SpellType)
+                {
+                    case SpellType.Healing:
+                        if (!spell.AOESpell)
                         {
-                            if(desc.Player.HasSpell(spellName))
+                            int hpMod = 0;
+                            bool hitsTarget = true;
+                            desc.Player.AdjustMP((int)spell.MPCost * -1);
+                            if (targetActor is Descriptor)
                             {
-                                bool okToCast = true;
-                                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+                                Descriptor tDesc = (Descriptor)targetActor;
+                                hpMod = spell.CalculateSpellHPEffect(desc.Player, tDesc.Player, out hitsTarget);
+                                if (!targetIsSelf)
                                 {
-                                    // make sure we can't cast a debuff or damaging spell in a safe room
-                                    okToCast = spell.SpellType == SpellType.Healing || spell.SpellType == SpellType.Buff;
+                                    desc.Send($"Calling on the power of {spell}, you heal {tDesc.Player.Name} for {hpMod} damage!{Constants.NewLine}");
+                                    tDesc.Send($"Calling on the power of {spell}, {desc.Player.Name} heals you for {hpMod} damage!{Constants.NewLine}");
+                                    tDesc.Player.AdjustHP(hpMod, out _);
                                 }
-                                if(okToCast)
+                                else
                                 {
-                                    if(desc.Player.Stats.CurrentMP >= spell.MPCost)
+                                    desc.Send($"Calling on the power of {spell} you heal yourself for {hpMod} damage!{Constants.NewLine}");
+                                    desc.Player.AdjustHP(hpMod, out _);
+                                }
+                            }
+                            else
+                            {
+                                NPC tNPC = (NPC)targetActor;
+                                hpMod = spell.CalculateSpellHPEffect(desc.Player, tNPC, out hitsTarget);
+                                desc.Send($"Calling on the power of {spell} you heal {tNPC.Name} for {hpMod} damage!{Constants.NewLine}");
+                                if (tNPC.IsFollower && tNPC.FollowingPlayer != desc.ID)
+                                {
+                                    SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"Calling on the power of {spell}, {desc.Player.Name} heals your follower for {hpMod} damage!{Constants.NewLine}");
+                                }
+                                tNPC.AdjustHP(hpMod, out _);
+                            }
+                        }
+                        else
+                        {
+                            var targetNPCs = RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom);
+                            var targetPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                            desc.Player.AdjustMP((int)spell.MPCost * -1);
+                            if (targetNPCs != null && targetNPCs.Count > 0)
+                            {
+                                foreach (var n in targetNPCs)
+                                {
+                                    var hpMod = spell.CalculateSpellHPEffect(desc.Player, n, out bool hits);
+                                    if (hits)
                                     {
-                                        var target = line.Replace(spellName, string.Empty).Replace("\"", string.Empty).Trim();
-                                        if(spell.RequiresTarget && string.IsNullOrEmpty(target))
+                                        n.AdjustHP(hpMod, out _);
+                                    }
+                                }
+                            }
+                            if (targetPlayers != null && targetPlayers.Count > 0)
+                            {
+                                foreach(var p in targetPlayers)
+                                {
+                                    var hpMod = spell.CalculateSpellHPEffect(desc.Player, p.Player, out bool hits);
+                                    if (hits)
+                                    {
+                                        p.Player.AdjustHP(hpMod, out _);
+                                        if (p.Player.Name != desc.Player.Name)
                                         {
-                                            desc.Send($"Cast that spell on what, exactly?{Constants.NewLine}");
+                                            p.Send($"{desc.Player.Name} bathes the area in holy light and your wounds are healed!{Constants.NewLine}");
+                                        }
+                                    }
+                                }
+                            }
+                            desc.Send($"You bathe the area in holy light, healing everyone's wounds!{Constants.NewLine}");
+                        }
+                        break;
+
+                    case SpellType.Damage:
+                        if (!spell.AOESpell)
+                        {
+                            if (targetActor != null && targetActor is NPC)
+                            {
+                                var tNPC = NPCManager.Instance.GetNPCByGUID(((NPC)targetActor).NPCGuid);
+                                if (tNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
+                                {
+                                    desc.Send($"Some mystical force prevents you from harming {tNPC.Name}...{Constants.NewLine}");
+                                    return;
+                                }
+                                if (tNPC.IsFollower)
+                                {
+                                    if (!desc.Player.PVP || !SessionManager.Instance.GetPlayerByGUID(tNPC.NPCGuid).Player.PVP)
+                                    {
+                                        desc.Send($"Some mysitcal force prevents that from happening!{Constants.NewLine}");
+                                        return;
+                                    }
+                                    var hpEffect = spell.CalculateSpellHPEffect(desc.Player, tNPC, out bool hits);
+                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
+                                    if (hits)
+                                    {
+                                        tNPC.AdjustHP(hpEffect * -1, out bool isKilled);
+                                        if (hpEffect <= 0)
+                                        {
+                                            desc.Send($"{tNPC.Name} has absorbed the magic of your spell!{Constants.NewLine}");
+                                        }
+                                        if (isKilled)
+                                        {
+                                            desc.Send($"Your {spell} spell strikes {tNPC.Name} for lethal damage, killing them!{Constants.NewLine}");
+                                            SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell has slain your follower!{Constants.NewLine}");
+                                            tNPC.Kill();
+                                            return;
                                         }
                                         else
                                         {
-                                            Descriptor targetPlayer = null;
-                                            NPC targetNPC = null;
-                                            if(target.ToLower() == "self" || !spell.RequiresTarget)
+                                            if (hpEffect >= 1)
                                             {
-                                                targetPlayer = desc;
+                                                desc.Send($"Your {spell} spell strikes {tNPC.Name} causing {hpEffect} damage!{Constants.NewLine}");
+                                                SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell strikes your follower for {hpEffect} damage!{Constants.NewLine}");
                                             }
-                                            targetNPC = GetTargetNPC(ref desc, target);
-                                            if(targetPlayer == null)
+                                            var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
+                                            if (existingSessions == null || existingSessions.Count == 0)
                                             {
-                                                targetPlayer = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.IsMatch(x.Player.Name, target, RegexOptions.IgnoreCase)).FirstOrDefault();
-                                            }
-                                            if(targetPlayer == null && targetNPC == null && spell.RequiresTarget)
-                                            {
-                                                desc.Send($"The target of your magic cannot be found...{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                // the spell doesn't require a target, or we have found a target for the spell and are otherwise OK to cast it
-                                                if(targetNPC != null)
+                                                CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
+                                                CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
+                                                CombatManager.Instance.AddCombatSession(c1);
+                                                CombatManager.Instance.AddCombatSession(c2);
+                                                if (desc.Player.FollowerID != Guid.Empty)
                                                 {
-                                                    if(spell.SpellType == SpellType.Healing || spell.SpellType == SpellType.Buff)
-                                                    {
-                                                        // deal with buffs and healing spells separately from debuffs and damage spells
-                                                        switch(spell.SpellType)
-                                                        {
-                                                            case SpellType.Healing:
-                                                                desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                var healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                var abilityModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
-                                                                if(abilityModifier > 0)
-                                                                {
-                                                                    healAmount += Convert.ToUInt32(abilityModifier * spell.NumOfDamageDice);
-                                                                }
-                                                                if(targetNPC.Stats.CurrentHP + (int)healAmount >= targetNPC.Stats.MaxHP)
-                                                                {
-                                                                    NPCManager.Instance.SetNPCHealthToMax(targetNPC.NPCGuid);
-                                                                    desc.Send($"Calling on holy power, you heal {targetNPC.Name} back to full health!{Constants.NewLine}");
-                                                                    if(targetNPC.IsFollower)
-                                                                    {
-                                                                        SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"Calling on holy power, {desc.Player.Name} heals your follower to full health!{Constants.NewLine}");
-                                                                    }
-                                                                }
-                                                                else
-                                                                {
-                                                                    NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, (int)healAmount);
-                                                                    desc.Send($"Calling on holy power, you heal {healAmount} of damage on {targetNPC.Name}!{Constants.NewLine}");
-                                                                    if(targetNPC.IsFollower)
-                                                                    {
-                                                                        SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"Calling on holy power, {desc.Player.Name} heals {healAmount} of damage on your follower!{Constants.NewLine}");
-                                                                    }
-                                                                }
-                                                                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                                                if(localPlayers != null && localPlayers.Count > 1)
-                                                                {
-                                                                    foreach (var lp in localPlayers)
-                                                                    {
-                                                                        var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
-                                                                            ? $"{desc.Player.Name} calls on holy power heal {targetNPC.Name}{Constants.NewLine}"
-                                                                            : $"Something calls on holy power to heal {targetNPC.Name}{Constants.NewLine}";
-                                                                        if (!Regex.IsMatch(lp.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase))
-                                                                        {
-                                                                            lp.Send(msg);
-                                                                        }
-                                                                    }
-                                                                }
-                                                                break;
-
-                                                            case SpellType.Buff:
-                                                                if(!targetNPC.HasBuff(spell.SpellName))
-                                                                {
-                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                    NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).AddBuff(spell.SpellName);
-                                                                    if(spell.NumOfDamageDice > 0)
-                                                                    {
-                                                                        healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                        abilityModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
-                                                                        if(abilityModifier > 0)
-                                                                        {
-                                                                            healAmount += Convert.ToUInt32(abilityModifier * spell.NumOfDamageDice);
-                                                                        }
-                                                                        if (targetNPC.Stats.CurrentHP + (int)healAmount >= targetNPC.Stats.MaxHP)
-                                                                        {
-                                                                            NPCManager.Instance.SetNPCHealthToMax(targetNPC.NPCGuid);
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, (int)healAmount);
-                                                                        }
-                                                                    }
-                                                                    desc.Send($"You bless {targetNPC.Name} with the power of {spell.SpellName}!{Constants.NewLine}");
-                                                                    if(targetNPC.IsFollower)
-                                                                    {
-                                                                        SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"Calling on holy power, {desc.Player.Name} blesses your follower with the power of {spell.SpellName}!{Constants.NewLine}");
-                                                                    }
-                                                                    localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                                                    if(localPlayers != null && localPlayers.Count > 1)
-                                                                    {
-                                                                        foreach (var lp in localPlayers)
-                                                                        {
-                                                                            var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
-                                                                                ? $"{desc.Player.Name} calls on holy power bless {targetNPC.Name}{Constants.NewLine}"
-                                                                                : $"Something calls on holy power to bless {targetNPC.Name}{Constants.NewLine}";
-                                                                            if (!Regex.IsMatch(lp.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase))
-                                                                            {
-                                                                                lp.Send(msg);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                                else
-                                                                {
-                                                                    desc.Send($"{targetNPC.Name} already has that blessing!{Constants.NewLine}");
-                                                                }
-                                                                break;
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        var startCombat = true;
-                                                        if (targetNPC.IsFollower)
-                                                        {
-                                                            if (!SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Player.PVP)
-                                                            {
-                                                                desc.Send($"{targetNPC.Name} is someone's follower and cannot be attacked while their PVP flag is disabled.{Constants.NewLine}");
-                                                                return;
-                                                            }
-                                                            if (targetNPC.FollowingPlayer == desc.Id)
-                                                            {
-                                                                desc.Send($"{targetNPC.Name} is your loyal follower, you cannot attack them!{Constants.NewLine}");
-                                                                return;
-                                                            }
-                                                        }
-                                                        if (targetNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
-                                                        {
-                                                            desc.Send($"Some mystical force prevents you from casting {spell.SpellName} on {targetNPC.Name}!{Constants.NewLine}");
-                                                            return;
-                                                        }
-                                                        if (desc.Player.IsInCombat)
-                                                        {
-                                                            startCombat = !CombatManager.Instance.IsPlayerInCombatWithNPC(desc.Id, targetNPC.NPCGuid);
-                                                        }
-                                                        if(!startCombat)
-                                                        {
-                                                            desc.Send($"You are already in combat with something else!{Constants.NewLine}");
-                                                            return;
-                                                        }
-                                                        else
-                                                        {
-                                                            // we're casting a debuff or damage spell and the target NPC doesn't have the NoAttack flag so we're good to go
-                                                            switch(spell.SpellType)
-                                                            {
-                                                                case SpellType.Damage:
-                                                                    // check to make sure we are either not in combat or are in combat with the target npc - we shouldn't cast this otherwise
-                                                                    bool spellHits = spell.AutoHitTarget;
-                                                                    if(!spellHits)
-                                                                    {
-                                                                        var toHit = Helpers.RollDice(1, 20);
-                                                                        var toHitMod = toHit;
-                                                                        var targetAC = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.ArmourClass;
-                                                                        var dexModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
-                                                                        if(dexModifier > 0)
-                                                                        {
-                                                                            toHitMod += Convert.ToUInt32(dexModifier);
-                                                                        }
-                                                                        spellHits = toHit == 20 || toHitMod >= targetAC;
-                                                                    }
-                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                    if(spellHits)
-                                                                    {
-                                                                        var damage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                        var abilityModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                                                        if (abilityModifier > 0)
-                                                                        {
-                                                                            damage += Convert.ToUInt32(abilityModifier * spell.NumOfDamageDice);
-                                                                        }
-                                                                        var targetHP = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.CurrentHP;
-                                                                        if (damage >= targetHP)
-                                                                        {
-                                                                            // kill the NPC
-                                                                            var combatSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.Id, targetNPC.NPCGuid);
-                                                                            if(combatSessions.Count > 0)
-                                                                            {
-                                                                                foreach(var s in combatSessions)
-                                                                                {
-                                                                                    CombatManager.Instance.RemoveCombatSession(s);
-                                                                                }
-                                                                            }
-                                                                            desc.Send($"Your {spell.SpellName} strikes {targetNPC.Name} for lethal damage, killing them instantly!{Constants.NewLine}");
-                                                                            desc.Send($"You have killed {targetNPC.Name} and obtained {targetNPC.BaseExpAward} Exp and {targetNPC.Stats.Gold} gold!{Constants.NewLine}");
-                                                                            desc.Player.AddExp(targetNPC.BaseExpAward);
-                                                                            desc.Player.AddGold(targetNPC.Stats.Gold);
-                                                                            desc.Player.UpdateAlignment(targetNPC.Alignment);
-                                                                            var pn = desc.Player.Name;
-                                                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                                                            if(localPlayers != null && localPlayers.Count > 1)
-                                                                            {
-                                                                                foreach(var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pn, RegexOptions.IgnoreCase)))
-                                                                                {
-                                                                                    var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
-                                                                                        ? $"There is a sickening scream as {targetNPC.Name} is slaughtered by {pn}'s {spell.SpellName} magic!{Constants.NewLine}"
-                                                                                        : $"There is a sickening scream is {targetNPC.Name} is slaughtered by someone's {spell.SpellName} magic!{Constants.NewLine}";
-                                                                                    lp.Send(msg);
-                                                                                }
-                                                                            }
-                                                                            NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Kill(true);
-                                                                            if (desc.Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(targetNPC.NPCID)))
-                                                                            {
-                                                                                for (int n = 0; n < desc.Player.ActiveQuests.Count; n++)
-                                                                                {
-                                                                                    if (desc.Player.ActiveQuests[n].Monsters.Keys.Contains(targetNPC.NPCID))
-                                                                                    {
-                                                                                        if (desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] <= 1)
-                                                                                        {
-                                                                                            desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] = 0;
-                                                                                        }
-                                                                                        else
-                                                                                        {
-                                                                                            desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID]--;
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            // damage the NPC and start combat session, if we're not already in one
-                                                                            NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, Convert.ToInt32(damage * -1));
-                                                                            desc.Send($"Your {spell.SpellName} spell blasts {targetNPC.Name} for {damage} damage!{Constants.NewLine}");
-                                                                            if(!desc.Player.IsInCombat)
-                                                                            {
-                                                                                var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
-                                                                                var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
-                                                                                CombatManager.Instance.AddCombatSession(pSession);
-                                                                                CombatManager.Instance.AddCombatSession(nSession);
-                                                                                desc.Player.Position = ActorPosition.Fighting;
-                                                                                if(desc.Player.FollowerID != Guid.Empty)
-                                                                                {
-                                                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                                    var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
-                                                                                    var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
-                                                                                    CombatManager.Instance.AddCombatSession(fSession);
-                                                                                    CombatManager.Instance.AddCombatSession(nfSession);
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        // spell missed - notify and start combat session
-                                                                        desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetNPC.Name}!{Constants.NewLine}");
-                                                                        if(targetNPC.IsFollower)
-                                                                        {
-                                                                            SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"The magic of {desc.Player.Name}'s {spell.SpellName} fizzles and misses your follower!{Constants.NewLine}");
-                                                                        }
-                                                                        if (!desc.Player.IsInCombat)
-                                                                        {
-                                                                            var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
-                                                                            var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
-                                                                            CombatManager.Instance.AddCombatSession(pSession);
-                                                                            CombatManager.Instance.AddCombatSession(nSession);
-                                                                            desc.Player.Position = ActorPosition.Fighting;
-                                                                            if (desc.Player.FollowerID != Guid.Empty)
-                                                                            {
-                                                                                var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                                var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
-                                                                                var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
-                                                                                CombatManager.Instance.AddCombatSession(fSession);
-                                                                                CombatManager.Instance.AddCombatSession(nfSession);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    break;
-
-                                                                case SpellType.Debuff:
-                                                                    if(!targetNPC.HasBuff(spell.SpellName))
-                                                                    {
-                                                                        desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                        spellHits = true;
-                                                                        if(!spell.AutoHitTarget)
-                                                                        {
-                                                                            var toHit = Helpers.RollDice(1, 20);
-                                                                            var toHitMod = toHit;
-                                                                            var dexMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
-                                                                            var targetAC = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.ArmourClass;
-                                                                            if (dexMod > 0)
-                                                                            {
-                                                                                toHitMod += (uint)dexMod;
-                                                                            }
-                                                                            spellHits = toHit == 20 || toHitMod >= targetAC;
-                                                                        }
-                                                                        if(spellHits)
-                                                                        {
-                                                                            NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).AddBuff(spell.SpellName);
-                                                                            desc.Send($"Calling on the arcane arts, you hinder {targetNPC.Name} with the power of {spell.SpellName}!{Constants.NewLine}");
-                                                                            if (spell.NumOfDamageDice > 0)
-                                                                            {
-                                                                                var damage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                                var abilityMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                                                                if (abilityMod > 0)
-                                                                                {
-                                                                                    damage += Convert.ToUInt32(abilityMod * spell.NumOfDamageDice);
-                                                                                }
-                                                                                var targetHP = NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Stats.CurrentHP;
-                                                                                if (damage >= targetHP)
-                                                                                {
-                                                                                    // killed the NPC
-                                                                                    var combatSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.Id, targetNPC.NPCGuid);
-                                                                                    if (combatSessions.Count > 0)
-                                                                                    {
-                                                                                        foreach (var s in combatSessions)
-                                                                                        {
-                                                                                            CombatManager.Instance.RemoveCombatSession(s);
-                                                                                        }
-                                                                                    }
-                                                                                    desc.Send($"Your {spell.SpellName} strikes {targetNPC.Name} for lethal damage, killing them instantly!{Constants.NewLine}");
-                                                                                    desc.Send($"You have killed {targetNPC.Name} and obtained {targetNPC.BaseExpAward} Exp and {targetNPC.Stats.Gold} gold!{Constants.NewLine}");
-                                                                                    desc.Player.AddExp(targetNPC.BaseExpAward);
-                                                                                    desc.Player.AddGold(targetNPC.Stats.Gold);
-                                                                                    desc.Player.UpdateAlignment(targetNPC.Alignment);
-                                                                                    var pn = desc.Player.Name;
-                                                                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                                                                    if (localPlayers != null && localPlayers.Count > 1)
-                                                                                    {
-                                                                                        foreach (var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pn, RegexOptions.IgnoreCase)))
-                                                                                        {
-                                                                                            var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
-                                                                                                ? $"There is a sickening scream as {targetNPC.Name} is slaughtered by {pn}'s {spell.SpellName} magic!{Constants.NewLine}"
-                                                                                                : $"There is a sickening scream is {targetNPC.Name} is slaughtered by someone's {spell.SpellName} magic!{Constants.NewLine}";
-                                                                                            lp.Send(msg);
-                                                                                        }
-                                                                                    }
-                                                                                    NPCManager.Instance.GetNPCByGUID(targetNPC.NPCGuid).Kill(true);
-                                                                                    if (desc.Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(targetNPC.NPCID)))
-                                                                                    {
-                                                                                        for (int n = 0; n < desc.Player.ActiveQuests.Count; n++)
-                                                                                        {
-                                                                                            if (desc.Player.ActiveQuests[n].Monsters.Keys.Contains(targetNPC.NPCID))
-                                                                                            {
-                                                                                                if (desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] <= 1)
-                                                                                                {
-                                                                                                    desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID] = 0;
-                                                                                                }
-                                                                                                else
-                                                                                                {
-                                                                                                    desc.Player.ActiveQuests[n].Monsters[targetNPC.NPCID]--;
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    // damage the NCP and start combat
-                                                                                    NPCManager.Instance.AdjustNPCHealth(targetNPC.NPCGuid, Convert.ToInt32(damage * -1));
-                                                                                    desc.Send($"Your {spell.SpellName} spell blasts {targetNPC.Name} for {damage} damage!{Constants.NewLine}");
-                                                                                    if (!desc.Player.IsInCombat)
-                                                                                    {
-                                                                                        var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
-                                                                                        var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
-                                                                                        CombatManager.Instance.AddCombatSession(pSession);
-                                                                                        CombatManager.Instance.AddCombatSession(nSession);
-                                                                                        desc.Player.Position = ActorPosition.Fighting;
-                                                                                        if (desc.Player.FollowerID != Guid.Empty)
-                                                                                        {
-                                                                                            var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                                            var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
-                                                                                            var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
-                                                                                            CombatManager.Instance.AddCombatSession(fSession);
-                                                                                            CombatManager.Instance.AddCombatSession(nfSession);
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            // spell missed - notify the player and start combat
-                                                                            desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetNPC.Name}!{Constants.NewLine}");
-                                                                            if (targetNPC.IsFollower)
-                                                                            {
-                                                                                SessionManager.Instance.GetPlayerByGUID(targetNPC.FollowingPlayer).Send($"The magic of {desc.Player.Name}'s {spell.SpellName} fizzles and misses your follower!{Constants.NewLine}");
-                                                                            }
-                                                                            if (!desc.Player.IsInCombat)
-                                                                            {
-                                                                                var pSession = new CombatSessionNew(desc, targetNPC, desc.Id, targetNPC.NPCGuid);
-                                                                                var nSession = new CombatSessionNew(targetNPC, desc, targetNPC.NPCGuid, desc.Id);
-                                                                                CombatManager.Instance.AddCombatSession(pSession);
-                                                                                CombatManager.Instance.AddCombatSession(nSession);
-                                                                                desc.Player.Position = ActorPosition.Fighting;
-                                                                                if (desc.Player.FollowerID != Guid.Empty)
-                                                                                {
-                                                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                                    var fSession = new CombatSessionNew(follower, targetNPC, follower.NPCGuid, targetNPC.NPCGuid);
-                                                                                    var nfSession = new CombatSessionNew(targetNPC, follower, targetNPC.NPCGuid, follower.NPCGuid);
-                                                                                    CombatManager.Instance.AddCombatSession(fSession);
-                                                                                    CombatManager.Instance.AddCombatSession(nfSession);
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        desc.Send($"{targetNPC.Name} is already affected by {spell.SpellName}!{Constants.NewLine}");
-                                                                    }
-                                                                    break;
-                                                            }
-                                                        }
-                                                    }
+                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                    CombatSession c3 = new CombatSession(follower, tNPC, follower.NPCGuid, tNPC.NPCGuid);
+                                                    CombatSession c4 = new CombatSession(tNPC, follower, tNPC.NPCGuid, follower.NPCGuid);
+                                                    CombatManager.Instance.AddCombatSession(c3);
+                                                    CombatManager.Instance.AddCombatSession(c4);
                                                 }
-                                                else
-                                                {
-                                                    // casting a spell on a player, if we're doing a debuff/damage spell we need to check the PVP flag first
-                                                    // assume that all players are OK with being healed or buffed so don't check PVP for these
-                                                    if(targetPlayer != null)
-                                                    {
-                                                        if (spell.SpellType == SpellType.Healing || spell.SpellType == SpellType.Buff)
-                                                        {
-                                                            switch(spell.SpellType)
-                                                            {
-                                                                case SpellType.Healing:
-                                                                    var healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                    var wisMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
-                                                                    var targetHP = targetPlayer.Player.Stats.CurrentHP;
-                                                                    var targetMaxHP = targetPlayer.Player.Stats.MaxHP;
-                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                    string pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
-                                                                    if (wisMod > 0)
-                                                                    {
-                                                                        healAmount += (uint)wisMod * spell.NumOfDamageDice;
-                                                                    }
-                                                                    if(targetHP + healAmount >= targetMaxHP)
-                                                                    {
-                                                                        targetPlayer.Player.Stats.CurrentHP = (int)targetMaxHP;
-                                                                        desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} back to full health!{Constants.NewLine}");
-                                                                        targetPlayer.Send($"{pName} calls on holy power to heal you back to full health!{Constants.NewLine}");
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        targetPlayer.Player.Stats.CurrentHP += (int)healAmount;
-                                                                        desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} for {healAmount} damage!{Constants.NewLine}");
-                                                                        targetPlayer.Send($"{pName} calls on holy power and heals {healAmount} damage!{Constants.NewLine}");
-                                                                    }
-                                                                    break;
-
-                                                                case SpellType.Buff:
-                                                                    if(!targetPlayer.Player.HasBuff(spell.SpellName))
-                                                                    {
-                                                                        desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                        targetPlayer.Player.AddBuff(spell.SpellName);
-                                                                        desc.Send($"Calling on holy power you bless {targetPlayer.Player.Name} with {spell.SpellName}!{Constants.NewLine}");
-                                                                        pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
-                                                                        targetPlayer.Send($"{pName} blesses you with the power of {spell.SpellName}!{Constants.NewLine}");
-                                                                        if (spell.NumOfDamageDice > 0)
-                                                                        {
-                                                                            healAmount = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                            wisMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom);
-                                                                            targetHP = targetPlayer.Player.Stats.CurrentHP;
-                                                                            targetMaxHP = targetPlayer.Player.Stats.MaxHP;
-                                                                            if (wisMod > 0)
-                                                                            {
-                                                                                healAmount += (uint)wisMod * spell.NumOfDamageDice;
-                                                                            }
-                                                                            if (targetHP + healAmount >= targetMaxHP)
-                                                                            {
-                                                                                targetPlayer.Player.Stats.CurrentHP = (int)targetMaxHP;
-                                                                                desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} back to full health!{Constants.NewLine}");
-                                                                                targetPlayer.Send($"{pName} calls on holy power to heal you back to full health!{Constants.NewLine}");
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                targetPlayer.Player.Stats.CurrentHP += (int)healAmount;
-                                                                                desc.Send($"Calling on holy power you heal {targetPlayer.Player.Name} for {healAmount} damage!{Constants.NewLine}");
-                                                                                targetPlayer.Send($"{pName} calls on holy power and heals {healAmount} damage!{Constants.NewLine}");
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        desc.Send($"{targetPlayer.Player.Name} already has that blessing!{Constants.NewLine}");
-                                                                    }
-                                                                    break;
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            if(!desc.Player.PVP)
-                                                            {
-                                                                desc.Send($"You can't cast that spell on {targetPlayer.Player.Name} right now...{Constants.NewLine}");
-                                                                return;
-                                                            }
-                                                            if(!targetPlayer.Player.PVP)
-                                                            {
-                                                                desc.Send($"You can't cast that spell on {targetPlayer.Player.Name} right now...{Constants.NewLine}");
-                                                                return;
-                                                            }
-                                                            // PVP is enabled and we can cast an offensive spell on a player
-                                                            switch (spell.SpellType)
-                                                            {
-                                                                case SpellType.Debuff:
-                                                                    bool spellHits = true;
-                                                                    bool startCombat = true;
-                                                                    if (!targetPlayer.Player.HasBuff(spell.SpellName))
-                                                                    {
-                                                                        desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                        if(!spell.AutoHitTarget)
-                                                                        {
-                                                                            var toHit = Helpers.RollDice(1, 20);
-                                                                            var toHitMod = toHit;
-                                                                            var dexMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
-                                                                            var targetAC = targetPlayer.Player.Stats.ArmourClass;
-                                                                            if(dexMod > 0)
-                                                                            {
-                                                                                toHitMod += (uint)dexMod;
-                                                                            }
-                                                                            spellHits = toHit == 20 || toHitMod >= targetAC;
-                                                                        }
-                                                                        if(spellHits)
-                                                                        {
-                                                                            targetPlayer.Player.AddBuff(spell.SpellName);
-                                                                            if(spell.NumOfDamageDice > 0)
-                                                                            {
-                                                                                uint damage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                                var intMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                                                                var pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
-                                                                                if(intMod > 0)
-                                                                                {
-                                                                                    damage += (uint)intMod * spell.NumOfDamageDice;
-                                                                                }
-                                                                                var targetHP = targetPlayer.Player.Stats.CurrentHP;
-                                                                                if (damage >= targetHP)
-                                                                                {
-                                                                                    desc.Send($"The magic of your {spell.SpellName} spell overcomes {targetPlayer.Player.Name} and kills them instantly!{Constants.NewLine}");
-                                                                                    targetPlayer.Send($"{pName} blasts you with the magic of {spell.SpellName} and kills you instantly!{Constants.NewLine}");
-                                                                                    targetPlayer.Player.Kill();
-                                                                                    startCombat = false;
-                                                                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                                                                    if(localPlayers != null && localPlayers.Count > 2)
-                                                                                    {
-                                                                                        foreach (var lp in localPlayers)
-                                                                                        {
-                                                                                            if (!Regex.IsMatch(lp.Player.Name, targetPlayer.Player.Name) && !Regex.IsMatch(lp.Player.Name, desc.Player.Name))
-                                                                                            {
-                                                                                                var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
-                                                                                                    ? $"{desc.Player.Name} blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}"
-                                                                                                    : $"Something blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}";
-                                                                                                lp.Send(msg);
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    // damage the player
-                                                                                    targetPlayer.Player.Stats.CurrentHP -= (int)damage;
-                                                                                    desc.Send($"The magic of your {spell.SpellName} blasts {targetPlayer.Player.Name} for {damage} damage!{Constants.NewLine}");
-                                                                                    targetPlayer.Send($"{pName} blasts you with the magic of {spell.SpellName} causing {damage} damage!{Constants.NewLine}");
-                                                                                }
-                                                                            }
-                                                                            if(startCombat)
-                                                                            {
-                                                                                var pSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
-                                                                                var tSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
-                                                                                CombatManager.Instance.AddCombatSession(pSession);
-                                                                                CombatManager.Instance.AddCombatSession(tSession);
-                                                                                if(desc.Player.FollowerID != Guid.Empty)
-                                                                                {
-                                                                                    var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                                    var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
-                                                                                    var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
-                                                                                    CombatManager.Instance.AddCombatSession(fSession);
-                                                                                    CombatManager.Instance.AddCombatSession(pfSession);
-                                                                                }
-                                                                                if(targetPlayer.Player.FollowerID != Guid.Empty)
-                                                                                {
-                                                                                    var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
-                                                                                    var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
-                                                                                    var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
-                                                                                    CombatManager.Instance.AddCombatSession(fSession);
-                                                                                    CombatManager.Instance.AddCombatSession(pfSession);
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            // spell missed the tagret, start a combat session
-                                                                            desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetPlayer.Player.Name}!{Constants.NewLine}");
-                                                                            targetPlayer.Send($"{desc.Player.Name} tries to blast you with their magic but the spell fizzles and misses!{Constants.NewLine}");
-                                                                            var aSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
-                                                                            var dSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
-                                                                            CombatManager.Instance.AddCombatSession(aSession);
-                                                                            CombatManager.Instance.AddCombatSession(dSession);
-                                                                            if (desc.Player.FollowerID != Guid.Empty)
-                                                                            {
-                                                                                var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                                var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
-                                                                                var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
-                                                                                CombatManager.Instance.AddCombatSession(fSession);
-                                                                                CombatManager.Instance.AddCombatSession(pfSession);
-                                                                            }
-                                                                            if (targetPlayer.Player.FollowerID != Guid.Empty)
-                                                                            {
-                                                                                var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
-                                                                                var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
-                                                                                var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
-                                                                                CombatManager.Instance.AddCombatSession(fSession);
-                                                                                CombatManager.Instance.AddCombatSession(pfSession);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        desc.Send($"{targetPlayer.Player.Name} is already afflicted by this curse!{Constants.NewLine}");
-                                                                    }
-                                                                    break;
-
-                                                                case SpellType.Damage:
-                                                                    startCombat = true;
-                                                                    desc.Player.Stats.CurrentMP -= (int)spell.MPCost;
-                                                                    var spellDamage = Helpers.RollDice(spell.NumOfDamageDice, spell.SizeOfDamageDice);
-                                                                    spellHits = true;
-                                                                    var abilityMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence);
-                                                                    if(abilityMod > 0)
-                                                                    {
-                                                                        spellDamage += (uint)abilityMod * spell.NumOfDamageDice;
-                                                                    }
-                                                                    if(!spell.AutoHitTarget)
-                                                                    {
-                                                                        var toHit = Helpers.RollDice(1, 20);
-                                                                        var toHitMod = toHit;
-                                                                        var dexMod = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity);
-                                                                        var targetAC = targetPlayer.Player.Stats.ArmourClass;
-                                                                        if(dexMod > 0)
-                                                                        {
-                                                                            toHitMod += (uint)dexMod;
-                                                                        }
-                                                                        spellHits = toHit == 20 || toHitMod >= targetAC;
-                                                                    }
-                                                                    if(spellHits)
-                                                                    {
-                                                                        if(spellDamage >= targetPlayer.Player.Stats.CurrentHP)
-                                                                        {
-                                                                            var pName = desc.Player.Visible || targetPlayer.Player.Level >= Constants.ImmLevel ? desc.Player.Name : "Something";
-                                                                            desc.Send($"The magic of your {spell.SpellName} spell overcomes {targetPlayer.Player.Name} and kills them instantly!{Constants.NewLine}");
-                                                                            targetPlayer.Send($"{pName} blasts you with the magic of {spell.SpellName} and kills you instantly!{Constants.NewLine}");
-                                                                            targetPlayer.Player.Kill();
-                                                                            startCombat = false;
-                                                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                                                            if (localPlayers != null && localPlayers.Count > 2)
-                                                                            {
-                                                                                foreach (var lp in localPlayers)
-                                                                                {
-                                                                                    if (!Regex.IsMatch(lp.Player.Name, targetPlayer.Player.Name) && !Regex.IsMatch(lp.Player.Name, desc.Player.Name))
-                                                                                    {
-                                                                                        var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
-                                                                                            ? $"{desc.Player.Name} blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}"
-                                                                                            : $"Something blasts {targetPlayer.Player.Name} with the power of {spell.SpellName}, killing them instantly!{Constants.NewLine}";
-                                                                                        lp.Send(msg);
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            targetPlayer.Player.Stats.CurrentHP -= (int)spellDamage;
-                                                                            desc.Send($"The magic of your {spell.SpellName} spell blasts {targetPlayer.Player.Name} for {spellDamage} damage!{Constants.NewLine}");
-                                                                            targetPlayer.Send($"{desc.Player.Name} blasts you with the magic of {spell.SpellName} causing {spellDamage} damage!{Constants.NewLine}");
-                                                                        }
-                                                                        if(startCombat)
-                                                                        {
-                                                                            var aSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
-                                                                            var dSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
-                                                                            CombatManager.Instance.AddCombatSession(aSession);
-                                                                            CombatManager.Instance.AddCombatSession(dSession);
-                                                                            if (desc.Player.FollowerID != Guid.Empty)
-                                                                            {
-                                                                                var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                                var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
-                                                                                var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
-                                                                                CombatManager.Instance.AddCombatSession(fSession);
-                                                                                CombatManager.Instance.AddCombatSession(pfSession);
-                                                                            }
-                                                                            if (targetPlayer.Player.FollowerID != Guid.Empty)
-                                                                            {
-                                                                                var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
-                                                                                var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
-                                                                                var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
-                                                                                CombatManager.Instance.AddCombatSession(fSession);
-                                                                                CombatManager.Instance.AddCombatSession(pfSession);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        // spell missed the tagret, start a combat session
-                                                                        desc.Send($"The magic of your {spell.SpellName} fizzles and misses {targetPlayer.Player.Name}!{Constants.NewLine}");
-                                                                        targetPlayer.Send($"{desc.Player.Name} tries to blast you with their magic but the spell fizzles and misses!{Constants.NewLine}");
-                                                                        var aSession = new CombatSessionNew(desc, targetPlayer, desc.Id, targetPlayer.Id);
-                                                                        var dSession = new CombatSessionNew(targetPlayer, desc, targetPlayer.Id, desc.Id);
-                                                                        CombatManager.Instance.AddCombatSession(aSession);
-                                                                        CombatManager.Instance.AddCombatSession(dSession);
-                                                                        if (desc.Player.FollowerID != Guid.Empty)
-                                                                        {
-                                                                            var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                            var fSession = new CombatSessionNew(f, targetPlayer, f.NPCGuid, targetPlayer.Id);
-                                                                            var pfSession = new CombatSessionNew(targetPlayer, f, targetPlayer.Id, f.NPCGuid);
-                                                                            CombatManager.Instance.AddCombatSession(fSession);
-                                                                            CombatManager.Instance.AddCombatSession(pfSession);
-                                                                        }
-                                                                        if (targetPlayer.Player.FollowerID != Guid.Empty)
-                                                                        {
-                                                                            var f = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
-                                                                            var fSession = new CombatSessionNew(f, desc, f.NPCGuid, desc.Id);
-                                                                            var pfSession = new CombatSessionNew(desc, f, desc.Id, f.NPCGuid);
-                                                                            CombatManager.Instance.AddCombatSession(fSession);
-                                                                            CombatManager.Instance.AddCombatSession(pfSession);
-                                                                        }
-                                                                    }
-                                                                    break;
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                                return;
                                             }
                                         }
                                     }
                                     else
                                     {
-                                        desc.Send($"You lack the MP to cast that spell!{Constants.NewLine}");
+                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
                                     }
                                 }
                                 else
                                 {
-                                    desc.Send($"Some mystical force prevents you from casting that here...{Constants.NewLine}");
+                                    var hpEffect = spell.CalculateSpellHPEffect(desc.Player, tNPC, out bool hits);
+                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
+                                    if (hits)
+                                    {
+                                        tNPC.AdjustHP(hpEffect * -1, out bool isKilled);
+                                        if (hpEffect <= 0)
+                                        {
+                                            desc.Send($"{tNPC.Name} has absorbed the magic of your spell!{Constants.NewLine}");
+                                        }
+                                        if (isKilled)
+                                        {
+                                            desc.Send($"The power of your {spell} spell is too much for {tNPC.Name} and they give in to death!{Constants.NewLine}");
+                                            desc.Send($"You have gained {tNPC.BaseExpAward} Exp and {tNPC.Gold} gold!{Constants.NewLine}");
+                                            desc.Player.AddExp(tNPC.BaseExpAward, false, false);
+                                            desc.Player.AddGold(tNPC.Gold, false);
+                                            tNPC.Kill(true, ref desc);
+                                        }
+                                        else
+                                        {
+                                            if (hpEffect >= 1)
+                                            {
+                                                desc.Send($"The magic of your {spell} spell blasts {tNPC.Name} causing {hpEffect} damage!{Constants.NewLine}");
+                                            }
+                                            var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
+                                            if (existingSessions == null || existingSessions.Count == 0)
+                                            {
+                                                CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
+                                                CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
+                                                CombatManager.Instance.AddCombatSession(c1);
+                                                CombatManager.Instance.AddCombatSession(c2);
+                                                if (desc.Player.FollowerID != Guid.Empty)
+                                                {
+                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                    CombatSession c3 = new CombatSession(follower, tNPC, follower.NPCGuid, tNPC.NPCGuid);
+                                                    CombatSession c4 = new CombatSession(tNPC, follower, tNPC.NPCGuid, follower.NPCGuid);
+                                                    CombatManager.Instance.AddCombatSession(c3);
+                                                    CombatManager.Instance.AddCombatSession(c4);
+                                                }
+                                            }
+                                        }
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
+                                        return;
+                                    }
                                 }
                             }
-                            else
+                            if (targetActor != null && targetActor is Descriptor)
                             {
-                                desc.Send($"You don't know that spell...{Constants.NewLine}");
+                                var tPlayer = (Descriptor)targetActor;
+                                var hpEffect = spell.CalculateSpellHPEffect(desc.Player, tPlayer.Player, out bool hits);
+                                desc.Player.AdjustMP((int)spell.MPCost * -1);
+                                if (hits)
+                                {
+                                    tPlayer.Player.AdjustHP(hpEffect * -1, out bool isKilled);
+                                    if (hpEffect <= 0)
+                                    {
+                                        desc.Send($"{tPlayer.Player.Name} has absorbed the magic of your spell!{Constants.NewLine}");
+                                    }
+                                    if (isKilled)
+                                    {
+                                        desc.Send($"The power of your {spell} spell slams into {tPlayer.Player.Name}, killing them instantly!{Constants.NewLine}");
+                                        tPlayer.Send($"{desc.Player.Name}'s {spell} spell slams into you with lethal force, killing you instantly!{Constants.NewLine}");
+                                        tPlayer.Player.Kill();
+                                    }
+                                    else
+                                    {
+                                        if (hpEffect >= 1)
+                                        {
+                                            desc.Send($"Your {spell} spell strikes {tPlayer.Player.Name} causing {hpEffect} damage!{Constants.NewLine}");
+                                            tPlayer.Send($"{desc.Player.Name}'s {spell} spell strikes you for {hpEffect} damage!{Constants.NewLine}");
+                                        }
+                                        var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tPlayer.ID);
+                                        if (existingSessions == null || existingSessions.Count == 0)
+                                        {
+                                            CombatSession c1 = new CombatSession(desc, tPlayer, desc.ID, tPlayer.ID);
+                                            CombatSession c2 = new CombatSession(tPlayer, desc, tPlayer.ID, desc.ID);
+                                            CombatManager.Instance.AddCombatSession(c1);
+                                            CombatManager.Instance.AddCombatSession(c2);
+                                            if (desc.Player.FollowerID != Guid.Empty)
+                                            {
+                                                var fnpc = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                CombatSession c3 = new CombatSession(fnpc, tPlayer, fnpc.NPCGuid, tPlayer.ID);
+                                                CombatSession c4 = new CombatSession(tPlayer, fnpc, tPlayer.ID, fnpc.NPCGuid);
+                                                CombatManager.Instance.AddCombatSession(c3);
+                                                CombatManager.Instance.AddCombatSession(c4);
+                                            }
+                                            if (tPlayer.Player.FollowerID != Guid.Empty)
+                                            {
+                                                var fnpc = NPCManager.Instance.GetNPCByGUID(tPlayer.Player.FollowerID);
+                                                CombatSession c5 = new CombatSession(fnpc, desc, fnpc.NPCGuid, desc.ID);
+                                                CombatSession c6 = new CombatSession(desc, fnpc, desc.ID, fnpc.NPCGuid);
+                                                CombatManager.Instance.AddCombatSession(c5);
+                                                CombatManager.Instance.AddCombatSession(c6);
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
+                                    tPlayer.Send($"{desc.Player.Name} tries to fire a spell at you but their magic fails!{Constants.NewLine}");
+                                }
                             }
                         }
                         else
                         {
-                            desc.Send($"No such spell exists in the Realms...{Constants.NewLine}");
+                            var targetNPCs = RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom);
+                            var targetPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
+                            desc.Player.AdjustMP((int)spell.MPCost * -1);
+                            if (targetNPCs != null && targetNPCs.Count > 0)
+                            {
+                                foreach(var npc in targetNPCs)
+                                {
+                                    if (npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
+                                    {
+                                        desc.Send($"Some mystical force prevents your magic from harming {npc.Name}...{Constants.NewLine}");
+                                        continue;
+                                    }
+                                    if (npc.FollowingPlayer == Guid.Empty || (SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Player.PVP && desc.Player.PVP))
+                                    {
+                                        var hpEffect = spell.CalculateSpellHPEffect(desc.Player, npc, out bool hits);
+                                        if (hits)
+                                        {
+                                            if (hpEffect <= 0)
+                                            {
+                                                desc.Send($"{npc.Name} has absorbed the magic of your spell!{Constants.NewLine}");
+                                            }
+                                            npc.AdjustHP(hpEffect * -1, out bool isKilled);
+                                            if (isKilled)
+                                            {
+                                                desc.Send($"Your magic deals lethal damage to {npc.Name}! You gain {npc.BaseExpAward} Exp and {npc.Gold} gold!{Constants.NewLine}");
+                                                desc.Player.AddExp(npc.BaseExpAward, false, false);
+                                                desc.Player.AddGold(npc.Gold, false);
+                                                npc.Kill(true, ref desc);
+                                            }
+                                            else
+                                            {
+                                                if (hpEffect >= 1)
+                                                {
+                                                    desc.Send($"The magic of your {spell} spell deals {hpEffect} damage to {npc.Name}!{Constants.NewLine}");
+                                                }
+                                                if (npc.FollowingPlayer != Guid.Empty)
+                                                {
+                                                    SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player}'s {spell} deals {hpEffect} damage to {npc.Name}!{Constants.NewLine}");
+                                                }
+                                                var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, npc.NPCGuid);
+                                                if (existingSessions == null || existingSessions.Count == 0)
+                                                {
+                                                    CombatSession s = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
+                                                    CombatSession s1 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
+                                                    CombatManager.Instance.AddCombatSession(s);
+                                                    CombatManager.Instance.AddCombatSession(s1);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"Somehow the magic of your {spell} misses {npc.Name}!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"Some mystical force prevents your magic from harming {npc.Name}...{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                            foreach(var p in targetPlayers)
+                            {
+                                if (!desc.Player.PVP || !p.Player.PVP)
+                                {
+                                    if (desc.ID != p.ID)
+                                    {
+                                        desc.Send($"Some mystical force prevents your magic from harming {p.Player.Name}...{Constants.NewLine}");
+                                    }
+                                }
+                                else
+                                {
+                                    if (desc.ID != p.ID)
+                                    {
+                                        var hpEffect = spell.CalculateSpellHPEffect(desc.Player, p.Player, out bool hits);
+                                        if (hits)
+                                        {
+                                            p.Player.AdjustHP(hpEffect * -1, out bool isKilled);
+                                            if (hpEffect <= 0)
+                                            {
+                                                desc.Send($"{p.Player.Name} has absorbed the magic of your spell!{Constants.NewLine}");
+                                            }
+                                            if (isKilled)
+                                            {
+                                                desc.Send($"The power of your magic overcomes {p.Player.Name}!{Constants.NewLine}");
+                                                p.Send($"The power of {desc.Player.Name}'s magic overcomes you and you give in to your wounds!{Constants.NewLine}");
+                                                p.Player.Kill();
+                                            }
+                                            else
+                                            {
+                                                if (hpEffect >= 1)
+                                                {
+                                                    desc.Send($"The magic of your {spell} spell causes {hpEffect} damage to {p.Player.Name}!{Constants.NewLine}");
+                                                    p.Send($"The magic of {desc.Player.Name}'s {spell} spell causes {hpEffect} damage to you!{Constants.NewLine}");
+                                                }
+                                                var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, p.ID);
+                                                if (existingSessions == null || existingSessions.Count == 0)
+                                                {
+                                                    CombatSession a = new CombatSession(desc, p, desc.ID, p.ID);
+                                                    CombatSession b = new CombatSession(p, desc, p.ID, desc.ID);
+                                                    CombatManager.Instance.AddCombatSession(a);
+                                                    CombatManager.Instance.AddCombatSession(b);
+                                                    if (desc.Player.FollowerID != Guid.Empty)
+                                                    {
+                                                        var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                        CombatSession c = new CombatSession(f, p, f.NPCGuid, p.ID);
+                                                        CombatSession d = new CombatSession(p, f, p.ID, f.NPCGuid);
+                                                        CombatManager.Instance.AddCombatSession(c);
+                                                        CombatManager.Instance.AddCombatSession(d);
+                                                    }
+                                                    if (p.Player.FollowerID != Guid.Empty)
+                                                    {
+                                                        var f = NPCManager.Instance.GetNPCByGUID(p.Player.FollowerID);
+                                                        CombatSession e = new CombatSession(f, desc, f.NPCGuid, desc.ID);
+                                                        CombatSession g = new CombatSession(desc, f, desc.ID, f.NPCGuid);
+                                                        CombatManager.Instance.AddCombatSession(e);
+                                                        CombatManager.Instance.AddCombatSession(g);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"The magic of your {spell} spell somehow misses {p.Player.Name}!{Constants.NewLine}");
+                                            p.Send($"The magic of {desc.Player.Name}'s spell somehow misses you!{Constants.NewLine}");
+                                        }
+                                    }
+                                }    
+                            }
                         }
-                    }
-                    else
-                    {
-                        desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You have been silenced and cannot use magic right now!{Constants.NewLine}");
+                        break;
+
+                    case SpellType.Buff:
+                        if (!spell.AOESpell)
+                        {
+                            int hpMod = 0;
+                            bool hitsTarget = true;
+                            desc.Player.AdjustMP((int)spell.MPCost * -1);
+                            if (targetActor is Descriptor)
+                            {
+                                Descriptor tDesc = (Descriptor)targetActor;
+                                spell.ApplyBuffSpell(desc.Player, tDesc.Player, out hitsTarget, out hpMod);
+                                if (hitsTarget)
+                                {
+                                    desc.Send($"You bless {tDesc.Player.Name} with the power of {spell}!{Constants.NewLine}");
+                                    tDesc.Send($"{desc.Player.Name} blesses you with the power of {spell}!{Constants.NewLine}");
+                                    if (hpMod > 0)
+                                    {
+                                        tDesc.Player.AdjustHP(hpMod, out _);
+                                        tDesc.Send($"{desc.Player.Name}'s {spell} spell heals you for {hpMod} damage!{Constants.NewLine}");
+                                    }
+                                }
+                                else
+                                {
+                                    desc.Send($"You try to cast {spell} on {tDesc.Player.Name} but your magic fails and nothing happens!{Constants.NewLine}");
+                                    tDesc.Send($"{desc.Player.Name} tries to cast a spell on you, but their magic fails and nothing happnes!{Constants.NewLine}");
+                                }
+                            }
+                            else
+                            {
+                                NPC tNPC = (NPC)targetActor;
+                                spell.ApplyBuffSpell(desc.Player, tNPC, out hitsTarget, out hpMod);
+                                if (hitsTarget)
+                                {
+                                    desc.Send($"You bless {tNPC.Name} with the power of {spell}!{Constants.NewLine}");
+                                    if (tNPC.IsFollower)
+                                    {
+                                        Descriptor owner = SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer);
+                                        owner.Send($"{desc.Player.Name} has blessed your follower with the power of {spell}!{Constants.NewLine}");
+                                        if (hpMod > 0)
+                                        {
+                                            owner.Send($"The magic of {desc.Player.Name}'s {spell} spell has healed your follower for {hpMod} damage!{Constants.NewLine}");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    desc.Send($"You try to cast {spell} on {tNPC.Name} but your magic fails and nothing happens!{Constants.NewLine}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            int hpMod = 0;
+                            bool hitsTarget = true;
+                            desc.Player.AdjustMP((int)spell.MPCost * -1);
+                            var targetNPCs = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).NPCsInRoom;
+                            var targetPlayers = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
+                            desc.Player.AdjustMP((int)spell.MPCost * -1);
+                            if (targetNPCs != null && targetNPCs.Count > 0)
+                            {
+                                foreach (var npc in targetNPCs)
+                                {
+                                    spell.ApplyBuffSpell(desc.Player, npc, out hitsTarget, out hpMod);
+                                    if (hitsTarget)
+                                    {
+                                        desc.Send($"You bless {npc.Name} with the power of {spell}!{Constants.NewLine}");
+                                        if (hpMod > 0)
+                                        {
+                                            npc.AdjustHP(hpMod, out _);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"Somehow your {spell} spell misses {npc.Name}!{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                            if (targetPlayers != null && targetPlayers.Count > 0)
+                            {
+                                foreach (var p in targetPlayers)
+                                {
+                                    spell.ApplyBuffSpell(desc.Player, p.Player, out hitsTarget, out hpMod);
+                                    if (hitsTarget)
+                                    {
+                                        desc.Send($"You bless {p.Player.Name} with the power of {spell}!{Constants.NewLine}");
+                                        p.Send($"{desc.Player.Name} blesses you with the power of {spell}!{Constants.NewLine}");
+                                        if (hpMod > 0)
+                                        {
+                                            p.Send($"The magic of {desc.Player.Name}'s {spell} spell heals you for {hpMod} damage!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"Somehow your {spell} spell misses {p.Player.Name}!{Constants.NewLine}");
+                                        p.Send($"Somehow the magic of {desc.Player.Name}'s {spell} spell misses you!{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                        }
+                        break;
+
+                    case SpellType.Debuff:
+                        if (!spell.AOESpell)
+                        {
+                            int hpMod = 0;
+                            bool hitsTarget = true;
+                            if (targetActor is Descriptor)
+                            {
+                                Descriptor tDesc = (Descriptor)targetActor;
+                                desc.Player.AdjustMP((int)spell.MPCost * -1);
+                                spell.ApplyBuffSpell(desc.Player, tDesc.Player, out hitsTarget, out hpMod);
+                                if (hitsTarget)
+                                {
+                                    desc.Send($"You have cursed {tDesc.Player.Name} with the power of {spell}!{Constants.NewLine}");
+                                    tDesc.Send($"{desc.Player.Name} has cursed you with the power of {spell}!{Constants.NewLine}");
+                                    if (hpMod != 0)
+                                    {
+                                        tDesc.Player.AdjustHP(hpMod * -1, out bool isKilled);
+                                        if (hpMod <= 0)
+                                        {
+                                            desc.Send($"{tDesc.Player.Name} has absorbed the power of your spell!{Constants.NewLine}");
+                                            tDesc.Send($"{desc.Player.Name} hurls a spell at you, but you have absorbed its effect!{Constants.NewLine}");
+                                        }
+                                        else
+                                        {
+                                            if (isKilled)
+                                            {
+                                                desc.Send($"The power of your magic overcomes {tDesc.Player.Name} and they surrender to death!{Constants.NewLine}");
+                                                tDesc.Send($"The power of {desc.Player.Name}'s {spell} spell overcomes you and you give in to death!{Constants.NewLine}");
+                                                tDesc.Player.Kill();
+                                                return;
+                                            }
+                                            else
+                                            {
+                                                desc.Send($"Your {spell} spell strikes {tDesc.Player.Name} causing {hpMod} damage!{Constants.NewLine}");
+                                                tDesc.Send($"{desc.Player.Name}'s {spell} spell hits you for {hpMod} damage!{Constants.NewLine}");
+                                            }
+                                        }
+                                        CombatSession s1 = new CombatSession(desc, tDesc, desc.ID, tDesc.ID);
+                                        CombatSession s2 = new CombatSession(tDesc, desc, tDesc.ID, desc.ID);
+                                        CombatManager.Instance.AddCombatSession(s1);
+                                        CombatManager.Instance.AddCombatSession(s2);
+                                        if (desc.Player.FollowerID != Guid.Empty)
+                                        {
+                                            NPC fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                            CombatSession s3 = new CombatSession(fNPC, tDesc, fNPC.NPCGuid, tDesc.ID);
+                                            CombatSession s4 = new CombatSession(tDesc, fNPC, tDesc.ID, fNPC.NPCGuid);
+                                            CombatManager.Instance.AddCombatSession(s3);
+                                            CombatManager.Instance.AddCombatSession(s4);
+                                        }
+                                        if (tDesc.Player.FollowerID != Guid.Empty)
+                                        {
+                                            NPC tDescFNPC = NPCManager.Instance.GetNPCByGUID(tDesc.Player.FollowerID);
+                                            CombatSession s5 = new CombatSession(desc, tDescFNPC, desc.ID, tDescFNPC.NPCGuid);
+                                            CombatSession s6 = new CombatSession(tDescFNPC, desc, tDescFNPC.NPCGuid, desc.ID);
+                                            CombatManager.Instance.AddCombatSession(s5);
+                                            CombatManager.Instance.AddCombatSession(s6);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    desc.Send($"The Winds of Magic abandon you and your spell fails!{Constants.NewLine}");
+                                    tDesc.Send($"{desc.Player.Name} seems to be trying to prepare a spell, but the Winds of Magic abandon them and the spell fails!{Constants.NewLine}");
+                                }
+                            }
+                            else
+                            {
+                                NPC tNPC = (NPC)targetActor;
+                                if (tNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
+                                {
+                                    desc.Send($"Some mystical force prevents you from harming {tNPC.Name}...{Constants.NewLine}");
+                                    return;
+                                }
+                                if (tNPC.IsFollower)
+                                {
+                                    if (!desc.Player.PVP || !SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Player.PVP)
+                                    {
+                                        desc.Send($"Some mystical force prevents that from happening!{Constants.NewLine}");
+                                        return;
+                                    }
+                                    spell.ApplyBuffSpell(desc.Player, tNPC, out hitsTarget, out hpMod);
+                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
+                                    if (hitsTarget)
+                                    {
+                                        tNPC.AdjustHP(hpMod * -1, out bool isKilled);
+                                        if (hpMod <= 0)
+                                        {
+                                            desc.Send($"{tNPC.Name} absorbs the power of your spell!{Constants.NewLine}");
+                                        }
+                                        else
+                                        {
+                                            if (isKilled)
+                                            {
+                                                desc.Send($"The power of your {spell} spell is too much for {tNPC.Name} and they die instantly!{Constants.NewLine}");
+                                                SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell kills your follower stone dead!{Constants.NewLine}");
+                                                tNPC.Kill();
+                                                return;
+                                            }
+                                            else
+                                            {
+                                                desc.Send($"Your {spell} spell strikes {tNPC.Name} causing {hpMod} damage!{Constants.NewLine}");
+                                                SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell strikes your follower causing {hpMod} damage!{Constants.NewLine}");
+                                            }
+                                        }
+                                        var existingSession = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
+                                        if (existingSession == null || existingSession.Count == 0)
+                                        {
+                                            CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
+                                            CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
+                                            CombatManager.Instance.AddCombatSession(c1);
+                                            CombatManager.Instance.AddCombatSession(c2);
+                                            if (desc.Player.FollowerID != Guid.Empty)
+                                            {
+                                                var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                CombatSession c3 = new CombatSession(fNPC, tNPC, fNPC.NPCGuid, tNPC.NPCGuid);
+                                                CombatSession c4 = new CombatSession(tNPC, fNPC, tNPC.NPCGuid, fNPC.NPCGuid);
+                                                CombatManager.Instance.AddCombatSession(c3);
+                                                CombatManager.Instance.AddCombatSession(c4);
+                                            }
+                                        }
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
+                                    }
+                                }
+                                else
+                                {
+                                    spell.ApplyBuffSpell(desc.Player, tNPC, out hitsTarget, out hpMod);
+                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
+                                    if (hitsTarget)
+                                    {
+                                        tNPC.AdjustHP(hpMod * -1, out bool isKilled);
+                                        if (hpMod <= 0)
+                                        {
+                                            desc.Send($"{tNPC.Name} absorbs the power of your spell!{Constants.NewLine}");
+                                        }
+                                        else
+                                        {
+                                            if (isKilled)
+                                            {
+                                                desc.Send($"The power of your {spell} spell is too much for {tNPC.Name} and they die instantly!{Constants.NewLine}");
+                                                desc.Send($"You gain {tNPC.BaseExpAward} Exp and {tNPC.Gold} gold!{Constants.NewLine}");
+                                                tNPC.Kill(true, ref desc);
+                                                return;
+                                            }
+                                            else
+                                            {
+                                                desc.Send($"Your {spell} spell strikes {tNPC.Name} causing {hpMod} damage!{Constants.NewLine}");
+                                            }
+                                        }
+                                        var existingSession = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
+                                        if (existingSession == null || existingSession.Count == 0)
+                                        {
+                                            CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
+                                            CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
+                                            CombatManager.Instance.AddCombatSession(c1);
+                                            CombatManager.Instance.AddCombatSession(c2);
+                                            if (desc.Player.FollowerID != Guid.Empty)
+                                            {
+                                                var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                CombatSession c3 = new CombatSession(fNPC, tNPC, fNPC.NPCGuid, tNPC.NPCGuid);
+                                                CombatSession c4 = new CombatSession(tNPC, fNPC, tNPC.NPCGuid, fNPC.NPCGuid);
+                                                CombatManager.Instance.AddCombatSession(c3);
+                                                CombatManager.Instance.AddCombatSession(c4);
+                                            }
+                                        }
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            desc.Player.AdjustMP((int)spell.MPCost * -1);
+                            int hpMod = 0;
+                            bool hitsTarget = true;
+                            var targetNPCs = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).NPCsInRoom;
+                            var targetPlayers = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
+                            if (targetNPCs != null && targetNPCs.Count > 0)
+                            {
+                                foreach(var npc in targetNPCs)
+                                {
+                                    if (npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
+                                    {
+                                        desc.Send($"Some mystical force prevents you from harming {npc.Name}...{Constants.NewLine}");
+                                        continue;
+                                    }
+                                    if (!npc.IsFollower || (SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Player.PVP && desc.Player.PVP))
+                                    {
+                                        spell.ApplyBuffSpell(desc.Player, npc, out hitsTarget, out hpMod);
+                                        if (hitsTarget)
+                                        {
+                                            npc.AdjustHP(hpMod * -1, out bool isKilled);
+                                            if (hpMod <= 0)
+                                            {
+                                                desc.Send($"{npc.Name} has absorbed the magic of your spell!{Constants.NewLine}");
+                                            }
+                                            else
+                                            {
+                                                if (isKilled)
+                                                {
+                                                    desc.Send($"Your {spell} spell deals lethal damage to {npc.Name}! You gain {npc.BaseExpAward} Exp and {npc.Gold} gold!{Constants.NewLine}");
+                                                    desc.Player.AddExp(npc.BaseExpAward, false, false);
+                                                    desc.Player.AddGold(npc.Gold, false);
+                                                    npc.Kill(true, ref desc);
+                                                }
+                                                else
+                                                {
+                                                    desc.Send($"The magic of your {spell} spell deals {hpMod} damage to {npc.Name}!{Constants.NewLine}");
+                                                    if (npc.FollowingPlayer != Guid.Empty)
+                                                    {
+                                                        SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell deals {hpMod} damage to {npc.Name}!{Constants.NewLine}");
+                                                    }
+                                                    var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, npc.NPCGuid);
+                                                    if (existingSessions == null || existingSessions.Count == 0)
+                                                    {
+                                                        CombatSession s1 = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
+                                                        CombatSession s2 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
+                                                        CombatManager.Instance.AddCombatSession(s1);
+                                                        CombatManager.Instance.AddCombatSession(s2);
+                                                        if (desc.Player.FollowerID != Guid.Empty)
+                                                        {
+                                                            var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                            CombatSession s3 = new CombatSession(fNPC, npc, fNPC.NPCGuid, npc.NPCGuid);
+                                                            CombatSession s4 = new CombatSession(npc, fNPC, npc.NPCGuid, fNPC.NPCGuid);
+                                                            CombatManager.Instance.AddCombatSession(s3);
+                                                            CombatManager.Instance.AddCombatSession(s4);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            desc.Send($"Somehow the magic of your {spell} spell misses {npc.Name}!{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"Some mystical force prevents your magic from harming {npc.Name}!{Constants.NewLine}");
+                                    }
+                                }
+                            }
+                            if (targetPlayers != null && targetPlayers.Count > 0)
+                            {
+                                foreach(var p in targetPlayers)
+                                {
+                                    if (!desc.Player.PVP || !p.Player.PVP)
+                                    {
+                                        if (desc.ID != p.ID)
+                                        {
+                                            desc.Send($"Some mystical force prevents your magic from harming {p.Player.Name}...{Constants.NewLine}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (desc.ID != p.ID)
+                                        {
+                                            spell.ApplyBuffSpell(desc.Player, p.Player, out hitsTarget, out hpMod);
+                                            if (hitsTarget)
+                                            {
+                                                p.Player.AdjustHP(hpMod * -1, out bool isKilled);
+                                                if (hpMod <= 0)
+                                                {
+                                                    desc.Send($"{p.Player.Name} has absorbed the power of your {spell} spell!{Constants.NewLine}");
+                                                    p.Send($"You have absorbed the magic of {desc.Player.Name}'s {spell} spell!{Constants.NewLine}");
+                                                }
+                                                else
+                                                {
+                                                    if (isKilled)
+                                                    {
+                                                        desc.Send($"Your {spell} spell deals lethal damage to {p.Player.Name}, killing them instantly!{Constants.NewLine}");
+                                                        p.Send($"{desc.Player.Name}'s {spell} spell deals lethal damage to you, killing you instantly!{Constants.NewLine}");
+                                                        p.Player.Kill();
+                                                    }
+                                                    else
+                                                    {
+                                                        desc.Send($"The magic of your {spell} spell strikes {p.Player.Name} for {hpMod} damage!{Constants.NewLine}");
+                                                        p.Send($"The magic of {desc.Player.Name}'s {spell} spell strikes you for {hpMod} damage!{Constants.NewLine}");
+                                                        var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, p.ID);
+                                                        if (existingSessions == null || existingSessions.Count == 0)
+                                                        {
+                                                            CombatSession s1 = new CombatSession(desc, p, desc.ID, p.ID);
+                                                            CombatSession s2 = new CombatSession(p, desc, p.ID, desc.ID);
+                                                            CombatManager.Instance.AddCombatSession(s1);
+                                                            CombatManager.Instance.AddCombatSession(s2);
+                                                            if (desc.Player.FollowerID != Guid.Empty)
+                                                            {
+                                                                var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
+                                                                CombatSession s3 = new CombatSession(fNPC, p, fNPC.NPCGuid, p.ID);
+                                                                CombatSession s4 = new CombatSession(p, fNPC, p.ID, fNPC.NPCGuid);
+                                                                CombatManager.Instance.AddCombatSession(s3);
+                                                                CombatManager.Instance.AddCombatSession(s4);
+                                                            }
+                                                            if (p.Player.FollowerID != Guid.Empty)
+                                                            {
+                                                                var tfNPC = NPCManager.Instance.GetNPCByGUID(p.Player.FollowerID);
+                                                                CombatSession s5 = new CombatSession(tfNPC, desc, tfNPC.NPCGuid, desc.ID);
+                                                                CombatSession s6 = new CombatSession(desc, tfNPC, desc.ID, tfNPC.NPCGuid);
+                                                                CombatManager.Instance.AddCombatSession(s5);
+                                                                CombatManager.Instance.AddCombatSession(s6);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                desc.Send($"Somehow your magic misses {p.Player.Name}!{Constants.NewLine}");
+                                                p.Send($"Somehow the magic of {desc.Player.Name}'s {spell} spell misses you!{Constants.NewLine}");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        break;
                 }
             }
             else
             {
-                desc.Send($"Some mystical force prevents the use of magic here...{Constants.NewLine}");
+                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
             }
         }
 
         private static void FleeCombat(ref Descriptor desc)
         {
-            if(desc.Player.IsInCombat)
+            if (desc.Player.IsInCombat)
             {
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomExits.Count > 0)
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomExits.Count > 0)
                 {
-                    var sessions = CombatManager.Instance.GetCombatSessionsForCombattant(desc.Id);
-                    if(sessions != null && sessions.Count > 0)
+                    var sessions = CombatManager.Instance.GetCombatSessionsForCombatant(desc.ID);
+                    if (sessions != null && sessions.Count > 0)
                     {
-                        foreach(var s in sessions)
+                        foreach (var s in sessions)
                         {
                             CombatManager.Instance.RemoveCombatSession(s);
                         }
@@ -3685,36 +3684,36 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void StartPVPCombat(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.PVP)
+            if (desc.Player.PVP)
             {
-                if(!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+                if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
                 {
                     var verb = GetVerb(ref input);
                     var target = input.Remove(0, verb.Length).Trim();
                     var tPlayer = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                    if(tPlayer != null)
+                    if (tPlayer != null)
                     {
-                        if(tPlayer.Player.PVP)
+                        if (tPlayer.Player.PVP)
                         {
-                            var mySession = new CombatSessionNew(desc, tPlayer, desc.Id, tPlayer.Id);
-                            var tpSession = new CombatSessionNew(tPlayer, desc, tPlayer.Id, desc.Id);
+                            var mySession = new CombatSession(desc, tPlayer, desc.ID, tPlayer.ID);
+                            var tpSession = new CombatSession(tPlayer, desc, tPlayer.ID, desc.ID);
                             CombatManager.Instance.AddCombatSession(mySession);
                             CombatManager.Instance.AddCombatSession(tpSession);
                             desc.Player.Position = ActorPosition.Fighting;
                             tPlayer.Player.Position = ActorPosition.Fighting;
-                            if(desc.Player.FollowerID != Guid.Empty)
+                            if (desc.Player.FollowerID != Guid.Empty)
                             {
                                 var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                var fSession = new CombatSessionNew(follower, tPlayer, follower.NPCGuid, tPlayer.Id);
-                                var pfSession = new CombatSessionNew(tPlayer, follower, tPlayer.Id, follower.NPCGuid);
+                                var fSession = new CombatSession(follower, tPlayer, follower.NPCGuid, tPlayer.ID);
+                                var pfSession = new CombatSession(tPlayer, follower, tPlayer.ID, follower.NPCGuid);
                                 CombatManager.Instance.AddCombatSession(fSession);
                                 CombatManager.Instance.AddCombatSession(pfSession);
                             }
-                            if(tPlayer.Player.FollowerID != Guid.Empty)
+                            if (tPlayer.Player.FollowerID != Guid.Empty)
                             {
                                 var tpFollower = NPCManager.Instance.GetNPCByGUID(tPlayer.Player.FollowerID);
-                                var tpfSession = new CombatSessionNew(tpFollower, desc, tpFollower.NPCGuid, desc.Id);
-                                var mtpfSession = new CombatSessionNew(desc, tpFollower, desc.Id, tpFollower.NPCGuid);
+                                var tpfSession = new CombatSession(tpFollower, desc, tpFollower.NPCGuid, desc.ID);
+                                var mtpfSession = new CombatSession(desc, tpFollower, desc.ID, tpFollower.NPCGuid);
                                 CombatManager.Instance.AddCombatSession(tpfSession);
                                 CombatManager.Instance.AddCombatSession(mtpfSession);
                             }
@@ -3742,7 +3741,7 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void StartCombat(ref Descriptor desc, ref string input)
         {
-            if(desc.Player.Position == ActorPosition.Standing)
+            if (desc.Player.Position == ActorPosition.Standing)
             {
                 if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
                 {
@@ -3760,15 +3759,15 @@ namespace Kingdoms_of_Etrea.Core
                                     desc.Player.Visible = true;
                                     desc.Send($"You shimmer and become visible again.{Constants.NewLine}");
                                 }
-                                var pSession = new CombatSessionNew(desc, t, desc.Id, t.NPCGuid);
-                                var mSession = new CombatSessionNew(t, desc, t.NPCGuid, desc.Id);
+                                var pSession = new CombatSession(desc, t, desc.ID, t.NPCGuid);
+                                var mSession = new CombatSession(t, desc, t.NPCGuid, desc.ID);
                                 CombatManager.Instance.AddCombatSession(pSession);
                                 CombatManager.Instance.AddCombatSession(mSession);
-                                if(desc.Player.FollowerID != Guid.Empty)
+                                if (desc.Player.FollowerID != Guid.Empty)
                                 {
                                     var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                    var fSession = new CombatSessionNew(f, t, f.NPCGuid, t.NPCGuid);
-                                    var mfSession = new CombatSessionNew(t, f, t.NPCGuid, f.NPCGuid);
+                                    var fSession = new CombatSession(f, t, f.NPCGuid, t.NPCGuid);
+                                    var mfSession = new CombatSession(t, f, t.NPCGuid, f.NPCGuid);
                                     CombatManager.Instance.AddCombatSession(fSession);
                                     CombatManager.Instance.AddCombatSession(mfSession);
                                 }
@@ -3781,7 +3780,7 @@ namespace Kingdoms_of_Etrea.Core
                         }
                         else
                         {
-                            if(t == null)
+                            if (t == null)
                             {
                                 desc.Send($"That doesn't seem to be here...{Constants.NewLine}");
                             }
@@ -3810,29 +3809,29 @@ namespace Kingdoms_of_Etrea.Core
         private static void DescribeSkill(ref Descriptor desc, ref string input)
         {
             var skillName = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            if(Skills.SkillExists(skillName))
+            if (SkillManager.Instance.SkillExists(skillName))
             {
-                var s = Skills.GetSkill(skillName);
+                var s = SkillManager.Instance.GetSkill(skillName);
                 desc.Send($"{s.Name} {s.Description.ToLower()}{Constants.NewLine}");
             }
             else
             {
-                if(Spells.SpellExists(skillName))
+                if (SpellManager.Instance.SpellExists(skillName))
                 {
-                    var s = Spells.GetSpell(skillName);
+                    var s = SpellManager.Instance.GetSpell(skillName);
                     desc.Send($"{s.SpellName} {s.Description.ToLower()}{Constants.NewLine}");
                 }
                 else
                 {
                     var r = RecipeManager.Instance.GetRecipe(skillName);
-                    if(r != null)
+                    if (r != null)
                     {
                         StringBuilder sb = new StringBuilder();
                         sb.AppendLine($"Name: {r.RecipeName}");
                         sb.AppendLine($"Description: {r.RecipeDescription}");
                         sb.AppendLine($"Produces: {ItemManager.Instance.GetItemByID(r.RecipeResult).Name}");
                         sb.AppendLine("Requires:");
-                        foreach(var m in r.RequiredMaterials)
+                        foreach (var m in r.RequiredMaterials)
                         {
                             sb.AppendLine($"{Constants.TabStop}{m.Value} x {ItemManager.Instance.GetItemByID(m.Key).Name}");
                         }
@@ -3848,14 +3847,14 @@ namespace Kingdoms_of_Etrea.Core
 
         private static void DoDiceGamble(ref Descriptor desc, ref string input)
         {
-            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Gambler))
+            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Gambler))
             {
                 var amount = input.Replace(GetVerb(ref input), string.Empty).Trim();
                 if (!string.IsNullOrEmpty(amount))
                 {
                     if (uint.TryParse(amount, out uint gpBet))
                     {
-                        if (gpBet > desc.Player.Stats.Gold)
+                        if (gpBet > desc.Player.Gold)
                         {
                             desc.Send($"You can't wager more gold than you have!{Constants.NewLine}");
                         }
@@ -3876,12 +3875,12 @@ namespace Kingdoms_of_Etrea.Core
                             if (playerFinalRoll > dicerRoll)
                             {
                                 var winnings = Convert.ToUInt32(Math.Round((double)gpBet / 2, 0));
-                                desc.Player.Stats.Gold += winnings;
+                                desc.Player.Gold += winnings;
                                 desc.Send($"You rolled {playerFinalRoll}, the Dicer rolled {dicerRoll}! You win {winnings} gold!{Constants.NewLine}");
                             }
                             else
                             {
-                                desc.Player.Stats.Gold -= gpBet;
+                                desc.Player.Gold -= gpBet;
                                 desc.Send($"You rolled {playerFinalRoll}, the Dicer rolled {dicerRoll}! You lose your wager of {gpBet} gold!{Constants.NewLine}");
                             }
                         }
@@ -3906,7 +3905,7 @@ namespace Kingdoms_of_Etrea.Core
         {
             var verb = GetVerb(ref input);
             var line = input.Remove(0, verb.Length).Trim();
-            if(string.IsNullOrEmpty(line))
+            if (string.IsNullOrEmpty(line))
             {
                 // No input so show the list of configured emotes
                 StringBuilder sb = new StringBuilder();
@@ -3944,7 +3943,7 @@ namespace Kingdoms_of_Etrea.Core
                 desc.Send($"You {line}{Constants.NewLine}");
                 var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                 var pName = desc.Player.Name;
-                foreach(var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pName)))
+                foreach (var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pName)))
                 {
                     var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel ? $"{pName} {line}{Constants.NewLine}" : $"Something {line}{Constants.NewLine}";
                     lp.Send(msg);
@@ -3962,16 +3961,16 @@ namespace Kingdoms_of_Etrea.Core
         private static void DoRecall(ref Descriptor desc)
         {
             var r = RoomManager.Instance.GetRoom(Constants.PlayerStartRoom());
-            if(r != null && !r.Flags.HasFlag(RoomFlags.NoTeleport))
+            if (r != null && !r.Flags.HasFlag(RoomFlags.NoTeleport))
             {
                 var cr = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-                if(!cr.Flags.HasFlag(RoomFlags.NoTeleport) && desc.Player.Stats.CurrentSP >= 5)
+                if (!cr.Flags.HasFlag(RoomFlags.NoTeleport) && desc.Player.CurrentSP >= 5)
                 {
-                    if(cr.PlayersInRoom(cr.RoomID) != null && cr.PlayersInRoom(cr.RoomID).Count > 0)
+                    if (cr.PlayersInRoom != null && cr.PlayersInRoom.Count > 0)
                     {
-                        foreach(var p in cr.PlayersInRoom(cr.RoomID))
+                        foreach (var p in cr.PlayersInRoom)
                         {
-                            if(!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
+                            if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
                             {
                                 var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} offers a prayer to the Gods and vanishes!{Constants.NewLine}"
                                     : $"The Winds of Magic swirl and something is taken away!{Constants.NewLine}";
@@ -3980,12 +3979,12 @@ namespace Kingdoms_of_Etrea.Core
                         }
                     }
                     desc.Player.Move(desc.Player.CurrentRoom, Constants.PlayerStartRoom(), true);
-                    desc.Player.Stats.CurrentSP -= 5;
-                    if (r.PlayersInRoom(r.RoomID) != null && r.PlayersInRoom(r.RoomID).Count > 1)
+                    desc.Player.CurrentSP -= 5;
+                    if (r.PlayersInRoom != null && r.PlayersInRoom.Count > 1)
                     {
-                        foreach(var p in r.PlayersInRoom(r.RoomID))
+                        foreach (var p in r.PlayersInRoom)
                         {
-                            if(!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
+                            if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
                             {
                                 var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} appears in a flash of magic!{Constants.NewLine}"
                                     : $"There is a flash of magic as something arrives!{Constants.NewLine}";
@@ -4010,21 +4009,21 @@ namespace Kingdoms_of_Etrea.Core
             var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
             var i = GetTargetItem(ref desc, target, true);
             var donRoom = RoomManager.Instance.GetRoom(Constants.DonationRoomRid());
-            if(donRoom != null)
+            if (donRoom != null)
             {
-                if(i != null)
+                if (i != null)
                 {
                     desc.Player.Inventory.Remove(i);
-                    RoomManager.Instance.AddItemToRoomInventory(Constants.DonationRoomRid(), ref i);
-                    Game.LogMessage($"INFO: Player {desc.Player.Name} donated item {i.Name} ({i.Id})", LogLevel.Info, true);
+                    RoomManager.Instance.AddItemToRoomInventory(donRoom.RoomID, ref i);
+                    Game.LogMessage($"INFO: Player {desc.Player.Name} donated item {i.Name} ({i.ID})", LogLevel.Info, true);
                     desc.Send($"You offer up {i.ShortDescription} to the Winds of Magic!{Constants.NewLine}");
-                    var donRoomPlayers = donRoom.PlayersInRoom(donRoom.RoomID);
-                    var localPlayers = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom);
-                    if(localPlayers != null && localPlayers.Count > 1)
+                    var donRoomPlayers = donRoom.PlayersInRoom;
+                    var localPlayers = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
+                    if (localPlayers != null && localPlayers.Count > 1)
                     {
-                        foreach(var p in localPlayers)
+                        foreach (var p in localPlayers)
                         {
-                            if(!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
+                            if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
                             {
                                 var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} offers {i.ShortDescription} to the Winds of Magic!{Constants.NewLine}"
                                     : $"Something offers {i.ShortDescription} to the Winds of Magic!";
@@ -4032,9 +4031,9 @@ namespace Kingdoms_of_Etrea.Core
                             }
                         }
                     }
-                    if(donRoomPlayers != null && donRoomPlayers.Count > 0)
+                    if (donRoomPlayers != null && donRoomPlayers.Count > 0)
                     {
-                        foreach(var p in donRoomPlayers)
+                        foreach (var p in donRoomPlayers)
                         {
                             p.Send($"The Winds of Magic swirl, depositing {i.ShortDescription} on the ground!{Constants.NewLine}");
                         }
@@ -4055,19 +4054,27 @@ namespace Kingdoms_of_Etrea.Core
         private static void AppraiseItemForSale(ref Descriptor desc, ref string input)
         {
             var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if(r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
+            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
             {
                 var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                if(s != null)
+                if (s != null)
                 {
                     var criteria = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                    if(!string.IsNullOrWhiteSpace(criteria))
+                    if (!string.IsNullOrWhiteSpace(criteria))
                     {
                         var i = GetTargetItem(ref desc, criteria, true);
-                        if(i != null)
+                        if (i != null)
                         {
-                            desc.Send($"The shopkeeper smiles and says, 'I'll give you {Helpers.GetNewSalePrice(ref desc, i.BaseValue)} gold for that.'{Constants.NewLine}");
+                            s.AppraiseItemForSale(ref desc, i);
                         }
+                        else
+                        {
+                            desc.Send($"You don't seem to be carrying anything like that...{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"Appraise what, exactly?{Constants.NewLine}");
                     }
                 }
                 else
@@ -4084,11 +4091,11 @@ namespace Kingdoms_of_Etrea.Core
         private static void ListShopWares(ref Descriptor desc, ref string input)
         {
             var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if(r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
+            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
             {
                 var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
                 var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                if(s != null)
+                if (s != null)
                 {
                     s.ListShopInventory(ref desc, criteria);
                 }
@@ -4106,51 +4113,18 @@ namespace Kingdoms_of_Etrea.Core
         private static void SellItemToShop(ref Descriptor desc, ref string input)
         {
             var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if(r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
+            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
             {
                 var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                if(s != null)
+                if (s != null)
                 {
                     var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
-                    if(!string.IsNullOrEmpty(criteria))
+                    if (!string.IsNullOrEmpty(criteria))
                     {
                         var i = GetTargetItem(ref desc, criteria, true);
-                        if(i != null)
+                        if (i != null)
                         {
-                            var salePrice = Helpers.GetNewSalePrice(ref desc, i.BaseValue);
-
-                            if (s.ShopAlignment != ActorAlignment.Neutral)
-                            {
-                                // adjust the sale price some more if the shop isn't neutral and doesn't match with the alignment of the player
-                                if (s.ShopAlignment != desc.Player.Alignment)
-                                {
-                                    // drop the purchase price by 10% of base price if the alignments don't match
-                                    var priceMod = Convert.ToUInt32(i.BaseValue * 0.1);
-                                    salePrice = salePrice - priceMod < 0 ? 1 : salePrice - priceMod;
-                                }
-                                if (s.ShopAlignment == desc.Player.Alignment)
-                                {
-                                    // increase the purchase price by 10% of base price if the alignments match
-                                    var priceMod = Convert.ToUInt32(i.BaseValue * 0.1);
-                                    salePrice += priceMod;
-                                }
-                            }
-                            desc.Player.Inventory.Remove(i);
-                            desc.Player.Stats.Gold += salePrice;
-                            desc.Send($"You hand over {i.ShortDescription} and pocket the {salePrice} gold from the shopkeeper{Constants.NewLine}");
-                            var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom);
-                            if(playersInRoom != null && playersInRoom.Count > 1)
-                            {
-                                foreach(var p in playersInRoom)
-                                {
-                                    if(!Regex.Match(desc.Player.Name, p.Player.Name, RegexOptions.IgnoreCase).Success)
-                                    {
-                                        var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} hands {i.ShortDescription} to the shopkeeper and gets a stack of gold in return!{Constants.NewLine}"
-                                            : $"Something hands over {i.ShortDescription} to the shopkeeper and gets a stack of gold in return!{Constants.NewLine}";
-                                        p.Send(msg);
-                                    }
-                                }
-                            }
+                            s.SellItem(ref desc, i);
                         }
                         else
                         {
@@ -4164,27 +4138,24 @@ namespace Kingdoms_of_Etrea.Core
                 }
                 else
                 {
-                    desc.Send($"The store appears broken - check with an Imm!{Constants.NewLine}");
+                    desc.Send($"This shop appears to be broken, please tell an Imm!{Constants.NewLine}");
+                    Game.LogMessage($"ERROR: Player {desc.Player.Name} tried to sell an item in Room {desc.Player.CurrentRoom} but ShopManager returned null", LogLevel.Error, true);
                 }
-            }
-            else
-            {
-                desc.Send($"There is no shop here...{Constants.NewLine}");
             }
         }
 
         private static void BuyItemFromShop(ref Descriptor desc, ref string input)
         {
             var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if(r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
+            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
             {
                 var s = ShopManager.Instance.GetShop(r.ShopID.Value);
                 var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
-                if(s != null)
+                if (s != null)
                 {
                     if (!string.IsNullOrEmpty(criteria))
                     {
-                        s.BuyItem(ref desc, ref criteria);
+                        s.BuyItem(ref desc, criteria);
                     }
                     else
                     {
@@ -4207,10 +4178,10 @@ namespace Kingdoms_of_Etrea.Core
             // learn <skill | spell | recipe | language> <name>
             // TODO: Add support for learning languages (other than Common) if the player doesn't know
             var elements = TokeniseInput(ref input);
-            if(elements.Length == 1)
+            if (elements.Length == 1)
             {
                 // no criteria specified so show what we can learn here, if anything
-                if(!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasTrainer())
+                if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasTrainer)
                 {
                     desc.Send($"There is no one here to teach you!{Constants.NewLine}");
                     return;
@@ -4223,9 +4194,9 @@ namespace Kingdoms_of_Etrea.Core
                     sb.AppendLine($"|| Price{Constants.TabStop}|| Skill");
                     sb.AppendLine($"||==============||{new string('=', 61)}");
                     uint skillsAvailable = 0;
-                    foreach (var s in Skills.GetAllSkills(string.Empty).OrderBy(x => x.Name).ToList())
+                    foreach (var s in SkillManager.Instance.GetAllSkills().OrderBy(x => x.Name).ToList())
                     {
-                        if(!desc.Player.HasSkill(s.Name) || (s.Name == "Extra Attack" && desc.Player.NumberOfAttacks + 1 <= 5))
+                        if (!desc.Player.HasSkill(s.Name) || (s.Name == "Extra Attack" && desc.Player.NumberOfAttacks + 1 <= 5))
                         {
                             skillsAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
@@ -4239,27 +4210,27 @@ namespace Kingdoms_of_Etrea.Core
                             }
                         }
                     }
-                    if(skillsAvailable == 0)
+                    if (skillsAvailable == 0)
                     {
                         sb.AppendLine("|| No skills available");
                     }
                     sb.AppendLine($"  {new string('=', 77)}");
                     sb.AppendLine();
                 }
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.MagicTrainer))
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.MagicTrainer))
                 {
                     sb.AppendLine("The sorceror smiles. 'Magic? I can teach you... For a price!'");
                     sb.AppendLine($"  {new string('=', 77)}");
                     sb.AppendLine($"|| Price{Constants.TabStop}|| Spell");
                     sb.AppendLine($"||==============||{new string('=', 61)}");
                     uint spellsAvailable = 0;
-                    foreach(var s in Spells.GetAllSpells(string.Empty).OrderBy(x => x.SpellName).ToList())
+                    foreach (var s in SpellManager.Instance.GetAllSpells().OrderBy(x => x.SpellName).ToList())
                     {
-                        if(!desc.Player.HasSpell(s.SpellName))
+                        if (!desc.Player.HasSpell(s.SpellName))
                         {
                             spellsAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                            if(p.ToString().Length > 4)
+                            if (p.ToString().Length > 4)
                             {
                                 sb.AppendLine($"|| {p}{Constants.TabStop}|| {s.SpellName}");
                             }
@@ -4275,7 +4246,7 @@ namespace Kingdoms_of_Etrea.Core
                     }
                     sb.AppendLine($"  {new string('=', 77)}");
                 }
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Scribe))
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Scribe))
                 {
                     // show scribe recipes
                     sb.AppendLine("The scribe flashes a toothy grin. 'Certainly! Sit! Learn!'");
@@ -4284,13 +4255,13 @@ namespace Kingdoms_of_Etrea.Core
                     sb.AppendLine($"||==============||{new string('=', 61)}");
                     uint recipesAvailable = 0;
                     var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Scribing).ToList();
-                    foreach(var recipe in r)
+                    foreach (var recipe in r)
                     {
-                        if(!desc.Player.KnowsRecipe(recipe.RecipeName))
+                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
                         {
                             recipesAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
-                            if(p.ToString().Length > 4)
+                            if (p.ToString().Length > 4)
                             {
                                 sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
                             }
@@ -4306,7 +4277,7 @@ namespace Kingdoms_of_Etrea.Core
                     }
                     sb.AppendLine($"  {new string('=', 77)}");
                 }
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Alchemist))
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Alchemist))
                 {
                     // show alchemy recipes
                     sb.AppendLine("The alchemist gives you a sickly grin. 'Certainly! Sit! Learn!'");
@@ -4337,7 +4308,7 @@ namespace Kingdoms_of_Etrea.Core
                     }
                     sb.AppendLine($"  {new string('=', 77)}");
                 }
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Blacksmith))
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Blacksmith))
                 {
                     // show blacksmith recipes
                     sb.AppendLine("The blacksmith flexes his mighty arms. 'The secrets of the Forge can be yours...'");
@@ -4368,7 +4339,7 @@ namespace Kingdoms_of_Etrea.Core
                     }
                     sb.AppendLine($"  {new string('=', 77)}");
                 }
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Jeweler))
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Jeweler))
                 {
                     sb.AppendLine("The jeweler smiles broadly. 'Certainly! Sit! Learn!'");
                     sb.AppendLine($"  {new string('=', 77)}");
@@ -4398,20 +4369,20 @@ namespace Kingdoms_of_Etrea.Core
                     }
                     sb.AppendLine($"  {new string('=', 77)}");
                 }
-                if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.LanguageTrainer))
+                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.LanguageTrainer))
                 {
                     sb.AppendLine("The old diplomat gives you a smile. 'If you want to learn, I can teach!'");
                     sb.AppendLine($"  {new string('=', 77)}");
                     sb.AppendLine($"|| Price{Constants.TabStop}|| Recipe");
                     sb.AppendLine($"||==============||{new string('=', 61)}");
                     uint langsAvailable = 0;
-                    foreach(Languages lang in Enum.GetValues(typeof(Languages)))
+                    foreach (Languages lang in Enum.GetValues(typeof(Languages)))
                     {
-                        if(!desc.Player.KnownLanguages.HasFlag(lang))
+                        if (!desc.Player.KnownLanguages.HasFlag(lang))
                         {
                             langsAvailable++;
                             var p = Helpers.GetNewPurchasePrice(ref desc, 5000);
-                            if(p.ToString().Length > 4)
+                            if (p.ToString().Length > 4)
                             {
                                 sb.AppendLine($"|| {p}{Constants.TabStop}|| {lang}");
                             }
@@ -4421,7 +4392,7 @@ namespace Kingdoms_of_Etrea.Core
                             }
                         }
                     }
-                    if(langsAvailable == 0)
+                    if (langsAvailable == 0)
                     {
                         sb.AppendLine("|| No languages available");
                     }
@@ -4431,25 +4402,25 @@ namespace Kingdoms_of_Etrea.Core
             }
             else
             {
-                if(elements.Length >= 2)
+                if (elements.Length >= 2)
                 {
                     // we are learning a skill or a spell
                     var t = elements[1];
                     var toLearn = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
-                    switch(t.ToLower())
+                    switch (t.ToLower())
                     {
                         case "skill":
-                            if (Skills.SkillExists(toLearn))
+                            if (SkillManager.Instance.SkillExists(toLearn))
                             {
                                 if (!desc.Player.HasSkill(toLearn) || (toLearn.ToLower() == "extra attack" && desc.Player.NumberOfAttacks + 1 <= 5))
                                 {
-                                    var s = Skills.GetSkill(toLearn);
+                                    var s = SkillManager.Instance.GetSkill(toLearn);
                                     var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                                    if (desc.Player.Stats.Gold >= p)
+                                    if (desc.Player.Gold >= p)
                                     {
                                         // skill exists, player does not know it and has enough gold to buy it
                                         desc.Send($"The trainer smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
-                                        desc.Player.Stats.Gold -= p;
+                                        desc.Player.Gold -= p;
                                         if (s.Name == "Extra Attack")
                                         {
                                             desc.Player.NumberOfAttacks++;
@@ -4479,16 +4450,16 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case "spell":
-                            if (Spells.SpellExists(toLearn))
+                            if (SpellManager.Instance.SpellExists(toLearn))
                             {
                                 if (!desc.Player.HasSpell(toLearn))
                                 {
-                                    var s = Spells.GetSpell(toLearn);
+                                    var s = SpellManager.Instance.GetSpell(toLearn);
                                     var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                                    if (desc.Player.Stats.Gold >= p)
+                                    if (desc.Player.Gold >= p)
                                     {
                                         desc.Send($"The sorceror smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
-                                        desc.Player.Stats.Gold -= p;
+                                        desc.Player.Gold -= p;
                                         desc.Player.AddSpell(s.SpellName);
                                     }
                                     else
@@ -4547,10 +4518,10 @@ namespace Kingdoms_of_Etrea.Core
                                     if (canLearn)
                                     {
                                         var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
-                                        if (desc.Player.Stats.Gold >= p)
+                                        if (desc.Player.Gold >= p)
                                         {
-                                            desc.Player.Stats.Gold -= p;
-                                            desc.Player.KnownRecipes.Add(r);
+                                            desc.Player.Gold -= p;
+                                            desc.Player.Recipes.Add(r);
                                             desc.Send($"You gain knowledge of crafting {r.RecipeName}{Constants.NewLine}");
                                         }
                                         else
@@ -4575,14 +4546,14 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case "language":
-                            if(Enum.TryParse<Languages>(toLearn, true, out Languages lang))
+                            if (Enum.TryParse<Languages>(toLearn, true, out Languages lang))
                             {
-                                if(!desc.Player.KnownLanguages.HasFlag(lang))
+                                if (!desc.Player.KnownLanguages.HasFlag(lang))
                                 {
                                     var p = Helpers.GetNewPurchasePrice(ref desc, 5000);
-                                    if(desc.Player.Stats.Gold >= p)
+                                    if (desc.Player.Gold >= p)
                                     {
-                                        desc.Player.Stats.Gold -= p;
+                                        desc.Player.Gold -= p;
                                         desc.Player.KnownLanguages |= lang;
                                         desc.Send($"The old diplomat smiles and passes long his knowledge of the {lang} language.{Constants.NewLine}");
                                     }
@@ -4615,17 +4586,17 @@ namespace Kingdoms_of_Etrea.Core
             var verb = GetVerb(ref input);
             var itemName = input.Remove(0, verb.Length).Trim();
             var i = GetTargetItem(ref desc, itemName, true);
-            if(i != null)
+            if (i != null)
             {
-                if(i.ItemType == ItemType.Consumable)
+                if (i.ItemType == ItemType.Consumable)
                 {
                     var pn = desc.Player.Name;
                     desc.Send($"You greedily consume the {i.Name}!{Constants.NewLine}");
                     desc.Player.Inventory.Remove(i);
                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => x.Player.Name != pn).ToList();
-                    if(localPlayers != null && localPlayers.Count > 0)
+                    if (localPlayers != null && localPlayers.Count > 0)
                     {
-                        foreach(var lp in localPlayers)
+                        foreach (var lp in localPlayers)
                         {
                             var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
                                 ? $"{pn} greedily consume the {i.Name} they were carrying!{Constants.NewLine}"
@@ -4633,46 +4604,25 @@ namespace Kingdoms_of_Etrea.Core
                             lp.Send(msg);
                         }
                     }
-                    if(i.NumberOfDamageDice > 0)
+                    if (i.NumberOfDamageDice > 0)
                     {
-                        var modAmount = Helpers.RollDice(i.NumberOfDamageDice, i.SizeOfDamageDice);
-                        foreach(ConsumableEffect flag in Helpers.GetPotionFlags(i.ConsumableEffect))
+                        int modAmount = (int)Helpers.RollDice(i.NumberOfDamageDice, i.SizeOfDamageDice);
+                        foreach (ConsumableEffect flag in Helpers.GetPotionFlags(i.ConsumableEffect))
                         {
                             switch (i.ConsumableEffect)
                             {
                                 case ConsumableEffect.SPHealing:
-                                    if(desc.Player.Stats.CurrentSP + modAmount > desc.Player.Stats.MaxSP)
-                                    {
-                                        desc.Player.Stats.CurrentSP = desc.Player.Stats.MaxSP;
-                                    }
-                                    else
-                                    {
-                                        desc.Player.Stats.CurrentSP += modAmount;
-                                    }
+                                    desc.Player.AdjustSP(modAmount);
                                     desc.Send($"You feel invigorated!{Constants.NewLine}");
                                     break;
 
                                 case ConsumableEffect.Healing:
-                                    if(desc.Player.Stats.CurrentHP + modAmount > desc.Player.Stats.MaxHP)
-                                    {
-                                        desc.Player.Stats.CurrentHP = (int)desc.Player.Stats.MaxHP;
-                                    }
-                                    else
-                                    {
-                                        desc.Player.Stats.CurrentHP += (int)modAmount;
-                                    }
+                                    desc.Player.AdjustHP(modAmount, out _);
                                     desc.Send($"You feel your wounds fading to memory...{Constants.NewLine}");
                                     break;
 
                                 case ConsumableEffect.MPHealing:
-                                    if(desc.Player.Stats.CurrentMP + modAmount > desc.Player.Stats.MaxMP)
-                                    {
-                                        desc.Player.Stats.CurrentMP = (int)desc.Player.Stats.MaxMP;
-                                    }
-                                    else
-                                    {
-                                        desc.Player.Stats.CurrentMP += (int)modAmount;
-                                    }
+                                    desc.Player.AdjustMP(modAmount);
                                     desc.Send($"You as though your spiritial force has been renewed!{Constants.NewLine}");
                                     break;
 
@@ -4683,58 +4633,41 @@ namespace Kingdoms_of_Etrea.Core
 
                                 case ConsumableEffect.Poison:
                                     desc.Send($"The {i.Name} tastes foul as you swallow it...{Constants.NewLine}");
-                                    if(desc.Player.Stats.CurrentHP - modAmount <= 0)
+                                    desc.Player.AdjustHP(modAmount * -1, out bool isKilled);
+                                    if (isKilled)
                                     {
                                         desc.Player.Kill();
-                                    }
-                                    else
-                                    {
-                                        desc.Player.Stats.CurrentHP -= (int)modAmount;
                                     }
                                     break;
 
                                 case ConsumableEffect.DrainSP:
                                     desc.Send($"You begin to feel your stamina drain away...{Constants.NewLine}");
-                                    if(desc.Player.Stats.CurrentSP - modAmount <= 0)
-                                    {
-                                        desc.Player.Stats.CurrentSP = 0;
-                                    }
-                                    else
-                                    {
-                                        desc.Player.Stats.CurrentSP -= modAmount;
-                                    }
+                                    desc.Player.AdjustSP(modAmount * -1);
                                     break;
 
                                 case ConsumableEffect.DrainMP:
                                     desc.Send($"You feel as though something was sapping your very spirit...{Constants.NewLine}");
-                                    if(desc.Player.Stats.CurrentMP - modAmount <= 0)
-                                    {
-                                        desc.Player.Stats.CurrentMP = 0;
-                                    }
-                                    else
-                                    {
-                                        desc.Player.Stats.CurrentMP -= (int)modAmount;
-                                    }
+                                    desc.Player.AdjustMP(modAmount * -1);
                                     break;
 
                                 case ConsumableEffect.Restoration:
                                     desc.Send($"You feel holy power filling you, restoring you...{Constants.NewLine}");
-                                    desc.Player.Stats.CurrentMP = (int)desc.Player.Stats.MaxMP;
-                                    desc.Player.Stats.CurrentHP = (int)desc.Player.Stats.MaxHP;
-                                    desc.Player.Stats.CurrentSP = desc.Player.Stats.MaxSP;
+                                    desc.Player.CurrentMP = desc.Player.MaxMP;
+                                    desc.Player.CurrentHP = desc.Player.MaxHP;
+                                    desc.Player.CurrentSP = desc.Player.MaxSP;
                                     break;
                             }
                         }
                     }
-                    if(i.AppliesBuff)
+                    if (i.AppliesBuff)
                     {
                         desc.Send($"You feel the magic in the {i.Name} coursing through you!{Constants.NewLine}");
                         foreach (var b in i.AppliedBuffs)
                         {
-                            var buff = Buffs.GetBuff(b);
+                            var buff = BuffManager.Instance.GetBuff(b);
                             if (buff != null)
                             {
-                                desc.Player.AddBuff(buff.BuffName);
+                                desc.Player.AddBuff(buff.BuffName, 0, false);
                             }
                         }
                     }
@@ -4758,31 +4691,31 @@ namespace Kingdoms_of_Etrea.Core
             var targetPlayer = TokeniseInput(ref line).First().Trim();
             var obj = line.Remove(0, targetPlayer.Length).Trim();
             var objTokens = TokeniseInput(ref obj);
-            if(objTokens.Length >= 1)
+            if (objTokens.Length >= 1)
             {
-                if(objTokens.First() != null && objTokens.First().ToLower() == "gold")
+                if (objTokens.First() != null && objTokens.First().ToLower() == "gold")
                 {
-                    if(objTokens.Length == 2)
+                    if (objTokens.Length == 2)
                     {
                         if (uint.TryParse(objTokens.Last().Trim(), out uint gpToGive))
                         {
-                            if(gpToGive <= desc.Player.Stats.Gold)
+                            if (gpToGive <= desc.Player.Gold)
                             {
                                 var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, targetPlayer, RegexOptions.IgnoreCase).Success).FirstOrDefault();
                                 if (p != null)
                                 {
-                                    p.Player.Stats.Gold += gpToGive;
-                                    desc.Player.Stats.Gold -= gpToGive;
+                                    p.Player.Gold += gpToGive;
+                                    desc.Player.Gold -= gpToGive;
                                     desc.Send($"You hand over {gpToGive} gold coins to {p.Player.Name}, how generous!{Constants.NewLine}");
                                     var msgToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} hands you {gpToGive} gold coins!{Constants.NewLine}"
                                         : $"Something hands you {gpToGive} gold coins, how odd!{Constants.NewLine}";
                                     p.Send(msgToTarget);
                                     var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                    if(localPlayers != null && localPlayers.Count > 0)
+                                    if (localPlayers != null && localPlayers.Count > 0)
                                     {
-                                        foreach(var lp in localPlayers)
+                                        foreach (var lp in localPlayers)
                                         {
-                                            if(lp.Player.Name != desc.Player.Name && lp.Player.Name != p.Player.Name)
+                                            if (lp.Player.Name != desc.Player.Name && lp.Player.Name != p.Player.Name)
                                             {
                                                 if (lp.Player.Level >= Constants.ImmLevel)
                                                 {
@@ -4894,17 +4827,17 @@ namespace Kingdoms_of_Etrea.Core
                     switch (targetSlot)
                     {
                         case WearSlot.Head:
-                            if (desc.Player.EquippedItems.Head != null)
+                            if (desc.Player.EquipHead != null)
                             {
-                                var i = desc.Player.EquippedItems.Head;
-                                desc.Player.EquippedItems.Head = null;
+                                var i = desc.Player.EquipHead;
+                                desc.Player.EquipHead = null;
                                 desc.Player.Inventory.Add(i);
                                 msgToSendToPlayer = $"You remove {i.Name} from your head{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from their head{Constants.NewLine}";
                                 msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if(i.AppliesBuff)
+                                if (i.AppliesBuff)
                                 {
-                                    foreach(var b in i.AppliedBuffs)
+                                    foreach (var b in i.AppliedBuffs)
                                     {
                                         desc.Player.RemoveBuff(b);
                                     }
@@ -4919,10 +4852,10 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case WearSlot.Neck:
-                            if (desc.Player.EquippedItems.Neck != null)
+                            if (desc.Player.EquipNeck != null)
                             {
-                                var i = desc.Player.EquippedItems.Neck;
-                                desc.Player.EquippedItems.Neck = null;
+                                var i = desc.Player.EquipNeck;
+                                desc.Player.EquipNeck = null;
                                 desc.Player.Inventory.Add(i);
                                 msgToSendToPlayer = $"You remove {i.Name} from around your neck{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from around their neck{Constants.NewLine}";
@@ -4944,10 +4877,10 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case WearSlot.Armour:
-                            if (desc.Player.EquippedItems.Armour != null)
+                            if (desc.Player.EquipArmour != null)
                             {
-                                var i = desc.Player.EquippedItems.Armour;
-                                desc.Player.EquippedItems.Armour = null;
+                                var i = desc.Player.EquipArmour;
+                                desc.Player.EquipArmour = null;
                                 desc.Player.Inventory.Add(i);
                                 msgToSendToPlayer = $"You stop wearing {i.Name} as your armour{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} stops wearing {i.Name} as their armour{Constants.NewLine}";
@@ -4969,10 +4902,10 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case WearSlot.FingerLeft:
-                            if (desc.Player.EquippedItems.FingerLeft != null)
+                            if (desc.Player.EquipLeftFinger != null)
                             {
-                                var i = desc.Player.EquippedItems.FingerLeft;
-                                desc.Player.EquippedItems.FingerLeft = null;
+                                var i = desc.Player.EquipLeftFinger;
+                                desc.Player.EquipLeftFinger = null;
                                 desc.Player.Inventory.Add(i);
                                 msgToSendToPlayer = $"You remove {i.Name} from a finger on your left hand{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from a finger on their left hand{Constants.NewLine}";
@@ -4994,10 +4927,10 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case WearSlot.FingerRight:
-                            if (desc.Player.EquippedItems.FingerRight != null)
+                            if (desc.Player.EquipRightFinger != null)
                             {
-                                var i = desc.Player.EquippedItems.FingerRight;
-                                desc.Player.EquippedItems.FingerRight = null;
+                                var i = desc.Player.EquipRightFinger;
+                                desc.Player.EquipRightFinger = null;
                                 desc.Player.Inventory.Add(i);
                                 msgToSendToPlayer = $"You remove {i.Name} from a finger on your right hand{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from a finger on the right hand{Constants.NewLine}";
@@ -5019,10 +4952,10 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case WearSlot.Weapon:
-                            if (desc.Player.EquippedItems.Weapon != null)
+                            if (desc.Player.EquipWeapon != null)
                             {
-                                var i = desc.Player.EquippedItems.Weapon;
-                                desc.Player.EquippedItems.Weapon = null;
+                                var i = desc.Player.EquipWeapon;
+                                desc.Player.EquipWeapon = null;
                                 desc.Player.Inventory.Add(i);
                                 msgToSendToPlayer = $"You stop wielding {i.Name} as your weapon{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} stops using {i.Name} as their weapon{Constants.NewLine}";
@@ -5044,10 +4977,10 @@ namespace Kingdoms_of_Etrea.Core
                             break;
 
                         case WearSlot.Held:
-                            if (desc.Player.EquippedItems.Held != null)
+                            if (desc.Player.EquipHeld != null)
                             {
-                                var i = desc.Player.EquippedItems.Held;
-                                desc.Player.EquippedItems.Held = null;
+                                var i = desc.Player.EquipHeld;
+                                desc.Player.EquipHeld = null;
                                 desc.Player.Inventory.Add(i);
                                 msgToSendToPlayer = $"You stop holding {i.Name}{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} stops holding {i.Name}{Constants.NewLine}";
@@ -5126,18 +5059,18 @@ namespace Kingdoms_of_Etrea.Core
                         switch (targetSlot)
                         {
                             case WearSlot.Head:
-                                if(item.CanPlayerEquip(ref desc, WearSlot.Head, out string reply))
+                                if (item.CanPlayerEquip(ref desc, WearSlot.Head, out string reply))
                                 {
-                                    desc.Player.EquippedItems.Head = item;
+                                    desc.Player.EquipHead = item;
                                     desc.Player.Inventory.Remove(item);
                                     msgToSendToPlayer = $"You put {item.Name} on your head{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} on their head{Constants.NewLine}";
                                     msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
                                     if (item.AppliesBuff)
                                     {
-                                        foreach(var b in item.AppliedBuffs)
+                                        foreach (var b in item.AppliedBuffs)
                                         {
-                                            desc.Player.AddBuff(b, true);
+                                            desc.Player.AddBuff(b, 0, true);
                                         }
                                         RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
                                     }
@@ -5150,9 +5083,9 @@ namespace Kingdoms_of_Etrea.Core
                                 break;
 
                             case WearSlot.Neck:
-                                if(item.CanPlayerEquip(ref desc, WearSlot.Neck, out reply))
+                                if (item.CanPlayerEquip(ref desc, WearSlot.Neck, out reply))
                                 {
-                                    desc.Player.EquippedItems.Neck = item;
+                                    desc.Player.EquipNeck = item;
                                     desc.Player.Inventory.Remove(item);
                                     msgToSendToPlayer = $"You put {item.Name} around your neck{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} around their neck{Constants.NewLine}";
@@ -5161,7 +5094,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         foreach (var b in item.AppliedBuffs)
                                         {
-                                            desc.Player.AddBuff(b, true);
+                                            desc.Player.AddBuff(b, 0, true);
                                         }
                                         RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
                                     }
@@ -5174,9 +5107,9 @@ namespace Kingdoms_of_Etrea.Core
                                 break;
 
                             case WearSlot.Armour:
-                                if(item.CanPlayerEquip(ref desc, WearSlot.Armour, out reply))
+                                if (item.CanPlayerEquip(ref desc, WearSlot.Armour, out reply))
                                 {
-                                    desc.Player.EquippedItems.Armour = item;
+                                    desc.Player.EquipArmour = item;
                                     desc.Player.Inventory.Remove(item);
                                     msgToSendToPlayer = $"You don {item.Name} as your armour{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} dons {item.Name} as their armour{Constants.NewLine}";
@@ -5185,7 +5118,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         foreach (var b in item.AppliedBuffs)
                                         {
-                                            desc.Player.AddBuff(b, true);
+                                            desc.Player.AddBuff(b, 0, true);
                                         }
                                         RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
                                     }
@@ -5198,9 +5131,9 @@ namespace Kingdoms_of_Etrea.Core
                                 break;
 
                             case WearSlot.FingerLeft:
-                                if(item.CanPlayerEquip(ref desc, WearSlot.FingerLeft, out reply))
+                                if (item.CanPlayerEquip(ref desc, WearSlot.FingerLeft, out reply))
                                 {
-                                    desc.Player.EquippedItems.FingerLeft = item;
+                                    desc.Player.EquipLeftFinger = item;
                                     desc.Player.Inventory.Remove(item);
                                     msgToSendToPlayer = $"You put {item.Name} on a finger on your left hand{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} on a finger on their left hand{Constants.NewLine}";
@@ -5209,7 +5142,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         foreach (var b in item.AppliedBuffs)
                                         {
-                                            desc.Player.AddBuff(b, true);
+                                            desc.Player.AddBuff(b, 0, true);
                                         }
                                         RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
                                     }
@@ -5222,9 +5155,9 @@ namespace Kingdoms_of_Etrea.Core
                                 break;
 
                             case WearSlot.FingerRight:
-                                if(item.CanPlayerEquip(ref desc, WearSlot.FingerRight, out reply))
+                                if (item.CanPlayerEquip(ref desc, WearSlot.FingerRight, out reply))
                                 {
-                                    desc.Player.EquippedItems.FingerRight = item;
+                                    desc.Player.EquipRightFinger = item;
                                     desc.Player.Inventory.Remove(item);
                                     msgToSendToPlayer = $"You put {item.Name} on a finger on your right hand{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} on a finger on their right hand{Constants.NewLine}";
@@ -5233,7 +5166,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         foreach (var b in item.AppliedBuffs)
                                         {
-                                            desc.Player.AddBuff(b, true);
+                                            desc.Player.AddBuff(b, 0, true);
                                         }
                                         RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
                                     }
@@ -5246,9 +5179,9 @@ namespace Kingdoms_of_Etrea.Core
                                 break;
 
                             case WearSlot.Weapon:
-                                if(item.CanPlayerEquip(ref desc, WearSlot.Weapon, out reply))
+                                if (item.CanPlayerEquip(ref desc, WearSlot.Weapon, out reply))
                                 {
-                                    desc.Player.EquippedItems.Weapon = item;
+                                    desc.Player.EquipWeapon = item;
                                     desc.Player.Inventory.Remove(item);
                                     msgToSendToPlayer = $"You wield {(item).Name} as your weapon{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} wields {(item).Name} as their weapon{Constants.NewLine}";
@@ -5257,7 +5190,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         foreach (var b in item.AppliedBuffs)
                                         {
-                                            desc.Player.AddBuff(b, true);
+                                            desc.Player.AddBuff(b, 0, true);
                                         }
                                         RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
                                     }
@@ -5270,9 +5203,9 @@ namespace Kingdoms_of_Etrea.Core
                                 break;
 
                             case WearSlot.Held:
-                                if(item.CanPlayerEquip(ref desc, WearSlot.Held, out reply))
+                                if (item.CanPlayerEquip(ref desc, WearSlot.Held, out reply))
                                 {
-                                    desc.Player.EquippedItems.Held = item;
+                                    desc.Player.EquipHeld = item;
                                     desc.Player.Inventory.Remove(item);
                                     msgToSendToPlayer = $"You hold {(item).Name} in your off-hand{Constants.NewLine}";
                                     msgToSendToOthers[0] = $"{desc.Player.Name} holds {(item).Name} in their off-hand{Constants.NewLine}";
@@ -5281,7 +5214,7 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         foreach (var b in item.AppliedBuffs)
                                         {
-                                            desc.Player.AddBuff(b, true);
+                                            desc.Player.AddBuff(b, 0, true);
                                         }
                                         RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
                                     }
@@ -5346,13 +5279,13 @@ namespace Kingdoms_of_Etrea.Core
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"  {new string('=', 77)}");
             sb.AppendLine("|| You are wearing the following equipment:");
-            sb.AppendLine($"|| Head:{Constants.TabStop}{desc.Player.EquippedItems.Head}");
-            sb.AppendLine($"|| Neck:{Constants.TabStop}{desc.Player.EquippedItems.Neck}");
-            sb.AppendLine($"|| Armour:{Constants.TabStop}{desc.Player.EquippedItems.Armour}");
-            sb.AppendLine($"|| Finger (L):{Constants.TabStop}{desc.Player.EquippedItems.FingerLeft}");
-            sb.AppendLine($"|| Finger (R):{Constants.TabStop}{desc.Player.EquippedItems.FingerRight}");
-            sb.AppendLine($"|| Weapon:{Constants.TabStop}{desc.Player.EquippedItems.Weapon}");
-            sb.AppendLine($"|| Held:{Constants.TabStop}{desc.Player.EquippedItems.Held}");
+            sb.AppendLine($"|| Head:{Constants.TabStop}{desc.Player.EquipHead?.Name ?? "Nothing"}");
+            sb.AppendLine($"|| Neck:{Constants.TabStop}{desc.Player.EquipNeck?.Name ?? "Nothing"}");
+            sb.AppendLine($"|| Armour:{Constants.TabStop}{desc.Player.EquipArmour?.Name ?? "Nothing"}");
+            sb.AppendLine($"|| Finger (L):{Constants.TabStop}{desc.Player.EquipLeftFinger?.Name ?? "Nothing"}");
+            sb.AppendLine($"|| Finger (R):{Constants.TabStop}{desc.Player.EquipRightFinger?.Name ?? "Nothing"}");
+            sb.AppendLine($"|| Weapon:{Constants.TabStop}{desc.Player.EquipWeapon?.Name ?? "Nothing"}");
+            sb.AppendLine($"|| Held:{Constants.TabStop}{desc.Player.EquipHeld?.Name ?? "Nothing"}");
             sb.AppendLine($"  {new string('=', 77)}");
             desc.Send(sb.ToString());
         }
@@ -5394,20 +5327,20 @@ namespace Kingdoms_of_Etrea.Core
         private static void GetItemFromRoom(ref Descriptor desc, ref string input)
         {
             var obj = input.Remove(0, GetVerb(ref input).Length).Trim();
-            if(!string.IsNullOrEmpty(obj))
+            if (!string.IsNullOrEmpty(obj))
             {
-                if(obj.ToLower().StartsWith("gold"))
+                if (obj.ToLower().StartsWith("gold"))
                 {
                     if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
                     {
                         var tokens = TokeniseInput(ref obj);
                         ulong gpToGet;
-                        if(tokens.Length > 1)
+                        if (tokens.Length > 1)
                         {
                             // player has specified an amount of gold to take
-                            if(ulong.TryParse(tokens.Last().Trim(), out gpToGet))
+                            if (ulong.TryParse(tokens.Last().Trim(), out gpToGet))
                             {
-                                if(gpToGet > RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom)
+                                if (gpToGet > RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom)
                                 {
                                     desc.Send($"There isn't that much gold here!{Constants.NewLine}");
                                     return;
@@ -5422,8 +5355,8 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             gpToGet = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
                         }
-                        desc.Player.Stats.Gold += gpToGet;
-                        RoomManager.Instance.GetGoldFromRoom(desc.Player.CurrentRoom, gpToGet);
+                        desc.Player.Gold += gpToGet;
+                        RoomManager.Instance.RemoveGoldFromRoom(desc.Player.CurrentRoom, gpToGet);
                         desc.Send($"You greedily snatch up the {gpToGet} gold coins!{Constants.NewLine}");
                         var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                         if (playersToNotify != null && playersToNotify.Count > 1)
@@ -5506,16 +5439,16 @@ namespace Kingdoms_of_Etrea.Core
             // drop gold 500
             var line = input.Remove(0, GetVerb(ref input).Length).Trim();
             var tokens = TokeniseInput(ref line);
-            if(tokens.First().ToLower() == "gold")
+            if (tokens.First().ToLower() == "gold")
             {
                 var amount = tokens.Last() ?? string.Empty;
-                if(!string.IsNullOrEmpty(amount))
+                if (!string.IsNullOrEmpty(amount))
                 {
-                    if(uint.TryParse(amount, out uint gpToDrop))
+                    if (uint.TryParse(amount, out uint gpToDrop))
                     {
-                        if(gpToDrop <= desc.Player.Stats.Gold)
+                        if (gpToDrop <= desc.Player.Gold)
                         {
-                            desc.Player.Stats.Gold -= gpToDrop;
+                            desc.Player.Gold -= gpToDrop;
                             RoomManager.Instance.AddGoldToRoom(desc.Player.CurrentRoom, gpToDrop);
                             desc.Send($"You drop {gpToDrop} gold to the floor!{Constants.NewLine}");
                             var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
@@ -5611,15 +5544,15 @@ namespace Kingdoms_of_Etrea.Core
                 var pname = desc.Player.Name;
                 if (desc.Player.Visible)
                 {
-                    if (desc.Player.Stats.CurrentMP > Skills.GetSkill("Hide").MPCost)
+                    if (desc.Player.CurrentMP > SkillManager.Instance.GetSkill("Hide").MPCost)
                     {
                         desc.Player.Visible = false;
-                        desc.Player.Stats.CurrentMP -= (int)Skills.GetSkill("Hide").MPCost;
+                        desc.Player.CurrentMP -= (int)SkillManager.Instance.GetSkill("Hide").MPCost;
                         desc.Send($"With cunning and skill you hide yourself from view!{Constants.NewLine}");
                         var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
                         if (playersToNotify != null && playersToNotify.Count > 1)
                         {
-                            foreach(var p in playersToNotify.Where(x => x.Player.Name != pname))
+                            foreach (var p in playersToNotify.Where(x => x.Player.Name != pname))
                             {
                                 p.Send($"{pname} hides and becomes impossible to see!{Constants.NewLine}");
                             }
@@ -5657,9 +5590,9 @@ namespace Kingdoms_of_Etrea.Core
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine($"  {new string('=', 77)}");
                 sb.AppendLine($"|| You are carrying:");
-                foreach (var i in desc.Player.Inventory.Select(x => new { x.Id, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
+                foreach (var i in desc.Player.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
                 {
-                    var cnt = desc.Player.Inventory.Where(y => y.Id == i.Id).Count();
+                    var cnt = desc.Player.Inventory.Where(y => y.ID == i.ID).Count();
                     sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription}");
                 }
                 sb.AppendLine($"  {new string('=', 77)}");
@@ -5731,7 +5664,7 @@ namespace Kingdoms_of_Etrea.Core
             else
             {
                 var elements = TokeniseInput(ref line);
-                if(elements != null)
+                if (elements != null)
                 {
                     try
                     {
@@ -5744,7 +5677,7 @@ namespace Kingdoms_of_Etrea.Core
                     }
                 }
             }
-            if(!string.IsNullOrEmpty(target) && !string.IsNullOrEmpty(direction))
+            if (!string.IsNullOrEmpty(target) && !string.IsNullOrEmpty(direction))
             {
                 // get a reference to the target player or NPC
                 object objTgt = null;
@@ -5752,42 +5685,42 @@ namespace Kingdoms_of_Etrea.Core
                 var npcsInRoom = RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom);
                 int targetRID = -1;
                 string roomDirection = string.Empty;
-                if(playersInRoom != null && playersInRoom.Count > 1)
+                if (playersInRoom != null && playersInRoom.Count > 1)
                 {
                     var p = playersInRoom.Where(x => Regex.Match(target, x.Player.Name, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                    if(p != null && (p.Player.Visible || desc.Player.Level >= Constants.ImmLevel))
+                    if (p != null && (p.Player.Visible || desc.Player.Level >= Constants.ImmLevel))
                     {
                         objTgt = p;
                     }
                 }
-                if(objTgt == null)
+                if (objTgt == null)
                 {
                     objTgt = GetTargetNPC(ref desc, target);
                 }
-                if(objTgt != null)
+                if (objTgt != null)
                 {
                     // check to see if we have an exit in the specified direction
-                    switch(direction)
+                    switch (direction)
                     {
                         case "u":
                         case "up":
-                            if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("up"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("up"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").ExitDirection;
-                                } 
+                                }
                             }
                             break;
 
                         case "d":
                         case "down":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("down"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("down"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").ExitDirection;
@@ -5797,10 +5730,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "n":
                         case "north":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("north"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("north"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").ExitDirection;
@@ -5810,10 +5743,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "nw":
                         case "northwest":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northwest"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northwest"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").ExitDirection;
@@ -5823,10 +5756,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "w":
                         case "west":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("west"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("west"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").ExitDirection;
@@ -5836,10 +5769,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "sw":
                         case "southwest":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southwest"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southwest"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").ExitDirection;
@@ -5849,10 +5782,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "s":
                         case "south":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("south"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("south"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").ExitDirection;
@@ -5862,10 +5795,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "se":
                         case "southeast":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southeast"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southeast"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").ExitDirection;
@@ -5875,10 +5808,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "e":
                         case "east":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("east"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("east"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").ExitDirection;
@@ -5888,10 +5821,10 @@ namespace Kingdoms_of_Etrea.Core
 
                         case "ne":
                         case "northeast":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northeast"))
+                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northeast"))
                             {
                                 var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").RoomDoor;
-                                if(d == null || (d != null && d.IsOpen))
+                                if (d == null || (d != null && d.IsOpen))
                                 {
                                     targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID);
                                     roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").ExitDirection;
@@ -5904,15 +5837,15 @@ namespace Kingdoms_of_Etrea.Core
                             return;
 
                     }
-                    if(targetRID > -1)
+                    if (targetRID > -1)
                     {
                         uint newRID = Convert.ToUInt32(targetRID);
-                        if(RoomManager.Instance.RoomExists(newRID))
+                        if (RoomManager.Instance.RoomExists(newRID))
                         {
                             bool destRoomIsNoMob = RoomManager.Instance.GetRoom(newRID).Flags.HasFlag(RoomFlags.NoMobs);
                             var playerRoll = Helpers.RollDice(1, 20);
                             int playerFinalRoll = Convert.ToInt32(playerRoll);
-                            var playerStrModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Strength);
+                            var playerStrModifier = Helpers.CalculateAbilityModifier(desc.Player.Strength);
                             playerFinalRoll += Convert.ToInt32(playerStrModifier);
                             playerFinalRoll = playerFinalRoll < 1 ? 1 : playerFinalRoll;
                             var targetRoll = Helpers.RollDice(1, 20);
@@ -5927,7 +5860,7 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     // target is a player
                                     targetName = (objTgt as Descriptor).Player.Name;
-                                    var targetStrModifier = ActorStats.CalculateAbilityModifier((objTgt as Descriptor).Player.Stats.Strength);
+                                    var targetStrModifier = Helpers.CalculateAbilityModifier((objTgt as Descriptor).Player.Strength);
                                     targetFinalRoll += targetStrModifier;
                                     targetFinalRoll = targetFinalRoll < 1 ? 1 : targetFinalRoll;
                                     okToPush = playerFinalRoll > targetFinalRoll;
@@ -5936,9 +5869,9 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     // target is an npc
                                     targetName = (objTgt as NPC).Name;
-                                    if(!(objTgt as NPC).BehaviourFlags.HasFlag(NPCFlags.NoPush))
+                                    if (!(objTgt as NPC).BehaviourFlags.HasFlag(NPCFlags.NoPush))
                                     {
-                                        var targetStrModifier = ActorStats.CalculateAbilityModifier((objTgt as NPC).Stats.Strength);
+                                        var targetStrModifier = Helpers.CalculateAbilityModifier((objTgt as NPC).Strength);
                                         targetFinalRoll += targetStrModifier;
                                         targetFinalRoll = targetFinalRoll < 1 ? 1 : targetFinalRoll;
                                         okToPush = playerFinalRoll > targetFinalRoll;
@@ -5958,7 +5891,7 @@ namespace Kingdoms_of_Etrea.Core
                             {
                                 // push the target in the specified direction
                                 desc.Send($"With a mighty effort you push {targetName} {roomDirection.ToLower()}!{Constants.NewLine}");
-                                if(targetIsPlayer)
+                                if (targetIsPlayer)
                                 {
                                     // notify the target player
                                     if (desc.Player.Visible || ((objTgt as Descriptor).Player.Level >= Constants.ImmLevel))
@@ -5969,9 +5902,9 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         (objTgt as Descriptor).Send($"Something pushes you {roomDirection.ToLower()}!{Constants.NewLine}");
                                     }
-                                    if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom).Count > 2)
+                                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Count > 2)
                                     {
-                                        foreach(var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom))
+                                        foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
                                         {
                                             if (p.Player.Name != desc.Player.Name && p.Player.Name != (objTgt as Descriptor).Player.Name)
                                             {
@@ -5998,7 +5931,7 @@ namespace Kingdoms_of_Etrea.Core
                                 else
                                 {
                                     // target is an NPC so just notify any other players in the room
-                                    foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom))
+                                    foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
                                     {
                                         if (p.Player.Name != desc.Player.Name)
                                         {
@@ -6013,7 +5946,7 @@ namespace Kingdoms_of_Etrea.Core
                                         }
                                     }
                                 }
-                                if(targetIsPlayer)
+                                if (targetIsPlayer)
                                 {
                                     var p = SessionManager.Instance.GetPlayer((objTgt as Descriptor).Player.Name);
                                     p.Player.Move(p.Player.CurrentRoom, newRID, false);
@@ -6027,7 +5960,7 @@ namespace Kingdoms_of_Etrea.Core
                             else
                             {
                                 // we failed
-                                if(!targetIsPlayer && destRoomIsNoMob)
+                                if (!targetIsPlayer && destRoomIsNoMob)
                                 {
                                     desc.Send($"Some mysterious force prevents you from doing that!{Constants.NewLine}");
                                 }
@@ -6035,10 +5968,10 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     desc.Send($"Try as you might, you just can't summon the strength to do that!{Constants.NewLine}");
                                 }
-                                if(targetIsPlayer)
+                                if (targetIsPlayer)
                                 {
                                     // notify the target player
-                                    if(desc.Player.Visible || ((objTgt as Descriptor).Player.Level >= Constants.ImmLevel))
+                                    if (desc.Player.Visible || ((objTgt as Descriptor).Player.Level >= Constants.ImmLevel))
                                     {
                                         (objTgt as Descriptor).Send($"{desc.Player.Name} tries to push you {roomDirection.ToLower()} but isn't strong enough!{Constants.NewLine}");
                                     }
@@ -6046,10 +5979,10 @@ namespace Kingdoms_of_Etrea.Core
                                     {
                                         (objTgt as Descriptor).Send($"Something tries to push you {roomDirection.ToLower()} but isn't strong enough!{Constants.NewLine}");
                                     }
-                                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom).Count > 2)
+                                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Count > 2)
                                     {
                                         // if we have more than the player and the target here, notify them of what happened
-                                        foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom))
+                                        foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
                                         {
                                             if (p.Player.Name != desc.Player.Name && p.Player.Name != (objTgt as Descriptor).Player.Name)
                                             {
@@ -6076,11 +6009,11 @@ namespace Kingdoms_of_Etrea.Core
                                 else
                                 {
                                     // target is an NPC so just notify any other players in the room
-                                    foreach(var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom))
+                                    foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
                                     {
-                                        if(p.Player.Name != desc.Player.Name)
+                                        if (p.Player.Name != desc.Player.Name)
                                         {
-                                            if(desc.Player.Visible)
+                                            if (desc.Player.Visible)
                                             {
                                                 p.Send($"{desc.Player.Name} tries to push {targetName} {roomDirection.ToLower()}, but isn't strong enough!{Constants.NewLine}");
                                             }
@@ -6117,7 +6050,12 @@ namespace Kingdoms_of_Etrea.Core
         internal static void ChangePlayerPosition(ref Descriptor desc, ref string input)
         {
             var verb = GetVerb(ref input).ToLower();
-            switch(verb)
+            if (desc.Player.Position == ActorPosition.Fighting)
+            {
+                desc.Send($"You're in combat and can't do that right now!{Constants.NewLine}");
+                return;
+            }
+            switch (verb)
             {
                 case "sit":
                     desc.Player.Position = ActorPosition.Sitting;
@@ -6130,7 +6068,7 @@ namespace Kingdoms_of_Etrea.Core
                     break;
 
                 case "stand":
-                    SessionManager.Instance.GetPlayerByGUID(desc.Id).Player.Position = ActorPosition.Standing;
+                    SessionManager.Instance.GetPlayerByGUID(desc.ID).Player.Position = ActorPosition.Standing;
                     desc.Send($"You stand up, ready to go!{Constants.NewLine}");
                     break;
             }
@@ -6149,10 +6087,10 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     case "up":
                     case "u":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("up"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("up"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").RoomDoor;
-                            if(d == null || (d != null && d.IsOpen))
+                            if (d == null || (d != null && d.IsOpen))
                             {
                                 var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID;
                                 var targetRoom = RoomManager.Instance.GetRoom(rid);
@@ -6205,7 +6143,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "down":
                     case "d":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("down"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("down"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6261,7 +6199,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "west":
                     case "w":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("west"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("west"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6317,7 +6255,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "east":
                     case "e":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("east"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("east"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6373,7 +6311,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "north":
                     case "n":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("north"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("north"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6429,7 +6367,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "south":
                     case "s":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("south"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("south"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6485,7 +6423,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "northwest":
                     case "nw":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northwest"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northwest"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6541,7 +6479,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "northeast":
                     case "ne":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("northeast"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northeast"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6597,7 +6535,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "southeast":
                     case "se":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southeast"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southeast"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6653,7 +6591,7 @@ namespace Kingdoms_of_Etrea.Core
 
                     case "southwest":
                     case "sw":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDiretion("southwest"))
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southwest"))
                         {
                             var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").RoomDoor;
                             if (d == null || (d != null && d.IsOpen))
@@ -6708,11 +6646,11 @@ namespace Kingdoms_of_Etrea.Core
                         break;
 
                     case "node":
-                        if(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
+                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
                         {
                             string amount = string.Empty;
                             uint d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeDepth;
-                            switch(d)
+                            switch (d)
                             {
                                 case 1:
                                     amount = "almost no";
@@ -6730,7 +6668,7 @@ namespace Kingdoms_of_Etrea.Core
                                     amount = "a lot of";
                                     break;
                             }
-                            if(desc.Player.Level >= Constants.ImmLevel)
+                            if (desc.Player.Level >= Constants.ImmLevel)
                             {
                                 desc.Send($"The {RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode} node can be mined {d} more times.{Constants.NewLine}");
                             }
@@ -6760,43 +6698,19 @@ namespace Kingdoms_of_Etrea.Core
                             }
                             else
                             {
-                                var targetHP = (double)p.Player.Stats.CurrentHP / p.Player.Stats.MaxHP * 100;
+                                var targetHP = (double)p.Player.CurrentHP / p.Player.MaxHP * 100;
                                 string stateMsg = Helpers.GetActorStateMessage(p.Player.Name, targetHP);
-                                string pAlignString = p.Player.Alignment == ActorAlignment.Evil ? $"{Constants.NewLine}{p.Player} gives off a dark aura.{Constants.NewLine}"
-                                    : p.Player.Alignment == ActorAlignment.Good ? $"{Constants.NewLine}{p.Player} radiates a holy glow.{Constants.NewLine}" : string.Empty;
+                                string pAlignString = p.Player.Alignment == Alignment.Evil ? $"{Constants.NewLine}{p.Player} gives off a dark aura.{Constants.NewLine}"
+                                    : p.Player.Alignment == Alignment.Good ? $"{Constants.NewLine}{p.Player} radiates a holy glow.{Constants.NewLine}" : string.Empty;
                                 msgToSendToPlayer = $"{p.Player.LongDescription}{pAlignString}{stateMsg}{Constants.NewLine}";
-                                if(p.Player.EquippedItems != null)
-                                {
-                                    msgToSendToPlayer = $"{msgToSendToPlayer}{p.Player.Name} is using:{Constants.NewLine}";
-                                    if(p.Player.EquippedItems.Head != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Head: {p.Player.EquippedItems.Head.Name}, {p.Player.EquippedItems.Head.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if(p.Player.EquippedItems.Neck != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {p.Player.EquippedItems.Neck.Name}, {p.Player.EquippedItems.Neck.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (p.Player.EquippedItems.Armour != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {p.Player.EquippedItems.Armour.Name}, {p.Player.EquippedItems.Armour.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (p.Player.EquippedItems.FingerLeft != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {p.Player.EquippedItems.FingerLeft.Name}, {p.Player.EquippedItems.FingerLeft.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (p.Player.EquippedItems.FingerRight != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {p.Player.EquippedItems.FingerRight.Name}, {p.Player.EquippedItems.FingerRight.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (p.Player.EquippedItems.Weapon != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {p.Player.EquippedItems.Weapon.Name}, {p.Player.EquippedItems.Weapon.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (p.Player.EquippedItems.Held != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Held: {p.Player.EquippedItems.Held.Name}, {p.Player.EquippedItems.Held.ShortDescription}{Constants.NewLine}";
-                                    }
-                                }
+                                msgToSendToPlayer = $"{msgToSendToPlayer}{p.Player.Name} is using:{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Head: {p.Player.EquipHead?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {p.Player.EquipNeck?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {p.Player.EquipArmour?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {p.Player.EquipLeftFinger?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {p.Player.EquipRightFinger?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {p.Player.EquipWeapon?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Held: {p.Player.EquipHeld?.Name ?? "Nothing"}{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} looks {p.Player.Name} up and down...{Constants.NewLine}";
                                 msgToSendToOthers[1] = $"Something looks {p.Player.Name} up and down...{Constants.NewLine}";
                                 msgToSendToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} gives you a studious look. Strange person.{Constants.NewLine}" : $"You feel a chill as though something was looking at you...{Constants.NewLine}";
@@ -6807,53 +6721,29 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             // p was null so the target string doesn't match a player in the room, try finding a matching NPC
                             var n = GetTargetNPC(ref desc, target);
-                            if(n != null)
+                            if (n != null)
                             {
-                                var targetHP = (double)n.Stats.CurrentHP / n.Stats.MaxHP * 100;
+                                var targetHP = (double)n.CurrentHP / n.MaxHP * 100;
                                 string stateMsg = Helpers.GetActorStateMessage(n.Name, targetHP);
-                                string pAlignString = n.Alignment == ActorAlignment.Evil ? $"{Constants.NewLine}{n.Name} gives off a dark aura.{Constants.NewLine}"
-                                    : n.Alignment == ActorAlignment.Good ? $"{Constants.NewLine}{n.Name} radiates a holy glow.{Constants.NewLine}" : string.Empty;
+                                string pAlignString = n.Alignment == Alignment.Evil ? $"{Constants.NewLine}{n.Name} gives off a dark aura.{Constants.NewLine}"
+                                    : n.Alignment == Alignment.Good ? $"{Constants.NewLine}{n.Name} radiates a holy glow.{Constants.NewLine}" : string.Empty;
                                 msgToSendToPlayer = $"{n.LongDescription}{pAlignString}{stateMsg}{Constants.NewLine}";
                                 msgToSendToOthers[0] = $"{desc.Player.Name} gives {n.Name} a studious look{Constants.NewLine}";
                                 msgToSendToOthers[1] = $"Something gives {n.Name} a studious look{Constants.NewLine}";
-                                if (n.EquippedItems != null)
-                                {
-                                    msgToSendToPlayer = $"{msgToSendToPlayer}{n.Name} is using:{Constants.NewLine}";
-                                    if (n.EquippedItems.Head != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Head: {n.EquippedItems.Head.Name}, {n.EquippedItems.Head.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (n.EquippedItems.Neck != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {n.EquippedItems.Neck.Name}, {n.EquippedItems.Neck.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (n.EquippedItems.Armour != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {n.EquippedItems.Armour.Name}, {n.EquippedItems.Armour.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (n.EquippedItems.FingerLeft != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {n.EquippedItems.FingerLeft.Name}, {n.EquippedItems.FingerLeft.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (n.EquippedItems.FingerRight != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {n.EquippedItems.FingerRight.Name}, {n.EquippedItems.FingerRight.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (n.EquippedItems.Weapon != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {n.EquippedItems.Weapon.Name}, {n.EquippedItems.Weapon.ShortDescription}{Constants.NewLine}";
-                                    }
-                                    if (n.EquippedItems.Held != null)
-                                    {
-                                        msgToSendToPlayer = $"{msgToSendToPlayer}Held: {n.EquippedItems.Held.Name}, {n.EquippedItems.Held.ShortDescription}{Constants.NewLine}";
-                                    }
-                                }
+                                msgToSendToPlayer = $"{msgToSendToPlayer}{n.Name} is using:{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Head: {n.EquipHead?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {n.EquipHead?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {n.EquipArmour?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {n.EquipLeftFinger?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {n.EquipRightFinger?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {n.EquipWeapon?.Name ?? "Nothing"}{Constants.NewLine}";
+                                msgToSendToPlayer = $"{msgToSendToPlayer}Held: {n.EquipHeld?.Name ?? "Nothing"}{Constants.NewLine}";
                             }
                             else
                             {
                                 // n was null, try looking for an item in the room
                                 var i = GetTargetItem(ref desc, target, false);
-                                if(i != null)
+                                if (i != null)
                                 {
                                     string modMsg = i.LongDescription;
                                     if (i.IsMagical)
@@ -6872,7 +6762,7 @@ namespace Kingdoms_of_Etrea.Core
                                 {
                                     // no matching item in the room, so look in player inventory instead
                                     var ii = GetTargetItem(ref desc, target, true);
-                                    if(ii != null)
+                                    if (ii != null)
                                     {
                                         string modMsg = ii.LongDescription;
                                         if (ii.IsMagical)
@@ -6903,14 +6793,14 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     desc.Send(msgToSendToPlayer);
                 }
-                var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom(desc.Player.CurrentRoom);
-                if(playersInRoom != null && playersInRoom.Count > 1)
+                var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
+                if (playersInRoom != null && playersInRoom.Count > 1)
                 {
-                    foreach(var p in playersInRoom)
+                    foreach (var p in playersInRoom)
                     {
-                        if(!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success && !Regex.Match(p.Player.Name, target, RegexOptions.IgnoreCase).Success)
+                        if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success && !Regex.Match(p.Player.Name, target, RegexOptions.IgnoreCase).Success)
                         {
-                            if(desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
+                            if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
                             {
                                 p.Send(msgToSendToOthers[0]);
                             }
@@ -6924,7 +6814,7 @@ namespace Kingdoms_of_Etrea.Core
             }
             else
             {
-                Room.DescribeRoom(ref desc);
+                RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).DescribeRoom(ref desc, true);
             }
         }
 
@@ -6932,18 +6822,18 @@ namespace Kingdoms_of_Etrea.Core
         {
             var verb = GetVerb(ref input);
             var line = input.Remove(0, verb.Length).Trim();
-            if(string.IsNullOrEmpty(line))
+            if (string.IsNullOrEmpty(line))
             {
                 // show configured aliases
                 StringBuilder sb = new StringBuilder();
-                if(desc.Player.CommandAliases != null && desc.Player.CommandAliases.Count > 0)
+                if (desc.Player.CommandAliases != null && desc.Player.CommandAliases.Count > 0)
                 {
                     sb.AppendLine($"  {new string('=', 77)}");
                     sb.AppendLine($"|| Alias{Constants.TabStop}{Constants.TabStop}|| Command");
                     sb.AppendLine($"  {new string('=', 77)}");
                     foreach (var alias in desc.Player.CommandAliases)
                     {
-                        if(alias.Key.Length < 7)
+                        if (alias.Key.Length < 7)
                         {
                             sb.AppendLine($"|| {alias.Key}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {alias.Value}");
                         }
@@ -6963,16 +6853,16 @@ namespace Kingdoms_of_Etrea.Core
             else
             {
                 var tokens = TokeniseInput(ref line);
-                if(tokens.Length > 1)
+                if (tokens.Length > 1)
                 {
                     var operation = tokens[0].Trim().ToLower();
-                    switch(operation)
+                    switch (operation)
                     {
                         case "add":
                         case "create":
                             var alias = tokens[1].Trim().ToLower();
                             var command = line.Remove(0, operation.Length).Trim().Remove(0, alias.Length).ToLower().Trim();
-                            if(!desc.Player.CommandAliases.ContainsKey(alias))
+                            if (!desc.Player.CommandAliases.ContainsKey(alias))
                             {
                                 desc.Player.CommandAliases.Add(alias, command);
                                 desc.Send($"A new alias for '{alias}' has been created.{Constants.NewLine}");
@@ -6986,7 +6876,7 @@ namespace Kingdoms_of_Etrea.Core
                         case "remove":
                         case "delete":
                             alias = tokens[1].Trim().ToLower();
-                            if(desc.Player.CommandAliases.ContainsKey(alias))
+                            if (desc.Player.CommandAliases.ContainsKey(alias))
                             {
                                 desc.Player.CommandAliases.Remove(alias);
                                 desc.Send($"The alias '{alias}' has been successfully removed.{Constants.NewLine}");
@@ -7012,20 +6902,19 @@ namespace Kingdoms_of_Etrea.Core
         private static void ShowCharSheet(ref Descriptor desc)
         {
             StringBuilder sb = new StringBuilder();
-            string dmg = desc.Player.EquippedItems != null && desc.Player.EquippedItems.Weapon != null ? $"{desc.Player.EquippedItems.Weapon.NumberOfDamageDice}D{desc.Player.EquippedItems.Weapon.SizeOfDamageDice}"
-                : "1D2";
+            string dmg = desc.Player.EquipWeapon != null ? $"{desc.Player.EquipWeapon.NumberOfDamageDice}D{desc.Player.EquipWeapon.SizeOfDamageDice}" : "1D2";
             sb.AppendLine($"  {new string('=', 77)}");
             sb.AppendLine($"|| Name: {desc.Player.Name}{Constants.TabStop}{Constants.TabStop}Gender: {desc.Player.Gender}{Constants.TabStop}Class: {desc.Player.Class}{Constants.TabStop}Race: {desc.Player.Race}");
-            sb.AppendLine($"|| Level: {desc.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {desc.Player.Stats.Exp:N0}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(desc.Player.Level, desc.Player.Stats.Exp):N0}");
-            sb.AppendLine($"|| Alignment: {desc.Player.Alignment}{Constants.TabStop}{Constants.TabStop}Gold: {desc.Player.Stats.Gold:N0}");
-            sb.AppendLine($"|| Position: {desc.Player.Position}{Constants.TabStop}{Constants.TabStop}Armour Class: {desc.Player.Stats.ArmourClass}");
+            sb.AppendLine($"|| Level: {desc.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {desc.Player.Exp:N0} / {LevelTable.GetExpForNextLevel(desc.Player.Level, desc.Player.Exp):N0}");
+            sb.AppendLine($"|| Alignment: {desc.Player.Alignment}{Constants.TabStop}{Constants.TabStop}Gold: {desc.Player.Gold:N0}");
+            sb.AppendLine($"|| Position: {desc.Player.Position}{Constants.TabStop}{Constants.TabStop}Base Armour Class: {desc.Player.BaseArmourClass}{Constants.TabStop}Armour Class: {desc.Player.ArmourClass}");
             sb.AppendLine($"||");
             sb.AppendLine($"|| Stats:");
-            sb.AppendLine($"|| STR: {desc.Player.Stats.Strength} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {desc.Player.Stats.Dexterity} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {desc.Player.Stats.Constitution} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Constitution)})");
-            sb.AppendLine($"|| INT: {desc.Player.Stats.Intelligence} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {desc.Player.Stats.Wisdom} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {desc.Player.Stats.Charisma} ({ActorStats.CalculateAbilityModifier(desc.Player.Stats.Charisma)})");
+            sb.AppendLine($"|| STR: {desc.Player.Strength} ({Helpers.CalculateAbilityModifier(desc.Player.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {desc.Player.Dexterity} ({Helpers.CalculateAbilityModifier(desc.Player.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {desc.Player.Constitution} ({Helpers.CalculateAbilityModifier(desc.Player.Constitution)})");
+            sb.AppendLine($"|| INT: {desc.Player.Intelligence} ({Helpers.CalculateAbilityModifier(desc.Player.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {desc.Player.Wisdom} ({Helpers.CalculateAbilityModifier(desc.Player.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {desc.Player.Charisma} ({Helpers.CalculateAbilityModifier(desc.Player.Charisma)})");
             sb.AppendLine($"|| ");
-            sb.AppendLine($"|| Health  : {desc.Player.Stats.CurrentHP} / {desc.Player.Stats.MaxHP}{Constants.TabStop}Mana: {desc.Player.Stats.CurrentMP} / {desc.Player.Stats.MaxMP}");
-            sb.AppendLine($"|| Stamina : {desc.Player.Stats.CurrentSP} / {desc.Player.Stats.MaxSP}{Constants.TabStop}Attacks: {desc.Player.NumberOfAttacks}{Constants.TabStop}Damage: {dmg}");
+            sb.AppendLine($"|| Health  : {desc.Player.CurrentHP} / {desc.Player.MaxHP}{Constants.TabStop}Mana: {desc.Player.CurrentMP} / {desc.Player.MaxMP}");
+            sb.AppendLine($"|| Stamina : {desc.Player.CurrentSP} / {desc.Player.MaxSP}{Constants.TabStop}Attacks: {desc.Player.NumberOfAttacks}{Constants.TabStop}Damage: {dmg}");
             sb.AppendLine($"|| Languages: {desc.Player.KnownLanguages}");
             sb.AppendLine($"  {new string('=', 77)}");
             desc.Send(sb.ToString());
@@ -7039,7 +6928,7 @@ namespace Kingdoms_of_Etrea.Core
             {
                 if (Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
                 {
-                    if(desc.Player.SpokenLanguage == Languages.Common)
+                    if (desc.Player.SpokenLanguage == Languages.Common)
                     {
                         p.Send($"You say \"{msg}\"{Constants.NewLine}");
                     }
@@ -7047,11 +6936,11 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         p.Send($"In {desc.Player.SpokenLanguage}, you say \"{msg}\"{Constants.NewLine}");
                     }
-                    
+
                 }
                 else
                 {
-                    if(desc.Player.SpokenLanguage == Languages.Common)
+                    if (desc.Player.SpokenLanguage == Languages.Common)
                     {
                         string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} says, \"{msg}\"{Constants.NewLine}"
                             : $"Something says, \"{msg}\"{Constants.NewLine}";
@@ -7100,11 +6989,10 @@ namespace Kingdoms_of_Etrea.Core
             }
             var verb = GetVerb(ref line);
             var toSend = line.Remove(0, verb.Length).Trim().Remove(0, target.Length).Trim();
-            //var toSend = line.TrimStart(GetVerb(ref line).ToCharArray()).Trim().Trim(target.ToCharArray()).Trim();
             var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
             if (p != null)
             {
-                if(desc.Player.SpokenLanguage == Languages.Common)
+                if (desc.Player.SpokenLanguage == Languages.Common)
                 {
                     var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} whispers \"{toSend}\"{Constants.NewLine}"
                         : $"Something whispers \"{toSend}\"{Constants.NewLine}";

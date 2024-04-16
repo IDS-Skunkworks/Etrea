@@ -1,10 +1,10 @@
-﻿using System.Text;
-using Kingdoms_of_Etrea.Entities;
+﻿using Etrea2.Entities;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Text;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal static class Helpers
     {
@@ -12,12 +12,17 @@ namespace Kingdoms_of_Etrea.Core
         private static int VowelMask = (1 << 1) | (1 << 5) | (1 << 9) | (1 << 15) | (1 << 21);
 
         #region JsonSerialise
+        internal static string SerialiseSpell(Spell spell)
+        {
+            return JsonConvert.SerializeObject(spell);
+        }
+
         internal static string SerialiseQuest(Quest q)
         {
             return JsonConvert.SerializeObject(q);
         }
 
-        internal static string SerialiseCraftingRecipe(Crafting.Recipe r)
+        internal static string SerialiseCraftingRecipe(Recipe r)
         {
             return JsonConvert.SerializeObject(r);
         }
@@ -64,6 +69,11 @@ namespace Kingdoms_of_Etrea.Core
         #endregion
 
         #region JsonDeSerialise
+        internal static Spell DeserialiseSpellObject(string s)
+        {
+            return JsonConvert.DeserializeObject<Spell>(s);
+        }
+
         internal static Quest DeserialiseQuest(string q)
         {
             return JsonConvert.DeserializeObject<Quest>(q);
@@ -74,9 +84,9 @@ namespace Kingdoms_of_Etrea.Core
             return JsonConvert.DeserializeObject<Mail>(mail);
         }
 
-        internal static Crafting.Recipe DeserialiseRecipe(string r)
+        internal static Recipe DeserialiseRecipe(string r)
         {
-            return JsonConvert.DeserializeObject<Crafting.Recipe>(r);
+            return JsonConvert.DeserializeObject<Recipe>(r);
         }
 
         internal static ResourceNode DeserialiseResourceNode(string n)
@@ -114,9 +124,9 @@ namespace Kingdoms_of_Etrea.Core
             return JsonConvert.DeserializeObject<Emote>(p);
         }
 
-        internal static List<Room.Exit> DeserialiseRoomExits(string exits)
+        internal static List<Exit> DeserialiseRoomExits(string exits)
         {
-            return JsonConvert.DeserializeObject<List<Room.Exit>>(exits);
+            return JsonConvert.DeserializeObject<List<Exit>>(exits);
         }
 
         internal static Shop DeserialiseRoomShop(string shop)
@@ -135,6 +145,11 @@ namespace Kingdoms_of_Etrea.Core
             var maxRoll = numOfDice * sizeOfDice;
             var retval = rnd.Next(Convert.ToInt32(numOfDice), Convert.ToInt32(maxRoll));
             return Convert.ToUInt32(retval);
+        }
+
+        internal static int CalculateAbilityModifier(uint abilityScore)
+        {
+            return ((int)abilityScore - 10) / 2;
         }
 
         internal static string GetActorStateMessage(string actorName, double hp)
@@ -171,7 +186,7 @@ namespace Kingdoms_of_Etrea.Core
             {
                 return $"{actorName} is in critical condition";
             }
-            if( hp < 20 &&  hp >= 10)
+            if (hp < 20 && hp >= 10)
             {
                 return $"{actorName} is carrying critical wounds and near to bleeding out";
             }
@@ -183,7 +198,7 @@ namespace Kingdoms_of_Etrea.Core
             return (c > 64) && ((VowelMask & (1 << ((c | 0x20) % 32))) != 0);
         }
 
-        internal static Room.Exit GetRandomExit(uint rid)
+        internal static Exit GetRandomExit(uint rid)
         {
             var exitList = RoomManager.Instance.GetRoom(rid).RoomExits;
             var n = rnd.Next(exitList.Count);
@@ -192,7 +207,7 @@ namespace Kingdoms_of_Etrea.Core
 
         internal static IEnumerable<ConsumableEffect> GetPotionFlags(ConsumableEffect potionFlags)
         {
-            foreach(ConsumableEffect pEffect in Enum.GetValues(typeof(ConsumableEffect)))
+            foreach (ConsumableEffect pEffect in Enum.GetValues(typeof(ConsumableEffect)))
             {
                 if (potionFlags.HasFlag(pEffect) && potionFlags != ConsumableEffect.None)
                 {
@@ -203,8 +218,8 @@ namespace Kingdoms_of_Etrea.Core
 
         internal static uint GetNewSalePrice(ref Descriptor desc, uint basePrice)
         {
-            var charismaModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Charisma);
-            if(desc.Player.HasSkill("Mercenary"))
+            var charismaModifier = CalculateAbilityModifier(desc.Player.Charisma);
+            if (desc.Player.HasSkill("Mercenary"))
             {
                 charismaModifier += 2;
             }
@@ -237,24 +252,24 @@ namespace Kingdoms_of_Etrea.Core
 
         internal static uint GetNewPurchasePrice(ref Descriptor desc, uint basePrice)
         {
-            var charismaModifier = ActorStats.CalculateAbilityModifier(desc.Player.Stats.Charisma);
-            if(desc.Player.HasSkill("Mercenary"))
+            var charismaModifier = Helpers.CalculateAbilityModifier(desc.Player.Charisma);
+            if (desc.Player.HasSkill("Mercenary"))
             {
                 charismaModifier += 2;
             }
             int modPrice = Convert.ToInt32(basePrice);
-            if(charismaModifier < 0)
+            if (charismaModifier < 0)
             {
                 // increase price due to low charisma
                 int posMod = charismaModifier * -1;     // convert negative modifier to positive for calculations
-                for(int i = 0; i < posMod; i++)
+                for (int i = 0; i < posMod; i++)
                 {
                     modPrice += Convert.ToInt32(Math.Round(modPrice * 0.025, 0));
                 }
                 modPrice = modPrice < 0 ? 0 : modPrice;
                 return Convert.ToUInt32(modPrice);
             }
-            if(charismaModifier > 0)
+            if (charismaModifier > 0)
             {
                 // drop price due to high charisma
                 for (int i = 0; i < charismaModifier; i++)
@@ -269,27 +284,27 @@ namespace Kingdoms_of_Etrea.Core
 
         internal static string GetDamageString(uint percDmg)
         {
-            if(percDmg > 90)
+            if (percDmg > 90)
             {
                 return "destroys";
             }
-            if(percDmg <=90 && percDmg > 80)
+            if (percDmg <= 90 && percDmg > 80)
             {
                 return "devastates";
             }
-            if(percDmg <= 80 && percDmg > 50)
+            if (percDmg <= 80 && percDmg > 50)
             {
                 return "eviscerates";
             }
-            if(percDmg <= 50 && percDmg > 20)
+            if (percDmg <= 50 && percDmg > 20)
             {
                 return "smashes";
             }
-            if(percDmg <=20 && percDmg > 10)
+            if (percDmg <= 20 && percDmg > 10)
             {
                 return "hurts";
             }
-            if(percDmg <= 10 && percDmg > 5)
+            if (percDmg <= 10 && percDmg > 5)
             {
                 return "wounds";
             }
@@ -313,9 +328,9 @@ namespace Kingdoms_of_Etrea.Core
             {
                 desc.Send($"[{row}] ");
                 var input = desc.Read().Trim();
-                if(ValidateInput(input) && input.Length <= 80)
+                if (ValidateInput(input) && input.Length <= 80)
                 {
-                    if(input.ToUpper() == "END")
+                    if (input.ToUpper() == "END")
                     {
                         valid = true;
                     }
@@ -323,7 +338,7 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         body.AppendLine(input);
                         row++;
-                        if(row > 30)
+                        if (row > 30)
                         {
                             valid = true;
                         }
@@ -334,7 +349,42 @@ namespace Kingdoms_of_Etrea.Core
                     desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
                 }
             }
+            body.RemoveEmptyLines();
             return body.ToString();
+        }
+
+        internal static string EditLongDescription(ref Descriptor desc, string longDesc)
+        {
+            var lines = longDesc.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            int l = 1;
+            foreach(var line in lines)
+            {
+                desc.Send($"[{l}] {line}{Constants.NewLine}");
+                l++;
+            }
+            desc.Send("Edit which line? ");
+            var input = desc.Read().Trim();
+            if (ValidateInput(input) && int.TryParse(input, out int editLine))
+            {
+                editLine--;
+                if (editLine >= 0 && editLine < lines.Length)
+                {
+                    desc.Send($"Original:{Constants.NewLine}{lines[editLine]}{Constants.NewLine}");
+                    desc.Send($"Enter replacement line:");
+                    input = desc.Read().Trim();
+                    if (ValidateInput(input))
+                    {
+                        lines[editLine] = input.Trim();
+                    }
+                }
+            }
+            StringBuilder sb = new StringBuilder();
+            foreach(var line in lines)
+            {
+                sb.AppendLine(line.Trim());
+            }
+            sb.RemoveEmptyLines();
+            return sb.ToString();
         }
 
         internal static string GetNewMOTD(ref Descriptor desc)
@@ -373,6 +423,7 @@ namespace Kingdoms_of_Etrea.Core
                     desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
                 }
             }
+            longDesc.RemoveEmptyLines();
             return longDesc.ToString();
         }
 
@@ -413,12 +464,13 @@ namespace Kingdoms_of_Etrea.Core
                     desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
                 }
             }
+            longDesc.RemoveEmptyLines();
             return longDesc.ToString();
         }
 
         internal static string CapitaliseFirstLetter(string src)
         {
-            if(string.IsNullOrEmpty(src))
+            if (string.IsNullOrEmpty(src))
             {
                 return string.Empty;
             }
@@ -426,7 +478,7 @@ namespace Kingdoms_of_Etrea.Core
             char[] retval = new char[letters.Length];
             for (int i = 0; i < letters.Length; i++)
             {
-                if(i == 0)
+                if (i == 0)
                 {
                     retval[i] = char.ToUpper(letters[i]);
                 }
@@ -437,40 +489,19 @@ namespace Kingdoms_of_Etrea.Core
             }
             return new string(retval);
         }
+    }
 
-        internal static string PrettifyMessageToSend(string msgIn)
+    internal static class StringBuilderExtensions
+    {
+        internal static void RemoveEmptyLines(this StringBuilder sb)
         {
-            return msgIn;
-
-            // This was originally designed to split messages to clients into lines of 80 characters but never really worked properly.
-            // Consequently leaving the process of screen wrapping to MUD clients themselves instead of trying to do it for them.
-            // Code left here in case anyone else wants to have a look at fixing the wrapping.
-            const int maxLineLength = 80;
-
-            StringBuilder sb = new StringBuilder();
-            StringBuilder line = new StringBuilder();
-
-            string[] descWords = msgIn.Split(' ');
-            foreach (string word in descWords)
+            int length = sb.Length;
+            int i = length - 1;
+            while (i >= 0 && char.IsWhiteSpace(sb[i]))
             {
-                if (line.Length + word.Length + 1 <= maxLineLength)
-                {
-                    if (line.Length > 0)
-                        line.Append(' ');
-                    line.Append(word);
-                }
-                else
-                {
-                    sb.AppendLine(line.ToString());
-                    line.Clear();
-                    line.Append(word);
-                }
+                i--;
             }
-
-            if (line.Length > 0)
-                sb.AppendLine(line.ToString());
-
-            return sb.ToString();
+            sb.Length = i + 1;
         }
     }
 }

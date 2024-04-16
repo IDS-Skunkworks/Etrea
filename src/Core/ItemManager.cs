@@ -1,27 +1,27 @@
-﻿using Kingdoms_of_Etrea.Entities;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Etrea2.Entities;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class ItemManager
     {
         private static ItemManager _instance = null;
-        private static readonly object _lockObject = new object();
-        private Dictionary<uint, InventoryItem> items { get; set; }
+        private static readonly object _lock = new object();
+        private Dictionary<uint, InventoryItem> _items { get; set; }
 
         private ItemManager()
         {
-            items = new Dictionary<uint, InventoryItem>();
+            _items = new Dictionary<uint, InventoryItem>();
         }
 
         internal static ItemManager Instance
         {
             get
             {
-                lock (_lockObject)
+                lock (_lock)
                 {
                     if (_instance == null)
                     {
@@ -32,122 +32,152 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        internal bool AddItem(uint id, InventoryItem i)
+        internal InventoryItem GetItemByID(uint id)
+        {
+            lock (_lock)
+            {
+                if (Instance._items.ContainsKey(id))
+                {
+                    return Instance._items[id];
+                }
+            }
+            return null;
+        }
+
+        internal List<InventoryItem> GetItemByIDRange(uint start, uint end)
+        {
+            lock (_lock)
+            {
+                return Instance._items.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
+            }
+        }
+
+        internal InventoryItem GetItemByName(string name)
         {
             try
             {
-                lock(_lockObject)
+                lock ( _lock)
                 {
-                    Instance.items.Add(id, i);
+                    var retval = (from InventoryItem i in Instance._items.Values where Regex.IsMatch(i.Name, name, RegexOptions.IgnoreCase) select i).FirstOrDefault();
+                    return retval;
+                }
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in ItemManager.GetItemByName(): {ex.Message}", LogLevel.Error, true);
+                return null;
+            }
+        }
+
+        internal List<InventoryItem> GetItemByNameOrDescription(string input)
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    var retval = (from InventoryItem i in Instance._items.Values
+                                  where Regex.IsMatch(i.Name, input, RegexOptions.IgnoreCase) ||
+                                  Regex.IsMatch(i.ShortDescription, input, RegexOptions.IgnoreCase) ||
+                                  Regex.IsMatch(i.LongDescription, input, RegexOptions.IgnoreCase) select i).ToList();
+                    return retval;
+                }
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in ItemManager.GetItemByNameOrDescription(): {ex.Message}", LogLevel.Error, true);
+                return null;
+            }
+        }
+
+        internal bool AddItem(ref Descriptor desc, InventoryItem i)
+        {
+            try
+            {
+                lock ( _lock)
+                {
+                    Instance._items.Add(i.ID, i);
+                    Game.LogMessage($"OLC: {desc.Player.Name} has added Item {i.Name} ({i.ID}) to ItemManager", LogLevel.OLC, true);
                 }
                 return true;
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"Error adding item '{i.Name}' with ID {id}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: {desc.Player.Name} encountered an error adding Item {i.Name} ({i.ID}) to ItemManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal InventoryItem GetItemByID(uint id)
-        {
-            if(Instance.items.ContainsKey(id))
-            {
-                return Instance.items[id];
-            }
-            return null;
-        }
-
-        internal InventoryItem GetItemByName(string name)
-        {
-            return (from InventoryItem item in Instance.items.Values where Regex.Match(item.Name, name, RegexOptions.IgnoreCase).Success select item).FirstOrDefault();
-        }
-
-        internal List<InventoryItem> GetItemByIDRange(uint start, uint end)
-        {
-            var retval = items.Values.Where(x => x.Id >= start && x.Id <= end).ToList();
-            return retval;
-        }
-
-        internal List<InventoryItem> GetItemByNameOrDescription(string n)
-        {
-            return (from InventoryItem item in Instance.items.Values
-                    where Regex.Match(item.Name, n, RegexOptions.IgnoreCase).Success ||
-                    Regex.Match(item.ShortDescription, n, RegexOptions.IgnoreCase).Success || Regex.Match(item.LongDescription, n, RegexOptions.IgnoreCase).Success
-                    select item).ToList();
-        }
-
-        internal bool UpdateItemByID(uint id, ref Descriptor desc, InventoryItem item)
+        internal bool UpdateItem(uint id, ref Descriptor desc, InventoryItem i)
         {
             try
             {
-                if(Instance.items.ContainsKey(id))
+                lock (_lock)
                 {
-                    lock(_lockObject)
+                    if (Instance._items.ContainsKey(id))
                     {
-                        Instance.items.Remove(id);
-                        Instance.items.Add(id, item);
-                        Game.LogMessage($"Player {desc.Player.Name} updated item with ID {id} in the Item Manager.", LogLevel.Info, true);
+                        Instance._items.Remove(id);
+                        Instance._items.Add(id, i);
+                        Game.LogMessage($"OLC: {desc.Player.Name} updated Item {i.Name} ({i.ID}) in ItemManager", LogLevel.OLC, true);
+                        return true;
                     }
-                    return true;
-                }
-                else
-                {
-                    Game.LogMessage($"Item Manager does not contain an item with ID {id}", LogLevel.Warning, true);
-                    lock(_lockObject)
+                    else
                     {
-                        Instance.items.Add(id, item);
+                        Game.LogMessage($"OLC: ItemManager does not contain an Item with ID {id} to update, it will be added instead", LogLevel.OLC, true);
+                        bool OK = AddItem(ref desc, i);
+                        return OK;
                     }
-                    return true;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"Player {desc.Player.Name} unable to update Item ID {id} due to an exception: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Item {i.ID} ({i.Name}) in ItemManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool RemoveItemByID(uint id, ref Descriptor desc)
+        internal bool RemoveItem(ref Descriptor desc, uint id)
         {
             try
             {
-                if(Instance.items.ContainsKey(id))
+                lock (_lock)
                 {
-                    lock(_lockObject)
+                    if (Instance._items.ContainsKey(id))
                     {
-                        Instance.items.Remove(id);
+                        Instance._items.Remove(id);
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} removed Item {id} from ItemManager", LogLevel.OLC, true);
+                        return true;
                     }
-                    Game.LogMessage($"Player {desc.Player.Name} removed item ID {id} from the Item Manager", LogLevel.Info, true);
-                    return true;
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} was unable to remove Item {id} from ItemManager, the ID does not exist", LogLevel.OLC, true);
+                    return false;
                 }
-                Game.LogMessage($"Player {desc.Player.Name} was unable to remove item ID {id} from the Item Manager, the ID does not exist", LogLevel.Warning, true);
-                return false;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"Player {desc.Player.Name} was unable to remove item ID {id} from the Item Manager, Exception: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Item {id} from ItemManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
         internal bool ItemExists(uint id)
         {
-            return Instance.items.ContainsKey(id);
-        }
-
-        internal int GetItemCount()
-        {
-            return Instance.items.Count;
+            return Instance._items.ContainsKey(id);
         }
 
         internal void LoadAllItems(out bool hasError)
         {
             var result = DatabaseManager.LoadAllItems(out hasError);
-            if(!hasError && result != null && result.Count > 0)
+            if (!hasError && result != null)
             {
-                Instance.items.Clear();
-                Instance.items = result;
+                Instance._items.Clear();
+                Instance._items = result;
+            }
+        }
+
+        internal int GetItemCount()
+        {
+            lock (_lock)
+            {
+                return Instance._items.Count;
             }
         }
     }

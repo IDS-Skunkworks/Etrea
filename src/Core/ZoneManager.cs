@@ -1,29 +1,27 @@
-﻿using Kingdoms_of_Etrea.Entities;
+﻿using Etrea2.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class ZoneManager
     {
         private static ZoneManager _instance = null;
-        private static readonly object _lockObject = new object();
-        //private ILoggingProvider _loggingProvider;
-        private Dictionary<uint, Zone> zones { get; set; }
+        private static readonly object _lock = new object();
+        private Dictionary<uint, Zone> Zones { get; set; }
 
         private ZoneManager()
         {
-            //_loggingProvider = loggingProvider;
-            zones = new Dictionary<uint, Zone>();
+            Zones = new Dictionary<uint, Zone>();
         }
 
-        internal static ZoneManager Instance
+        public static ZoneManager Instance
         {
             get
             {
-                lock (_lockObject)
+                lock(_lock)
                 {
                     if (_instance == null)
                     {
@@ -34,117 +32,144 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        internal bool AddNewZone(Zone z)
+        internal bool AddNewZone(ref Descriptor desc, Zone z)
         {
             try
             {
-                lock (_lockObject)
+                lock(_lock)
                 {
-                    _instance.zones.Add(z.ZoneID, z);
+                    Instance.Zones.Add(z.ZoneID, z);
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} has added Zone {z.ZoneID} ({z.ZoneName}) to ZoneManager", LogLevel.OLC, true);
+                    return true;
                 }
-                return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"Error adding Zone {z.ZoneName} ({z.ZoneID}): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding Zone {z.ZoneID} ({z.ZoneName}) to ZoneManager: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        internal bool RemoveZone(ref Descriptor desc, uint zoneID, string zoneName)
+        {
+            try
+            {
+                lock(_lock)
+                {
+                    Instance.Zones.Remove(zoneID);
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} has removed Zone {zoneID} ({zoneName}) from ZoneManager", LogLevel.OLC, true);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Zone {zoneID} ({zoneName}) from ZoneManager: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        internal bool UpdateZone(ref Descriptor desc, Zone zone)
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    if (Instance.Zones.ContainsKey(zone.ZoneID))
+                    {
+                        Instance.Zones.Remove(zone.ZoneID);
+                        Instance.Zones.Add(zone.ZoneID, zone);
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} has updated Zone {zone.ZoneID} ({zone.ZoneName}) in ZoneManager", LogLevel.OLC, true);
+                        return true;
+                    }
+                    else
+                    {
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} attempted to update Zone {zone.ZoneID} ({zone.ZoneName}) in ZoneManager but the ID could not be found, it will be added instead", LogLevel.OLC, true);
+                        bool OK = AddNewZone(ref desc, zone);
+                        return OK;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error attempting to update Zone {zone.ZoneID} ({zone.ZoneName}) in ZoneManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
         internal uint GetMaxAllocatedRID()
         {
-            var maxAllocatedRID = Instance.zones.Max(x => x.Value.MaxRoom);
-            return maxAllocatedRID;
+            lock (_lock)
+            {
+                return Instance.Zones.Values.Max(x => x.MaxRoom);
+            }
         }
 
         internal Zone GetZoneForRID(uint rid)
         {
-            var z = Instance.zones.Values.Where(x => rid >= x.MinRoom && rid <= x.MaxRoom).FirstOrDefault();
-            return z;
-        }
-
-        internal bool IsRIDInZone(uint rid, uint zoneID)
-        {
-            return zones[zoneID].MinRoom <= rid && zones[zoneID].MaxRoom >= rid;
-        }
-
-        internal bool RemoveZone(uint zoneID, string zoneName)
-        {
-            try
+            lock (_lock)
             {
-                lock (_lockObject)
-                {
-                    _instance.zones.Remove(zoneID);
-                }
-                return true;
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"Error remvoing Zone {zoneName} ({zoneID}): {ex.Message}", LogLevel.Error, true);
-                return false;
+                return Instance.Zones.Values.Where(x => rid >= x.MinRoom && rid <= x.MaxRoom).FirstOrDefault();
             }
         }
 
-        internal bool UpdateZone(ref Descriptor desc, Zone z)
+        internal bool IsRIDInZone(uint rid, uint zone)
         {
-            try
+            lock (_lock)
             {
-                if(Instance.zones.ContainsKey(z.ZoneID))
+                if (Instance.Zones.ContainsKey(zone))
                 {
-                    lock(_lockObject)
-                    {
-                        Instance.zones.Remove(z.ZoneID);
-                        Instance.zones.Add(z.ZoneID, z);
-                        Game.LogMessage($"Player {desc.Player.Name} updated Zone with ID {z.ZoneID} in the Zone Manager", LogLevel.Info, true);
-                    }
-                    return true;
+                    return Instance.Zones[zone].MinRoom <= rid && Instance.Zones[zone].MaxRoom >= rid;
                 }
-                else
-                {
-                    Game.LogMessage($"Zone Manager does not contain a Zone with ID {z.ZoneID}", LogLevel.Warning, true);
-                    lock(_lockObject)
-                    {
-                        Instance.zones.Add(z.ZoneID, z);
-                    }
-                    return true;
-                }
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"Error updating Zone {z.ZoneName} ({z.ZoneID}): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
         internal int GetZoneCount()
         {
-            return Instance.zones.Count;
-        }
-
-        internal Zone GetZone(uint zid)
-        {
-            return Instance.zones[zid];
+            lock (_lock)
+            {
+                return Instance.Zones.Count;
+            }
         }
 
         internal Dictionary<uint, Zone> GetAllZones()
         {
-            return Instance.zones;
+            lock (_lock)
+            {
+                return Instance.Zones;
+            }
         }
 
         internal List<Zone> GetZoneByIDRange(uint start, uint end)
         {
-            var retval = zones.Values.Where(x => x.ZoneID >= start && x.ZoneID <= end).ToList();
-            return retval;
+            lock (_lock)
+            {
+                return Instance.Zones.Values.Where(x => x.ZoneID >= start && x.ZoneID <= end).ToList();
+            }
         }
 
-        internal List<Zone> GetZoneByName(string n)
+        internal List<Zone> GetZoneByName(string name)
         {
-            return (from Zone z in Instance.zones.Values where Regex.Match(z.ZoneName, n, RegexOptions.IgnoreCase).Success select z).ToList();
+            lock (_lock)
+            {
+                return Instance.Zones.Values.Where(x => Regex.IsMatch(x.ZoneName, name, RegexOptions.IgnoreCase)).ToList();
+            }
         }
 
-        internal bool ZoneExists(uint zoneId)
+        internal Zone GetZone(uint id)
         {
-            return Instance.zones.ContainsKey(zoneId);
+            lock (_lock)
+            {
+                return Instance.Zones.ContainsKey(id) ? Instance.Zones[id] : null;
+            }
+        }
+
+        internal bool ZoneExists(uint zone)
+        {
+            lock (_lock)
+            {
+                return Instance.Zones.ContainsKey(zone);
+            }
         }
 
         internal void LoadAllZones(out bool hasError)
@@ -152,8 +177,8 @@ namespace Kingdoms_of_Etrea.Core
             var result = DatabaseManager.LoadAllZones(out hasError);
             if (!hasError && result != null && result.Count > 0)
             {
-                Instance.zones.Clear();
-                Instance.zones = result;
+                Instance.Zones.Clear();
+                Instance.Zones = result;
             }
         }
     }

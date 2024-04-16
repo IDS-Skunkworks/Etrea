@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
+using Etrea2.Core;
 using System.Threading;
-using System.Threading.Tasks;
-using Kingdoms_of_Etrea.Core;
 
-namespace Kingdoms_of_Etrea.Networking
+namespace Etrea2.Networking
 {
     internal class TcpServer
     {
@@ -14,7 +14,7 @@ namespace Kingdoms_of_Etrea.Networking
         private CancellationTokenSource _tokenSource;
         private string _ip;
         private int _port;
-        private byte[] _buffer = new byte[256];
+        private byte[] _buffer = new byte[1024];
 
         internal TcpServer(string ipAddress, int port)
         {
@@ -44,24 +44,23 @@ namespace Kingdoms_of_Etrea.Networking
         {
             Task.Run(async () =>
             {
-                if(_listener != null && _accept)
+                if (_listener != null && _accept)
                 {
-                    while(true)
+                    while (true)
                     {
-                        if(_tokenSource.Token.IsCancellationRequested)
+                        if (_tokenSource.Token.IsCancellationRequested)
                         {
-                            Game.LogMessage("INFO: Stopping TCP listener...", LogLevel.Info, true);
+                            Game.LogMessage($"INFO: Stopping TCP listener...", LogLevel.Info, true);
                             _accept = false;
                             _listener.Stop();
                             break;
                         }
                         var clientTask = _listener.AcceptTcpClientAsync();
-
-                        if(clientTask.Result != null)
+                        if (clientTask.Result != null)
                         {
                             var client = clientTask.Result;
-                            Game.LogMessage($"INFO: Accepting new connection from {client.Client.RemoteEndPoint}", LogLevel.Connection, true);
-                            await SessionManager.Instance.NewDescriptorAsync(client);
+                            Game.LogMessage($"CONNECTION: Accepting new connection from {client.Client.RemoteEndPoint}", LogLevel.Connection, true);
+                            await SessionManager.Instance.NewDescriptor(client);
                         }
                     }
                 }
@@ -70,7 +69,7 @@ namespace Kingdoms_of_Etrea.Networking
 
         internal void Shutdown()
         {
-            Game.LogMessage("SHUTDOWN: Requesting TCP listener stop", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Requesting TCP listener stop", LogLevel.Info, true);
             _tokenSource.Cancel();
         }
     }

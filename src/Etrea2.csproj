@@ -4,20 +4,19 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{65402E18-46CD-4444-9059-ABAE6D9F9561}</ProjectGuid>
+    <ProjectGuid>{F14ED9DC-1568-402E-B6D4-C42A783C0A4E}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Kingdoms_of_Etrea</RootNamespace>
-    <AssemblyName>Kingdoms of Etrea</AssemblyName>
-    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <RootNamespace>Etrea2</RootNamespace>
+    <AssemblyName>Etrea2</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -36,7 +35,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Resources\Hybridworks-Haunted-Hotel-Haunted-Hotel.ico</ApplicationIcon>
+    <ApplicationIcon>Iconarchive-Fairy-Tale-Dark-Castle.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -48,9 +47,6 @@
     <Reference Include="System.Data.SQLite, Version=1.0.118.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
       <HintPath>..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\lib\net46\System.Data.SQLite.dll</HintPath>
     </Reference>
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -61,6 +57,7 @@
   <ItemGroup>
     <Compile Include="Core\ActImmortal.cs" />
     <Compile Include="Core\ActPlayer.cs" />
+    <Compile Include="Core\BuffManager.cs" />
     <Compile Include="Core\CharacterCreator.cs" />
     <Compile Include="Core\CombatManager.cs" />
     <Compile Include="Core\CommandParser.cs" />
@@ -72,68 +69,79 @@
     <Compile Include="Core\Game.cs" />
     <Compile Include="Core\Helpers.cs" />
     <Compile Include="Core\ItemManager.cs" />
+    <Compile Include="Core\LevelTable.cs" />
     <Compile Include="Core\NodeManager.cs" />
     <Compile Include="Core\NPCManager.cs" />
     <Compile Include="Core\QuestManager.cs" />
     <Compile Include="Core\RecipeManager.cs" />
-    <Compile Include="Core\ShopManager.cs" />
-    <Compile Include="Entities\Buff.cs" />
-    <Compile Include="Entities\CombatSession.cs" />
-    <Compile Include="Entities\CraftingRecipe.cs" />
-    <Compile Include="Entities\Emote.cs" />
-    <Compile Include="Entities\Mail.cs" />
-    <Compile Include="Entities\Quest.cs" />
-    <Compile Include="Entities\ResourceNode.cs" />
-    <Compile Include="Entities\Shop.cs" />
-    <Compile Include="Entities\Skills.cs" />
-    <Compile Include="Entities\Spells.cs" />
-    <Compile Include="OLC\CraftingRecipe.cs" />
-    <Compile Include="OLC\Emotes.cs" />
-    <Compile Include="OLC\Items.cs" />
-    <Compile Include="OLC\NPC.cs" />
-    <Compile Include="OLC\OLC.cs" />
     <Compile Include="Core\RoomManager.cs" />
     <Compile Include="Core\SessionManager.cs" />
+    <Compile Include="Core\ShopManager.cs" />
+    <Compile Include="Core\SkillManager.cs" />
+    <Compile Include="Core\SpellManager.cs" />
     <Compile Include="Core\ZoneManager.cs" />
     <Compile Include="Entities\Actor.cs" />
-    <Compile Include="Entities\Item.cs" />
+    <Compile Include="Entities\Buff.cs" />
+    <Compile Include="Entities\CombatSession.cs" />
+    <Compile Include="Entities\Emote.cs" />
+    <Compile Include="Entities\Exit.cs" />
+    <Compile Include="Entities\InventoryItem.cs" />
+    <Compile Include="Entities\Mail.cs" />
+    <Compile Include="Entities\Quest.cs" />
+    <Compile Include="Entities\Recipe.cs" />
+    <Compile Include="Entities\ResourceNode.cs" />
     <Compile Include="Entities\Room.cs" />
+    <Compile Include="Entities\RoomDoor.cs" />
+    <Compile Include="Entities\Shop.cs" />
+    <Compile Include="Entities\Skill.cs" />
+    <Compile Include="Entities\Spell.cs" />
     <Compile Include="Entities\Zone.cs" />
-    <Compile Include="Enums\Enums.cs" />
+    <Compile Include="Enums\ActorClass.cs" />
+    <Compile Include="Enums\ActorPosition.cs" />
+    <Compile Include="Enums\ActorRace.cs" />
+    <Compile Include="Enums\ActorType.cs" />
+    <Compile Include="Enums\Alignment.cs" />
+    <Compile Include="Enums\ArmourType.cs" />
+    <Compile Include="Enums\ConnectionState.cs" />
+    <Compile Include="Enums\ConsumableEffect.cs" />
+    <Compile Include="Enums\Gender.cs" />
+    <Compile Include="Enums\ItemType.cs" />
+    <Compile Include="Enums\Languages.cs" />
+    <Compile Include="Enums\LogLevel.cs" />
+    <Compile Include="Enums\NPCFlags.cs" />
+    <Compile Include="Enums\QuestType.cs" />
+    <Compile Include="Enums\RecipeType.cs" />
+    <Compile Include="Enums\RoomFlags.cs" />
+    <Compile Include="Enums\SpellElement.cs" />
+    <Compile Include="Enums\SpellType.cs" />
+    <Compile Include="Enums\WeaponType.cs" />
+    <Compile Include="Enums\WearSlot.cs" />
     <Compile Include="Interfaces\IInputValidator.cs" />
     <Compile Include="Interfaces\ILoggingProvider.cs" />
     <Compile Include="Interfaces\ILogonProvider.cs" />
     <Compile Include="Interfaces\LoggingProvider.cs" />
     <Compile Include="Interfaces\LogonProvider.cs" />
     <Compile Include="Networking\TcpServer.cs" />
+    <Compile Include="OLC\Emotes.cs" />
+    <Compile Include="OLC\Items.cs" />
+    <Compile Include="OLC\Nodes.cs" />
+    <Compile Include="OLC\NPCs.cs" />
+    <Compile Include="OLC\OLC.cs" />
     <Compile Include="OLC\Quests.cs" />
-    <Compile Include="OLC\ResourceNode.cs" />
+    <Compile Include="OLC\Recipes.cs" />
     <Compile Include="OLC\Rooms.cs" />
-    <Compile Include="OLC\Shop.cs" />
-    <Compile Include="OLC\Zone.cs" />
+    <Compile Include="OLC\Shops.cs" />
+    <Compile Include="OLC\Spells.cs" />
+    <Compile Include="OLC\Zones.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Structs\Structs.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Hybridworks-Haunted-Hotel-Haunted-Hotel.ico" />
-  </ItemGroup>
-  <ItemGroup>
+    <Content Include="Iconarchive-Fairy-Tale-Dark-Castle.ico" />
     <Content Include="ToDo.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,14 +1,14 @@
-﻿using Kingdoms_of_Etrea.Core;
+﻿using Etrea2.Core;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Entities
+namespace Etrea2.Entities
 {
     internal class Emote
     {
         [JsonProperty]
-        internal uint EmoteID { get; set; }
+        internal uint ID { get; set; }
         [JsonProperty]
         internal string EmoteName { get; set; }
         [JsonProperty]
@@ -34,16 +34,38 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal string MsgToPlayerWhenTargetIsPlayer { get; set; }
 
+        internal Emote ShallowCopy()
+        {
+            var e = (Emote)this.MemberwiseClone();
+            return e;
+        }
+
+        internal Emote()
+        {
+            EmoteName = string.Empty;
+            MsgToPlayerWithTarget = string.Empty;
+            MsgToPlayerWithNoTarget = string.Empty;
+            MsgToTarget = string.Empty;
+            MsgToOthersWithTarget = string.Empty;
+            MsgToOthersWithNoTarget = string.Empty;
+            MsgToOthersWithVisPlayerAndInvisTarget = string.Empty;
+            MsgToOthersWithInvisPlayerAndTarget = string.Empty;
+            MsgToPlayerTargetNotFound = string.Empty;
+            MsgToOthersTargetNotFound = string.Empty;
+            MsgToOthersWhenTargetIsPlayer = string.Empty;
+            MsgToPlayerWhenTargetIsPlayer = string.Empty;
+        }
+
         internal void ShowEmoteMessage(ref Descriptor desc, string target)
         {
             var playerName = desc.Player.Name;
-            if(string.IsNullOrEmpty(target))
+            if (string.IsNullOrEmpty(target))
             {
                 desc.Send($"{MsgToPlayerWithNoTarget}{Constants.NewLine}");
                 var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                if(localPlayers != null && localPlayers.Count > 1)
+                if (localPlayers != null && localPlayers.Count > 1)
                 {
-                    foreach(var player in localPlayers.Where(x => x.Player.Name != playerName))
+                    foreach (var player in localPlayers.Where(x => x.Player.Name != playerName))
                     {
                         var msg = desc.Player.Visible || player.Player.Level >= Constants.ImmLevel ?
                             $"{MsgToOthersWithNoTarget.Replace("{Player}", playerName)}{Constants.NewLine}" :
@@ -55,16 +77,16 @@ namespace Kingdoms_of_Etrea.Entities
             else
             {
                 var tp = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if(tp != null)
+                if (tp != null)
                 {
                     // we have a target player
-                    if(tp.Player.Name == desc.Player.Name)
+                    if (tp.Player.Name == desc.Player.Name)
                     {
                         desc.Send($"{MsgToPlayerWhenTargetIsPlayer.Replace("{Player", playerName).Replace("{Target}", playerName)}{Constants.NewLine}");
                         var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => x.Player.Name != tp.Player.Name).ToList();
-                        if(localPlayers != null && localPlayers.Count > 0)
+                        if (localPlayers != null && localPlayers.Count > 0)
                         {
-                            foreach(var player in localPlayers)
+                            foreach (var player in localPlayers)
                             {
                                 var msg = desc.Player.Visible || player.Player.Level >= Constants.ImmLevel ?
                                     $"{MsgToOthersWhenTargetIsPlayer.Replace("{Player}", playerName).Replace("{Target}", playerName)}{Constants.NewLine}" :
@@ -154,9 +176,9 @@ namespace Kingdoms_of_Etrea.Entities
                         // target is an npc
                         desc.Send($"{MsgToPlayerWithTarget.Replace("{Player}", playerName).Replace("{Target}", tnpc.Name)}{Constants.NewLine}");
                         var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        if(localPlayers != null && localPlayers.Count > 1)
+                        if (localPlayers != null && localPlayers.Count > 1)
                         {
-                            foreach(var player in localPlayers.Where(x => x.Player.Name != playerName))
+                            foreach (var player in localPlayers.Where(x => x.Player.Name != playerName))
                             {
                                 var msg = desc.Player.Visible || player.Player.Level >= Constants.ImmLevel ?
                                     $"{MsgToOthersWithTarget.Replace("{Player}", playerName).Replace("{Target}", tnpc.Name)}{Constants.NewLine}" :
@@ -170,9 +192,9 @@ namespace Kingdoms_of_Etrea.Entities
                         // target can't be found
                         desc.Send($"{MsgToPlayerTargetNotFound.Replace("{Player}", desc.Player.Name).Replace("{Target}", target)}{Constants.NewLine}");
                         var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        if(localPlayers != null && localPlayers.Count > 1)
+                        if (localPlayers != null && localPlayers.Count > 1)
                         {
-                            foreach(var player in localPlayers.Where(x => x.Player.Name != playerName))
+                            foreach (var player in localPlayers.Where(x => x.Player.Name != playerName))
                             {
                                 var msg = desc.Player.Visible || player.Player.Level >= Constants.ImmLevel ?
                                     $"{MsgToOthersTargetNotFound.Replace("{Player}", playerName).Replace("{Target}", target)}{Constants.NewLine}" :

@@ -1,12 +1,10 @@
-﻿using Kingdoms_of_Etrea.Core;
-using Kingdoms_of_Etrea.Interfaces;
+﻿using Etrea2.Core;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Entities
+namespace Etrea2.Entities
 {
     [Serializable]
     internal abstract class Actor
@@ -18,15 +16,17 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal string LongDescription { get; set; }
         [JsonProperty]
+        internal string ArrivalMessage { get; set; }
+        [JsonProperty]
+        internal string DepartureMessage { get; set; }
+        [JsonProperty]
         internal string Title { get; set; }
         [JsonProperty]
         internal uint Level { get; set; }
         [JsonProperty]
         internal Gender Gender { get; set; }
         [JsonProperty]
-        internal ActorType Type { get; set; }
-        [JsonProperty]
-        internal ActorStats Stats { get; set; }
+        internal ActorType ActorType { get; set; }
         [JsonProperty]
         internal ActorClass Class { get; set; }
         [JsonProperty]
@@ -34,11 +34,9 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal ActorPosition Position { get; set; }
         [JsonProperty]
-        internal ActorAlignment Alignment { get; set; }
+        internal Alignment Alignment { get; set; }
         [JsonProperty]
         internal int AlignmentScale { get; set; }
-        [JsonProperty]
-        internal EquippedItems EquippedItems { get; set; }
         [JsonProperty]
         internal uint CurrentRoom { get; set; }
         [JsonProperty]
@@ -46,279 +44,1156 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal Dictionary<string, int> Buffs { get; set; }
         [JsonProperty]
-        internal List<Skills.Skill> Skills { get; set; }
-        [JsonProperty]
-        internal List<Spells.Spell> Spells { get; set; }
-        [JsonProperty]
         internal List<InventoryItem> Inventory { get; set; }
-        [JsonProperty]
-        internal List<InventoryItem> VaultStore { get; set; }
         [JsonProperty]
         internal uint NumberOfAttacks { get; set; }
         [JsonProperty]
-        internal uint CombatInitiative { get; set; }
+        internal int ResistFire { get; set; }
         [JsonProperty]
-        internal int FireResistance { get; set; }
+        internal int ResistIce { get; set; }
         [JsonProperty]
-        internal int IceResistance { get; set; }
+        internal int ResistLightning { get; set; }
         [JsonProperty]
-        internal int LightningResistance { get; set; }
+        internal int ResistEarth { get; set; }
         [JsonProperty]
-        internal int EarthResistance { get; set; }
+        internal int ResistHoly { get; set; }
         [JsonProperty]
-        internal int HolyResistance { get; set; }
+        internal int ResistDark { get; set; }
         [JsonProperty]
-        internal int DarkResistance { get; set; }
+        internal ulong Gold { get; set; }
+        [JsonProperty]
+        internal uint Strength { get; set; }
+        [JsonProperty]
+        internal uint Dexterity { get; set; }
+        [JsonProperty]
+        internal uint Constitution { get; set; }
+        [JsonProperty]
+        internal uint Intelligence { get; set; }
+        [JsonProperty]
+        internal uint Wisdom { get; set; }
+        [JsonProperty]
+        internal uint Charisma { get; set; }
+        [JsonProperty]
+        internal uint BaseArmourClass { get; set; }
+        [JsonProperty]
+        internal uint ArmourClass { get; set; }
+        [JsonProperty]
+        internal List<Spell> Spells { get; set; }
+        [JsonProperty]
+        internal List <Skill> Skills { get; set; }
+        [JsonProperty]
+        internal InventoryItem EquipHead { get; set; }
+        [JsonProperty]
+        internal InventoryItem EquipNeck { get; set; }
+        [JsonProperty]
+        internal InventoryItem EquipArmour { get; set; }
+        [JsonProperty]
+        internal InventoryItem EquipLeftFinger { get; set; }
+        [JsonProperty]
+        internal InventoryItem EquipRightFinger { get; set; }
+        [JsonProperty]
+        internal InventoryItem EquipWeapon { get; set; }
+        [JsonProperty]
+        internal InventoryItem EquipHeld { get; set; }
+        [JsonProperty]
+        internal int CurrentSP { get; set; }
+        [JsonProperty]
+        internal int MaxSP { get; set; }
+        [JsonProperty]
+        internal int MaxHP { get; set; }
+        [JsonProperty]
+        internal int MaxMP { get; set; }
+        [JsonProperty]
+        internal int CurrentHP { get; set; }
+        [JsonProperty]
+        internal int CurrentMP { get; set; }
+
+        internal uint DoDamageRoll(Actor defender)
+        {
+            int damage = EquipWeapon != null ? (int)Helpers.RollDice(EquipWeapon.NumberOfDamageDice, EquipWeapon.SizeOfDamageDice) : (int)Helpers.RollDice(1, 2);
+            if (EquipWeapon == null || !EquipWeapon.IsFinesse)
+            {
+                var abilityMod = Helpers.CalculateAbilityModifier(Strength);
+                damage += abilityMod;
+            }
+            if (EquipWeapon != null && EquipWeapon.IsFinesse)
+            {
+                var abilityMod = Helpers.CalculateAbilityModifier(Dexterity);
+                damage += abilityMod;
+            }
+            if (HasBuff("Desperate Attack"))
+            {
+                damage += 4;
+            }
+            if (HasBuff("Bless"))
+            {
+                damage += 1;
+            }
+            if (EquipWeapon != null && EquipWeapon.RequiredSkill != null)
+            {
+                if (EquipWeapon.RequiredSkill.Name.ToLower() == "Simple Weapons" && HasSkill("Simple Weapon Mastery"))
+                {
+                    damage += 2;
+                }
+                if (EquipWeapon.RequiredSkill.Name.ToLower() == "Martial Weapons" && HasSkill("Martial Weapon Mastery"))
+                {
+                    damage += 2;
+                }
+                if (EquipWeapon.RequiredSkill.Name.ToLower() == "Exotic Weapons" && HasSkill("Exotic Weapon Mastery"))
+                {
+                    damage += 2;
+                }
+            }
+            if (defender.EquipArmour != null && defender.EquipArmour.DamageReductionModifier > 0)
+            {
+                damage -= defender.EquipArmour.DamageModifier;
+            }
+            if (defender.HasBuff("Barkskin"))
+            {
+                damage -= 2;
+            }
+            if (defender.HasBuff("Stoneskin"))
+            {
+                damage -= 3;
+            }
+            if (defender.HasBuff("Ironskin"))
+            {
+                damage -= 4;
+            }
+            damage = damage < 0 ? 0 : damage;
+            return (uint)damage;
+        }
+
+        internal bool DoHitRoll(Actor target, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical)
+        {
+            baseHitRoll = Helpers.RollDice(1, 20);
+            isCritical = baseHitRoll == 20;
+            if (baseHitRoll > 1 && !isCritical)
+            {
+                int modHitRoll = (int)baseHitRoll;
+                if (EquipWeapon != null && EquipWeapon.IsFinesse)
+                {
+                    modHitRoll += Helpers.CalculateAbilityModifier(Dexterity);
+                }
+                else
+                {
+                    modHitRoll += Helpers.CalculateAbilityModifier(Strength);
+                }
+                // TODO: Anything which directly affects an attacker's hit roll should be dealt with here
+                //       Defender's AC is dealt with under the call to CalculateArmourClass() before we compare results
+                if (HasBuff("Truestrike"))
+                {
+                    modHitRoll += 10;
+                }
+                if (HasBuff("Desperate Attack"))
+                {
+                    modHitRoll -= 4;
+                }
+                if (HasBuff("Bless"))
+                {
+                    modHitRoll += 1;
+                }
+                if (HasSkill("Awareness"))
+                {
+                    modHitRoll += 1;
+                }
+                if (EquipWeapon != null && EquipWeapon.RequiredSkill != null)
+                {
+                    if (EquipWeapon.RequiredSkill.Name == "Simple Weapons" && HasSkill("Simple Weapon Mastery"))
+                    {
+                        modHitRoll += 2;
+                    }
+                    if (EquipWeapon.RequiredSkill.Name == "Martial Weapons" && HasSkill("Martial Weapon Mastery"))
+                    {
+                        modHitRoll += 2;
+                    }
+                    if (EquipWeapon.RequiredSkill.Name == "Exotic Weapons" && HasSkill("Exotic Weapon Mastery"))
+                    {
+                        modHitRoll += 2;
+                    }
+                }
+                target.CalculateArmourClass();
+                finalHitRoll = modHitRoll < 1 ? 1 : (uint)modHitRoll;
+                return finalHitRoll >= target.ArmourClass;
+            }
+            else
+            {
+                finalHitRoll = baseHitRoll;
+                if (baseHitRoll == 1)
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+        }
 
         internal void CalculateArmourClass()
         {
-            int baseAC = 10;
-            int dexModifier = ActorStats.CalculateAbilityModifier(Stats.Dexterity);
+            int acBase = Convert.ToInt32(BaseArmourClass);
+            int dexModifier = Helpers.CalculateAbilityModifier(Dexterity);
             int eqModifiers = 0, skillModifiers = 0;
-            eqModifiers += EquippedItems.Head != null ? EquippedItems.Head.ArmourClassModifier : 0;
-            eqModifiers += EquippedItems.Neck != null ? EquippedItems.Neck.ArmourClassModifier : 0;
-            eqModifiers += EquippedItems.Armour != null ? EquippedItems.Armour.ArmourClassModifier : 0;
-            eqModifiers += EquippedItems.Held != null ? EquippedItems.Held.ArmourClassModifier : 0;
-            eqModifiers += EquippedItems.FingerLeft != null ? EquippedItems.FingerLeft.ArmourClassModifier : 0;
-            eqModifiers += EquippedItems.FingerRight != null ? EquippedItems.FingerRight.ArmourClassModifier : 0;
-            if(HasSkill("Parry"))
+            eqModifiers += EquipHead != null ? EquipHead.ArmourClassModifier : 0;
+            eqModifiers += EquipNeck != null ? EquipNeck.ArmourClassModifier : 0;
+            eqModifiers += EquipArmour != null ? EquipArmour.ArmourClassModifier : 0;
+            eqModifiers += EquipHeld != null ? EquipHeld.ArmourClassModifier : 0;
+            eqModifiers += EquipLeftFinger != null ? EquipLeftFinger.ArmourClassModifier : 0;
+            eqModifiers += EquipRightFinger != null ? EquipRightFinger.ArmourClassModifier : 0;
+            eqModifiers += EquipWeapon != null ? EquipWeapon.ArmourClassModifier : 0;
+            if (EquipWeapon != null && EquipWeapon.IsFinesse && HasSkill("Parry"))
             {
                 skillModifiers += 2;
             }
-            if(HasSkill("Dodge"))
+            if (HasSkill("Dodge") && (EquipArmour == null || (EquipArmour != null && EquipArmour.BaseArmourType == ArmourType.Light)))
             {
                 skillModifiers += 2;
             }
-            var finalAC = baseAC + dexModifier + eqModifiers + skillModifiers;
+            var finalAC = acBase + dexModifier + eqModifiers + skillModifiers;
             finalAC = finalAC < 0 ? 0 : finalAC;
-            Stats.ArmourClass = Convert.ToUInt32(finalAC);
+            ArmourClass = Convert.ToUInt32(finalAC);
         }
 
         internal bool HasItemInInventory(uint itemID)
         {
-            if(Inventory != null && Inventory.Count > 0)
+            if (Inventory != null && Inventory.Count > 0)
             {
-                return Inventory.Any(x => x.Id ==  itemID);
-            }
-            return false;
-        }
-
-        internal bool HasItemInVault(uint itemID)
-        {
-            if (VaultStore != null && VaultStore.Count > 0)
-            {
-                return VaultStore.Any(x => x.Id == itemID);
+                return Inventory.Any(x => x.ID == itemID);
             }
             return false;
         }
 
         internal void AddSpell(string spellName)
         {
-            if(Spells == null)
+            var s = SpellManager.Instance.GetSpell(spellName);
+            if (s != null && !Spells.Contains(s))
             {
-                Spells = new List<Spells.Spell>();
-            }
-            if (!Spells.Any(x => Regex.Match(x.SpellName, spellName, RegexOptions.IgnoreCase).Success))
-            {
-                var s = Entities.Spells.GetSpell(spellName);
                 Spells.Add(s);
             }
         }
 
         internal void RemoveSpell(string spellName)
         {
-            if(Spells == null)
+            var s = SpellManager.Instance.GetSpell(spellName);
+            if (s != null && Spells.Contains(s))
             {
-                Spells = new List<Spells.Spell>();
-            }
-            if (Spells.Any(x => Regex.Match(x.SpellName, spellName, RegexOptions.IgnoreCase).Success))
-            {
-                var s = Entities.Spells.GetSpell(spellName);
                 Spells.Remove(s);
             }
         }
 
-        internal bool HasSpell(string spellName)
-        {
-            if(Spells == null)
-            {
-                Spells = new List<Spells.Spell>();
-            }
-            if (Spells.Count > 0)
-            {
-                return Spells.Any(x => Regex.Match(x.SpellName, spellName, RegexOptions.IgnoreCase).Success);
-            }
-            return false;
-        }
-
         internal void AddSkill(string skillName)
         {
-            if(Skills == null)
+            var s = SkillManager.Instance.GetSkill(skillName);
+            if (s != null && !Skills.Contains(s))
             {
-                Skills = new List<Skills.Skill>();
-            }
-            if (!Skills.Any(x => Regex.Match(x.Name, skillName, RegexOptions.IgnoreCase).Success))
-            {
-                var s = Entities.Skills.GetSkill(skillName);
                 Skills.Add(s);
             }
         }
 
         internal void RemoveSkill(string skillName)
         {
-            if (Skills == null)
+            var s = SkillManager.Instance.GetSkill(skillName);
+            if (s != null && Skills.Contains(s))
             {
-                Skills = new List<Skills.Skill>();
-            }
-            if (Skills.Any(x => Regex.Match(x.Name, skillName, RegexOptions.IgnoreCase).Success))
-            {
-                var s = Entities.Skills.GetSkill(skillName);
                 Skills.Remove(s);
             }
         }
 
-        internal bool HasSkill(string skillName)
+        internal bool HasSpell(string spellName)
         {
-            if (Skills == null)
-            {
-                Skills = new List<Skills.Skill>();
-            }
-            if (Skills.Count > 0)
-            {
-                return Skills.Any(x => Regex.Match(x.Name, skillName, RegexOptions.IgnoreCase).Success);
-            }
-            return false;
+            return Spells.Any(x => x != null && x.SpellName.ToLower() == spellName.ToLower());
         }
 
-        internal bool HasBuff(string buffName)
+        internal bool HasSkill(string skillName)
         {
-            if(Buffs == null)
+            return Skills.Any(x => x != null && x.Name.ToLower() == skillName.ToLower());
+        }
+
+        internal void AddBuff(string buffName, int bonusDuration, bool isPermanent)
+        {
+            // TODO: Check calls to this function and see if we can use Max to pass through the highest value for bonus duration
+            var b = BuffManager.Instance.GetBuff(buffName);
+            if (b != null)
             {
-                Buffs = new Dictionary<string, int>();
+                CalculateArmourClass();
+                if (Buffs.ContainsKey(buffName))
+                {
+                    if (isPermanent)
+                    {
+                        Buffs[buffName] = -1;
+                    }
+                    else
+                    {
+                        if (Buffs[buffName] > 0)
+                        {
+                            Buffs[buffName] += b.BuffDuration + bonusDuration;
+                        }
+                    }
+                }
+                else
+                {
+                    if (isPermanent)
+                    {
+                        Buffs.Add(buffName, -1);
+                    }
+                    else
+                    {
+                        Buffs.Add(buffName, b.BuffDuration + bonusDuration);
+                    }
+                }
+                switch (buffName)
+                {
+                    // add cases here to add the effects of buffs which have been applied
+                    case "Bulls Strength":
+                        Strength += 4;
+                        break;
+
+                    case "Cats Grace":
+                        Dexterity += 4;
+                        break;
+
+                    case "Bears Endurance":
+                        Constitution += 4;
+                        break;
+
+                    case "Owls Wisdom":
+                        Wisdom += 4;
+                        break;
+
+                    case "Eagles Splendour":
+                        Charisma += 4;
+                        break;
+
+                    case "Foxs Cunning":
+                        Intelligence += 4;
+                        break;
+
+                    case "Mage Armour":
+                        ArmourClass += 5;
+                        break;
+
+                    case "Fae Fire":
+                        ArmourClass -= 4;
+                        break;
+
+                    case "Minor Fire Resistance":
+                        ResistFire += 15;
+                        break;
+
+                    case "Moderate Fire Resistance":
+                        ResistFire += 30;
+                        break;
+
+                    case "Greater Fire Resistance":
+                        ResistFire += 70;
+                        break;
+
+                    case "Minor Ice Resistance":
+                        ResistIce += 15;
+                        break;
+
+                    case "Moderate Ice Resistance":
+                        ResistIce += 30;
+                        break;
+
+                    case "Greater Ice Resistance":
+                        ResistIce += 70;
+                        break;
+
+                    case "Minor Lightning Resistance":
+                        ResistLightning += 15;
+                        break;
+
+                    case "Moderate Lightning Resistance":
+                        ResistLightning += 30;
+                        break;
+
+                    case "Greater Lightning Resistance":
+                        ResistLightning += 70;
+                        break;
+
+                    case "Minor Earth Resistance":
+                        ResistEarth += 15;
+                        break;
+
+                    case "Moderate Earth Resistance":
+                        ResistEarth += 30;
+                        break;
+
+                    case "Greater Earth Resistance":
+                        ResistEarth += 70;
+                        break;
+
+                    case "Minor Dark Resistance":
+                        ResistDark += 15;
+                        break;
+
+                    case "Moderate Dark Resistance":
+                        ResistDark += 30;
+                        break;
+
+                    case "Greater Dark Resistance":
+                        ResistDark += 70;
+                        break;
+
+                    case "Minor Holy Resistance":
+                        ResistHoly += 15;
+                        break;
+
+                    case "Moderate Holy Resistance":
+                        ResistHoly += 30;
+                        break;
+
+                    case "Greater Holy Resistance":
+                        ResistHoly += 70;
+                        break;
+
+                    case "Minor Fire Weakness":
+                        ResistFire -= 15;
+                        break;
+
+                    case "Minor Ice Weakness":
+                        ResistIce -= 15;
+                        break;
+
+                    case "Minor Lightning Weakness":
+                        ResistLightning -= 15;
+                        break;
+
+                    case "Minor Earth Weakness":
+                        ResistEarth -= 15;
+                        break;
+
+                    case "Minor Holy Weakness":
+                        ResistHoly -= 15;
+                        break;
+
+                    case "Minor Dark Weakness":
+                        ResistDark -= 15;
+                        break;
+
+                    case "Moderate Fire Weakness":
+                        ResistFire -= 30;
+                        break;
+
+                    case "Moderate Ice Weakness":
+                        ResistIce -= 30;
+                        break;
+
+                    case "Moderate Lightning Weakness":
+                        ResistLightning -= 30;
+                        break;
+
+                    case "Moderate Earth Weakness":
+                        ResistEarth -= 30;
+                        break;
+
+                    case "Moderate Holy Weakness":
+                        ResistHoly -= 30;
+                        break;
+
+                    case "Moderate Dark Weakness":
+                        ResistDark -= 30;
+                        break;
+
+                    case "Greater Fire Weakness":
+                        ResistFire -= 70;
+                        break;
+
+                    case "Greater Ice Weakness":
+                        ResistIce -= 70;
+                        break;
+
+                    case "Greater Lightning Weakness":
+                        ResistLightning -= 70;
+                        break;
+
+                    case "Greater Earth Weakness":
+                        ResistEarth -= 70;
+                        break;
+
+                    case "Greater Holy Weakness":
+                        ResistHoly -= 70;
+                        break;
+
+                    case "Greater Dark Weakness":
+                        ResistDark -= 70;
+                        break;
+
+                    default:
+                        break;
+                }
+                CalculateArmourClass();
             }
-            if (Buffs != null && Buffs.Count > 0)
-            {
-                return Buffs.Keys.Any(x => Regex.Match(x, buffName, RegexOptions.IgnoreCase).Success);
-            }
-            return false;
         }
 
         internal void RemoveBuff(string buffName)
         {
-            if(Buffs == null)
-            {
-                Buffs = new Dictionary<string, int>();
-            }    
             if (Buffs.ContainsKey(buffName))
             {
                 Buffs.Remove(buffName);
-                switch (buffName)
+                switch(buffName)
                 {
                     // add cases here to remove the effects of buffs which have expired
                     case "Bulls Strength":
-                        Stats.Strength -= 4;
+                        Strength -= 4;
                         break;
 
                     case "Cats Grace":
-                        Stats.Dexterity -= 4;
+                        Dexterity -= 4;
                         break;
 
                     case "Bears Endurance":
-                        Stats.Constitution -= 4;
+                        Constitution -= 4;
                         break;
 
                     case "Owls Wisdom":
-                        Stats.Wisdom -= 4;
+                        Wisdom -= 4;
                         break;
 
                     case "Eagles Splendour":
-                        Stats.Charisma -= 4;
+                        Charisma -= 4;
                         break;
 
                     case "Foxs Cunning":
-                        Stats.Intelligence -= 4;
+                        Intelligence -= 4;
                         break;
 
                     case "Mage Armour":
-                        Stats.ArmourClass -= 5;
+                        ArmourClass -= 5;
                         break;
 
                     case "Fae Fire":
-                        Stats.ArmourClass += 4;
+                        ArmourClass += 4;
+                        break;
+
+                    case "Minor Fire Resistance":
+                        ResistFire -= 15;
+                        break;
+
+                    case "Intermediate Fire Resistance":
+                        ResistFire -= 30;
+                        break;
+
+                    case "Greater Fire Resistance":
+                        ResistFire -= 70;
+                        break;
+
+                    case "Minor Ice Resistance":
+                        ResistIce -= 15;
+                        break;
+
+                    case "Intermediate Ice Resistance":
+                        ResistIce -= 30;
+                        break;
+
+                    case "Greater Ice Resistance":
+                        ResistIce -= 70;
+                        break;
+
+                    case "Minor Lightning Resistance":
+                        ResistLightning -= 15;
+                        break;
+
+                    case "Intermediate Lightning Resistance":
+                        ResistLightning -= 30;
+                        break;
+
+                    case "Greater Lightning Resistance":
+                        ResistLightning -= 70;
+                        break;
+
+                    case "Minor Earth Resistance":
+                        ResistEarth -= 15;
+                        break;
+
+                    case "Intermediate Earth Resistance":
+                        ResistEarth -= 30;
+                        break;
+
+                    case "Greater Earth Resistance":
+                        ResistEarth -= 70;
+                        break;
+
+                    case "Minor Dark Resistance":
+                        ResistDark -= 15;
+                        break;
+
+                    case "Intermediate Dark Resistance":
+                        ResistDark -= 30;
+                        break;
+
+                    case "Greater Dark Resistance":
+                        ResistDark -= 70;
+                        break;
+
+                    case "Minor Holy Resistance":
+                        ResistHoly -= 15;
+                        break;
+
+                    case "Intermediate Holy Resistance":
+                        ResistHoly -= 30;
+                        break;
+
+                    case "Greater Holy Resistance":
+                        ResistHoly -= 70;
+                        break;
+
+                    default:
                         break;
                 }
             }
-            CalculateArmourClass();
         }
 
-        internal void AddBuff(string buffName, bool permBuff = false)
+        internal void AdjustHP(int amount, out bool isKilled)
         {
-            CalculateArmourClass();
-            if (Buffs == null)
+            isKilled = false;
+            CurrentHP += amount;
+            if (CurrentHP <= 0)
             {
-                Buffs = new Dictionary<string, int>();
+                CurrentHP = 0;
+                isKilled = true;
             }
-            if(Buffs.ContainsKey(buffName))
+            if (CurrentHP > MaxHP)
             {
-                if(permBuff)
-                {
-                    Buffs[buffName] = -1;
-                }
-                else
-                {
-                    if (Buffs[buffName] > 0)
-                    {
-                        Buffs[buffName] += Entities.Buffs.GetBuff(buffName).BuffDuration;
-                    }
-                }
+                CurrentHP = MaxHP;
             }
-            else
+        }
+
+        internal void AdjustSP(int amount)
+        {
+            CurrentSP += amount;
+            if (CurrentSP < 0)
             {
-                if(permBuff)
-                {
-                    Buffs.Add(buffName, -1);
-                }
-                else
-                {
-                    Buffs.Add(buffName, Entities.Buffs.GetBuff(buffName).BuffDuration);
-                }
+                CurrentSP = 0;
             }
-            switch (buffName)
+            if (CurrentSP > MaxSP)
             {
-                // add cases here to add the effects of buffs which have been applied
-                case "Bulls Strength":
-                    Stats.Strength += 4;
-                    break;
-
-                case "Cats Grace":
-                    Stats.Dexterity += 4;
-                    break;
-
-                case "Bears Endurance":
-                    Stats.Constitution += 4;
-                    break;
-
-                case "Owls Wisdom":
-                    Stats.Wisdom += 4;
-                    break;
-
-                case "Eagles Splendour":
-                    Stats.Charisma += 4;
-                    break;
-
-                case "Foxs Cunning":
-                    Stats.Intelligence += 4;
-                    break;
-
-                case "Mage Armour":
-                    Stats.ArmourClass += 5;
-                    break;
-
-                case "Fae Fire":
-                    Stats.ArmourClass -= 4;
-                    break;
+                CurrentSP = MaxSP;
             }
-            CalculateArmourClass();
+        }
+
+        internal void AdjustMP(int amount)
+        {
+            CurrentMP += amount;
+            if (CurrentMP < 0)
+            {
+                CurrentMP = 0;
+            }
+            if (CurrentMP > MaxMP)
+            {
+                CurrentMP = MaxMP;
+            }
+        }
+
+        internal void SetStat(string stat, string value, ref Descriptor setter, out bool changeSuccess, out string statChanged, out string setValue)
+        {
+            // TODO: Use this function instead of the ones currently used in ActImmortal - we can also use these to set NPCs
+            // needs to include options for setting resists
+            changeSuccess = true;
+            statChanged = stat;
+            setValue = string.Empty;
+            try
+            {
+                switch (stat.ToLower())
+                {
+                    case "strength":
+                    case "str":
+                        if (uint.TryParse(value, out uint uintValue))
+                        {
+                            Strength = uintValue;
+                            statChanged = "Strength";
+                            setValue = uintValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Strength to {uintValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Strength!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "dexterity":
+                    case "dex":
+                        if (uint.TryParse(value, out uintValue))
+                        {
+                            Dexterity = uintValue;
+                            statChanged = "Dexterity";
+                            setValue = uintValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Dexterity to {uintValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Dexterity!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "constitution":
+                    case "con":
+                        if (uint.TryParse(value, out uintValue))
+                        {
+                            Constitution = uintValue;
+                            statChanged = "Constitution";
+                            setValue = uintValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Constitution to {uintValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Constitution!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "intelligence":
+                    case "int":
+                        if (uint.TryParse(value, out uintValue))
+                        {
+                            Intelligence = uintValue;
+                            statChanged = "Intelligence";
+                            setValue = uintValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Intelligence to {uintValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Intelligence!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "wisdom":
+                    case "wis":
+                        if (uint.TryParse(value, out uintValue))
+                        {
+                            Wisdom = uintValue;
+                            statChanged = "Wisdom";
+                            setValue = uintValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Wisdom to {uintValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Wisdom!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "charisma":
+                    case "cha":
+                        if (uint.TryParse(value, out uintValue))
+                        {
+                            Charisma = uintValue;
+                            statChanged = "Charisma";
+                            setValue = uintValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Charisma to {uintValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Charisma!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "maxhp":
+                        if (int.TryParse(value, out int intValue))
+                        {
+                            intValue = intValue < 1 ? 1 : intValue;
+                            MaxHP = intValue;
+                            if (CurrentHP > MaxHP)
+                            {
+                                CurrentHP = MaxHP;
+                            }
+                            statChanged = "Max HP";
+                            setValue = intValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Max HP to {intValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Max HP!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "currenthp":
+                        if (int.TryParse(value, out intValue))
+                        {
+                            intValue = intValue < 1 ? 1 : intValue;
+                            if (intValue < MaxHP)
+                            {
+                                CurrentHP = intValue;
+                                statChanged = "Current HP";
+                                setValue = intValue.ToString();
+                                setter.Send($"You have successfully changed {Name}'s Current HP to {intValue}!{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                setter.Send($"You cannot set Current HP to be higher than Max HP!{Constants.NewLine}");
+                                changeSuccess = false;
+                            }
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Current HP!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "maxmp":
+                        if (int.TryParse(value, out intValue))
+                        {
+                            intValue = intValue < 1 ? 1 : intValue;
+                            MaxMP = intValue;
+                            if (CurrentMP > MaxMP)
+                            {
+                                CurrentMP = MaxMP;
+                            }
+                            statChanged = "Max MP";
+                            setValue = intValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Max MP to {intValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Max MP!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "currentmp":
+                        if (int.TryParse(value, out intValue))
+                        {
+                            intValue = intValue < 1 ? 1 : intValue;
+                            if (intValue < MaxMP)
+                            {
+                                CurrentMP = intValue;
+                                statChanged = "Current MP";
+                                setValue = intValue.ToString();
+                                setter.Send($"You have successfully changed {Name}'s Current MP to {intValue}!{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                setter.Send($"You cannot set Current MP to be higher than Max MP!{Constants.NewLine}");
+                                changeSuccess = false;
+                            }
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Current MP!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "maxsp":
+                        if (int.TryParse(value, out intValue))
+                        {
+                            intValue = intValue < 1 ? 1 : intValue;
+                            MaxSP = intValue;
+                            if (CurrentSP > MaxSP)
+                            {
+                                CurrentSP = MaxSP;
+                            }
+                            statChanged = "Max SP";
+                            setValue = intValue.ToString();
+                            setter.Send($"You have successfully changed {Name}'s Max SP to {intValue}!{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Max SP!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "currentsp":
+                        if (int.TryParse(value, out intValue))
+                        {
+                            intValue = intValue < 1 ? 1 : intValue;
+                            if (intValue < MaxSP)
+                            {
+                                CurrentSP = intValue;
+                                statChanged = "Current SP";
+                                setValue = intValue.ToString();
+                                setter.Send($"You have successfully changed {Name}'s Current SP to {intValue}!{Constants.NewLine}");
+                            }
+                            else
+                            {
+                                setter.Send($"You cannot set Current SP to be higher than Max SP!{Constants.NewLine}");
+                                changeSuccess = false;
+                            }
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Current SP!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "baseac":
+                    case "armourclass":
+                    case "ac":
+                        if (uint.TryParse(value, out uintValue))
+                        {
+                            uintValue = uintValue < 1 ? 1 : uintValue;
+                            BaseArmourClass = uintValue;
+                            CalculateArmourClass();
+                            setter.Send($"You have successfully changed {Name}'s Base Armour Class to {uintValue}!{Constants.NewLine}");
+                            statChanged = "Base Armour Class";
+                            setValue = uintValue.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Armour Class!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "gold":
+                    case "gp":
+                        if (ulong.TryParse(value, out ulong ulongValue))
+                        {
+                            Gold = ulongValue;
+                            setter.Send($"You have successfully changed {Name}'s Gold to {ulongValue}!{Constants.NewLine}");
+                            statChanged = "Gold";
+                            setValue = ulongValue.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Gold!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "alignment":
+                    case "align":
+                        if (Enum.TryParse<Alignment>(value, true, out Alignment newAlignment))
+                        {
+                            Alignment = newAlignment;
+                            switch(Alignment)
+                            {
+                                case Alignment.Good:
+                                    AlignmentScale = 50;
+                                    break;
+
+                                case Alignment.Neutral:
+                                    AlignmentScale = 0;
+                                    break;
+
+                                case Alignment.Evil:
+                                    AlignmentScale = -50;
+                                    break;
+                            }
+                            statChanged = "Alignment";
+                            setValue = newAlignment.ToString();
+                        }
+                        else
+                        {
+                            changeSuccess = false;
+                            setter.Send($"That isn't a valid value for Alignment!{Constants.NewLine}");
+                        }
+                        break;
+
+                    case "resistfire":
+                    case "fireresist":
+                        if (int.TryParse(value, out int result))
+                        {
+                            if (result < -100)
+                            {
+                                result = -100;
+                            }
+                            if (result > 100)
+                            {
+                                result = 100;
+                            }
+                            ResistFire = result;
+                            statChanged = "Fire Resistance";
+                            setValue = result.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Fire Resistance!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "resistice":
+                    case "iceresist":
+                        if (int.TryParse(value, out result))
+                        {
+                            if (result < -100)
+                            {
+                                result = -100;
+                            }
+                            if (result > 100)
+                            {
+                                result = 100;
+                            }
+                            ResistIce = result;
+                            statChanged = "Ice Resistance";
+                            setValue = result.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Ice Resistance!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "resistearth":
+                    case "earthresist":
+                        if (int.TryParse(value, out result))
+                        {
+                            if (result < -100)
+                            {
+                                result = -100;
+                            }
+                            if (result > 100)
+                            {
+                                result = 100;
+                            }
+                            ResistEarth = result;
+                            statChanged = "Earth Resistance";
+                            setValue = result.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Earth Resistance!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "lightningresist":
+                    case "resistlightning":
+                        if (int.TryParse(value, out result))
+                        {
+                            if (result < -100)
+                            {
+                                result = -100;
+                            }
+                            if (result > 100)
+                            {
+                                result = 100;
+                            }
+                            ResistLightning = result;
+                            statChanged = "Lightning Resistance";
+                            setValue = result.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Lightning Resistance!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "holyresist":
+                    case "resistholy":
+                        if (int.TryParse(value, out result))
+                        {
+                            if (result < -100)
+                            {
+                                result = -100;
+                            }
+                            if (result > 100)
+                            {
+                                result = 100;
+                            }
+                            ResistHoly = result;
+                            statChanged = "Holy Resistance";
+                            setValue = result.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Holy Resistance!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "darkresist":
+                    case "resistdark":
+                        if (int.TryParse(value, out result))
+                        {
+                            if (result < -100)
+                            {
+                                result = -100;
+                            }
+                            if (result > 100)
+                            {
+                                result = 100;
+                            }
+                            ResistDark = result;
+                            statChanged = "Dark Resistance";
+                            setValue = result.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Dark Resistance!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "resistall":
+                        if (int.TryParse(value, out result))
+                        {
+                            if (result < -100)
+                            {
+                                result = -100;
+                            }
+                            if (result > 100)
+                            {
+                                result = 100;
+                            }
+                            ResistDark = result;
+                            ResistEarth = result;
+                            ResistFire = result;
+                            ResistHoly = result;
+                            ResistIce = result;
+                            ResistLightning = result;
+                            statChanged = "All Resistances";
+                            setValue = result.ToString();
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for resistances!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    case "level":
+                        if (uint.TryParse(value, out uintValue))
+                        {
+                            if (uintValue <= setter.Player.Level)
+                            {
+                                Level = uintValue;
+                                statChanged = "Level";
+                                setValue = uintValue.ToString();
+                            }
+                            else
+                            {
+                                setter.Send($"You cannot set someone to be a higher level than yourself!{Constants.NewLine}");
+                                changeSuccess = false;
+                            }
+                        }
+                        else
+                        {
+                            setter.Send($"That isn't a valid value for Level!{Constants.NewLine}");
+                            changeSuccess = false;
+                        }
+                        break;
+
+                    default:
+                        setter.Send($"That doesn't look like something you can change...{Constants.NewLine}");
+                        changeSuccess = false;
+                        break;
+                }
+            }
+            catch(Exception ex)
+            {
+                changeSuccess = false;
+                Game.LogMessage($"ERROR: Player {setter.Player} encountered an error setting {stat} to {value} for {Name} (ActorType: {ActorType}: {ex.Message}", LogLevel.Error, true);
+                setter.Send($"Your powers have failed you and the change was not made!{Constants.NewLine}");
+            }
+        }
+
+        internal bool HasBuff(string buffName)
+        {
+            return Buffs.ContainsKey(buffName);
         }
     }
 
@@ -328,15 +1203,13 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal NPCFlags BehaviourFlags { get; set; }
         [JsonProperty]
-        internal string DepartMessage { get; set; }
-        [JsonProperty]
-        internal string ArrivalMessage { get; set; }
-        [JsonProperty]
         internal uint BaseExpAward { get; set; }
         [JsonProperty]
-        internal uint NumberOfHitDice { get; set; }
+        internal uint BonusHitDice { get; set; }
         [JsonProperty]
-        internal uint SizeOfHitDice { get; set; }
+        internal uint NumberOfHitDice => Level + BonusHitDice;
+        [JsonProperty]
+        internal uint HitDieSize { get; set; }
         [JsonProperty]
         internal uint NPCID { get; set; }
         [JsonProperty]
@@ -348,18 +1221,17 @@ namespace Kingdoms_of_Etrea.Entities
         internal Guid FollowingPlayer { get; set; }
         internal Guid NPCGuid { get; set; }
         internal bool IsFollower => FollowingPlayer != Guid.Empty;
-        internal bool IsNPCInCombat => CombatManager.Instance.IsNPCInCombatNew(this.NPCGuid);
+        internal bool IsInCombat => CombatManager.Instance.IsNPCInCombat(this.NPCGuid);
 
         internal NPC()
         {
             Inventory = new List<InventoryItem>();
-            Skills = new List<Skills.Skill>();
-            Spells = new List<Spells.Spell>();
+            Skills = new List<Skill>();
+            Spells = new List<Spell>();
             Buffs = new Dictionary<string, int>();
-            Name = "NPC";
-            DepartMessage = $"{Name} wanders away{Constants.NewLine}";
+            Name = "New NPC";
+            DepartureMessage = $"{Name} wanders away{Constants.NewLine}";
             ArrivalMessage = $"{Name} arrives, looking mean!{Constants.NewLine}";
-            Stats = new ActorStats();
         }
 
         internal NPC ShallowCopy()
@@ -369,19 +1241,19 @@ namespace Kingdoms_of_Etrea.Entities
             return npc;
         }
 
-        internal bool FleeCombat(ref ILoggingProvider loggingProvider, out uint destRid)
+        internal bool FleeCombat(out uint destRID)
         {
-            destRid = 0;
+            destRID = 0;
             try
             {
                 var roomExits = RoomManager.Instance.GetRoom(CurrentRoom).RoomExits;
-                if(roomExits.Count > 0)
+                if (roomExits.Count > 0)
                 {
-                    var rnd = new Random(DateTime.Now.GetHashCode());
+                    var rnd = new Random(DateTime.UtcNow.GetHashCode());
                     var exit = roomExits[rnd.Next(roomExits.Count)];
-                    if(ZoneManager.Instance.IsRIDInZone(exit.DestinationRoomID, AppearsInZone))
+                    if (ZoneManager.Instance.IsRIDInZone(exit.DestinationRoomID, AppearsInZone))
                     {
-                        destRid = exit.DestinationRoomID;
+                        destRID = exit.DestinationRoomID;
                         return true;
                     }
                 }
@@ -389,39 +1261,89 @@ namespace Kingdoms_of_Etrea.Entities
             }
             catch (Exception ex)
             {
-                loggingProvider.LogMessage($"ERROR: Error while NPC fleeing combat: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: NPC {Name} ({NPCID}) caused an error trying to flee combat: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal virtual bool Move(ref NPC n, uint fromRoomID, uint destRoomID, bool wasTeleported)
+        internal bool Move(ref NPC n, uint fromRID, uint toRID, bool wasTeleported)
         {
             try
             {
-                var targetRoom = RoomManager.Instance.GetRoom(destRoomID);
-                if(targetRoom == null)
+                var targetRoom = RoomManager.Instance.GetRoom(toRID);
+                if (targetRoom == null)
                 {
                     return false;
                 }
-                else
-                {
-                    RoomManager.Instance.UpdateNPCsInRoom(fromRoomID, true, false, ref n);
-                    RoomManager.Instance.UpdateNPCsInRoom(destRoomID, false, false, ref n);
-                    NPCManager.Instance.MoveNPCToNewRID(n.NPCGuid, destRoomID);
-                    return true;
-                }
+                RoomManager.Instance.UpdateNPCsInRoom(fromRID, true, false, ref n);
+                RoomManager.Instance.UpdateNPCsInRoom(toRID, false, false, ref n);
+                NPCManager.Instance.MoveNPCToNewRID(n.NPCGuid, toRID);
+                return true;
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Failed to move NPC from room {fromRoomID} to room {destRoomID}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Failed to move NPC {Name} ({NPCID}) from RID {fromRID} to {toRID}: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal void Kill(bool killedInCombat)
+        internal void Kill()
+        {
+            if (Inventory != null && Inventory.Count > 0)
+            {
+                foreach (var i in Inventory)
+                {
+                    var item = i;
+                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+                }
+            }
+            if (EquipHead != null && !EquipHead.IsMonsterItem)
+            {
+                var item = EquipHead;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipHeld != null && !EquipHeld.IsMonsterItem)
+            {
+                var item = EquipHeld;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipWeapon != null && !EquipWeapon.IsMonsterItem)
+            {
+                var item = EquipWeapon;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipLeftFinger != null && !EquipLeftFinger.IsMonsterItem)
+            {
+                var item = EquipLeftFinger;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipRightFinger != null && !EquipRightFinger.IsMonsterItem)
+            {
+                var item = EquipRightFinger;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipArmour != null && !EquipArmour.IsMonsterItem)
+            {
+                var item = EquipArmour;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipNeck != null && !EquipNeck.IsMonsterItem)
+            {
+                var item = EquipNeck;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (IsFollower)
+            {
+                SessionManager.Instance.GetPlayerByGUID(FollowingPlayer).Player.FollowerID = Guid.Empty;
+                SessionManager.Instance.GetPlayerByGUID(FollowingPlayer).Send($"Alas, your follower {Name} has been slain!{Constants.NewLine}");
+            }
+            NPCManager.Instance.RemoveNPCFromWorld(NPCGuid);
+        }
+
+        internal void Kill(bool killedInCombat, ref Descriptor desc)
         {
             bool dropsItems = false;
-            if(Inventory != null && Inventory.Count > 0)
+            if (Inventory != null && Inventory.Count > 0)
             {
                 dropsItems = true;
                 foreach(var i in Inventory)
@@ -430,78 +1352,97 @@ namespace Kingdoms_of_Etrea.Entities
                     RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
                 }
             }
-            if(EquippedItems != null)
+            if (EquipHead != null && !EquipHead.IsMonsterItem)
             {
-                if(EquippedItems.Head != null && !EquippedItems.Head.IsMonsterItem)
-                {
-                    dropsItems = true;
-                    var item = EquippedItems.Head;
-                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
-                }
-                if(EquippedItems.Held != null && !EquippedItems.Held.IsMonsterItem)
-                {
-                    dropsItems = true;
-                    var item = EquippedItems.Held;
-                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
-                }
-                if(EquippedItems.Weapon != null && !EquippedItems.Weapon.IsMonsterItem)
-                {
-                    dropsItems = true;
-                    var item = EquippedItems.Weapon;
-                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
-                }
-                if(EquippedItems.FingerLeft != null && !EquippedItems.FingerLeft.IsMonsterItem)
-                {
-                    dropsItems = true;
-                    var item = EquippedItems.FingerLeft;
-                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
-                }
-                if(EquippedItems.FingerRight != null && !EquippedItems.FingerRight.IsMonsterItem)
-                {
-                    dropsItems = true;
-                    var item = EquippedItems.FingerRight;
-                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
-                }
-                if(EquippedItems.Armour != null && !EquippedItems.Armour.IsMonsterItem)
-                {
-                    dropsItems = true;
-                    var item = EquippedItems.Armour;
-                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
-                }
-                if(EquippedItems.Neck != null && !EquippedItems.Neck.IsMonsterItem)
-                {
-                    dropsItems = true;
-                    var item = EquippedItems.Neck;
-                    RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
-                }
+                dropsItems = true;
+                var item = EquipHead;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
             }
-            if(FollowingPlayer != Guid.Empty)
+            if (EquipHeld != null && !EquipHeld.IsMonsterItem)
+            {
+                dropsItems = true;
+                var item = EquipHeld;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipWeapon != null && !EquipWeapon.IsMonsterItem)
+            {
+                dropsItems = true;
+                var item = EquipWeapon;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipLeftFinger != null && !EquipLeftFinger.IsMonsterItem)
+            {
+                dropsItems = true;
+                var item = EquipLeftFinger;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipRightFinger != null && !EquipRightFinger.IsMonsterItem)
+            {
+                dropsItems = true;
+                var item = EquipRightFinger;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipArmour != null && !EquipArmour.IsMonsterItem)
+            {
+                dropsItems = true;
+                var item = EquipArmour;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (EquipNeck != null && !EquipNeck.IsMonsterItem)
+            {
+                dropsItems = true;
+                var item = EquipNeck;
+                RoomManager.Instance.AddItemToRoomInventory(CurrentRoom, ref item);
+            }
+            if (IsFollower)
             {
                 SessionManager.Instance.GetPlayerByGUID(FollowingPlayer).Player.FollowerID = Guid.Empty;
-                SessionManager.Instance.GetPlayerByGUID(FollowingPlayer).Send($"Alas, your follower has been slain!{Constants.NewLine}");
+                SessionManager.Instance.GetPlayerByGUID(FollowingPlayer).Send($"Alas, your follower {Name} has been slain!{Constants.NewLine}");
             }
-            if(killedInCombat && dropsItems)
+            if (killedInCombat && dropsItems)
             {
-                var localPlayers = RoomManager.Instance.GetPlayersInRoom(CurrentRoom);
-                if(localPlayers != null && localPlayers.Count > 0)
+                if (dropsItems)
                 {
-                    var article = Helpers.IsCharAVowel(Name[0]) ? "An" : "A";
-                    foreach(var lp in localPlayers)
+                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(CurrentRoom);
+                    if (localPlayers != null && localPlayers.Count > 0)
                     {
-                        lp.Send($"{article} {Name} drops some items before their corpse is swallowed by the Winds of Magic!{Constants.NewLine}");
+                        var article = Helpers.IsCharAVowel(Name[0]) ? "An" : "A";
+                        foreach (var lp in localPlayers)
+                        {
+                            lp.Send($"{article} {Name} drops some items to the floor as their corpse is swallowed by the Winds of Magic!{Constants.NewLine}");
+                        }
+                    }
+                }
+                if (desc.Player.ActiveQuests.Any(x => x.Monsters.Keys.Contains(NPCID)))
+                {
+                    for (int n = 0; n < desc.Player.ActiveQuests.Count; n++)
+                    {
+                        if (desc.Player.ActiveQuests[n].Monsters.Keys.Contains(NPCID))
+                        {
+                            if (desc.Player.ActiveQuests[n].Monsters[NPCID] <= 1)
+                            {
+                                desc.Player.ActiveQuests[n].Monsters[NPCID] = 0;
+                            }
+                            else
+                            {
+                                desc.Player.ActiveQuests[n].Monsters[NPCID]--;
+                            }
+                        }
                     }
                 }
             }
-            NPCManager.Instance.RemoveNPCFromWorld(NPCGuid, this, CurrentRoom);
+            desc.Player.UpdateAlignment(Alignment);
+            NPCManager.Instance.RemoveNPCFromWorld(NPCGuid);
         }
     }
 
+    [Serializable]
     internal class Player : Actor
     {
         [JsonProperty]
         internal bool ShowDetailedRollInfo { get; set; }
         [JsonProperty]
-        internal List<Crafting.Recipe> KnownRecipes { get; set; }
+        internal List<Recipe> Recipes { get; set; }
         [JsonProperty]
         internal HashSet<Guid> CompletedQuests { get; set; }
         [JsonProperty]
@@ -515,162 +1456,175 @@ namespace Kingdoms_of_Etrea.Entities
         internal Languages KnownLanguages { get; set; }
         [JsonProperty]
         internal Languages SpokenLanguage { get; set; }
-        internal bool PVP;
-        internal bool IsInCombat => CombatManager.Instance.IsPlayerInCombat(SessionManager.Instance.GetPlayer(Name).Id);
+        [JsonProperty]
+        internal uint Exp { get; set; }
+        [JsonProperty]
+        internal List<InventoryItem> VaultStore { get; set; }
+        internal bool PVP { get; set; }
+        internal bool IsInCombat => CombatManager.Instance.IsPlayerInCombat(SessionManager.Instance.GetPlayer(Name).ID);
 
-        internal virtual bool Move(uint fromRoomId, uint destRoomId, bool wasTeleported, /*ref Descriptor desc,*/ bool bypassStamCheck = false)
+        internal Player()
+        {
+            ActiveQuests = new List<Quest>();
+            Inventory = new List<InventoryItem>();
+            Spells = new List<Spell>();
+            Recipes = new List<Recipe>();
+            Skills = new List<Skill>();
+            CompletedQuests = new HashSet<Guid>();
+            VaultStore = new List<InventoryItem>();
+        }
+
+        internal bool Move(uint fromRID, uint toRID, bool wasTeleported, bool bypassStaminaCheck = false)
         {
             try
             {
-                var targetRoom = RoomManager.Instance.GetRoom(destRoomId);
+                var targetRoom = RoomManager.Instance.GetRoom(toRID);
                 if (targetRoom == null)
                 {
-                    SessionManager.Instance.GetPlayer(Name).Send("Some mysterious force pushes you back... You cannot go that way!");
+                    SessionManager.Instance.GetPlayer(Name).Send($"Some mysterious force pushes you back... You cannot go that way!{Constants.NewLine}");
                     return true;
                 }
-                else
+                if (!bypassStaminaCheck)
                 {
-                    if(!bypassStamCheck)
+                    int stamCost = 1;
+                    if (RoomManager.Instance.GetRoom(fromRID).Flags.HasFlag(RoomFlags.HardTerrain))
                     {
-                        uint stamCost = 1;
-                        if (RoomManager.Instance.GetRoom(fromRoomId).Flags.HasFlag(RoomFlags.HardTerrain))
-                        {
-                            stamCost += Helpers.RollDice(1, 4);
-                        }
-                        if (RoomManager.Instance.GetRoom(destRoomId).Flags.HasFlag(RoomFlags.HardTerrain))
-                        {
-                            stamCost += Helpers.RollDice(1, 4);
-                        }
-                        if (this.Stats.CurrentSP < stamCost)
-                        {
-                            SessionManager.Instance.GetPlayer(Name).Send($"You don't have the energy to move that far just now...{Constants.NewLine}");
-                            return true;
-                        }
-                        this.Stats.CurrentSP -= stamCost;
+                        stamCost += (int)Helpers.RollDice(1, 4);
                     }
-                    var pDesc = SessionManager.Instance.GetPlayer(Name);
-                    RoomManager.Instance.UpdatePlayersInRoom(fromRoomId, ref pDesc, true, wasTeleported, false, false);   // Player leaving a room
-                    RoomManager.Instance.UpdatePlayersInRoom(destRoomId, ref pDesc, false, wasTeleported, false, false);  // Player arriving in a room
-                    if(this.FollowerID != Guid.Empty)
+                    if (RoomManager.Instance.GetRoom(toRID).Flags.HasFlag(RoomFlags.HardTerrain))
                     {
-                        var n = NPCManager.Instance.GetNPCByGUID(this.FollowerID);
-                        if (n != null)
-                        {
-                            n.Move(ref n, fromRoomId, destRoomId, false);
-                        }
-                        else
-                        {
-                            this.FollowerID = Guid.Empty;
-                        }
+                        stamCost += (int)Helpers.RollDice(1, 4);
                     }
-                    CurrentRoom = destRoomId;
-                    RoomManager.Instance.ProcessEnvironmentBuffs(fromRoomId);
-                    RoomManager.Instance.ProcessEnvironmentBuffs(destRoomId);
-                    Room.DescribeRoom(ref pDesc, true);
+                    if (CurrentSP < stamCost)
+                    {
+                        SessionManager.Instance.GetPlayer(Name).Send($"You don't have the energy to move that fart just now...{Constants.NewLine}");
+                        return true;
+                    }
+                    CurrentSP -= stamCost;
                 }
+                var desc = SessionManager.Instance.GetPlayer(Name);
+                RoomManager.Instance.UpdatePlayersInRoom(fromRID, ref desc, true, wasTeleported, false, false);
+                RoomManager.Instance.UpdatePlayersInRoom(toRID, ref desc, false, wasTeleported, false, false);
+                desc.Player.CurrentRoom = toRID;
+                if(this.FollowerID != Guid.Empty)
+                {
+                    var n = NPCManager.Instance.GetNPCByGUID(this.FollowerID);
+                    if (n != null)
+                    {
+                        n.Move(ref n, fromRID, toRID, false);
+                    }
+                    else
+                    {
+                        this.FollowerID = Guid.Empty;
+                    }
+                }
+                CurrentRoom = toRID;
+                RoomManager.Instance.ProcessEnvironmentBuffs(fromRID);
+                RoomManager.Instance.ProcessEnvironmentBuffs(toRID);
+                RoomManager.Instance.GetRoom(CurrentRoom).DescribeRoom(ref desc, true);
                 return true;
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error moving player {Name} from room {fromRoomId} to room {destRoomId}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error moving player {Name} from Room {fromRID} to Room {toRID}: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal void UpdateAlignment(ActorAlignment npcAlignment)
+        internal void UpdateAlignment(Alignment npcAlignment)
         {
-            switch (npcAlignment)
+            switch(npcAlignment)
             {
-                case ActorAlignment.Evil:
+                case Alignment.Evil:
                     AlignmentScale++;
                     break;
 
-                case ActorAlignment.Good:
+                case Alignment.Good:
                     AlignmentScale--;
                     break;
             }
             if (AlignmentScale <= -50)
             {
-                Alignment = ActorAlignment.Evil;
+                Alignment = Alignment.Evil;
                 return;
             }
-            if (AlignmentScale > -50 && AlignmentScale < 50)
+            if (AlignmentScale > -5 && AlignmentScale < 50)
             {
-                Alignment = ActorAlignment.Neutral;
+                Alignment = Alignment.Neutral;
                 return;
             }
             if (AlignmentScale >= 50)
             {
-                Alignment = ActorAlignment.Good;
+                Alignment = Alignment.Good;
             }
         }
 
         internal bool KnowsRecipe(string recipeName)
         {
-            if(!string.IsNullOrEmpty(recipeName))
-            {
-                var r = (from kr in KnownRecipes where Regex.Match(kr.RecipeName, recipeName, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
-                return r != null;
-            }
-            return false;
+            return Recipes.Where(x => x.RecipeName.ToLower() == recipeName.ToLower()).Any();
         }
 
-        internal void Kill(/*ref Descriptor descriptor*/)
+        internal void Kill()
         {
-            Stats.CurrentHP = 0;
+            CurrentHP = 0;
             if (Buffs != null && Buffs.Count > 0)
             {
-                var buffNames = Buffs.Keys.ToList();
-                foreach (var buffName in buffNames)
+                var buffNames = Buffs.Where(x => x.Value != -1).Select(y => y.Key).ToList();
+                foreach(var buffName in buffNames)
                 {
                     RemoveBuff(buffName);
                 }
             }
             Position = ActorPosition.Dead;
-            uint xpLost = Stats.Exp > 3 ? Convert.ToUInt32(Stats.Exp * 0.1) : 0;
-            Stats.Exp -= xpLost;
-            //uint gp = descriptor.Player.Stats.Gold;
-            ulong gp = this.Stats.Gold;
-            //RoomManager.Instance.AddGoldToRoom(descriptor.Player.CurrentRoom, gp);
-            RoomManager.Instance.AddGoldToRoom(this.CurrentRoom, gp);
-            //descriptor.Player.Stats.Gold = 0;
-            this.Stats.Gold = 0;
+            uint xpLost = Exp > 3 ? Convert.ToUInt32(Exp * 0.1) : 0;
+            Exp -= xpLost;
+            ulong gp = Gold;
+            RoomManager.Instance.AddGoldToRoom(CurrentRoom, gp);
+            Gold = 0;
             RoomManager.Instance.GetRoom(CurrentRoom).ItemsInRoom.AddRange(Inventory);
             Inventory.Clear();
-            //Move(descriptor.Player.CurrentRoom, Constants.LimboRID(), true, ref descriptor);
-            Move(this.CurrentRoom, Constants.LimboRID(), true, true);
+            Move(CurrentRoom, Constants.LimboRID(), true, true);
         }
 
-        internal void AddGold(ulong gp/*, ref Descriptor desc*/)
+        internal void AddGold(ulong gp, bool bypassSkillCheck)
         {
             ulong totalGP = gp;
-            if(HasSkill("Gold Digger"))
+            if (!bypassSkillCheck)
             {
-                uint bonusGP = Convert.ToUInt32(gp * 0.5);
-                SessionManager.Instance.GetPlayer(Name).Send($"Your skills allow you to find an extra {bonusGP} gold!{Constants.NewLine}");
-                totalGP += bonusGP;
+                if(HasSkill("Gold Digger"))
+                {
+                    uint bonusGP = Convert.ToUInt32(gp * 0.5);
+                    SessionManager.Instance.GetPlayer(Name).Send($"Your skills allow you to find an extra {bonusGP:N0} gold!{Constants.NewLine}");
+                    totalGP += bonusGP;
+                }
             }
-            Stats.Gold += totalGP;
+            Gold += totalGP;
         }
 
-        internal void AddExp(uint xp/*, ref Descriptor desc*/)
+        internal void AddExp(uint xp, bool bypassSkillCheck, bool bypassRaceCheck)
         {
-            Stats.Exp += xp;
-            if(Race == ActorRace.Human)
+            uint totalXP = xp;
+            if (!bypassSkillCheck)
             {
-                uint bonusXP = Convert.ToUInt32(xp * 0.25);
-                SessionManager.Instance.GetPlayer(Name).Send($"Your Human nature grants you a bonus of {bonusXP} Exp!{Constants.NewLine}");
-                Stats.Exp += bonusXP;
+                if (HasSkill("Quick Learner"))
+                {
+                    uint skillBonusXP = Convert.ToUInt32(xp * 0.25);
+                    SessionManager.Instance.GetPlayer(Name).Send($"Your skills grant you a bonus of {skillBonusXP} Exp!{Constants.NewLine}");
+                    totalXP += skillBonusXP;
+                }
             }
-            if(HasSkill("Quick Learner"))
+            if (!bypassRaceCheck)
             {
-                uint bonusXP = Convert.ToUInt32(xp * 0.25);
-                SessionManager.Instance.GetPlayer(Name).Send($"Your skills grant you a bonus of {bonusXP} Exp!{Constants.NewLine}");
-                Stats.Exp += bonusXP;
+                if (Race == ActorRace.Human)
+                {
+                    uint raceBonusXP = Convert.ToUInt32(xp * 0.25);
+                    SessionManager.Instance.GetPlayer(Name).Send($"Your Human nature grants you a bonus of {raceBonusXP} Exp!{Constants.NewLine}");
+                    totalXP += raceBonusXP;
+                }
             }
-            if(LevelTable.HasCharAchievedNewLevel(Stats.Exp, Level, out uint newLevel))
+            Exp += totalXP;
+            if (LevelTable.HasCharacterAchievedNewLevel(Exp, Level, out uint newLevel))
             {
-                // moving to level 1 causes newLevel to return 2?
                 LevelUp(newLevel - Level);
             }
         }
@@ -682,112 +1636,73 @@ namespace Kingdoms_of_Etrea.Entities
 
         private void LevelUp(uint levelsToAdvance)
         {
-            for(uint i = 0; i < levelsToAdvance; i++)
+            for (uint i = 0; i < levelsToAdvance; i++)
             {
                 Level++;
                 uint hpIncrease = 0;
                 uint mpIncrease = 0;
-                int hpMod;
-                int mpMod = 0;
+                int hpModifier = 0;
+                int mpModifier = 0;
                 switch(Class)
                 {
                     case ActorClass.Cleric:
                         hpIncrease = Helpers.RollDice(1, 8);
                         mpIncrease = Helpers.RollDice(1, 8);
-                        mpMod = (int)mpIncrease + ActorStats.CalculateAbilityModifier(Stats.Wisdom);
+                        mpModifier = (int)mpIncrease + Helpers.CalculateAbilityModifier(Wisdom);
                         if (Level % 4 == 0)
                         {
-                            Stats.Wisdom++;
-                            Stats.Constitution++;
+                            Wisdom++;
+                            Constitution++;
+                            SessionManager.Instance.GetPlayer(Name).Send($"Your Wisdom and Constitution have improved!{Constants.NewLine}");
                         }
                         break;
 
                     case ActorClass.Fighter:
                         hpIncrease = Helpers.RollDice(1, 10);
                         mpIncrease = Helpers.RollDice(1, 4);
-                        mpMod = (int)mpIncrease + ActorStats.CalculateAbilityModifier(Stats.Intelligence);
+                        mpModifier = (int)mpIncrease + Helpers.CalculateAbilityModifier(Intelligence);
                         if (Level % 4 == 0)
                         {
-                            Stats.Strength++;
-                            Stats.Constitution++;
+                            Strength++;
+                            Constitution++;
+                            SessionManager.Instance.GetPlayer(Name).Send($"Your Strength and Constitution have improved!{Constants.NewLine}");
                         }
                         break;
 
                     case ActorClass.Thief:
                         hpIncrease = Helpers.RollDice(1, 6);
                         mpIncrease = Helpers.RollDice(1, 6);
-                        mpMod = (int)mpIncrease + ActorStats.CalculateAbilityModifier(Stats.Intelligence);
+                        mpModifier = (int)mpIncrease + Helpers.CalculateAbilityModifier(Intelligence);
                         if (Level % 4 == 0)
                         {
-                            Stats.Dexterity++;
-                            Stats.Intelligence++;
+                            Dexterity++;
+                            Intelligence++;
+                            SessionManager.Instance.GetPlayer(Name).Send($"Your Dexterity and Intelligence have increased!{Constants.NewLine}");
                         }
                         break;
 
                     case ActorClass.Wizard:
                         hpIncrease = Helpers.RollDice(1, 4);
                         mpIncrease = Helpers.RollDice(1, 10);
-                        mpMod = (int)mpIncrease + ActorStats.CalculateAbilityModifier(Stats.Intelligence);
+                        mpModifier = Helpers.CalculateAbilityModifier(Intelligence);
                         if (Level % 4 == 0)
                         {
-                            Stats.Intelligence++;
-                            Stats.Wisdom++;
+                            Intelligence++;
+                            Wisdom++;
+                            SessionManager.Instance.GetPlayer(Name).Send($"Your Intelligence and Wisdom have increased!{Constants.NewLine}");
                         }
                         break;
                 }
-                hpMod = (int)hpIncrease + ActorStats.CalculateAbilityModifier(Stats.Constitution);
-                if (hpMod < 1)
-                {
-                    hpMod = 1;
-                }
-                if (mpMod < 1)
-                {
-                    mpMod = 1;
-                }
-                Stats.MaxHP += Convert.ToUInt32(hpMod);
-                Stats.MaxMP += Convert.ToUInt32(mpMod);
-                Stats.CurrentMaxHP += Convert.ToUInt32(hpMod);
-                Stats.CurrentMaxMP += Convert.ToUInt32(mpMod);
-                var stamIncrease = Convert.ToInt32(Helpers.RollDice(1,10) + ActorStats.CalculateAbilityModifier(Stats.Constitution));
-                if(stamIncrease < 1)
-                {
-                    stamIncrease = 1;
-                }
-                Stats.MaxSP += Convert.ToUInt32(stamIncrease);
-                Stats.CurrentSP += Convert.ToUInt32(stamIncrease);
+                hpModifier = (int)hpIncrease + Helpers.CalculateAbilityModifier(Constitution);
+                hpModifier = hpModifier < 1 ? 1 : hpModifier;
+                mpModifier = mpModifier < 1 ? 1 : mpModifier;
+                MaxHP += hpModifier;
+                MaxMP += mpModifier;
+                var stamIncrease = Helpers.RollDice(1, 10) + Helpers.CalculateAbilityModifier(Constitution);
+                stamIncrease = stamIncrease < 1 ? 1 : stamIncrease;
+                MaxSP += (int)stamIncrease;
+                SessionManager.Instance.GetPlayer(Name).Send($"You gain {hpIncrease} HP, {mpIncrease} MP and {stamIncrease} SP");
             }
         }
-    }
-
-    internal class PlayerBuff
-    {
-        [JsonProperty]
-        internal string BuffID { get; set; }
-        [JsonProperty]
-        internal string BuffName { get; set; }
-        [JsonProperty]
-        internal uint BuffDuration { get; set; }
-        [JsonProperty]
-        internal uint ElapsedTicks { get; set; }
-        internal Buffs BuffEffect { get; set; }
-    }
-
-    [Serializable]
-    internal class EquippedItems
-    {
-        [JsonProperty]
-        internal InventoryItem Head { get; set; }
-        [JsonProperty]
-        internal InventoryItem Neck { get; set; }
-        [JsonProperty]
-        internal InventoryItem Armour { get; set; }
-        [JsonProperty]
-        internal InventoryItem FingerLeft { get; set; }
-        [JsonProperty]
-        internal InventoryItem FingerRight { get; set; }
-        [JsonProperty]
-        internal InventoryItem Weapon { get; set; }
-        [JsonProperty]
-        internal InventoryItem Held { get; set; }
     }
 }

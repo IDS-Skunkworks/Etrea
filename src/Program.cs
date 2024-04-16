@@ -1,9 +1,11 @@
-﻿using Kingdoms_of_Etrea.Networking;
-using Kingdoms_of_Etrea.Core;
-using System.Configuration;
+﻿using System.Configuration;
+using Etrea2.Networking;
+using Etrea2.Core;
 using System.Net;
+using System;
 
-namespace Kingdoms_of_Etrea
+
+namespace Etrea2
 {
     internal class Program
     {
@@ -13,14 +15,15 @@ namespace Kingdoms_of_Etrea
 
         static void Main(string[] args)
         {
-            // https://www.dandwiki.com/wiki/3e_SRD:Armor
             var serverIP = ConfigurationManager.AppSettings["listenerIP"];
             var serverPort = ConfigurationManager.AppSettings["listenPort"];
             var startRoom = ConfigurationManager.AppSettings["playerStartRoom"];
+            Console.Title = ConfigurationManager.AppSettings["gameTitle"];
             int port;
-            if(!string.IsNullOrEmpty(serverIP))
+
+            if (!string.IsNullOrEmpty(serverIP))
             {
-                if(!IPAddress.TryParse(serverIP, out _))
+                if (!IPAddress.TryParse(serverIP, out _))
                 {
                     serverIP = "0.0.0.0";
                 }
@@ -29,9 +32,9 @@ namespace Kingdoms_of_Etrea
             {
                 serverIP = "0.0.0.0";
             }
-            if(!string.IsNullOrEmpty(serverPort))
+            if (!string.IsNullOrEmpty(serverPort))
             {
-                if(!int.TryParse(serverPort, out port))
+                if (!int.TryParse(serverPort, out port))
                 {
                     port = 12345;
                 }
@@ -40,9 +43,9 @@ namespace Kingdoms_of_Etrea
             {
                 port = 12345;
             }
-            if(!string.IsNullOrEmpty(startRoom))
+            if (!string.IsNullOrEmpty(startRoom))
             {
-                if(!uint.TryParse(startRoom, out uint _startRoom))
+                if (!uint.TryParse(startRoom, out uint _startRoom))
                 {
                     _startRoom = 100;
                 }
@@ -51,11 +54,11 @@ namespace Kingdoms_of_Etrea
             {
                 _startRoom = 100;
             }
+
             _server = new TcpServer(serverIP, port);
             _server.StartServer(_startRoom);
             _server.Listen();
 
-            // zone, npc, combat, autosave, buff
             var confZonePulse = ConfigurationManager.AppSettings["zonePulse"];
             var confNpcPulse = ConfigurationManager.AppSettings["npcPulse"];
             var confCombatPulse = ConfigurationManager.AppSettings["combatPulse"];
@@ -64,9 +67,9 @@ namespace Kingdoms_of_Etrea
             var confBackupPulse = ConfigurationManager.AppSettings["backupPulse"];
             var confBackupsRetained = ConfigurationManager.AppSettings["backupsRetained"];
             uint zonePulse, npcPulse, combatPulse, autoSavePulse, buffPulse, backupPulse, backupsRetained;
-            if(!string.IsNullOrEmpty(confBackupPulse))
+            if (!string.IsNullOrEmpty(confBackupPulse))
             {
-                if(!uint.TryParse(confBackupPulse, out backupPulse))
+                if (!uint.TryParse(confBackupPulse, out backupPulse))
                 {
                     backupPulse = 3600;
                 }
@@ -75,9 +78,9 @@ namespace Kingdoms_of_Etrea
             {
                 backupPulse = 3600;
             }
-            if(!string.IsNullOrEmpty(confBackupsRetained))
+            if (!string.IsNullOrEmpty(confBackupsRetained))
             {
-                if(!uint.TryParse(confBackupsRetained, out backupsRetained))
+                if (!uint.TryParse(confBackupsRetained, out backupsRetained))
                 {
                     backupsRetained = 10;
                 }
@@ -86,9 +89,9 @@ namespace Kingdoms_of_Etrea
             {
                 backupsRetained = 10;
             }
-            if(!string.IsNullOrEmpty(confZonePulse))
+            if (!string.IsNullOrEmpty(confZonePulse))
             {
-                if(!uint.TryParse(confZonePulse, out zonePulse))
+                if (!uint.TryParse(confZonePulse, out zonePulse))
                 {
                     zonePulse = 600;
                 }
@@ -97,9 +100,9 @@ namespace Kingdoms_of_Etrea
             {
                 zonePulse = 600;
             }
-            if(!string.IsNullOrEmpty(confNpcPulse))
+            if (!string.IsNullOrEmpty(confNpcPulse))
             {
-                if(!uint.TryParse(confNpcPulse, out npcPulse))
+                if (!uint.TryParse(confNpcPulse, out npcPulse))
                 {
                     npcPulse = 120;
                 }
@@ -108,9 +111,9 @@ namespace Kingdoms_of_Etrea
             {
                 npcPulse = 120;
             }
-            if(!string.IsNullOrEmpty(confCombatPulse))
+            if (!string.IsNullOrEmpty(confCombatPulse))
             {
-                if(!uint.TryParse(confCombatPulse, out combatPulse))
+                if (!uint.TryParse(confCombatPulse, out combatPulse))
                 {
                     combatPulse = 6;
                 }
@@ -119,9 +122,9 @@ namespace Kingdoms_of_Etrea
             {
                 combatPulse = 6;
             }
-            if(!string.IsNullOrEmpty(confAutoSavePulse))
+            if (!string.IsNullOrEmpty(confAutoSavePulse))
             {
-                if(!uint.TryParse(confAutoSavePulse, out autoSavePulse))
+                if (!uint.TryParse(confAutoSavePulse, out autoSavePulse))
                 {
                     autoSavePulse = 180;
                 }
@@ -130,27 +133,28 @@ namespace Kingdoms_of_Etrea
             {
                 autoSavePulse = 180;
             }
-            if(!string.IsNullOrEmpty(confBuffPulse))
+            if (!string.IsNullOrEmpty(confBuffPulse))
             {
-                if(!uint.TryParse(confBuffPulse, out buffPulse))
+                if (!uint.TryParse(confBuffPulse, out buffPulse))
                 {
                     buffPulse = 60;
-                }    
+                }
             }
             else
             {
                 buffPulse = 60;
             }
+
             Game.LogMessage($"INFO: Starting game with following parameters: zonePulse = {zonePulse}; npcPulse = {npcPulse}; combatPulse = {combatPulse}; buffPulse = {buffPulse}; backupPulse = {backupPulse}; backupsRetained = {backupsRetained}", LogLevel.Info, true);
             _game = new Game(zonePulse, npcPulse, combatPulse, autoSavePulse, buffPulse, backupPulse, backupsRetained);
-            _game.Run();
+            _game.Run();            // blocking call, we only call Shutdown() when the game loop exits
 
             _server.Shutdown();
         }
 
         internal static void Stop()
         {
-            if(_game != null)
+            if (_game != null)
             {
                 _game.Shutdown();
             }

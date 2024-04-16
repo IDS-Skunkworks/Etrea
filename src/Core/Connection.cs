@@ -1,12 +1,11 @@
-﻿using Kingdoms_of_Etrea.Interfaces;
-using System;
-using System.IO;
+﻿using System;
 using System.Text;
 using System.Threading;
-using Kingdoms_of_Etrea.Entities;
+using Etrea2.Interfaces;
+using System.IO;
 using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class Connection : IInputValidator
     {
@@ -20,24 +19,7 @@ namespace Kingdoms_of_Etrea.Core
             var thread = new Thread(HandleConnection);
             thread.IsBackground = true;
             thread.Start();
-
-            // Can't remeber why I added this as it was never finished... Commenting out for now...
-            //var monitor = new Thread(MonitorConnection);
-            //monitor.IsBackground = true;
-            //monitor.Start();
         }
-
-        //private void MonitorConnection()
-        //{
-        //    if(_desc != null)
-        //    {
-
-        //    }
-        //    else
-        //    {
-
-        //    }
-        //}
 
         private void HandleConnection()
         {
@@ -46,21 +28,23 @@ namespace Kingdoms_of_Etrea.Core
             bool first = true;
             while (_desc != null && _desc.IsConnected)
             {
-                if(first)
+                if (first)
                 {
                     // if the player is trying to load into a room that no longer exits, port them to Limbo to avoid a crash...
                     uint pStartRoom = _desc.Player.CurrentRoom;
-                    if(!RoomManager.Instance.RoomExists(pStartRoom))
+                    if (!RoomManager.Instance.RoomExists(pStartRoom))
                     {
                         Game.LogMessage($"WARN: Player {_desc.Player.Name} tried to load in room {pStartRoom} which doesn't exist - moving to Limo", LogLevel.Warning, true);
                         _desc.Player.CurrentRoom = Constants.LimboRID();
                         _desc.Send($"The world has shifted and the Gods have transported you to Limbo for safe keeping!{Constants.NewLine}");
                     }
                     RoomManager.Instance.ProcessEnvironmentBuffs(pStartRoom);
+                    RoomManager.Instance.GetRoom(_desc.Player.CurrentRoom).DescribeRoom(ref _desc, true);
                     var motd = DatabaseManager.GetMOTD();
                     if (!string.IsNullOrEmpty(motd))
                     {
                         StringBuilder sb = new StringBuilder();
+                        sb.AppendLine();
                         sb.AppendLine($"  {new string('=', 77)}");
                         sb.AppendLine($"|| Message Of The Day:");
                         foreach (var line in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
@@ -73,12 +57,10 @@ namespace Kingdoms_of_Etrea.Core
                         sb.AppendLine($"  {new string('=', 77)}{Constants.NewLine}");
                         _desc.Send(sb.ToString());
                     }
-                    Room.DescribeRoom(ref _desc);
                     first = false;
                 }
-                string prompt = $"{Constants.NewLine}{Constants.BrightRedText}{_desc.Player.Stats.CurrentHP}/{_desc.Player.Stats.MaxHP} HP{Constants.PlainText}; {Constants.BrightBluetext}{_desc.Player.Stats.CurrentMP}/{_desc.Player.Stats.MaxMP} MP{Constants.PlainText}; {Constants.BrightYellowText}{_desc.Player.Stats.CurrentSP}/{_desc.Player.Stats.MaxSP} SP{Constants.PlainText} >>";
+                string prompt = $"{Constants.NewLine}{Constants.BrightRedText}{_desc.Player.CurrentHP:N0}/{_desc.Player.MaxHP:N0} HP{Constants.PlainText}; {Constants.BrightBluetext}{_desc.Player.CurrentMP:N0}/{_desc.Player.MaxMP:N0} MP{Constants.PlainText}; {Constants.BrightYellowText}{_desc.Player.CurrentSP:N0}/{_desc.Player.MaxSP:N0} SP{Constants.PlainText} >>";
                 _desc.Send(prompt);
-
                 var input = _desc.Read();
                 _desc.LastInputTime = DateTime.UtcNow;
                 if (!string.IsNullOrEmpty(input))
@@ -94,6 +76,7 @@ namespace Kingdoms_of_Etrea.Core
                         {
                             Game.LogMessage($"ERROR: Error parsing input from {_desc.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
                             _desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                            Game.LogMessage($"DEBUG: Error parsing input from {_desc.Client.Client.RemoteEndPoint}: {input}", LogLevel.Debug, false);
                         }
                     }
                 }
@@ -104,16 +87,11 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        public bool ValidateInput(string input)
-        {
-            return !string.IsNullOrEmpty(input) && Encoding.UTF8.GetByteCount(input) == input.Length;
-        }
-
         private void CreateNewChar()
         {
             _desc.State = ConnectionState.CreatingCharacter;
             CharacterCreator.CreateNewCharacter(ref _desc);
-            if(_desc.Player == null)
+            if (_desc.Player == null)
             {
                 _desc.Send($"A valid character was not created, returning to the main menu...{Constants.NewLine}");
                 MainMenu();
@@ -124,7 +102,7 @@ namespace Kingdoms_of_Etrea.Core
         {
             _desc.State = ConnectionState.MainMenu;
             bool validSelection = false;
-            while(_desc != null && _desc.IsConnected && !validSelection)
+            while (_desc != null && _desc.IsConnected && !validSelection)
             {
                 try
                 {
@@ -167,6 +145,11 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
+        public bool ValidateInput(string input)
+        {
+            return !string.IsNullOrEmpty(input) && Encoding.UTF8.GetByteCount(input) == input.Length;
+        }
+
         private void WelcomeMessage()
         {
             try
@@ -174,7 +157,7 @@ namespace Kingdoms_of_Etrea.Core
                 string welcomePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resources");
                 string[] welcomeLines = File.ReadAllLines($"{welcomePath}\\welcome.txt");
                 StringBuilder sb = new StringBuilder();
-                foreach(string currentLine in welcomeLines)
+                foreach (string currentLine in welcomeLines)
                 {
                     var line = Regex.Replace(currentLine, "{BR}", Constants.BrightRedText);
                     line = Regex.Replace(line, "{RE}", Constants.PlainText);
@@ -190,9 +173,9 @@ namespace Kingdoms_of_Etrea.Core
                 _desc.Send(sb.ToString());
                 _desc.Send(Constants.PlainText);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error sending welcome message: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error sending welcome message to {_desc.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
             }
         }
     }

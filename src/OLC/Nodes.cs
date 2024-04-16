@@ -1,59 +1,12 @@
-﻿using Kingdoms_of_Etrea.Core;
-using Kingdoms_of_Etrea.Entities;
-using System.Text;
+﻿using Etrea2.Core;
+using Etrea2.Entities;
 using System.Collections.Generic;
+using System.Text;
 
-namespace Kingdoms_of_Etrea.OLC
+namespace Etrea2.OLC
 {
     internal static partial class OLC
     {
-        #region Delete
-        private static void DeleteResourceNode(ref Descriptor desc)
-        {
-            desc.Send($"{Constants.RedText}This is a permanent change to the World and cannot be undone unless a database backup is restored!{Constants.PlainText}{Constants.NewLine}");
-            desc.Send("Enter the ID of the Resource Node: ");
-            var input = desc.Read().Trim();
-            if(Helpers.ValidateInput(input))
-            {
-                ResourceNode n = null;
-                if(uint.TryParse(input, out uint nodeID))
-                {
-                    n = NodeManager.Instance.GetNodeByID(nodeID);
-                }
-                else
-                {
-                    n = NodeManager.Instance.GetNodeByName(input);
-                }
-                if(n != null)
-                {
-                    if(DatabaseManager.DeleteResourceNodeByID(ref desc, ref n))
-                    {
-                        if(NodeManager.Instance.RemoveNode(n))
-                        {
-                            desc.Send($"Resource Node removed from NodeManager and World Database.{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Send($"Unable to remove Resource Node from NodeManager.{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Unable to remove Resource Node from World Database.{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"Unable to find a Resource Node with that name or ID.{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-            }
-        }
-        #endregion
-
         #region Create
         private static void CreateNewResourceNode(ref Descriptor desc)
         {
@@ -62,18 +15,20 @@ namespace Kingdoms_of_Etrea.OLC
             sb.AppendLine("A Resource Node is a feature that can appear in Rooms that have the CAVE flag.");
             sb.AppendLine("Resource Nodes can be mined by players with the appropriate skill to gain resources for crafting.");
             desc.Send(sb.ToString());
-            ResourceNode n = new ResourceNode();
-            n.CanFind = new List<InventoryItem>();
-            while(!okToReturn)
+            ResourceNode n = new ResourceNode
+            {
+                CanFind = new List<InventoryItem>()
+            };
+            while (!okToReturn)
             {
                 sb.Clear();
-                sb.AppendLine($"Node ID: {n.Id}");
+                sb.AppendLine($"Node ID: {n.ID}");
                 sb.AppendLine($"Node Name: {n.NodeName}");
                 sb.AppendLine($"Appearance Chance: {n.AppearanceChance}");
                 sb.AppendLine($"Can Find:");
-                if(n.CanFind != null && n.CanFind.Count > 0)
+                if (n.CanFind != null && n.CanFind.Count > 0)
                 {
-                    foreach(var cf in n.CanFind)
+                    foreach (var cf in n.CanFind)
                     {
                         sb.AppendLine($"{cf.Name}");
                     }
@@ -84,24 +39,20 @@ namespace Kingdoms_of_Etrea.OLC
                 }
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine("1. Set Node ID");
-                sb.AppendLine("2. Set Node Name");
-                sb.AppendLine("3. Set Appearance Chance");
-                sb.AppendLine("4. Add Item to Node");
-                sb.AppendLine("5. Remove Item from Node");
-                sb.AppendLine("6. Save Node");
-                sb.AppendLine("7. Exit without Saving");
+                sb.AppendLine($"1. Set Node ID{Constants.TabStop}{Constants.TabStop}2. Set Node Name");
+                sb.AppendLine($"3. Set Appearance Chance{Constants.TabStop}4. Add Item to Node{Constants.TabStop}5. Remove Item from Node");
+                sb.AppendLine($"6. Save{Constants.TabStop}7. Exit");
                 sb.AppendLine("Selection:");
                 desc.Send(sb.ToString());
                 var input = desc.Read().Trim();
-                if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
+                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
                 {
-                    if(option >= 1 && option <= 7)
+                    if (option >= 1 && option <= 7)
                     {
-                        switch(option)
+                        switch (option)
                         {
                             case 1:
-                                n.Id = GetAssetUintValue(ref desc, "Enter Node ID: ");
+                                n.ID = GetAssetUintValue(ref desc, "Enter Node ID: ");
                                 break;
 
                             case 2:
@@ -115,7 +66,7 @@ namespace Kingdoms_of_Etrea.OLC
                             case 4:
                                 var i = GetAssetUintValue(ref desc, "Enter Item ID: ");
                                 var item = ItemManager.Instance.GetItemByID(i);
-                                if(item != null)
+                                if (item != null)
                                 {
                                     n.CanFind.Add(item);
                                 }
@@ -128,9 +79,9 @@ namespace Kingdoms_of_Etrea.OLC
                             case 5:
                                 i = GetAssetUintValue(ref desc, "Enter ID of Item to remove: ");
                                 item = ItemManager.Instance.GetItemByID(i);
-                                if(item != null)
+                                if (item != null)
                                 {
-                                    if(n.CanFind.Contains(item))
+                                    if (n.CanFind.Contains(item))
                                     {
                                         n.CanFind.Remove(item);
                                     }
@@ -138,14 +89,13 @@ namespace Kingdoms_of_Etrea.OLC
                                 break;
 
                             case 6:
-                                if(ValidateResourceNode(ref desc, ref n, true))
+                                if (ValidateResourceNode(ref desc, ref n, true))
                                 {
-                                    if(DatabaseManager.AddNewResourceNode(ref desc, ref n))
+                                    if (DatabaseManager.AddNewResourceNode(ref desc, ref n))
                                     {
-                                        if(NodeManager.Instance.AddNode(n))
+                                        if (NodeManager.Instance.AddNode(ref desc, n))
                                         {
                                             desc.Send($"Resource Node successfully added to NodeManager and World Database.{Constants.NewLine}");
-                                            Game.LogMessage($"INFO: Player {desc.Player} added new Resource Node '{n.NodeName}' ({n.Id}) to the World Database and NodeManager.", LogLevel.Info, true);
                                             okToReturn = true;
                                         }
                                         else
@@ -183,25 +133,21 @@ namespace Kingdoms_of_Etrea.OLC
         {
             desc.Send($"Enter the ID of the Node to edit: ");
             var input = desc.Read().Trim();
-            if(Helpers.ValidateInput(input))
+            if (Helpers.ValidateInput(input) && input == "END")
             {
-                ResourceNode n = null;
-                if(uint.TryParse(input, out uint nId))
+                return;
+            }
+            if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint nid))
+            {
+                if (NodeManager.Instance.NodeExists(nid))
                 {
-                    n = NodeManager.Instance.GetNodeByID(nId);
-                }
-                else
-                {
-                    n = NodeManager.Instance.GetNodeByName(input);
-                }
-                if(n != null)
-                {
+                    ResourceNode n = NodeManager.Instance.GetNode(nid).ShallowCopy();
                     bool okToReturn = false;
                     StringBuilder sb = new StringBuilder();
-                    while(!okToReturn)
+                    while (!okToReturn)
                     {
                         sb.Clear();
-                        sb.AppendLine($"Node ID: {n.Id}");
+                        sb.AppendLine($"Node ID: {n.ID}");
                         sb.AppendLine($"Node Name: {n.NodeName}");
                         sb.AppendLine($"Appearance Chance: {n.AppearanceChance}");
                         sb.AppendLine($"Can Find:");
@@ -227,11 +173,11 @@ namespace Kingdoms_of_Etrea.OLC
                         sb.AppendLine("Selection:");
                         desc.Send(sb.ToString());
                         input = desc.Read().Trim();
-                        if(Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
+                        if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint option))
                         {
-                            if(option >= 1 && option <= 6)
+                            if (option >= 1 && option <= 6)
                             {
-                                switch(option)
+                                switch (option)
                                 {
                                     case 1:
                                         n.NodeName = GetAssetStringValue(ref desc, "Enter Node Name: ");
@@ -244,7 +190,7 @@ namespace Kingdoms_of_Etrea.OLC
                                     case 3:
                                         var i = GetAssetUintValue(ref desc, "Enter Item ID: ");
                                         var item = ItemManager.Instance.GetItemByID(i);
-                                        if(item != null)
+                                        if (item != null)
                                         {
                                             n.CanFind.Add(item);
                                         }
@@ -257,9 +203,9 @@ namespace Kingdoms_of_Etrea.OLC
                                     case 4:
                                         i = GetAssetUintValue(ref desc, "Enter Item ID to remove: ");
                                         item = ItemManager.Instance.GetItemByID(i);
-                                        if(item != null)
+                                        if (item != null)
                                         {
-                                            if(n.CanFind.Contains(item))
+                                            if (n.CanFind.Contains(item))
                                             {
                                                 n.CanFind.Remove(item);
                                             }
@@ -271,14 +217,13 @@ namespace Kingdoms_of_Etrea.OLC
                                         break;
 
                                     case 5:
-                                        if(ValidateResourceNode(ref desc, ref n, false))
+                                        if (ValidateResourceNode(ref desc, ref n, false))
                                         {
-                                            if(DatabaseManager.UpdateResourceNode(ref desc, ref n))
+                                            if (DatabaseManager.UpdateResourceNode(ref desc, ref n))
                                             {
-                                                if(NodeManager.Instance.UpdateNode(ref desc, n))
+                                                if (NodeManager.Instance.UpdateNode(ref desc, n))
                                                 {
                                                     desc.Send($"Updated Node in NodeManager and World Database.{Constants.NewLine}");
-                                                    Game.LogMessage($"INFO: Player {desc.Player} updated Resource Node '{n.NodeName}' ({n.Id}) in NodeManager and World Database.", LogLevel.Info, true);
                                                     okToReturn = true;
                                                 }
                                                 else
@@ -311,36 +256,79 @@ namespace Kingdoms_of_Etrea.OLC
                 }
                 else
                 {
-                    desc.Send($"No Resource Node with that name or ID could be found.{Constants.NewLine}");
+                    desc.Send($"No Resource Node with ID could be found.{Constants.NewLine}");
                 }
             }
         }
         #endregion
 
-        #region Functions
+        #region Delete
+        private static void DeleteResourceNode(ref Descriptor desc)
+        {
+            desc.Send($"{Constants.RedText}This is a permanent change to the World and cannot be undone unless a database backup is restored!{Constants.PlainText}{Constants.NewLine}");
+            desc.Send("Enter the ID of the Resource Node or END to return: ");
+            var input = desc.Read().Trim();
+            if (Helpers.ValidateInput(input) && input == "END")
+            {
+                return;
+            }
+            if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint nid))
+            {
+                ResourceNode n = NodeManager.Instance.GetNodeByID(nid);
+                if (n != null)
+                {
+                    if (DatabaseManager.DeleteResourceNodeByID(ref desc, ref n))
+                    {
+                        if (NodeManager.Instance.RemoveNode(ref desc, n))
+                        {
+                            desc.Send($"Resource Node removed from NodeManager and World Database.{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            desc.Send($"Unable to remove Resource Node from NodeManager.{Constants.NewLine}");
+                        }
+                    }
+                    else
+                    {
+                        desc.Send($"Unable to remove Resource Node from World Database.{Constants.NewLine}");
+                    }
+                }
+                else
+                {
+                    desc.Send($"Unable to find a Resource Node with that name or ID.{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+            }
+        }
+        #endregion
+
+        #region Validation Functions
         private static bool ValidateResourceNode(ref Descriptor desc, ref ResourceNode n, bool IsNewNode)
         {
-            if(n.Id == 0)
+            if (n.ID == 0)
             {
                 desc.Send($"You must provide a valid ID for the Node{Constants.NewLine}");
                 return false;
             }
-            if(string.IsNullOrEmpty(n.NodeName))
+            if (string.IsNullOrEmpty(n.NodeName))
             {
                 desc.Send($"You must provide a name for the Node{Constants.NewLine}");
                 return false;
             }
-            if(n.AppearanceChance > 100)
+            if (n.AppearanceChance > 100)
             {
                 desc.Send($"Appearance chance cannot be higher than 100%{Constants.NewLine}");
                 return false;
             }
-            if(IsNewNode && DatabaseManager.IsNodeIDInUse(ref desc, n.Id))
+            if (IsNewNode && DatabaseManager.IsNodeIDInUse(n.ID))
             {
                 desc.Send($"The specified Node ID is already in use.{Constants.NewLine}");
                 return false;
             }
-            if(n.CanFind == null || n.CanFind.Count == 0)
+            if (n.CanFind == null || n.CanFind.Count == 0)
             {
                 desc.Send($"You must add at least one item to the Node.{Constants.NewLine}");
                 return false;

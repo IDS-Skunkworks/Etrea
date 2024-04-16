@@ -1,31 +1,29 @@
-﻿using Kingdoms_of_Etrea.Entities;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Etrea2.Entities;
 using System.Text.RegularExpressions;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal class ShopManager
     {
         private static ShopManager _instance = null;
-        private static readonly object _lockObject = new object();
-        //private ILoggingProvider _loggingProvider;
-        private Dictionary<uint, Shop> shops { get; set; }
+        private static readonly object _lock = new object();
+        private Dictionary<uint, Shop> _shops { get; set; }
 
         private ShopManager()
         {
-            //_loggingProvider = loggingProvider;
-            shops = new Dictionary<uint, Shop>();
+            _shops = new Dictionary<uint, Shop>();
         }
 
         internal static ShopManager Instance
         {
             get
             {
-                lock(_lockObject)
+                lock (_lock)
                 {
-                    if(_instance == null)
+                    if (_instance == null)
                     {
                         _instance = new ShopManager();
                     }
@@ -34,24 +32,20 @@ namespace Kingdoms_of_Etrea.Core
             }
         }
 
-        internal Dictionary<uint, Shop> GetAllShops()
-        {
-            return Instance.shops;
-        }
-
-        internal bool AddNewShop(Shop s)
+        internal bool AddNewShop(ref Descriptor desc, Shop s)
         {
             try
             {
-                lock(_lockObject)
+                lock(_lock)
                 {
-                    _instance.shops.Add(s.ShopID, s);
+                    Instance._shops.Add(s.ID, s);
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} has added Shop {s.ID} ({s.ShopName}) to ShopManager", LogLevel.OLC, true);
                 }
                 return true;
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"Error adding Shop ID {s.ShopName} ({s.ShopID}): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding Shop ID {s.ID} ({s.ShopName}) to ShopManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
@@ -60,88 +54,101 @@ namespace Kingdoms_of_Etrea.Core
         {
             try
             {
-                if(Instance.shops.ContainsKey(s.ShopID))
+                lock (_lock)
                 {
-                    lock(_lockObject)
+                    if (Instance._shops.ContainsKey(s.ID))
                     {
-                        Instance.shops.Remove(s.ShopID);
-                        Instance.shops.Add(s.ShopID, s);
-                        Game.LogMessage($"Player {desc.Player.Name} updated Shop {s.ShopID} in Shop Manager", LogLevel.Info, true);
+                        Instance._shops.Remove(s.ID);
+                        Instance._shops.Add(s.ID, s);
+                        Game.LogMessage($"OLC: Player {desc.Player.Name} updated Shop {s.ID} ({s.ShopName}) in ShopManager", LogLevel.OLC, true);
+                        return true;
                     }
-                    return true;
+                    else
+                    {
+                        Game.LogMessage($"OLC: ShopManager does not contain a Shop with ID {s.ID} to update, it will be added instead", LogLevel.OLC, true);
+                        bool OK = AddNewShop(ref desc, s);
+                        return OK;
+                    }
                 }
-                else
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Shop {s.ID} ({s.ShopName}) in ShopManager: {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        internal bool RemoveShop(ref Descriptor desc, uint id, string name)
+        {
+            try
+            {
+                lock (_lock)
                 {
-                    Game.LogMessage($"Shop Manager does not contain a Shop with ID {s.ShopID}", LogLevel.Warning, true);
-                    lock(_lockObject)
-                    {
-                        Instance.shops.Add(s.ShopID, s);
-                    }
+                    Instance._shops.Remove(id);
+                    Game.LogMessage($"OLC: Player {desc.Player.Name} removed Shop {id} ({name}) from ShopManager", LogLevel.OLC, true);
                     return true;
                 }
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"Error updating Shop {s.ShopID}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Shop {id} ({name}) from ShopManager: {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
         internal List<Shop> GetShopByIDRange(uint start, uint end)
         {
-            var retval = shops.Values.Where(x => x.ShopID >= start && x.ShopID <= end).ToList();
+            var retval = Instance._shops.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
             return retval;
+        }
+
+        internal List<Shop> GetAllShops()
+        {
+            lock (_lock)
+            {
+                return Instance._shops.Values.ToList();
+            }
         }
 
         internal List<Shop> GetShopsByName(string name)
         {
-            if(!string.IsNullOrEmpty(name))
+            if (!string.IsNullOrEmpty(name))
             {
-                var result = from s in Instance.shops.Values where Regex.Match(s.ShopName, name, RegexOptions.IgnoreCase).Success select s;
-                return result.ToList();
+                var result = Instance._shops.Values.Where(x => Regex.IsMatch(x.ShopName, name, RegexOptions.IgnoreCase)).ToList();
+                return result;
             }
-            return Instance.shops.Values.ToList();
-        }
-
-        internal bool RemoveShop(uint id, string sname)
-        {
-            try
-            {
-                lock(_lockObject)
-                {
-                    _instance.shops.Remove(id);
-                }
-                return true;
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"Error removing Shop {sname} ({id}): {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
+            return Instance._shops.Values.ToList();
         }
 
         internal int GetShopCount()
         {
-            return Instance.shops.Count;
+            return Instance._shops.Count;
         }
 
         internal Shop GetShop(uint id)
         {
-            return Instance.shops.ContainsKey(id) ? Instance.shops[id] : null;
+            lock (_lock)
+            {
+                if (Instance._shops.ContainsKey(id))
+                {
+                    return Instance._shops[id];
+                }
+            }
+            return null;
         }
 
         internal bool ShopExists(uint id)
         {
-            return Instance.shops.ContainsKey(id);
+            return Instance._shops.ContainsKey(id);
         }
 
         internal void LoadAllShops(out bool hasErr)
         {
             var result = DatabaseManager.LoadAllShops(out hasErr);
-            if(!hasErr && result != null && result.Count > 0)
+            if (!hasErr && result != null)
             {
-                Instance.shops.Clear();
-                Instance.shops = result;
+                Instance._shops.Clear();
+                Instance._shops = result;
             }
         }
     }

@@ -1,7 +1,6 @@
-﻿using Kingdoms_of_Etrea.Core;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
-namespace Kingdoms_of_Etrea.Entities
+namespace Etrea2.Entities
 {
     internal class Zone
     {
@@ -14,14 +13,10 @@ namespace Kingdoms_of_Etrea.Entities
         [JsonProperty]
         internal uint MaxRoom { get; set; }
 
-        public Zone(uint zid)
+        internal Zone ShallowCopy()
         {
-            ZoneManager.Instance.GetZone(zid);
-        }
-
-        internal Zone()
-        {
-
+            var z = (Zone)this.MemberwiseClone();
+            return z;
         }
     }
 }

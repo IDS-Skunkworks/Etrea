@@ -1,9 +1,9 @@
-﻿using Kingdoms_of_Etrea.Entities;
+﻿using System;
 using System.Collections.Generic;
-using System;
+using Etrea2.Entities;
 using System.Text;
 
-namespace Kingdoms_of_Etrea.Core
+namespace Etrea2.Core
 {
     internal static class CharacterCreator
     {
@@ -32,28 +32,24 @@ namespace Kingdoms_of_Etrea.Core
             Player p = new Player();
             p.ShowDetailedRollInfo = false;
             p.Visible = true;
-            p.Stats = new ActorStats
-            {
-                Strength = 10,
-                Dexterity = 10,
-                Constitution= 10,
-                Intelligence = 10,
-                Wisdom = 10,
-                Charisma = 10,
-                ArmourClass = 10,
-                CurrentSP = 10,
-                MaxSP = 10,
-            };
-            p.EquippedItems = new EquippedItems();
+            p.Strength = 10;
+            p.Dexterity = 10;
+            p.Constitution = 10;
+            p.Intelligence = 10;
+            p.Wisdom = 10;
+            p.Charisma = 10;
+            p.CurrentSP = 20;
+            p.MaxSP = 20;
+            p.BaseArmourClass = 10; 
             p.Inventory = new List<InventoryItem>();
             p.Buffs = new Dictionary<string, int>();
-            p.Skills = new List<Skills.Skill>();
-            p.Spells = new List<Spells.Spell>();
-            p.KnownRecipes = new List<Crafting.Recipe>();
+            p.Skills = new List<Skill>();
+            p.Spells = new List<Spell>();
+            p.Recipes = new List<Recipe>();
             p.CompletedQuests = new HashSet<Guid>();
             p.ActiveQuests = new List<Quest>();
             p.CommandAliases = new Dictionary<string, string>();
-            p.KnownLanguages |= Languages.Common;
+            p.KnownLanguages = Languages.Common;
             p.SpokenLanguage = Languages.Common;
             p.NumberOfAttacks = 1;
             p.PVP = false;
@@ -73,9 +69,9 @@ namespace Kingdoms_of_Etrea.Core
                 var input = _desc.Read().Trim();
                 if (ValidateInput(input))
                 {
-                    if(uint.TryParse(input, out uint selection))
+                    if (uint.TryParse(input, out uint selection))
                     {
-                        switch(selection)
+                        switch (selection)
                         {
                             case 1:
                                 p.Race = ActorRace.Human;
@@ -83,55 +79,55 @@ namespace Kingdoms_of_Etrea.Core
                                 validRace = true;
                                 break;
 
-                                case 2:
+                            case 2:
                                 p.Race = ActorRace.Elf;
-                                p.Stats.Intelligence += 2;
-                                p.Stats.Charisma += 1;
-                                p.Stats.Constitution -= 1;
-                                p.Stats.Strength -= 1;
+                                p.Intelligence += 2;
+                                p.Charisma += 1;
+                                p.Constitution -= 1;
+                                p.Strength -= 1;
                                 p.KnownLanguages |= Languages.Elvish;
                                 validRace = true;
                                 break;
 
-                                case 3:
+                            case 3:
                                 p.Race = ActorRace.HalfElf;
-                                p.Stats.Intelligence += 1;
-                                p.Stats.Dexterity += 1;
+                                p.Intelligence += 1;
+                                p.Dexterity += 1;
                                 p.KnownLanguages |= Languages.Elvish;
                                 validRace = true;
                                 break;
 
-                                case 4:
+                            case 4:
                                 p.Race = ActorRace.Orc;
-                                p.Stats.Strength += 2;
-                                p.Stats.Constitution += 2;
-                                p.Stats.Intelligence -= 2;
-                                p.Stats.Charisma -= 2;
-                                p.Stats.ArmourClass += 1;
+                                p.Strength += 2;
+                                p.Constitution += 2;
+                                p.Intelligence -= 2;
+                                p.Charisma -= 2;
+                                p.BaseArmourClass += 1;
                                 p.KnownLanguages |= Languages.Orcish;
                                 validRace = true;
                                 break;
 
-                                case 5:
+                            case 5:
                                 p.Race = ActorRace.Dwarf;
-                                p.Stats.Strength += 1;
-                                p.Stats.Constitution += 2;
-                                p.Stats.Charisma -= 1;
-                                p.Stats.Dexterity -= 1;
+                                p.Strength += 1;
+                                p.Constitution += 2;
+                                p.Charisma -= 1;
+                                p.Dexterity -= 1;
                                 p.KnownLanguages |= Languages.Dwarvish;
                                 validRace = true;
                                 break;
 
-                                case 6:
+                            case 6:
                                 p.Race = ActorRace.Hobbit;
-                                p.Stats.Dexterity += 2;
-                                p.Stats.Charisma += 1;
-                                p.Stats.Strength -= 2;
-                                p.Stats.Constitution -= 1;
+                                p.Dexterity += 2;
+                                p.Charisma += 1;
+                                p.Strength -= 2;
+                                p.Constitution -= 1;
                                 validRace = true;
                                 break;
 
-                                case 7:
+                            case 7:
                                 return;
 
                             default:
@@ -161,16 +157,16 @@ namespace Kingdoms_of_Etrea.Core
                 sb.Append("Selection: ");
                 _desc.Send(sb.ToString());
                 var input = _desc.Read().Trim();
-                if(ValidateInput(input))
+                if (ValidateInput(input))
                 {
-                    if(uint.TryParse(input, out uint selection))
+                    if (uint.TryParse(input, out uint selection))
                     {
-                        switch(selection)
+                        switch (selection)
                         {
                             case 1:
-                                p.Stats.Intelligence += 2;
-                                p.Stats.Strength -= 1;
-                                p.Stats.Constitution -= 1;
+                                p.Intelligence += 2;
+                                p.Strength -= 1;
+                                p.Constitution -= 1;
                                 p.Class = ActorClass.Wizard;
                                 p.AddSkill("Light Armour");
                                 p.AddSkill("Simple Weapons");
@@ -179,11 +175,11 @@ namespace Kingdoms_of_Etrea.Core
                                 p.KnownLanguages |= Languages.Draconic;
                                 validClass = true;
                                 break;
-                                
-                                case 2:
-                                p.Stats.Dexterity += 2;
-                                p.Stats.Strength -= 1;
-                                p.Stats.Constitution -= 1;
+
+                            case 2:
+                                p.Dexterity += 2;
+                                p.Strength -= 1;
+                                p.Constitution -= 1;
                                 p.Class = ActorClass.Thief;
                                 p.AddSkill("Light Armour");
                                 p.AddSkill("Simple Weapons");
@@ -192,10 +188,10 @@ namespace Kingdoms_of_Etrea.Core
                                 validClass = true;
                                 break;
 
-                                case 3:
-                                p.Stats.Wisdom += 2;
-                                p.Stats.Strength -= 1;
-                                p.Stats.Constitution -= 1;
+                            case 3:
+                                p.Wisdom += 2;
+                                p.Strength -= 1;
+                                p.Constitution -= 1;
                                 p.Class = ActorClass.Cleric;
                                 p.AddSkill("Light Armour");
                                 p.AddSkill("Simple Weapons");
@@ -205,12 +201,12 @@ namespace Kingdoms_of_Etrea.Core
                                 validClass = true;
                                 break;
 
-                                case 4:
-                                p.Stats.Strength += 2;
-                                p.Stats.Constitution += 2;
-                                p.Stats.Dexterity -= 1;
-                                p.Stats.Intelligence -= 1;
-                                p.Stats.Charisma -= 1;
+                            case 4:
+                                p.Strength += 2;
+                                p.Constitution += 2;
+                                p.Dexterity -= 1;
+                                p.Intelligence -= 1;
+                                p.Charisma -= 1;
                                 p.Class = ActorClass.Fighter;
                                 p.AddSkill("Light Armour");
                                 p.AddSkill("Medium Armour");
@@ -220,7 +216,7 @@ namespace Kingdoms_of_Etrea.Core
                                 validClass = true;
                                 break;
 
-                                case 5:
+                            case 5:
                                 return;
 
                             default:
@@ -242,50 +238,50 @@ namespace Kingdoms_of_Etrea.Core
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("Your current stats from your race and class selection are:");
-                sb.AppendLine($"1. Strength:{Constants.TabStop}{Constants.TabStop}{p.Stats.Strength}{Constants.TabStop}({ActorStats.CalculateAbilityModifier(p.Stats.Strength)})");
-                sb.AppendLine($"2. Dexterity:{Constants.TabStop}{Constants.TabStop}{p.Stats.Dexterity}{Constants.TabStop}({ActorStats.CalculateAbilityModifier(p.Stats.Dexterity)})");
-                sb.AppendLine($"3. Constitution:{Constants.TabStop}{p.Stats.Constitution}{Constants.TabStop}({ActorStats.CalculateAbilityModifier(p.Stats.Constitution)})");
-                sb.AppendLine($"4. Intelligence:{Constants.TabStop}{p.Stats.Intelligence}{Constants.TabStop}({ActorStats.CalculateAbilityModifier(p.Stats.Intelligence)})");
-                sb.AppendLine($"5. Wisdom:{Constants.TabStop}{Constants.TabStop}{p.Stats.Wisdom}{Constants.TabStop}({ActorStats.CalculateAbilityModifier(p.Stats.Wisdom)})");
-                sb.AppendLine($"6. Charisma:{Constants.TabStop}{Constants.TabStop}{p.Stats.Charisma}{Constants.TabStop}({ActorStats.CalculateAbilityModifier(p.Stats.Charisma)})");
+                sb.AppendLine($"1. Strength:{Constants.TabStop}{Constants.TabStop}{p.Strength}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Strength)})");
+                sb.AppendLine($"2. Dexterity:{Constants.TabStop}{Constants.TabStop}{p.Dexterity}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Dexterity)})");
+                sb.AppendLine($"3. Constitution:{Constants.TabStop}{p.Constitution}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Constitution)})");
+                sb.AppendLine($"4. Intelligence:{Constants.TabStop}{p.Intelligence}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Intelligence)})");
+                sb.AppendLine($"5. Wisdom:{Constants.TabStop}{Constants.TabStop}{p.Wisdom}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Wisdom)})");
+                sb.AppendLine($"6. Charisma:{Constants.TabStop}{Constants.TabStop}{p.Charisma}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Charisma)})");
                 sb.AppendLine("7. Exit Character Creator");
                 sb.AppendLine($"You have {Constants.BoldText}{statPointsToAllocate} points{Constants.PlainText} to spend on increasing stats");
                 sb.Append("Selection: ");
                 _desc.Send(sb.ToString());
                 var input = _desc.Read().Trim();
-                if(ValidateInput(input))
+                if (ValidateInput(input))
                 {
-                    if(uint.TryParse(input, out uint selection))
+                    if (uint.TryParse(input, out uint selection))
                     {
-                        switch(selection)
+                        switch (selection)
                         {
                             case 1:
-                                p.Stats.Strength++;
+                                p.Strength++;
                                 statPointsToAllocate--;
                                 break;
 
                             case 2:
-                                p.Stats.Dexterity++;
+                                p.Dexterity++;
                                 statPointsToAllocate--;
                                 break;
 
                             case 3:
-                                p.Stats.Constitution++;
+                                p.Constitution++;
                                 statPointsToAllocate--;
                                 break;
 
                             case 4:
-                                p.Stats.Intelligence++;
+                                p.Intelligence++;
                                 statPointsToAllocate--;
                                 break;
 
                             case 5:
-                                p.Stats.Wisdom++;
+                                p.Wisdom++;
                                 statPointsToAllocate--;
                                 break;
 
                             case 6:
-                                p.Stats.Charisma++;
+                                p.Charisma++;
                                 statPointsToAllocate--;
                                 break;
 
@@ -319,11 +315,11 @@ namespace Kingdoms_of_Etrea.Core
                 sb.Append("Selection: ");
                 _desc.Send(sb.ToString());
                 var input = _desc.Read().Trim();
-                if(ValidateInput(input))
+                if (ValidateInput(input))
                 {
-                    if(uint.TryParse(input, out uint selection))
+                    if (uint.TryParse(input, out uint selection))
                     {
-                        switch(selection)
+                        switch (selection)
                         {
                             case 1:
                                 p.Gender = Gender.Male;
@@ -365,9 +361,7 @@ namespace Kingdoms_of_Etrea.Core
                 sb.AppendLine($"Title: {p.Title ?? string.Empty}");
                 sb.AppendLine($"Short Description: {p.ShortDescription ?? string.Empty}");
                 sb.AppendLine($"Long Description: {p.LongDescription ?? string.Empty}");
-                sb.AppendLine($"Race: {p.Race}");
-                sb.AppendLine($"Class: {p.Class}");
-                sb.AppendLine($"Gender: {p.Gender}");
+                sb.AppendLine($"Race: {p.Race}{Constants.TabStop}Class: {p.Class}{Constants.TabStop}Gender: {p.Gender}");
                 sb.AppendLine($"Languages: {p.KnownLanguages}");
                 sb.AppendLine();
                 sb.AppendLine("1. Change Name");
@@ -378,11 +372,11 @@ namespace Kingdoms_of_Etrea.Core
                 sb.Append("Selection: ");
                 _desc.Send(sb.ToString());
                 var input = _desc.Read().Trim();
-                if(ValidateInput(input))
+                if (ValidateInput(input))
                 {
-                    if(uint.TryParse(input, out uint selection))
+                    if (uint.TryParse(input, out uint selection))
                     {
-                        switch(selection)
+                        switch (selection)
                         {
                             case 1:
                                 playerName = GetNewCharName(ref _desc);
@@ -397,7 +391,7 @@ namespace Kingdoms_of_Etrea.Core
                             case 3:
                                 playerShortDesc = GetNewCharShortDesc(ref _desc);
                                 p.ShortDescription = playerShortDesc;
-                              break;
+                                break;
 
                             case 4:
                                 playerLongDesc = GetNewCharLongDesc(ref _desc);
@@ -429,7 +423,7 @@ namespace Kingdoms_of_Etrea.Core
                 _desc.Send($"Please enter a password for the new character{Constants.NewLine}");
                 _desc.Send("Password: ");
                 var input = _desc.Read().Trim();
-                if(ValidateInput(input))
+                if (ValidateInput(input))
                 {
                     playerPwd = input;
                     validPwd = true;
@@ -440,48 +434,46 @@ namespace Kingdoms_of_Etrea.Core
             switch (p.Class)
             {
                 case ActorClass.Cleric:
-                    p.Stats.MaxHP = Convert.ToUInt32(8 + ActorStats.CalculateAbilityModifier(p.Stats.Constitution));
-                    p.Stats.MaxMP = Convert.ToUInt32(8 + ActorStats.CalculateAbilityModifier(p.Stats.Wisdom));
+                    p.MaxHP = 8 + Helpers.CalculateAbilityModifier(p.Constitution);
+                    p.MaxMP = 8 + Helpers.CalculateAbilityModifier(p.Wisdom);
                     break;
 
                 case ActorClass.Fighter:
-                    p.Stats.MaxHP = Convert.ToUInt32(10 + ActorStats.CalculateAbilityModifier(p.Stats.Constitution));
-                    p.Stats.MaxMP = Convert.ToUInt32(4 + ActorStats.CalculateAbilityModifier(p.Stats.Intelligence));
+                    p.MaxHP = 10 + Helpers.CalculateAbilityModifier(p.Constitution);
+                    p.MaxMP = 4 + Helpers.CalculateAbilityModifier(p.Intelligence);
                     break;
 
                 case ActorClass.Thief:
-                    p.Stats.MaxHP = Convert.ToUInt32(6 + ActorStats.CalculateAbilityModifier(p.Stats.Constitution));
-                    p.Stats.MaxMP = Convert.ToUInt32(6 + ActorStats.CalculateAbilityModifier(p.Stats.Intelligence));
+                    p.MaxHP = 6 + Helpers.CalculateAbilityModifier(p.Constitution);
+                    p.MaxMP = 6 + Helpers.CalculateAbilityModifier(p.Intelligence);
                     break;
 
                 case ActorClass.Wizard:
-                    p.Stats.MaxHP = Convert.ToUInt32(4 + ActorStats.CalculateAbilityModifier(p.Stats.Constitution));
-                    p.Stats.MaxMP = Convert.ToUInt32(10 + ActorStats.CalculateAbilityModifier(p.Stats.Intelligence));
+                    p.MaxHP = 4 + Helpers.CalculateAbilityModifier(p.Constitution);
+                    p.MaxMP = 10 + Helpers.CalculateAbilityModifier(p.Intelligence);
                     break;
 
                 default:
-                    p.Stats.MaxHP = Convert.ToUInt32(6 + ActorStats.CalculateAbilityModifier(p.Stats.Constitution));
-                    p.Stats.MaxMP = Convert.ToUInt32(8 + ActorStats.CalculateAbilityModifier(p.Stats.Intelligence));
+                    p.MaxHP = 6 + Helpers.CalculateAbilityModifier(p.Constitution);
+                    p.MaxMP = 8 + Helpers.CalculateAbilityModifier(p.Intelligence);
                     break;
             }
 
             p.Position = ActorPosition.Standing;
             p.Level = 1;
-            p.Stats.MaxSP += Convert.ToUInt32(ActorStats.CalculateAbilityModifier(p.Stats.Constitution));
-            p.Stats.CurrentSP = p.Stats.MaxSP;
-            p.Stats.CurrentHP = (int)p.Stats.MaxHP;
-            p.Stats.CurrentMP = (int)p.Stats.MaxMP;
-            p.Stats.CurrentMaxHP = p.Stats.MaxHP;
-            p.Stats.CurrentMaxMP = p.Stats.MaxMP;
-            p.Stats.ArmourClass = Convert.ToUInt32(10 + ActorStats.CalculateAbilityModifier(p.Stats.Dexterity));
-            p.Alignment = ActorAlignment.Neutral;
-            p.Stats.Gold = 50 + Helpers.RollDice(25, 2);
+            p.MaxSP += Helpers.CalculateAbilityModifier(p.Constitution);
+            p.CurrentSP = p.MaxSP;
+            p.CurrentHP = p.MaxHP;
+            p.CurrentMP = p.MaxMP;
+            p.CalculateArmourClass();
+            p.Alignment = Alignment.Neutral;
+            p.Gold = 50 + Helpers.RollDice(25, 2);
             p.CurrentRoom = Constants.PlayerStartRoom();
-            p.Type = ActorType.Player;
+            p.ActorType = ActorType.Player;
 
             _desc.Player = p;
 
-            DatabaseManager.SavePlayerNew(ref _desc, true, playerPwd);
+            DatabaseManager.SavePlayer(ref _desc, true, playerPwd);
 
             Game.LogMessage($"INFO: {_desc.Client.Client.RemoteEndPoint} has entered the world as a new character: {p.Name}", LogLevel.Info, true);
 
@@ -566,9 +558,9 @@ namespace Kingdoms_of_Etrea.Core
             {
                 _desc.Send($"[{row}] ");
                 var input = _desc.Read().Trim();
-                if(ValidateInput(input) && input.Length <= 80)
+                if (ValidateInput(input) && input.Length <= 80)
                 {
-                    if(input.ToUpper() == "END" && row >= 2)
+                    if (input.ToUpper() == "END" && row >= 2)
                     {
                         valid = true;
                     }
@@ -576,7 +568,7 @@ namespace Kingdoms_of_Etrea.Core
                     {
                         charDesc.AppendLine(input);
                         row++;
-                        if(row > 30)
+                        if (row > 30)
                         {
                             valid = true;
                         }
@@ -606,7 +598,7 @@ namespace Kingdoms_of_Etrea.Core
                 {
                     if (input.Length <= 20 && !DatabaseManager.CharacterExistsInDatabase(input))
                     {
-                        if(input.IndexOf(' ') >= 0)
+                        if (input.IndexOf(' ') >= 0)
                         {
                             _desc.Send($"Your name cannot contain whitespace{Constants.NewLine}");
                             valid = false;
@@ -619,7 +611,7 @@ namespace Kingdoms_of_Etrea.Core
                     else
                     {
                         _desc.Send($"Either that name is already taken or it is too long.{Constants.NewLine}");
-                    }    
+                    }
                 }
                 else
                 {
