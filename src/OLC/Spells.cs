@@ -217,7 +217,7 @@ namespace Etrea2.OLC
                                     break;
 
                                 case 13:
-                                    if (ValidateSpell(ref desc, ref s, true))
+                                    if (ValidateSpell(ref desc, ref s, false))
                                     {
                                         if (DatabaseManager.UpdateSpell(ref s))
                                         {

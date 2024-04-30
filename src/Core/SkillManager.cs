@@ -258,6 +258,13 @@ namespace Etrea2.Core
                     Description = "Allows learning and crafting of Cooking recipes",
                     MPCost = 0,
                     GoldToLearn = 1500
+                },
+                new Skill
+                {
+                    Name = "Hide",
+                    Description = "Hide yourself from the view of others",
+                    MPCost = 10,
+                    GoldToLearn = 2500
                 }
             };
         }

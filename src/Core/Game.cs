@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Etrea2.Interfaces;
 using Etrea2.Entities;
+using System.Configuration;
 
 namespace Etrea2.Core
 {
@@ -22,6 +23,7 @@ namespace Etrea2.Core
         private static uint _buffPulse;
         private static uint _backupPulse;
         private static uint _lastTickCount;
+        private static uint _donationRoomRID;
 
         internal Game(uint zonePulse, uint npcPulse, uint combatPulse, uint savePulse, uint buffPulse, uint backupPulse, uint backupsRetained)
         {
@@ -32,11 +34,27 @@ namespace Etrea2.Core
             _buffPulse = buffPulse;
             _backupPulse = backupPulse;
             _backupsRetained = backupsRetained;
+            _donationRoomRID = uint.Parse(ConfigurationManager.AppSettings["donationRoomRID"]);
         }
 
         internal static DateTime GetStartTime()
         {
             return _gameStart;
+        }
+
+        internal static uint GetDonationRoomRID()
+        {
+            return _donationRoomRID;
+        }
+
+        internal static void SetDonationRoomRID(uint newRID)
+        {
+            if (newRID == 0)
+            {
+                _donationRoomRID = uint.Parse(ConfigurationManager.AppSettings["donationRoomRID"]);
+                return;
+            }
+            _donationRoomRID = newRID;
         }
 
         internal static bool GetBackupInfo(out DateTime backupTime, out uint backupTick)
@@ -641,6 +659,7 @@ namespace Etrea2.Core
 
         private void PulseAllZones()
         {
+            // TODO: See about moving this to ZoneManager, with each Zone having a Pulse method
             foreach (var zone in ZoneManager.Instance.GetAllZones())
             {
                 LogMessage($"TICK: Pulsing Zone {zone.Key} ({zone.Value.ZoneName})", LogLevel.Info, true);
@@ -665,9 +684,13 @@ namespace Etrea2.Core
                 {
                     foreach(var n in r.SpawnNPCsAtTick)
                     {
+                        var npc = NPCManager.Instance.GetNPCByID(n.Key);
                         if (RoomManager.Instance.GetNPCsInRoom(r.RoomID).Where(x => x.NPCID == n.Key).Count() < n.Value)
                         {
-                            NPCManager.Instance.AddNPCToWorld(n.Key, r.RoomID);
+                            if (NPCManager.Instance.GetCountOfNPCsInWorld(n.Key) < npc.MaxNumber)
+                            {
+                                NPCManager.Instance.AddNPCToWorld(n.Key, r.RoomID);
+                            }
                         }
                     }
                 }

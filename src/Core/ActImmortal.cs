@@ -10,6 +10,34 @@ namespace Etrea2.Core
 {
     internal static partial class CommandParser
     {
+        private static void DonationRoom(ref Descriptor desc, ref string input)
+        {
+            if (desc.Player.Level >= Constants.ImmLevel)
+            {
+                var verb = GetVerb(ref input);
+                var line = input.Remove(0, verb.Length).Trim();
+                if (string.IsNullOrEmpty(line))
+                {
+                    desc.Send($"The Donation Room is currently RID {Game.GetDonationRoomRID()}{Constants.NewLine}");
+                    desc.Send($"Use donroom <RID> to change the Donation Room RID{Constants.NewLine}");
+                    return;
+                }
+                if (uint.TryParse(line, out uint newDonRoomRID))
+                {
+                    Game.SetDonationRoomRID(newDonRoomRID);
+                    desc.Send($"Donation Room updated to RID {newDonRoomRID}{Constants.NewLine}");
+                }
+                else
+                {
+                    desc.Send($"Use donroom <RID> to change the Donation Room RID{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
+            }
+        }
+
         private static void PulseShop(ref Descriptor desc, ref string input)
         {
             if (desc.Player.Level >= Constants.ImmLevel)
@@ -1527,6 +1555,35 @@ namespace Etrea2.Core
                         {
                             switch (objectType.ToLower())
                             {
+                                case "player":
+                                    var matchingPlayers = DatabaseManager.GetAllPlayers(ref desc, target);
+                                    if (matchingPlayers != null)
+                                    {
+                                        sb.AppendLine($"  {new string('=', 77)}");
+                                        if (matchingPlayers.Count == 0)
+                                        {
+                                            sb.AppendLine($"|| No players matching that name could be found");
+                                            sb.AppendLine($"  {new string('=', 77)}");
+                                        }
+                                        else
+                                        {
+                                            foreach(var p in matchingPlayers)
+                                            {
+                                                var isConnected = SessionManager.Instance.GetPlayer(p) != null;
+                                                sb.AppendLine($"|| {p}: Online: {(isConnected ? "Yes" : "No")}");
+                                            }
+                                            sb.AppendLine($"  {new string('=', 77)}");
+                                            sb.AppendLine($"|| {matchingPlayers.Count} players found");
+                                            sb.AppendLine($"  {new string('=', 77)}");
+                                        }
+                                        desc.Send(sb.ToString());
+                                    }
+                                    else
+                                    {
+                                        desc.Send($"There was an error looking up players{Constants.NewLine}");
+                                    }
+                                    break;
+
                                 case "quest":
                                     var matchingQuests = QuestManager.Instance.GetQuestsByNameOrDescription(target).OrderBy(x => x.QuestID).ToList();
                                     if (matchingQuests != null && matchingQuests.Count > 0)

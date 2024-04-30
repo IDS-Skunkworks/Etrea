@@ -339,6 +339,10 @@ namespace Etrea2.Core
 
                 // IMM only commands
                 #region ImmOnlyCommands
+                case "donroom":
+                    DonationRoom(ref desc, ref input);
+                    break;
+
                 case "shopstats":
                     ShowShopStats(ref desc, ref input);
                     break;

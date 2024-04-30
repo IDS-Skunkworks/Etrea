@@ -53,18 +53,18 @@ namespace Etrea2.Core
             return 0;
         }
 
-        internal static uint DonationRoomRid()                          // Get the RID of the donation room, or return the default of 150 if we can't read it
-        {
-            var rid = ConfigurationManager.AppSettings["donationRoomRID"];
-            if (!string.IsNullOrEmpty(rid))
-            {
-                if (uint.TryParse(rid, out uint donationRoom))
-                {
-                    return donationRoom;
-                }
-            }
-            return 150;
-        }
+        //internal static uint DonationRoomRid()                          // Get the RID of the donation room, or return the default of 150 if we can't read it
+        //{
+        //    var rid = ConfigurationManager.AppSettings["donationRoomRID"];
+        //    if (!string.IsNullOrEmpty(rid))
+        //    {
+        //        if (uint.TryParse(rid, out uint donationRoom))
+        //        {
+        //            return donationRoom;
+        //        }
+        //    }
+        //    return 150;
+        //}
 
         internal static uint MaxIdleTickCount()                         // Get the max number of autosave ticks a player can be idle for before being disconnected, default 20
         {

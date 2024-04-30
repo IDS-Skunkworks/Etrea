@@ -75,7 +75,7 @@ namespace Etrea2.OLC
                 sb.AppendLine("just a piece of junk. Please select the type of item you wish to create:");
                 sb.AppendLine($"1. Misc{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}2. Weapon");
                 sb.AppendLine($"3. Armour{Constants.TabStop}{Constants.TabStop}4. Ring");
-                sb.AppendLine($"5. Scroll{Constants.TabStop}{Constants.TabStop}6. Potion");
+                sb.AppendLine($"5. Scroll{Constants.TabStop}{Constants.TabStop}6. Consumable");
                 sb.AppendLine("7. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
@@ -146,7 +146,7 @@ namespace Etrea2.OLC
                 sb.AppendLine($"Item ID: {newPotion.ID}{Constants.TabStop}Item Name: {newPotion.Name}");
                 sb.AppendLine($"Short Description: {newPotion.ShortDescription}");
                 sb.AppendLine($"Long Description:{Constants.NewLine}{newPotion.LongDescription}");
-                sb.AppendLine($"Value: {newPotion.BaseValue}{Constants.TabStop}{Constants.TabStop}Potion Effect: {newPotion.ConsumableEffect}");
+                sb.AppendLine($"Value: {newPotion.BaseValue}{Constants.TabStop}{Constants.TabStop}Consumable Effect: {newPotion.ConsumableEffect}");
                 sb.AppendLine($"Number of Damage Dice: {newPotion.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {newPotion.SizeOfDamageDice}");
                 sb.AppendLine($"Is Magical?: {newPotion.IsMagical}");
                 sb.AppendLine($"Buffs: {string.Join(", ", newPotion.AppliedBuffs)}");
@@ -154,10 +154,10 @@ namespace Etrea2.OLC
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item ID{Constants.TabStop}2. Set Item Name");
                 sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}6. Set Value{Constants.TabStop}7. Set Potion Effect");
+                sb.AppendLine($"5. Edit Long Description{Constants.TabStop}6. Set Value{Constants.TabStop}7. Set Consumable Effect");
                 sb.AppendLine($"8. Set Number of Damage Dice{Constants.TabStop}9. Set Size of Damage Dice");
                 sb.AppendLine("10. Toggle Magical flag");
-                sb.AppendLine($"111. Add Buff{Constants.TabStop}12. Remove Buff");
+                sb.AppendLine($"11. Add Buff{Constants.TabStop}12. Remove Buff");
                 sb.AppendLine($"13. Save{Constants.TabStop}{Constants.TabStop}14. Exit");
                 sb.Append("Selection: ");
                 desc.Send(sb.ToString());
@@ -1400,7 +1400,7 @@ namespace Etrea2.OLC
                 sb.AppendLine($"Item ID: {p.ID}{Constants.TabStop}{Constants.TabStop}Item Name: {p.Name}");
                 sb.AppendLine($"Short Description: {p.ShortDescription}");
                 sb.AppendLine($"Long Description:{Constants.NewLine}{p.LongDescription}");
-                sb.AppendLine($"Value: {p.BaseValue}{Constants.TabStop}{Constants.TabStop}Potion Effect: {p.ConsumableEffect}");
+                sb.AppendLine($"Value: {p.BaseValue}{Constants.TabStop}{Constants.TabStop}Consumable Effect: {p.ConsumableEffect}");
                 sb.AppendLine($"Number of Damage Dice: {p.NumberOfDamageDice}{Constants.TabStop}Size of Damage Dice: {p.SizeOfDamageDice}");
                 sb.AppendLine($"Is Magical?: {p.IsMagical}");
                 sb.AppendLine($"Buffs: {string.Join(", ", p.AppliedBuffs)}");
@@ -1408,7 +1408,7 @@ namespace Etrea2.OLC
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Item Name{Constants.TabStop}{Constants.TabStop}2. Set Short Description");
                 sb.AppendLine($"3. Set Long Description{Constants.TabStop}{Constants.TabStop}4. Edit Long Description");
-                sb.AppendLine($"5. Set Value{Constants.TabStop}{Constants.TabStop}6. Set Potion Effect");
+                sb.AppendLine($"5. Set Value{Constants.TabStop}{Constants.TabStop}6. Set Consumable Effect");
                 sb.AppendLine($"7. Set Number of Damage Dice{Constants.TabStop}8. Set Size of Damage Dice");
                 sb.AppendLine("9. Toggle Magical flag");
                 sb.AppendLine($"10. Add Buff{Constants.TabStop}{Constants.TabStop}11. Remove Buff");

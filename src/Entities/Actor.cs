@@ -250,6 +250,18 @@ namespace Etrea2.Entities
             {
                 skillModifiers += 2;
             }
+            if (HasSkill("Light Armour Mastery") && EquipArmour != null && EquipArmour.BaseArmourType == ArmourType.Light)
+            {
+                skillModifiers += 2;
+            }
+            if (HasSkill("Medium Armour Mastery") && EquipArmour != null && EquipArmour.BaseArmourType == ArmourType.Medium)
+            {
+                skillModifiers += 2;
+            }
+            if (HasSkill("Heavy Armour Mastery") && EquipArmour != null && EquipArmour.BaseArmourType == ArmourType.Heavy)
+            {
+                skillModifiers += 2;
+            }
             var finalAC = acBase + dexModifier + eqModifiers + skillModifiers;
             finalAC = finalAC < 0 ? 0 : finalAC;
             ArmourClass = Convert.ToUInt32(finalAC);

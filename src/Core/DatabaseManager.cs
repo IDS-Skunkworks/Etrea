@@ -65,6 +65,37 @@ namespace Etrea2.Core
         #endregion
 
         #region Players
+        internal static List<string> GetAllPlayers(ref Descriptor desc, string pName)
+        {
+            var retval = new List<string>();
+            string cs = $"URI=file:{playerDBPath}";
+            try
+            {
+                using (var con = new SQLiteConnection(cs))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = string.IsNullOrEmpty(pName) ? "SELECT PlayerName FROM tblPlayers;" : $"SELECT PlayerName FROM tblPlayers WHERE PlayerName LIKE '%{pName}%';";
+                        using (SQLiteDataReader dr = cmd.ExecuteReader())
+                        {
+                            while (dr.Read())
+                            {
+                                retval.Add(dr.GetString(0));
+                            }
+                        }
+                    }
+                    con.Close();
+                }
+                return retval;
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error getting a list of all players: {ex.Message}", LogLevel.Error, true);
+                return null;
+            }
+        }
+
         internal static bool UpdatePlayerPassword(ref Descriptor desc, string newPW)
         {
             string cs = $"URI=file:{playerDBPath}";

@@ -4008,7 +4008,7 @@ namespace Etrea2.Core
         {
             var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
             var i = GetTargetItem(ref desc, target, true);
-            var donRoom = RoomManager.Instance.GetRoom(Constants.DonationRoomRid());
+            var donRoom = RoomManager.Instance.GetRoom(Game.GetDonationRoomRID());
             if (donRoom != null)
             {
                 if (i != null)
