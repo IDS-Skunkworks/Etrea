@@ -10,6 +10,218 @@ namespace Etrea2.Core
 {
     internal static partial class CommandParser
     {
+        private static void DoConsiderCheck(ref Descriptor desc, ref string input)
+        {
+            // consider <target>
+            var verb = GetVerb(ref input);
+            var target = input.Remove(0, verb.Length).Trim();
+            if (string.IsNullOrEmpty(target))
+            {
+                desc.Send($"Consider what, exactly?{Constants.NewLine}");
+                return;
+            }
+            var tNPC = GetTargetNPC(ref desc, target);
+            if (tNPC == null)
+            {
+                desc.Send($"That doesn't seem to be here right now...{Constants.NewLine}");
+                return;
+            }
+            int consScore = 0;
+            if (desc.Player.Strength != tNPC.Strength)
+            {
+                if (desc.Player.Strength > tNPC.Strength)
+                {
+                    consScore++;
+                }
+                if (desc.Player.Strength < tNPC.Strength)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.Dexterity != tNPC.Dexterity)
+            {
+                if (desc.Player.Dexterity > tNPC.Dexterity)
+                {
+                    consScore++;
+                }
+                if (desc.Player.Dexterity < tNPC.Dexterity)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.Constitution != tNPC.Constitution)
+            {
+                if (desc.Player.Constitution > tNPC.Constitution)
+                {
+                    consScore++;
+                }
+                if (desc.Player.Constitution < tNPC.Constitution)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.Intelligence != tNPC.Intelligence)
+            {
+                if (desc.Player.Intelligence > tNPC.Intelligence)
+                {
+                    consScore++;
+                }
+                if (desc.Player.Intelligence < tNPC.Intelligence)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.Wisdom != tNPC.Wisdom)
+            {
+                if (desc.Player.Wisdom > tNPC.Wisdom)
+                {
+                    consScore++;
+                }
+                if (desc.Player.Wisdom < tNPC.Wisdom)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.Charisma != tNPC.Charisma)
+            {
+                if (desc.Player.Charisma > tNPC.Charisma)
+                {
+                    consScore++;
+                }
+                if (desc.Player.Charisma < tNPC.Charisma)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.CurrentHP != tNPC.CurrentHP)
+            {
+                if (desc.Player.CurrentHP > tNPC.CurrentHP)
+                {
+                    consScore++;
+                }
+                if (desc.Player.CurrentHP < tNPC.CurrentHP)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.CurrentMP != tNPC.CurrentMP)
+            {
+                if (desc.Player.CurrentMP > tNPC.CurrentMP)
+                {
+                    consScore++;
+                }
+                if (desc.Player.CurrentMP < tNPC.CurrentMP)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.CurrentHP < desc.Player.MaxHP)
+            {
+                consScore--;
+            }
+            if (desc.Player.CurrentMP < desc.Player.MaxMP)
+            {
+                consScore--;
+            }
+            desc.Player.CalculateArmourClass();
+            tNPC.CalculateArmourClass();
+            if (desc.Player.ArmourClass != tNPC.ArmourClass)
+            {
+                if (desc.Player.ArmourClass < tNPC.ArmourClass)
+                {
+                    consScore--;
+                }
+                if (desc.Player.ArmourClass > tNPC.ArmourClass)
+                {
+                    consScore++;
+                }
+            }
+            if (desc.Player.EquipWeapon != null && tNPC.EquipWeapon != null)
+            {
+                if (desc.Player.EquipWeapon.NumberOfDamageDice > tNPC.EquipWeapon.NumberOfDamageDice)
+                {
+                    consScore++;
+                }
+                if (desc.Player.EquipWeapon.NumberOfDamageDice < tNPC.EquipWeapon.NumberOfDamageDice)
+                {
+                    consScore--;
+                }
+                if (desc.Player.EquipWeapon.SizeOfDamageDice > tNPC.EquipWeapon.SizeOfDamageDice)
+                {
+                    consScore++;
+                }
+                if (desc.Player.EquipWeapon.SizeOfDamageDice < tNPC.EquipWeapon.SizeOfDamageDice)
+                {
+                    consScore--;
+                }
+            }
+            if (desc.Player.EquipWeapon == null && tNPC.EquipWeapon != null)
+            {
+                consScore--;
+            }
+            if (desc.Player.EquipWeapon != null && tNPC.EquipWeapon == null)
+            {
+                consScore++;
+            }
+            if (desc.Player.Level != tNPC.Level)
+            {
+                if (desc.Player.Level < tNPC.Level)
+                {
+                    consScore--;
+                }
+                if (desc.Player.Level > tNPC.Level)
+                {
+                    consScore++;
+                }
+            }
+            // check value of conScore and give result, low number is bad, higher number is good
+            if (consScore == 0)
+            {
+                desc.Send($"Your chances of defeating {tNPC.Name} are about evens...{Constants.NewLine}");
+                return;
+            }
+            if (consScore == 1)
+            {
+                desc.Send($"You should be able to get the better of {tNPC.Name}...{Constants.NewLine}");
+                return;
+            }
+            if (consScore == 2)
+            {
+                desc.Send($"You shouldn't have any difficulty dealing with {tNPC.Name}...{Constants.NewLine}");
+                return;
+            }
+            if (consScore == 3)
+            {
+                desc.Send($"You should be able to make a meal of {tNPC.Name}...{Constants.NewLine}");
+                return;
+            }
+            if (consScore >= 4)
+            {
+                desc.Send($"{tNPC.Name} should pose no challenge at all!{Constants.NewLine}");
+                return;
+            }
+            if (consScore == -1)
+            {
+                desc.Send($"{tNPC.Name} should be able to get the better of you...{Constants.NewLine}");
+                return;
+            }
+            if (consScore == -2)
+            {
+                desc.Send($"{tNPC.Name} shouldn't have any issues dispatching you...{Constants.NewLine}");
+                return;
+            }
+            if (consScore == -3)
+            {
+                desc.Send($"{tNPC.Name} will make a meal of you... Maybe think again...{Constants.NewLine}");
+                return;
+            }
+            if (consScore <= -4)
+            {
+                desc.Send($"Even the Gods laugh at the idea! You have no chance!{Constants.NewLine}");
+                return;
+            }
+        }
+
         private static void ExorciseCursedItem(ref Descriptor desc, ref string input)
         {
             if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Exorcist))

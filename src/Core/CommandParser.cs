@@ -307,6 +307,10 @@ namespace Etrea2.Core
                 #endregion
 
                 #region Combat
+                case "consider":
+                    DoConsiderCheck(ref desc, ref input);
+                    break;
+
                 case "cast":
                     CastSpell(ref desc, ref input);
                     break;
