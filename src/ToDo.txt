@@ -1,0 +1,1 @@
+﻿Move the code for pulsing zones etc to the relevant objects and call the new methods from the Game instance
