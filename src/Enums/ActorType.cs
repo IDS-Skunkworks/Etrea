@@ -1,9 +1,8 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum ActorType
+    public enum ActorType
     {
-        Unknown,
         Player,
-        NonPlayer,
+        NonPlayer
     }
 }

@@ -1,1034 +1,666 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Etrea2.Interfaces;
-using Etrea2.Entities;
 using System.Configuration;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Timers;
+using Etrea3.Objects;
+using System.IO;
+using Newtonsoft.Json.Linq;
+using System.Net.Sockets;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal sealed class Game
+    public sealed class Game
     {
-        private static ILoggingProvider _logProvider = new LoggingProvider();
-        private bool _running;
-        private static DateTime _gameStart;
-        private static DateTime _lastBackup;
-        private static bool _backupCompleted = false;
-        private static uint _backupsRetained;
-        private static uint _zonePulse;
-        private static uint _npcPulse;
-        private static uint _combatPulse;
-        private static uint _savePulse;
-        private static uint _buffPulse;
-        private static uint _backupPulse;
-        private static uint _lastTickCount;
-        private static uint _donationRoomRID;
+        private static DateTime startTime;
+        private static DateTime lastBackupTime;
+        private static bool backupCompleted = false;
+        private static int backupsRetained;
+        private static int zoneTick;
+        private static int npcTick;
+        private static int combatTick;
+        private static int autoSaveTick;
+        private static int buffTick;
+        private static int backupTick;
+        private static int donationRoomID;
+        private static int startRoomID;
+        private static int limboRoomID;
+        private static int maxIdleSeconds;
+        private static ulong tickCount = 0;
+        private static bool disconnectIdleImms = false;
 
-        internal Game(uint zonePulse, uint npcPulse, uint combatPulse, uint savePulse, uint buffPulse, uint backupPulse, uint backupsRetained)
+        private static Timer zoneTickTimer = new Timer();
+        private static Timer npcTickTimer = new Timer();
+        private static Timer combatTickTimer = new Timer();
+        private static Timer autoSaveTimer = new Timer();
+        private static Timer buffTickTimer = new Timer();
+        private static Timer backupTickTimer = new Timer();
+        private static Timer cleanupTimer = new Timer();
+
+        private static TaskCompletionSource<bool> tcs;
+
+        public static ulong TickCount => tickCount;
+        public static DateTime StartTime => startTime;
+        public static int DonationRoomID => donationRoomID;
+        public static int PlayerStartRoom => startRoomID;
+        public static int Limbo => limboRoomID;
+        public static int MaxIdleSeconds => maxIdleSeconds;
+        public static bool DisconnectIdleImms => disconnectIdleImms;
+
+        public Game()
         {
-            _zonePulse = zonePulse;
-            _npcPulse = npcPulse;
-            _combatPulse = combatPulse;
-            _savePulse = savePulse;
-            _buffPulse = buffPulse;
-            _backupPulse = backupPulse;
-            _backupsRetained = backupsRetained;
-            _donationRoomRID = uint.Parse(ConfigurationManager.AppSettings["donationRoomRID"]);
+            backupsRetained = int.Parse(ConfigurationManager.AppSettings["RetainBackupCount"]);
+            zoneTick = int.Parse(ConfigurationManager.AppSettings["ZoneTick"]);
+            npcTick = int.Parse(ConfigurationManager.AppSettings["NPCTick"]);
+            combatTick = int.Parse(ConfigurationManager.AppSettings["CombatTick"]);
+            autoSaveTick = int.Parse(ConfigurationManager.AppSettings["AutosaveTick"]);
+            buffTick = int.Parse(ConfigurationManager.AppSettings["BuffTick"]);
+            backupTick = int.Parse(ConfigurationManager.AppSettings["BackupTick"]);
+            donationRoomID = int.Parse(ConfigurationManager.AppSettings["DonationRoom"]);
+            startRoomID = int.Parse(ConfigurationManager.AppSettings["StartRoom"]);
+            limboRoomID = int.Parse(ConfigurationManager.AppSettings["LimboRoom"]);
+            maxIdleSeconds = int.Parse(ConfigurationManager.AppSettings["MaxIdleTime"]);
+            disconnectIdleImms = bool.Parse(ConfigurationManager.AppSettings["DisconnectIdleImmortals"]);
+
+            zoneTickTimer.Interval = zoneTick * 1000;
+            npcTickTimer.Interval = npcTick * 1000;
+            combatTickTimer.Interval = combatTick * 1000;
+            autoSaveTimer.Interval = autoSaveTick * 1000;
+            buffTickTimer.Interval = buffTick * 1000;
+            backupTickTimer.Interval = backupTick * 1000;
+            cleanupTimer.Interval = 120 * 1000;
         }
 
-        internal static DateTime GetStartTime()
-        {
-            return _gameStart;
-        }
-
-        internal static uint GetDonationRoomRID()
-        {
-            return _donationRoomRID;
-        }
-
-        internal static void SetDonationRoomRID(uint newRID)
+        public static void SetDonationRoom(int newRID)
         {
             if (newRID == 0)
             {
-                _donationRoomRID = uint.Parse(ConfigurationManager.AppSettings["donationRoomRID"]);
+                donationRoomID = int.Parse(ConfigurationManager.AppSettings["DonationRoom"]);
                 return;
             }
-            _donationRoomRID = newRID;
+            donationRoomID = newRID;
         }
 
-        internal static bool GetBackupInfo(out DateTime backupTime, out uint backupTick)
+        public static bool GetBackupInfo(out DateTime backupTime, out int backupTimer)
         {
             backupTime = DateTime.UtcNow;
-            backupTick = _backupPulse;
-            if (_backupCompleted)
+            backupTimer = backupTick;
+            if (backupCompleted)
             {
-                backupTime = _lastBackup;
+                backupTime = lastBackupTime;
                 return true;
             }
             return false;
         }
 
-        internal static void LogMessage(string message, LogLevel level, bool logToScreen)
+        public static void LogMessage(string message, LogLevel level, bool writeToScreen)
         {
-            _logProvider.LogMessage(message, level, logToScreen);
+            Logger.LogMessage(message, level, writeToScreen);
         }
 
-        internal void Run()
+        public async Task Run()
         {
-            bool zoneLoadErr = false;
-            bool roomLoadErr = false;
-            bool npcLoadError = false;
-            bool itemLoadError = false;
-            bool shopLoadError = false;
-            bool emoteLoadError = false;
-            bool nodeLoadError = false;
-            bool recipeLoadError = false;
-            bool questLoadError = false;
-            bool spellLoadError = false;
-
-            _running = true;
-            _gameStart = DateTime.UtcNow;
-            RoomManager.Instance.LoadAllRooms(out roomLoadErr);
-            ItemManager.Instance.LoadAllItems(out itemLoadError);
-            ShopManager.Instance.LoadAllShops(out shopLoadError);
-            ZoneManager.Instance.LoadAllZones(out zoneLoadErr);
-            NPCManager.Instance.LoadAllNPCs(out npcLoadError);
-            EmoteManager.Instance.LoadAllEmotes(out emoteLoadError);
-            NodeManager.Instance.LoadAllNodes(out nodeLoadError);
-            RecipeManager.Instance.LoadAllRecipes(out recipeLoadError);
-            QuestManager.Instance.LoadAllQuests(out questLoadError);
-            SpellManager.Instance.LoadAllSpells(out spellLoadError);
-
-            // set initial gold and inventory for any shops
-            if (ShopManager.Instance.GetAllShops().Count > 0)
+            tcs = new TaskCompletionSource<bool>();
+            if (DatabaseManager.ClearLogTable(out int rowCount))
             {
-                foreach(var s in ShopManager.Instance.GetAllShops())
-                {
-                    Game.LogMessage($"INFO: Restocking Shop '{s.ShopName}' (ID: {s.ID})...", LogLevel.Info, true);
-                    s.RestockShop();
-                }
+                LogMessage($"INFO: Log Table cleared, {rowCount} items removed.", LogLevel.Info, true);
             }
-
-            if (RoomManager.Instance.GetRoomCount() == 0)
+            else
             {
-                // No rooms, so add the default RID 0 (Limbo) and 100 (Etrea Square)
-                Room limbo = new Room
-                {
-                    RoomName = "Limbo",
-                    RoomID = 0,
-                    ZoneID = 0,
-                    ShortDescription = "Limbo, the world between worlds",
-                    LongDescription = "White clouds swirl around carrying the faint echo of mortal voices. Through the mists, the city of Etrea is visible below.",
-                    RoomExits = new List<Exit>
-                    { new Exit
-                    {
-                        ExitDirection = "Down",
-                        DestinationRoomID = 100
-                    }
-                    },
-                    Flags = RoomFlags.Safe
-                };
-                Room townSquare = new Room
-                {
-                    RoomName = "Etrea City Square",
-                    RoomID = 100,
-                    ZoneID = 1,
-                    ShortDescription = "The central square of the town of Etrea",
-                    LongDescription = "A large and magnificently carved fountain dominates the central plaza and town square of Etrea. Rows of shops and buildings circle the square. To the north, Etrea Keep dominates the skyline. To the south are the main city gates, while the city streets spiral off to the west and east.",
-                    Flags = RoomFlags.Safe,
-                    RoomExits = new List<Exit>()
-                };
-                if (!DatabaseManager.AddDefaultRoom(limbo) || !DatabaseManager.AddDefaultRoom(townSquare))
-                {
-                    roomLoadErr = true;
-                }
-                else
-                {
-                    RoomManager.Instance.LoadAllRooms(out roomLoadErr);
-                }
+                LogMessage($"ERROR: Failed to clear Log Table", LogLevel.Error, true);
             }
-
-            if (!roomLoadErr && !npcLoadError)
+            startTime = DateTime.UtcNow;
+            bool dbLoad = LoadDatabase();
+            if (!dbLoad)
             {
-                var rooms = RoomManager.Instance.GetAllRooms();
+                LogMessage($"ERROR: Cannot load from database, check logs for more information. Performing shutdown...", LogLevel.Error, true);
+                Shutdown();
+            }
+            if (RoomManager.Instance.Count > 0)
+            {
+                LogMessage($"INFO: Spawning default NPCs and Items", LogLevel.Info, true);
+                var rooms = RoomManager.Instance.GetRoom().Where(x => x.StartingNPCs.Count > 0).ToList();
                 if (rooms.Count > 0)
                 {
-                    foreach (var r in RoomManager.Instance.GetAllRooms())
+                    foreach (var room in rooms)
                     {
-                        if (r.Value.SpawnNPCsAtStart != null && r.Value.SpawnNPCsAtStart.Count > 0)
+                        foreach(var n in room.StartingNPCs)
                         {
-                            foreach (var rnpc in r.Value.SpawnNPCsAtStart)
+                            int id = n.Key;
+                            int amount = n.Value;
+                            for (int i = 0; i < amount; i++)
                             {
-                                var numToSpawn = rnpc.Value;
-                                for (int i = 0; i < numToSpawn; i++)
+                                LogMessage($"INFO: Spawning NPC {id} in Room {room.ID}", LogLevel.Info, true);
+                                NPCManager.Instance.AddNewNPCInstance(id, room.ID);
+                            }
+                        }
+                    }
+                }
+                rooms = RoomManager.Instance.GetRoom().Where(x => x.StartingItems.Count > 0).ToList();
+                if (rooms.Count > 0)
+                {
+                    foreach(var room in rooms)
+                    {
+                        foreach(var i in room.StartingItems)
+                        {
+                            for (int c = 0; c < i.Value; c++)
+                            {
+                                if (ItemManager.Instance.ItemExists(i.Key))
                                 {
-                                    NPCManager.Instance.AddNPCToWorld(rnpc.Key, r.Value.RoomID);
+                                    LogMessage($"INFO: Spawning Item {i.Key} in Room {room.ID}", LogLevel.Info, true);
+                                    dynamic spawmItem = null;
+                                    var baseItem = ItemManager.Instance.GetItem(i.Key);
+                                    switch(baseItem.ItemType)
+                                    {
+                                        case ItemType.Misc:
+                                            spawmItem = Helpers.Clone<InventoryItem>(baseItem);
+                                            break;
+
+                                        case ItemType.Weapon:
+                                            spawmItem = Helpers.Clone<Weapon>(baseItem);
+                                            break;
+
+                                        case ItemType.Consumable:
+                                            spawmItem = Helpers.Clone<Consumable>(baseItem);
+                                            break;
+
+                                        case ItemType.Armour:
+                                            spawmItem = Helpers.Clone<Armour>(baseItem);
+                                            break;
+
+                                        case ItemType.Ring:
+                                            spawmItem = Helpers.Clone<Ring>(baseItem);
+                                            break;
+
+                                        case ItemType.Scroll:
+                                            spawmItem = Helpers.Clone<Scroll>(baseItem);
+                                            break;
+                                    }
+                                    RoomManager.Instance.AddItemToRoomInventory(room.ID, spawmItem);
+                                }
+                                else
+                                {
+                                    LogMessage($"ERROR: Cannot Spawn Item {i.Key} in Room {room.ID}, no such Item in Item Manager", LogLevel.Error, true);
                                 }
                             }
                         }
                     }
                 }
             }
-
-            if (zoneLoadErr || roomLoadErr || itemLoadError || shopLoadError || npcLoadError || emoteLoadError || nodeLoadError || recipeLoadError || questLoadError || spellLoadError)
+            LogMessage($"INFO: Setting default inventories for Shops", LogLevel.Info, true);
+            foreach(var s in ShopManager.Instance.GetShop())
             {
-                LogMessage("ERROR: Error loading data from World Database, game cannot start", LogLevel.Error, true);
-                PerformShutdown();
+                s.RestockShop();
             }
+            LogMessage("INFO: Starting timers and entering main game loop", LogLevel.Info, true);
+            zoneTickTimer.Elapsed += ZoneTick;
+            npcTickTimer.Elapsed += NPCTick;
+            combatTickTimer.Elapsed += CombatTick;
+            autoSaveTimer.Elapsed += AutoSaveTick;
+            buffTickTimer.Elapsed += BuffTick;
+            backupTickTimer.Elapsed += BackupTick;
+            cleanupTimer.Elapsed += CleanUpTick;
+            zoneTickTimer.Start();
+            npcTickTimer.Start();
+            combatTickTimer.Start();
+            autoSaveTimer.Start();
+            buffTickTimer.Start();
+            backupTickTimer.Start();
+            cleanupTimer.Start();
 
-            LogMessage($"INFO: Database loading: {ZoneManager.Instance.GetZoneCount()} Zone(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {RoomManager.Instance.GetRoomCount()} Room(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {DatabaseManager.GetPlayerCount()} Player(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {ItemManager.Instance.GetItemCount()} Item(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {ShopManager.Instance.GetShopCount()} Shop(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {NPCManager.Instance.GetNPCTemplateCount()} NPC(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {EmoteManager.Instance.GetEmoteCount()} Emote(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {NodeManager.Instance.GetNodeCount()} Resource Node(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {RecipeManager.Instance.GetRecipeCount()} Crafting Recipe(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {QuestManager.Instance.GetQuestCount()} Quest(s)", LogLevel.Info, true);
-            LogMessage($"INFO: Database loading: {SpellManager.Instance.GetSpellCount()} Spell(s)", LogLevel.Info, true);
-            LogMessage("INFO: Entering main game loop", LogLevel.Info, true);
-            while (_running)
-            {
-                Heartbeat();
-            }
-            LogMessage("INFO: Starting game shutdown", LogLevel.Info, true);
-            PerformShutdown();
+            await tcs.Task;
+            LogMessage($"INFO: Shutting down...", LogLevel.Info, true);
         }
 
-        internal void Shutdown()
+        public void Shutdown()
         {
-            _running = false;
+            LogMessage($"INFO: Shutdown in progress, saving all connected players...", LogLevel.Info, true);
+            SaveAllPlayers(true, out _);
+            tcs.SetResult(true);
         }
 
-        private void PerformShutdown()
+        public static void ImmShutdown(Session session, bool force)
         {
-            LogMessage($"INFO: Shutdown complete", LogLevel.Info, true);
-            Environment.Exit(0);
-        }
-
-        private void Heartbeat()
-        {
-            var uptimeSeconds = (uint)(DateTime.UtcNow - _gameStart).TotalSeconds;
-            var totalUptime = DateTime.UtcNow - _gameStart;
-            if (_lastTickCount != uptimeSeconds)
+            LogMessage($"INFO: Game shutdown has been initiated by {session.Player.Name}", LogLevel.Info, true);
+            SaveAllPlayers(force, out bool saveErr);
+            if (saveErr)
             {
-                _lastTickCount = uptimeSeconds;
-                if (uptimeSeconds % 300 == 0)
-                {
-                    LogMessage($"UPTIME: Game world has been up for {totalUptime.Days} days, {totalUptime.Hours} hours, {totalUptime.Minutes} minutes, {totalUptime.Seconds} seconds", LogLevel.Info, true);
-                }
-
-                if (uptimeSeconds % 90 == 0) // 900
-                {
-                    CleanupDescriptors();
-                }
-                if (uptimeSeconds % _zonePulse == 0)
-                {
-                    PulseAllZones();
-                }
-                if (uptimeSeconds % _npcPulse == 0)
-                {
-                    PulseNPCs();
-                }
-                if (uptimeSeconds % _combatPulse == 0)
-                {
-                    PulseCombat();
-                }
-                if (uptimeSeconds % _savePulse == 0)
-                {
-                    PulseAutoSave();
-                }
-                if (uptimeSeconds % _buffPulse == 0)
-                {
-                    PulseBuffs();
-                }
-                if (uptimeSeconds % _backupPulse == 0)
-                {
-                    PulseBackups();
-                }
-            }
-        }
-
-        private void PulseBackups()
-        {
-            var backupLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
-            var worldLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world");
-            var backupTime = DateTime.UtcNow;
-            try
-            {
-                if (!Directory.Exists(backupLocation))
-                {
-                    Directory.CreateDirectory(backupLocation);
-                }
-
-                File.Copy($"{worldLocation}\\players.db", $"{backupLocation}\\players-{backupTime:yyyy-MM-dd-HH-mm-ss}.db");
-                File.Copy($"{worldLocation}\\world.db", $"{backupLocation}\\world-{backupTime:yyyy-MM-dd-HH-mm-ss}.db");
-                LogMessage($"BACKUP: World backup completed successfully", LogLevel.Info, true);
-                _lastBackup = backupTime;
-                _backupCompleted = true;
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"ERROR: World backup failed: {ex.Message}", LogLevel.Error, true);
+                LogMessage($"WARN: Failed to save all connected players and FORCE was not specified, aborting shutdown", LogLevel.Warning, true);
                 return;
             }
-            try
-            {
-                var files = Directory.GetFiles(backupLocation);
-                var cutoff = (_backupPulse * _backupsRetained) * -1; // 3600 * 10 * -1
-                LogMessage($"BACKUP: Backup cutoff time: {cutoff} seconds", LogLevel.Info, true);
-                LogMessage($"BACKUP: Processing old backups, retention cutoff: {backupTime.AddSeconds(cutoff):yyyy-MM-dd HH:mm:ss}", LogLevel.Info, true);
-                foreach (var file in files)
-                {
-                    try
-                    {
-                        var fi = new FileInfo(file);
-                        if (fi.CreationTimeUtc <= backupTime.AddSeconds(cutoff))
-                        {
-                            File.Delete(file);
-                            LogMessage($"BACKUP: Deleting file '{file}' which is beyond retention", LogLevel.Info, true);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessage($"ERROR: Error deleting file '{file}': {ex.Message}", LogLevel.Error, true);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"ERROR: Error deleting backups: {ex.Message}", LogLevel.Error, true);
-            }
+            LogMessage($"INFO: Processed save of all connected players", LogLevel.Info, true);
+            tcs.SetResult(true);
         }
 
-        private void PulseBuffs()
+        public static void BackupNow()
         {
-            LogMessage("INFO: Player buffs and player/NPC regen", LogLevel.Info, true);
-            var connectedPlayers = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected).ToList();
-            foreach (var player in connectedPlayers)
+            Task.Run(() =>
             {
-                if (!player.Player.IsInCombat)
+                var backupLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+                var worldLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world");
+                var backupTime = DateTime.UtcNow;
+                try
                 {
-                    // only process basic regen on players that are alive and not fighting
-                    if (player.Player.Position != ActorPosition.Dead && !RoomManager.Instance.GetRoom(player.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoHealing))
+                    if (!Directory.Exists(backupLocation))
                     {
-                        if (player.Player.CurrentHP < player.Player.MaxHP)
+                        Directory.CreateDirectory(backupLocation);
+                    }
+                    File.Copy($"{worldLocation}\\players.db", $"{backupLocation}\\players-{backupTime:yyyy-MM-dd-HH-mm-ss}.db");
+                    File.Copy($"{worldLocation}\\world.db", $"{backupLocation}\\world-{backupTime:yyyy-MM-dd-HH-mm-ss}.db");
+                    LogMessage($"BACKUP: World and Player database backup complete", LogLevel.Info, true);
+                    lastBackupTime = backupTime;
+                    backupCompleted = true;
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"ERROR: Error in Game.BackupTick() while backing up databases: {ex.Message}", LogLevel.Error, true);
+                    return;
+                }
+                try
+                {
+                    var files = Directory.GetFiles(backupLocation);
+                    var cutOff = (backupTick * backupsRetained) * -1;
+                    LogMessage($"BACKUP: Pruning old backups, retention cutoff: {backupTime.AddSeconds(cutOff):yyyy-MM-dd HH-mm-ss}", LogLevel.Info, true);
+                    foreach (var file in files)
+                    {
+                        try
                         {
-                            var regen = Helpers.RollDice(1, 4);
-                            var bonus = Helpers.CalculateAbilityModifier(player.Player.Constitution);
-                            if (bonus > 0)
+                            var fi = new FileInfo(file);
+                            if (fi.CreationTimeUtc <= backupTime.AddSeconds(cutOff))
                             {
-                                regen += Convert.ToUInt32(bonus);
-                            }
-                            if (player.Player.Position == ActorPosition.Resting)
-                            {
-                                // extra regen if the player is resting
-                                regen += 2;
-                            }
-                            if (RoomManager.Instance.GetRoom(player.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Healing))
-                            {
-                                // double regen if the player is in a healing room
-                                regen *= 2;
-                            }
-                            if (player.Player.CurrentHP + regen > player.Player.MaxHP)
-                            {
-                                SessionManager.Instance.GetPlayerByGUID(player.ID).Player.CurrentHP = (int)player.Player.MaxHP;
-                            }
-                            else
-                            {
-                                SessionManager.Instance.GetPlayerByGUID(player.ID).Player.CurrentHP += (int)regen;
-                                LogMessage($"INFO: Restoring {player.Player.Name} {regen} HP", LogLevel.Info, true);
+                                File.Delete(file);
+                                LogMessage($"BACKUP: Deleted backup file: {file}", LogLevel.Info, true);
                             }
                         }
-                        if (player.Player.CurrentMP < player.Player.MaxMP)
+                        catch (Exception ex)
                         {
-                            var regen = Helpers.RollDice(1, 3);
-                            var bonus = Helpers.CalculateAbilityModifier(player.Player.Intelligence);
-                            if (bonus > 0)
-                            {
-                                regen += Convert.ToUInt32(bonus);
-                            }
-                            if (player.Player.Position == ActorPosition.Resting)
-                            {
-                                // extra regen if the player is resting
-                                regen += 2;
-                            }
-                            if (RoomManager.Instance.GetRoom(player.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Healing))
-                            {
-                                regen *= 2;
-                            }
-                            if (player.Player.CurrentMP + regen > player.Player.MaxMP)
-                            {
-                                SessionManager.Instance.GetPlayerByGUID(player.ID).Player.CurrentMP = (int)player.Player.MaxMP;
-                            }
-                            else
-                            {
-                                SessionManager.Instance.GetPlayerByGUID(player.ID).Player.CurrentMP += (int)regen;
-                                LogMessage($"INFO: Restoring {player.Player.Name} {regen} MP", LogLevel.Info, true);
-                            }
-                        }
-                        if (player.Player.CurrentSP < player.Player.MaxSP)
-                        {
-                            var regen = Helpers.RollDice(1, 3);
-                            var bonus = Helpers.CalculateAbilityModifier(player.Player.Constitution);
-                            if (bonus > 0)
-                            {
-                                regen += Convert.ToUInt32(bonus);
-                            }
-                            if (player.Player.Position == ActorPosition.Resting)
-                            {
-                                regen += 2;
-                            }
-                            if (RoomManager.Instance.GetRoom(player.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Healing))
-                            {
-                                regen *= 2;
-                            }
-                            if (player.Player.CurrentSP + regen > player.Player.MaxSP)
-                            {
-                                SessionManager.Instance.GetPlayerByGUID(player.ID).Player.CurrentSP = player.Player.MaxSP;
-                            }
-                            else
-                            {
-                                SessionManager.Instance.GetPlayerByGUID(player.ID).Player.CurrentSP += (int)regen;
-                                LogMessage($"INFO: Restoring {player.Player.Name} {regen} SP", LogLevel.Info, true);
-                            }
+                            LogMessage($"ERROR: Error removing backup file '{file}': {ex.Message}", LogLevel.Error, true);
                         }
                     }
                 }
-            }
-            var npcs = NPCManager.Instance.GetAllNPCInstances();
-            foreach (var npc in npcs)
-            {
-                if (!CombatManager.Instance.IsNPCInCombat(npc.Value.NPCGuid)|| npc.Value.BehaviourFlags.HasFlag(NPCFlags.Regen))
+                catch (Exception ex)
                 {
-                    // only regen NPCs that are not in combat unless they have the regen behaviour flag
-                    if (npc.Value.CurrentHP < npc.Value.MaxHP)
-                    {
-                        var regen = Helpers.RollDice(1, 3);
-                        var bonus = Helpers.CalculateAbilityModifier(npc.Value.Constitution);
-                        if (bonus > 0)
-                        {
-                            regen += Convert.ToUInt32(bonus);
-                        }
-                        if (RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).Flags.HasFlag(RoomFlags.Healing))
-                        {
-                            regen *= 2;
-                        }
-                        if (npc.Value.CurrentHP + regen > npc.Value.MaxHP)
-                        {
-                            npc.Value.CurrentHP = npc.Value.MaxHP;
-                        }
-                        else
-                        {
-                            npc.Value.CurrentHP += (int)regen;
-                            LogMessage($"INFO: Restoring {npc.Value.Name} {regen} HP", LogLevel.Info, true);
-                        }
-                    }
-                    if (npc.Value.CurrentMP < npc.Value.MaxMP)
-                    {
-                        var regen = Helpers.RollDice(1, 3);
-                        var bonus = Helpers.CalculateAbilityModifier(npc.Value.Intelligence);
-                        if (bonus > 0)
-                        {
-                            regen += Convert.ToUInt32(bonus);
-                        }
-                        if (RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).Flags.HasFlag(RoomFlags.Healing))
-                        {
-                            regen *= 2;
-                        }
-                        if (npc.Value.CurrentMP + regen > npc.Value.MaxMP)
-                        {
-                            npc.Value.CurrentMP = npc.Value.MaxMP;
-                        }
-                        else
-                        {
-                            npc.Value.CurrentMP += (int)regen;
-                            LogMessage($"INFO: Restoring {npc.Value.Name} {regen} MP", LogLevel.Info, true);
-                        }
-                    }
+                    LogMessage($"ERROR: Error in Game.BackupTick() while processing old backups: {ex.Message}", LogLevel.Error, true);
                 }
-            }
-            var playersWithBuff = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected && x.Player.Buffs != null && x.Player.Buffs.Count > 0).ToList();
-            List<Descriptor> playersToKill = new List<Descriptor>();
-            if (playersWithBuff != null && playersWithBuff.Count > 0)
-            {
-                foreach (var player in playersWithBuff)
-                {
-                    List<string> buffsToRemove = new List<string>();
-                    for (int i = 0; i < player.Player.Buffs.Count; i++)
-                    {
-                        var buff = player.Player.Buffs.ElementAt(i).Key;
-                        if (buff == "Light")
-                        {
-                            RoomManager.Instance.GetRoom(player.Player.CurrentRoom).HasLightSource = true;
-                        }
-                        if (player.Player.Buffs.ElementAt(i).Value > -1)
-                        {
-                            if (player.Player.Buffs.ElementAt(i).Value - 1 == 0)
-                            {
-                                buffsToRemove.Add(buff);
-                            }
-                            else
-                            {
-                                player.Player.Buffs[buff]--;
-                            }
-                        }
-                    }
-                    if (buffsToRemove.Count > 0)
-                    {
-                        foreach (var b in buffsToRemove)
-                        {
-                            player.Player.RemoveBuff(b);
-                            LogMessage($"INFO: Removing buff {b} from player {player.Player.Name}", LogLevel.Info, true);
-                            player.Send($"The magic of {b} fades away!{Constants.NewLine}");
-                        }
-                    }
-                    buffsToRemove.Clear();
-                    if (player.Player.Buffs.ContainsKey("Regen"))
-                    {
-                        var regenSpell = SpellManager.Instance.GetSpell("Regen");
-                        var regenHP = Helpers.RollDice(regenSpell.NumOfDamageDice, regenSpell.SizeOfDamageDice);
-                        if (player.Player.CurrentHP + regenHP >= player.Player.MaxHP)
-                        {
-                            player.Player.CurrentHP = player.Player.MaxHP;
-                            player.Send($"The magic of Regen has restored you to full health!{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            player.Player.CurrentHP += (int)regenHP;
-                            if (player.Player.Level >= Constants.ImmLevel || player.Player.ShowDetailedRollInfo)
-                            {
-                                player.Send($"The magic of Regen restores {regenHP} health to you!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                player.Send($"The magic of Regen restores some health to you!{Constants.NewLine}");
-                            }
-                        }
-                    }
-                    if (player.Player.Buffs.ContainsKey("Acid Arrow"))
-                    {
-                        var acidSpell = SpellManager.Instance.GetSpell("Acid Arrow");
-                        var acidDmg = Helpers.RollDice(acidSpell.NumOfDamageDice, acidSpell.SizeOfDamageDice);
-                        if (player.Player.CurrentHP - acidDmg <= 0)
-                        {
-                            // DOT killed the player
-                            player.Send($"The magic of {acidSpell.SpellName} is too much and you finally succumb!{Constants.NewLine}");
-                            playersToKill.Add(player);
-                        }
-                        else
-                        {
-                            player.Player.CurrentHP -= (int)acidDmg;
-                            if (player.Player.Level >= Constants.ImmLevel || player.Player.ShowDetailedRollInfo)
-                            {
-                                player.Send($"The magic of {acidSpell.SpellName} deals {acidDmg} damage to you!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                player.Send($"The magic of {acidSpell.SpellName} hurts you!{Constants.NewLine}");
-                            }
-                        }
-                    }
-                    if (player.Player.Buffs.ContainsKey("Poison"))
-                    {
-                        var poisonSpell = SpellManager.Instance.GetSpell("Poison");
-                        var pDamage = Helpers.RollDice(poisonSpell.NumOfDamageDice, poisonSpell.SizeOfDamageDice);
-                        if (player.Player.CurrentHP - pDamage <= 0)
-                        {
-                            player.Send($"The poison in your veins is too much for you and you finally succumb!{Constants.NewLine}");
-                            playersToKill.Add(player);
-                        }
-                        else
-                        {
-                            SessionManager.Instance.GetPlayerByGUID(player.ID).Player.CurrentHP -= (int)pDamage;
-                            if (player.Player.Level >= Constants.ImmLevel || player.Player.ShowDetailedRollInfo)
-                            {
-                                player.Send($"The poison in your veins deals {pDamage} to you!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                player.Send($"The poison in your veins burns and causes you pain!{Constants.NewLine}");
-                            }
-                        }
-                    }
-                }
-                if (playersToKill != null && playersToKill.Count > 0)
-                {
-                    // one or more players was dealt lethal damage by a DOT spell
-                    for (int i = 0; i < playersToKill.Count; i++)
-                    {
-                        var p = playersToKill[i];
-                        p.Player.Kill();
-                    }
-                }
-                playersToKill.Clear();
-            }
-            var roomsWithPlayers = RoomManager.Instance.GetRoomsWithPlayers();
-            if (roomsWithPlayers != null && roomsWithPlayers.Count > 0)
-            {
-                LogMessage($"INFO: Pulsing environment buffs on rooms with players", LogLevel.Info, true);
-                foreach (var room in roomsWithPlayers)
-                {
-                    RoomManager.Instance.ProcessEnvironmentBuffs(room.RoomID);
-                }
-            }
-            var npcsWithBuffs = NPCManager.Instance.GetAllNPCInstances().Values.Where(x => x.Buffs != null && x.Buffs.Count > 0).ToList();
-            if (npcsWithBuffs != null && npcsWithBuffs.Count > 0)
-            {
-                List<NPC> npcsToKill = new List<NPC>();
-                foreach (var npc in npcsWithBuffs)
-                {
-                    List<string> npcBuffsToRemove = new List<string>();
-                    for (int i = 0; i < npc.Buffs.Count; i++)
-                    {
-                        var buff = npc.Buffs.ElementAt(i).Key;
-                        if (buff == "Light")
-                        {
-                            RoomManager.Instance.GetRoom(npc.CurrentRoom).HasLightSource = true;
-                        }
-                        if (npc.Buffs.ElementAt(i).Value > -1)
-                        {
-                            if (npc.Buffs.ElementAt(i).Value - 1 == 0)
-                            {
-                                npcBuffsToRemove.Add(buff);
-                            }
-                            else
-                            {
-                                npc.Buffs[buff]--;
-                            }
-                        }
-                    }
-                    if (npcBuffsToRemove.Count > 0)
-                    {
-                        foreach (var b in npcBuffsToRemove)
-                        {
-                            npc.RemoveBuff(b);
-                            LogMessage($"INFO: Removing buff {b} from NPC {npc.Name}", LogLevel.Info, true);
-                        }
-                    }
-                    npcBuffsToRemove.Clear();
-                    if (npc.Buffs.ContainsKey("Regen"))
-                    {
-                        var regenSpell = SpellManager.Instance.GetSpell("Regen");
-                        var regenHP = Helpers.RollDice(regenSpell.NumOfDamageDice, regenSpell.SizeOfDamageDice);
-                        if (npc.CurrentHP + regenHP >= npc.MaxHP)
-                        {
-                            npc.CurrentHP = npc.MaxHP;
-                        }
-                        else
-                        {
-                            npc.CurrentHP += (int)regenHP;
-                        }
-                    }
-                    if (npc.Buffs.ContainsKey("Acid Arrow"))
-                    {
-                        var acidSpell = SpellManager.Instance.GetSpell("Acid Arrow");
-                        var acidDmg = Helpers.RollDice(acidSpell.NumOfDamageDice, acidSpell.SizeOfDamageDice);
-                        if (npc.CurrentHP <= acidDmg)
-                        {
-                            npcsToKill.Add(npc);
-                        }
-                        else
-                        {
-                            npc.CurrentHP -= (int)acidDmg;
-                        }
-                    }
-                }
-                if (npcsToKill != null && npcsToKill.Count > 0)
-                {
-                    for (int i = 0; i < npcsToKill.Count; i++)
-                    {
-                        var npc = npcsToKill[i];
-                        npc.Kill();
-                    }
-                }
-                npcsToKill.Clear();
-            }
-            var roomsWithNPCS = NPCManager.Instance.GetAllNPCInstances().Values.Select(x => x.CurrentRoom).Distinct().ToList();
-            if (roomsWithNPCS != null && roomsWithNPCS.Count > 0)
-            {
-                LogMessage($"INFO: Pulsing environment buffs on rooms with NPCs", LogLevel.Info, true);
-                foreach (var room in roomsWithNPCS)
-                {
-                    RoomManager.Instance.ProcessEnvironmentBuffs(room);
-                }
-            }
+            });
         }
 
-        private void PulseAllZones()
+        private void CombatTick(object sender, ElapsedEventArgs e)
         {
-            // TODO: See about moving this to ZoneManager, with each Zone having a Pulse method
-            foreach (var zone in ZoneManager.Instance.GetAllZones())
+            Task.Run(() =>
             {
-                LogMessage($"TICK: Pulsing Zone {zone.Key} ({zone.Value.ZoneName})", LogLevel.Info, true);
-                var npcsForZone = NPCManager.Instance.GetNPCsForZone(zone.Key);
-                var zoneRooms = RoomManager.Instance.GetRoomIDsForZone(zone.Key);
-                // process NPCs
-                if (npcsForZone != null && npcsForZone.Count > 0)
+                CombatManager.ProcessCombat();
+            });
+        }
+
+        private void NPCTick(object sender, ElapsedEventArgs e)
+        {
+            tickCount++;
+            var upTime = DateTime.UtcNow - StartTime;
+            LogMessage($"INFO: Tick count: {tickCount:N0}; Uptime: {upTime.Days:0} day(s), {upTime.Hours:00}:{upTime.Minutes:00}:{upTime.Seconds:00}", LogLevel.Info, true);
+            Task.Run(() =>
+            {
+                NPCManager.Instance.TickAllNPCs(tickCount);
+            });
+        }
+
+        private void ZoneTick(object sender, ElapsedEventArgs e)
+        {
+            ZoneManager.Instance.PulseAllZones();
+        }
+
+        private void CleanUpTick(object sender, ElapsedEventArgs e)
+        {
+            Task.Run(() =>
+            {
+                int clearedConnections = 0;
+                LogMessage($"INFO: Clearing stale connections", LogLevel.Info, true);
+                while (SessionManager.Instance.DisconnectedSessions.Count > 0)
                 {
-                    foreach (var r in zoneRooms.Where(x => !x.Flags.HasFlag(RoomFlags.NoMobs)))
+                    var s = SessionManager.Instance.DisconnectedSessions.FirstOrDefault();
+                    if (s != null)
                     {
-                        foreach (var npc in npcsForZone)
-                        {
-                            var roll = Helpers.RollDice(1, 100);
-                            if (roll < npc.AppearChance && (NPCManager.Instance.GetCountOfNPCsInWorld(npc.NPCID) + 1 <= npc.MaxNumber))
-                            {
-                                NPCManager.Instance.AddNPCToWorld(npc.NPCID, r.RoomID);
-                            }
-                        }
+                        SessionManager.Instance.Close(s);
+                        clearedConnections++;
                     }
                 }
-                foreach(var r in zoneRooms.Where(x => !x.Flags.HasFlag(RoomFlags.NoMobs) && x.SpawnNPCsAtTick != null && x.SpawnNPCsAtTick.Count > 0))
+                LogMessage($"INFO: Cleared {clearedConnections} stale sessions", LogLevel.Info, true);
+            });
+        }
+
+        private static void SaveAllPlayers(bool force, out bool saveErr)
+        {
+            saveErr = false;
+            var connectedPlayers = SessionManager.Instance.ActivePlayers;
+            if (connectedPlayers != null && connectedPlayers.Count > 0)
+            {
+                LogMessage($"INFO: Starting Autosave of {connectedPlayers.Count} connected players", LogLevel.Info, true);
+                foreach (var p in connectedPlayers)
                 {
-                    foreach(var n in r.SpawnNPCsAtTick)
+                    var result = DatabaseManager.SavePlayer(p, false);
+                    if (result)
                     {
-                        var npc = NPCManager.Instance.GetNPCByID(n.Key);
-                        if (RoomManager.Instance.GetNPCsInRoom(r.RoomID).Where(x => x.NPCID == n.Key).Count() < n.Value)
-                        {
-                            if (NPCManager.Instance.GetCountOfNPCsInWorld(n.Key) < npc.MaxNumber)
-                            {
-                                NPCManager.Instance.AddNPCToWorld(n.Key, r.RoomID);
-                            }
-                        }
-                    }
-                }
-                // process items
-                foreach(var r in zoneRooms.Where(x => x.SpawnItemsAtTick != null && x.SpawnItemsAtTick.Count > 0))
-                {
-                    foreach(var i in r.SpawnItemsAtTick)
-                    {
-                        var item = ItemManager.Instance.GetItemByID(i.Key);
-                        if (item != null)
-                        {
-                            while(r.ItemsInRoom.Where(x => x.ID == i.Key).Count() < i.Value)
-                            {
-                                RoomManager.Instance.AddItemToRoomInventory(r.RoomID, ref item);
-                            }
-                        }
-                    }
-                }
-                var caves = RoomManager.Instance.GetAllRooms().Values.Where(x => x.ZoneID == zone.Key && x.Flags.HasFlag(RoomFlags.Cave) && x.ResourceNode == null).ToList();
-                foreach (var room in caves)
-                {
-                    var roll = Helpers.RollDice(1, 100);
-                    var node = NodeManager.Instance.GetNode(roll);
-                    if (node != null)
-                    {
-                        RoomManager.Instance.GetRoom(room.RoomID).ResourceNode = node;
-                        LogMessage($"INFO: Added {node} node to RID {room.RoomID}", LogLevel.Info, true);
+                        LogMessage($"AUTOSAVE: Successfully saved Player {p.Player.Name}", LogLevel.Info, true);
                     }
                     else
                     {
-                        LogMessage($"INFO: Rolled Node was null, skipping adding Resource Node to Room {room.RoomID}", LogLevel.Info, true);
-                    }
-                }
-            }
-            LogMessage($"INFO: Pulsing Shop inventories...", LogLevel.Info, true);
-            var shops = ShopManager.Instance.GetAllShops();
-            if (shops != null && shops.Count > 0)
-            {
-                foreach(var s in shops)
-                {
-                    Game.LogMessage($"INFO: Refreshing inventory for {s.ShopName}...", LogLevel.Info, true);
-                    s.RestockShop();
-                }
-            }
-        }
-
-        private void PulseNPCs()
-        {
-            LogMessage($"TICK: Pulsing NPCs", LogLevel.Info, true);
-            var npcs = NPCManager.Instance.GetAllNPCInstances();
-            foreach (var npc in npcs)
-            {
-                if (!npc.Value.BehaviourFlags.HasFlag(NPCFlags.Hostile))
-                {
-                    // non-hostile NPC actions, e.g. moving around, picking up random items etc
-                    if (!npc.Value.BehaviourFlags.HasFlag(NPCFlags.Sentinel))
-                    {
-                        // npc is not a sentinel so we can move it around
-                        var moveChance = Helpers.RollDice(1, 100);
-                        if (moveChance <= 25)
-                        {
-                            // move the npc
-                            var n = NPCManager.Instance.GetNPCByGUID(npc.Key);
-                            if (n != null)
-                            {
-                                // only move the NPC if it isn't in an active combat session
-                                if (!CombatManager.Instance.IsNPCInCombat(n.NPCGuid))
-                                {
-                                    var roomExits = RoomManager.Instance.GetRoom(n.CurrentRoom).RoomExits;
-                                    if (roomExits != null && roomExits.Count > 0)
-                                    {
-                                        var rnd = new Random(DateTime.Now.ToString().GetHashCode());
-                                        var index = rnd.Next(0, roomExits.Count);
-                                        // only allow the NPC to move if there is no door or the door is open
-                                        if (roomExits[index].RoomDoor == null || roomExits[index].RoomDoor.IsOpen)
-                                        {
-                                            var destRID = roomExits[index].DestinationRoomID;
-                                            if (RoomManager.Instance.RoomExists(destRID))
-                                            {
-                                                // Only move the NPC to the target room if the RID is in the zone the NPC appears in and isn't flagged NoMob - prevent NPCs from wandering too much
-                                                if (ZoneManager.Instance.IsRIDInZone(destRID, n.AppearsInZone) && !RoomManager.Instance.GetRoom(destRID).Flags.HasFlag(RoomFlags.NoMobs))
-                                                {
-                                                    npc.Value.Move(ref n, n.CurrentRoom, destRID, false);
-                                                }
-                                            }
-                                            else
-                                            {
-                                                LogMessage($"WARN: Cannot move {npc.Value.Name} from {npc.Value.CurrentRoom} to {destRID}, room does not exist", LogLevel.Warning, true);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                LogMessage($"ERROR: Cannot find NPC with GUID {npc.Key}", LogLevel.Error, true);
-                                continue;
-                            }
-                        }
-                    }
-                    if (npc.Value.BehaviourFlags.HasFlag(NPCFlags.Scavenger))
-                    {
-                        // npc is a sentinel scavenger so see if there are items to take in the room
-                        var pickupChance = Helpers.RollDice(1, 100);
-                        if (pickupChance <= 33 && !CombatManager.Instance.IsNPCInCombat(npc.Value.NPCGuid))
-                        {
-                            var items = RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).ItemsInRoom;
-                            if (items != null && items.Count > 0)
-                            {
-                                var rnd = new Random(DateTime.Now.ToString().GetHashCode());
-                                var index = rnd.Next(0, items.Count);
-                                var item = items[index];
-                                npc.Value.Inventory.Add(item);
-                                RoomManager.Instance.RemoveItemFromRoomInventory(npc.Value.CurrentRoom, ref item);
-                                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(npc.Value.CurrentRoom);
-                                if (playersToNotify != null && playersToNotify.Count > 0)
-                                {
-                                    foreach (var player in playersToNotify)
-                                    {
-                                        player.Send($"{npc.Value.Name} greedily snatches up {item.ShortDescription}!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                        var goldPickupChance = Helpers.RollDice(1, 100);
-                        var gp = RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).GoldInRoom;
-                        if (RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).GoldInRoom > 0)
-                        {
-                            if (goldPickupChance <= 33 && CombatManager.Instance.GetCombatSessionsForCombatant(npc.Key).Count() == 0)
-                            {
-                                npc.Value.Gold += gp;
-                                RoomManager.Instance.RemoveGoldFromRoom(npc.Value.CurrentRoom, gp);
-                                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(npc.Value.CurrentRoom);
-                                if (playersToNotify != null && playersToNotify.Count > 0)
-                                {
-                                    foreach (var player in playersToNotify)
-                                    {
-                                        player.Send($"{npc.Value.Name} snatches up a pile of gold!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // NPC has the hostile flag, so look to see if it is in a room where it can start a fight, if so, start the fight
-                    // if not, do something based off another flag or skip its turn
-                    if (!CombatManager.Instance.IsNPCInCombat(npc.Value.NPCGuid))
-                    {
-                        bool startFight = false;
-                        if (!RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
-                        {
-                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(npc.Value.CurrentRoom);
-                            if (localPlayers != null && localPlayers.Count > 0)
-                            {
-                                var rnd = new Random(DateTime.Now.GetHashCode());
-                                var tp = localPlayers[rnd.Next(localPlayers.Count)];
-                                if (tp.Player.Visible && !tp.Player.IsInCombat)
-                                {
-                                    startFight = true;
-                                    var mSession = new CombatSession(npc.Value, tp, npc.Key, tp.ID);
-                                    var pSession = new CombatSession(tp, npc.Value, tp.ID, npc.Key);
-                                    CombatManager.Instance.AddCombatSession(mSession);
-                                    CombatManager.Instance.AddCombatSession(pSession);
-                                    if (tp.Player.FollowerID != Guid.Empty)
-                                    {
-                                        var follower = NPCManager.Instance.GetNPCByGUID(tp.Player.FollowerID);
-                                        var mfSession = new CombatSession(npc.Value, follower, npc.Key, follower.NPCGuid);
-                                        var fSession = new CombatSession(follower, npc.Value, follower.NPCGuid, npc.Key);
-                                        CombatManager.Instance.AddCombatSession(mfSession);
-                                        CombatManager.Instance.AddCombatSession(fSession);
-                                    }
-                                    tp.Player.Position = ActorPosition.Fighting;
-                                    tp.Send($"{npc.Value.Name} launches an attack on you!{Constants.NewLine}");
-                                    LogMessage($"INFO: NPC {npc.Value.Name} starting combat session with {tp.Player.Name} in room {npc.Value.CurrentRoom}", LogLevel.Info, true);
-                                    foreach (var lp in localPlayers)
-                                    {
-                                        if (lp.Player.Name != tp.Player.Name)
-                                        {
-                                            lp.Send($"{npc.Value.Name} suddenly launches an attack on {tp.Player.Name}!{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    foreach (var player in localPlayers)
-                                    {
-                                        player.Send($"{npc.Value.Name} looks to be after a fight!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(npc.Value.CurrentRoom);
-                            if (localPlayers != null && localPlayers.Count > 0)
-                            {
-                                foreach (var player in localPlayers)
-                                {
-                                    player.Send($"{npc.Value.Name} looks to be after a fight!{Constants.NewLine}");
-                                }
-                            }
-                        }
-                        if (!startFight)
-                        {
-                            var moveChance = Helpers.RollDice(1, 100);
-                            if (moveChance <= 25)
-                            {
-                                var n = NPCManager.Instance.GetNPCByGUID(npc.Key);
-                                if (n != null)
-                                {
-                                    if (!CombatManager.Instance.IsNPCInCombat(npc.Key))
-                                    {
-                                        var roomExits = RoomManager.Instance.GetRoom(n.CurrentRoom).RoomExits;
-                                        if (roomExits != null && roomExits.Count > 0)
-                                        {
-                                            var rnd = new Random(DateTime.Now.GetHashCode());
-                                            var destRoom = roomExits[rnd.Next(roomExits.Count)];
-                                            if (RoomManager.Instance.RoomExists(destRoom.DestinationRoomID) && ZoneManager.Instance.IsRIDInZone(destRoom.DestinationRoomID, n.AppearsInZone))
-                                            {
-                                                if (!RoomManager.Instance.GetRoom(destRoom.DestinationRoomID).Flags.HasFlag(RoomFlags.NoMobs))
-                                                {
-                                                    npc.Value.Move(ref n, n.CurrentRoom, destRoom.DestinationRoomID, false);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    LogMessage($"ERROR: Cannot find NPC with GUID {npc.Key}", LogLevel.Error, true);
-                                    continue;
-                                }
-                            }
-                            if (npc.Value.BehaviourFlags.HasFlag(NPCFlags.Scavenger))
-                            {
-                                var pickupChance = Helpers.RollDice(1, 100);
-                                if (pickupChance <= 33 && CombatManager.Instance.GetCombatSessionsForCombatant(npc.Key).Count() == 0)
-                                {
-                                    var items = RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).ItemsInRoom;
-                                    if (items != null && items.Count > 0)
-                                    {
-                                        var rnd = new Random(DateTime.Now.GetHashCode());
-                                        var item = items[rnd.Next(items.Count)];
-                                        npc.Value.Inventory.Add(item);
-                                        RoomManager.Instance.GetRoom(npc.Value.CurrentRoom).ItemsInRoom.Remove(item);
-                                        var playersToNotify = RoomManager.Instance.GetPlayersInRoom(npc.Value.CurrentRoom);
-                                        if (playersToNotify != null && playersToNotify.Count > 0)
-                                        {
-                                            foreach (var player in playersToNotify)
-                                            {
-                                                player.Send($"{npc.Value.Name} greedily snatches up {item.ShortDescription}!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private void PulseCombat()
-        {
-            List<Guid> CompletedCombatSessions = new List<Guid>();
-            if (CombatManager.Instance.GetCombatQueue().Count > 0)
-            {
-                CombatManager.Instance.ProcessCombatQueue(out CompletedCombatSessions);
-                if (CompletedCombatSessions.Count > 0)
-                {
-                    foreach (var s in CompletedCombatSessions)
-                    {
-                        CombatManager.Instance.RemoveCombatSession(s);
-                    }
-                }
-            }
-            CompletedCombatSessions.Clear();
-        }
-
-        private void PulseAutoSave()
-        {
-            var playersInGame = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected).ToList();
-            if (playersInGame != null && playersInGame.Count > 0)
-            {
-                LogMessage($"AUTOSAVE: Processing auto-save of {playersInGame.Count} connected players...", LogLevel.Info, true);
-                foreach (var p in playersInGame)
-                {
-                    var player = p;
-                    if (DatabaseManager.SavePlayer(ref player, false))
-                    {
-                        LogMessage($"AUTOSAVE: Player {player.Player.Name} saved by autosave tick", LogLevel.Info, true);
-                    }
-                    else
-                    {
-                        LogMessage($"AUTOSAVE: Failed to save {player.Player.Name} on autosave tick", LogLevel.Error, true);
+                        saveErr = true;
+                        LogMessage($"AUTOSAVE: Failed to save Player {p.Player.Name}", LogLevel.Error, true);
                     }
                 }
             }
             else
             {
-                LogMessage($"AUTOSAVE: No players to save on tick.", LogLevel.Info, true);
+                LogMessage($"INFO: No connected players to save", LogLevel.Info, true);
             }
-            var idlePlayers = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected && (DateTime.UtcNow - x.LastInputTime).TotalSeconds > Constants.MaxIdleTickCount()).ToList();
-            if (idlePlayers != null && idlePlayers.Count > 0)
+            if (force)
             {
-                LogMessage($"INFO: Disconnecting idle players; {idlePlayers.Count} connected player(s) to process", LogLevel.Info, true);
-                uint playersDisconnected = 0;
-                foreach (var player in idlePlayers)
-                {
-                    if (player.Player.Level < Constants.ImmLevel || (player.Player.Level >= Constants.ImmLevel && Constants.DisconnectIdleImms()))
-                    {
-                        var p = player;
-                        LogMessage($"INFO: {player.Player} has been idle for {Math.Round((DateTime.UtcNow - player.LastInputTime).TotalSeconds, 2)} seconds and will be disconnected", LogLevel.Info, true);
-                        player.Send($"You have been disconnected due to an idle timeout.{Constants.NewLine}");
-                        SessionManager.Instance.Close(p);
-                        playersDisconnected++;
-                    }
-                }
-                LogMessage($"INFO: {playersDisconnected} idle player session(s) have been disconnected", LogLevel.Info, true);
+                saveErr = false;
             }
         }
 
-        private void CleanupDescriptors()
+        private void AutoSaveTick(object sender, ElapsedEventArgs e)
         {
-            uint clearedDescriptors = 0;
-            LogMessage($"INFO: Checking and clearing stale connections", LogLevel.Info, true);
-            while (SessionManager.Instance.GetDisconnectedSessions().Count() > 0)
+            Task.Run(() =>
             {
-                var s = SessionManager.Instance.GetDisconnectedSessions().FirstOrDefault();
-                if (s != null)
+                SaveAllPlayers(true, out _);
+                var idlePlayers = SessionManager.Instance.IdleSessions;
+                if (idlePlayers != null && idlePlayers.Count > 0)
                 {
-                    SessionManager.Instance.Close(s);
-                    clearedDescriptors++;
+                    int disconCount = 0;
+                    LogMessage($"INFO: Disconnecting idle players, {idlePlayers.Count} players to process", LogLevel.Info, true);
+                    foreach (var p in idlePlayers)
+                    {
+                        bool okToDiscon = okToDiscon = p.Player.Level < Constants.ImmLevel || DisconnectIdleImms;
+                        if (!okToDiscon)
+                        {
+                            LogMessage($"INFO: Not disconnecting player {p.Player.Name}", LogLevel.Info, true);
+                            continue;
+                        }
+                        var idleTime = Convert.ToInt32((DateTime.UtcNow - p.LastInputTime).TotalSeconds);
+                        LogMessage($"INFO: Player {p.Player.Name} has been idle for {idleTime:N0} seconds and will be disconnected", LogLevel.Info, true);
+                        p.Send($"You have been idle for {idleTime:N0} seconds and will be disconnected{Constants.NewLine}");
+                        SessionManager.Instance.Close(p);
+                        disconCount++;
+                    }
+                    LogMessage($"INFO: {disconCount} idle players have been disconnected", LogLevel.Info, true);
+                }
+            });
+        }
+
+        private void BuffTick(object sender, ElapsedEventArgs e)
+        {
+            Task.Run(() =>
+            {
+                LogMessage($"TICK: Pulsing HP/MP/SP regen on all Actors", LogLevel.Info, true);
+                foreach (var n in NPCManager.Instance.AllNPCInstances.ToList())
+                {
+                    if (n.InCombat && !n.HasBuff("Regen") && !n.Flags.HasFlag(NPCFlags.Regeneration))
+                    {
+                        continue;
+                    }
+                    var hpRegen = Math.Max(1, Helpers.RollDice<int>(1, 4) + Helpers.CalculateAbilityModifier(n.Constitution));
+                    var mpRegen = Math.Max(1, Helpers.RollDice<int>(1, 6) + Helpers.CalculateAbilityModifier(n.Intelligence));
+                    if (n.HasBuff("Regen"))
+                    {
+                        hpRegen += Helpers.RollDice<int>(1, 6);
+                        mpRegen += Helpers.RollDice<int>(1, 8);
+                    }
+                    LogMessage($"INFO: Restoring {hpRegen} HP and {mpRegen} MP to {n.Name}", LogLevel.Info, true);
+                    n.AdjustHP(hpRegen, out _);
+                    n.AdjustMP(mpRegen);
+                }
+                foreach (var p in SessionManager.Instance.ActivePlayers)
+                {
+                    if (p.Player.InCombat && !p.Player.HasBuff("Regen") || p.Player.Position == ActorPosition.Dead)
+                    {
+                        continue;
+                    }
+                    var hpRegen = Math.Max(1, Helpers.RollDice<int>(1, 4) + Helpers.CalculateAbilityModifier(p.Player.Constitution));
+                    var mpRegen = Helpers.RollDice<int>(1, 8);
+                    var spRegen = Math.Max(1, Helpers.RollDice<int>(1, 8) + Helpers.CalculateAbilityModifier(p.Player.Constitution));
+                    if (p.Player.Class == ActorClass.Cleric)
+                    {
+                        mpRegen = Math.Max(1, mpRegen + Helpers.CalculateAbilityModifier(p.Player.Wisdom));
+                    }
+                    else
+                    {
+                        mpRegen = Math.Max(1, mpRegen + Helpers.CalculateAbilityModifier(p.Player.Intelligence));
+                    }
+                    if (p.Player.HasBuff("Regen"))
+                    {
+                        hpRegen += Helpers.RollDice<int>(1, 6);
+                        mpRegen += Helpers.RollDice<int>(1, 8);
+                        spRegen += Helpers.RollDice<int>(1, 6);
+                    }
+                    switch (p.Player.Position)
+                    {
+                        case ActorPosition.Resting:
+                            hpRegen += Helpers.RollDice<int>(1, 3);
+                            mpRegen += Helpers.RollDice<int>(1, 3);
+                            spRegen += Helpers.RollDice<int>(1, 3);
+                            break;
+
+                        case ActorPosition.Sleeping:
+                            hpRegen += Helpers.RollDice<int>(1, 6);
+                            mpRegen += Helpers.RollDice<int>(1, 6);
+                            spRegen += Helpers.RollDice<int>(1, 6);
+                            break;
+                    }
+                    LogMessage($"INFO: Restoring {hpRegen} HP, {mpRegen} MP and {spRegen} SP to {p.Player.Name}", LogLevel.Info, true);
+                    p.Player.AdjustHP(hpRegen, out _);
+                    p.Player.AdjustMP(mpRegen);
+                    p.Player.AdjustSP(spRegen);
+                }
+                LogMessage($"TICK: Pulsing buffs on all Actors", LogLevel.Info, true);
+                foreach (var n in NPCManager.Instance.AllNPCInstances.Where(x => x.Buffs.Count > 0))
+                {
+                    foreach (var b in n.Buffs)
+                    {
+                        n.RemoveBuff(b.Key, false);
+                        switch (b.Key)
+                        {
+                            case "Sprit Drain":
+                                var mpLoss = Helpers.RollDice<int>(1, 4);
+                                n.AdjustMP(mpLoss * -1);
+                                break;
+
+                            case "Spirit Fire":
+                                var mpGain = Helpers.RollDice<int>(1, 4);
+                                n.AdjustMP(mpGain);
+                                break;
+
+                            case "Poison":
+                                var hpLoss = Helpers.RollDice<int>(1, 6);
+                                n.AdjustHP(hpLoss * -1, out bool isKilled);
+                                if (isKilled)
+                                {
+                                    n.Kill(null, false);
+                                }
+                                break;
+
+                            case "Restoration":
+                                n.Restore();
+                                break;
+
+                            case "Esuna":
+                                n.Esuna();
+                                break;
+                        }
+                    }
+                }
+                foreach (var p in SessionManager.Instance.ActivePlayers.Where(x => x.Player.Buffs.Count > 0))
+                {
+                    foreach (var b in p.Player.Buffs)
+                    {
+                        p.Player.RemoveBuff(b.Key, false);
+                        switch (b.Key)
+                        {
+                            case "Spirit Drain":
+                                var mpLoss = Helpers.RollDice<int>(1, 4);
+                                p.Player.AdjustMP(mpLoss * -1);
+                                break;
+
+                            case "Spirit Fire":
+                                var mpGain = Helpers.RollDice<int>(1, 4);
+                                p.Player.AdjustMP(mpGain);
+                                break;
+
+                            case "Energy Drain":
+                                var spLoss = Helpers.RollDice<int>(1, 3);
+                                p.Player.AdjustSP(spLoss * -1);
+                                break;
+
+                            case "Energy Fire":
+                                var spGain = Helpers.RollDice<int>(1, 3);
+                                p.Player.AdjustSP(spGain);
+                                break;
+
+                            case "Poison":
+                                var hpLoss = Helpers.RollDice<int>(1, 6);
+                                p.Player.AdjustHP(hpLoss * -1, out bool isKilled);
+                                if (isKilled)
+                                {
+                                    p.Player.Kill(null, false);
+                                }
+                                break;
+
+                            case "Restoration":
+                                p.Player.Restore();
+                                break;
+
+                            case "Esuna":
+                                p.Player.Esuna();
+                                break;
+                        }
+                    }
+                }
+            });
+        }
+
+        private void BackupTick(object sender, ElapsedEventArgs e)
+        {
+            BackupNow();
+        }
+
+        private bool LoadDatabase()
+        {
+            ZoneManager.Instance.LoadAllZones(out bool zErr);
+            if (zErr)
+            {
+                return false;
+            }
+            if (ZoneManager.Instance.Count == 0)
+            {
+                if (AddDefaultZone())
+                {
+                    LoadDatabase(); // restart the load process if we've added a zone
+                }
+                else
+                {
+                    LogMessage($"ERROR: Failed to create Default Zone, aborting laod process", LogLevel.Error, true);
+                    return false;
                 }
             }
-            LogMessage($"INFO: Cleared {clearedDescriptors} stale connections", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {ZoneManager.Instance.Count} Zones loaded", LogLevel.Info, true);
+            RoomManager.Instance.LoadAllRooms(out bool roomErr);
+            if (roomErr)
+            {
+                return false;
+            }
+            if (RoomManager.Instance.Count == 0)
+            {
+                if (AddDefaultRoom())
+                {
+                    LoadDatabase();
+                }
+                else
+                {
+                    LogMessage($"ERROR: Failed to create Default Room, aborting load process", LogLevel.Error, true);
+                    return false;
+                }
+            }
+            LogMessage($"INFO: Loading Database, {RoomManager.Instance.Count} Rooms loaded", LogLevel.Info, true);
+            // TODO: Load MobProgs here - need to load these before NPCs
+            ItemManager.Instance.LoadAllItems(out bool itemErr);
+            if (itemErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {ItemManager.Instance.Count} Items loaded", LogLevel.Info, true);
+            ShopManager.Instance.LoadAllShops(out bool shopErr);
+            if (shopErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {ShopManager.Instance.Count} Shops loaded", LogLevel.Info, true);
+            NPCManager.Instance.LoadAllNPCs(out bool npcErr);
+            if (npcErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {NPCManager.Instance.TemplateCount} NPCs loaded", LogLevel.Info, true);
+            EmoteManager.Instance.LoadAllEmotes(out bool emoteErr);
+            if (emoteErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {EmoteManager.Instance.Count} Emotes loaded", LogLevel.Info, true);
+            NodeManager.Instance.LoadAllNodes(out bool nodeErr);
+            if (nodeErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {NodeManager.Instance.Count} Resource Nodes loaded", LogLevel.Info, true);
+            RecipeManager.Instance.LoadAllRecipes(out bool recipeErr);
+            if (recipeErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {RecipeManager.Instance.Count} Crafting Recipes loaded", LogLevel.Info, true);
+            QuestManager.Instance.LoadAllQuests(out bool questErr);
+            if (questErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {QuestManager.Instance.Count} Quests loaded", LogLevel.Info, true);
+            SpellManager.Instance.LoadAllSpells(out bool spellErr);
+            if (spellErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {SpellManager.Instance.Count} Spells loaded", LogLevel.Info, true);
+            return true;
+        }
+
+        private bool AddDefaultRoom()
+        {
+            var limbo = new Room
+            {
+                RoomName = "Limbo",
+                ID = 0,
+                ZoneID = 0,
+                ShortDescription = "the world between worlds",
+                LongDescription = "White clouds swirl around, carrying the faint echo of mortal voices. Through a ghostly mist, the city of Etrea is visible below.",
+                Flags = RoomFlags.Safe
+            };
+            return DatabaseManager.SaveRoomToWorldDatabase(limbo, true);
+        }
+
+        private bool AddDefaultZone()
+        {
+            var highHeavens = new Zone
+            {
+                ZoneID = 0,
+                ZoneName = "The High Heavens",
+                MinRoom = 0,
+                MaxRoom = 99,
+                LockHolder = Guid.Empty,
+                OLCLocked = false
+            };
+            return DatabaseManager.SaveZoneToWorldDatabase(highHeavens, true);
         }
     }
 }

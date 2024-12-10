@@ -1,7 +1,8 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum LogLevel
+    public enum LogLevel
     {
+        None = 0,
         Error,
         Warning,
         Info,
@@ -9,5 +10,6 @@
         OLC,
         Connection,
         Shop,
+        Combat,
     }
 }

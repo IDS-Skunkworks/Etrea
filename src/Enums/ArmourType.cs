@@ -1,9 +1,11 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum ArmourType
+    public enum ArmourType
     {
+        Undefined,
         Light,
         Medium,
         Heavy,
+        Exotic
     }
 }

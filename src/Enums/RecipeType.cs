@@ -1,11 +1,12 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum RecipeType
+    public enum RecipeType
     {
-        Blacksmithing,
+        Undefined,
+        Blacksmith,
         Alchemy,
-        Scribing,
-        Jewelcrafting,
-        Cooking
+        Scribe,
+        Jewelcraft,
+        Cooking,
     }
 }

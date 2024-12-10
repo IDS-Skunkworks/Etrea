@@ -1,153 +1,154 @@
-﻿using Etrea2.Entities;
+﻿using Etrea3.Objects;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class SpellManager
+    public class SpellManager
     {
-        private static SpellManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<string, Spell> Spells { get; set; }
+        private static SpellManager instance = null;
+        private ConcurrentDictionary<int, Spell> Spells;
+        public int Count => Spells.Count;
 
         private SpellManager()
         {
-            Spells = new Dictionary<string, Spell>();
+            Spells = new ConcurrentDictionary<int, Spell>();
         }
 
-        internal static SpellManager Instance
+        public static SpellManager Instance
         {
             get
             {
-                lock (_lock)
+                if (instance == null)
                 {
-                    if (_instance == null)
-                    {
-                        _instance = new SpellManager();
-                    }
-                    return _instance;
+                    instance = new SpellManager();
                 }
+                return instance;
             }
         }
 
-        internal List<Spell> GetAllSpells()
+        public void SetSpellLockState(int id, bool locked, Session session)
         {
-            lock (_lock)
+            if (Instance.Spells.ContainsKey(id))
             {
-                return Instance.Spells.Values.ToList();
+                Instance.Spells[id].OLCLocked = locked;
+                Instance.Spells[id].LockHolder = locked ? session.ID : Guid.Empty;
             }
         }
 
-        internal bool AddSpell(ref Descriptor desc, Spell spell)
+        public bool GetSpellLockState(int id, out Guid lockHolder)
         {
-            try
+            if (Instance.Spells.ContainsKey(id))
             {
-                lock (_lock)
-                {
-                    Instance.Spells.Add(spell.SpellName, spell);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} added Spell '{spell.SpellName}' to SpellManager", LogLevel.OLC, true);
-                    return true;
-                }
+                lockHolder = Instance.Spells[id].LockHolder;
+                return Instance.Spells[id].OLCLocked;
             }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding Spell '{spell.SpellName}' to SpellManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
+            lockHolder = Guid.Empty;
+            return false;
         }
 
-        internal bool UpdateSpell(ref Descriptor desc, Spell spell)
+        public void LoadAllSpells(out bool hasErr)
         {
-            try
-            {
-                lock(_lock)
-                {
-                    if (Instance.Spells.ContainsKey(spell.SpellName))
-                    {
-                        Instance.Spells.Remove(spell.SpellName);
-                        Instance.Spells.Add(spell.SpellName, spell);
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} has updated Spell '{spell.SpellName}' in SpellManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} tried to update Spell '{spell.SpellName}' in SpellManager, but it could not be found and will be added instead", LogLevel.OLC, true);
-                        bool OK = AddSpell(ref desc, spell);
-                        return OK;
-                    }
-                }
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Spell '{spell.SpellName}' in SpellManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool RemoveSpell(ref Descriptor desc, Spell spell)
-        {
-            try
-            {
-                lock(_lock)
-                {
-                    Instance.Spells.Remove(spell.SpellName);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} has removed Spell '{spell.SpellName}' from SpellManager", LogLevel.OLC, true);
-                    return true;
-                }
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Spell '{spell.SpellName}' from SpellManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal Spell GetSpell(string spellName)
-        {
-            lock (_lock)
-            {
-                if (Instance.Spells.Count > 0)
-                {
-                    return Instance.Spells.Values.Where(x => Regex.IsMatch(x.SpellName, spellName, RegexOptions.IgnoreCase)).FirstOrDefault();
-                }
-                return null;
-            }
-        }
-
-        internal List<Spell> GetSpells(string spellName)
-        {
-            lock( _lock)
-            {
-                return Instance.Spells.Values.Where(x => Regex.IsMatch(x.SpellName, spellName, RegexOptions.IgnoreCase) || Regex.IsMatch(x.Description, spellName, RegexOptions.IgnoreCase)).ToList();
-            }
-        }
-
-        internal void LoadAllSpells(out bool hasError)
-        {
-            var result = DatabaseManager.LoadAllSpells(out hasError);
-            if (!hasError && result != null)
+            var result = DatabaseManager.LoadAllSpells(out hasErr);
+            if (!hasErr && result != null)
             {
                 Instance.Spells.Clear();
-                Instance.Spells = result;
+                foreach(var spell in result)
+                {
+                    Instance.Spells.TryAdd(spell.Key, spell.Value);
+                }
             }
         }
 
-        internal bool SpellExists(string spellName)
+        public Spell GetSpell(int id)
         {
-            lock (_lock)
+            return Instance.Spells.ContainsKey(id) ? Instance.Spells[id] : null;
+        }
+
+        public List<Spell> GetSpell(int start, int end)
+        {
+            return end < start ? null : Instance.Spells.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
+        }
+
+        public Spell GetSpell(string spellName)
+        {
+            return Instance.Spells.Values.FirstOrDefault(x => x.Name.IndexOf(spellName, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        public List<Spell> GetSpell(string spellName, bool all)
+        {
+            return Instance.Spells.Values.Where(x => x.Name.IndexOf(spellName, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        }
+
+        public List<Spell> GetSpell()
+        {
+            return Instance.Spells.Values.ToList();
+        }
+
+        public List<Spell> GetSpell(ActorClass actorClass)
+        {
+            return Instance.Spells.Values.Where(x => x.AvailableToClass.HasFlag(actorClass)).ToList();
+        }
+
+        public List<Spell> GetSpell(SpellType spellType)
+        {
+            return Instance.Spells.Values.Where(x => x.SpellType == spellType).ToList();
+        }
+
+        public bool SpellExists(int spellID)
+        {
+            return Instance.Spells.ContainsKey(spellID);
+        }
+
+        public bool AddOrUpdateSpell(Spell spell, bool isNew)
+        {
+            try
             {
-                return Instance.Spells.Values.Where(x => Regex.IsMatch(x.SpellName, spellName, RegexOptions.IgnoreCase)).Any();
+                if (!DatabaseManager.SaveSpellToWorldDatabase(spell, isNew))
+                {
+                    Game.LogMessage($"ERROR: Failed to save Spell {spell.Name} ({spell.ID}) to World Database", LogLevel.Error, true);
+                    return false;
+                }
+                if (isNew)
+                {
+                    if (!Instance.Spells.TryAdd(spell.ID, spell))
+                    {
+                        Game.LogMessage($"ERROR: Failed to add new Spell {spell.Name} ({spell.ID}) to Spell Manager", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!Instance.Spells.TryGetValue(spell.ID, out Spell existingSpell))
+                    {
+                        Game.LogMessage($"ERROR: Spell {spell.ID} not found in Spell Manager for update", LogLevel.Error, true);
+                        return false;
+                    }
+                    if (!Instance.Spells.TryUpdate(spell.ID, spell, existingSpell))
+                    {
+                        Game.LogMessage($"ERROR: Failed to update Spell {spell.ID} in Spell Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                return true;
+            }
+            catch(Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in SpellManager.AddOrUpdateSpell(): {ex.Message}", LogLevel.Error, true);
+                return false;
             }
         }
 
-        internal int GetSpellCount()
+        public bool RemoveSpell(int id)
         {
-            lock (_lock)
+            if (Instance.Spells.ContainsKey(id))
             {
-                return Instance.Spells.Count;
+                return Instance.Spells.TryRemove(id, out _) && DatabaseManager.RemoveSpell(id);
             }
+            Game.LogMessage($"ERROR: Error removing Spell with ID {id}, no such Spell in SpellManager", LogLevel.Error, true);
+            return false;
         }
     }
 }

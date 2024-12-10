@@ -1,76 +1,93 @@
 ﻿using System;
+using System.Configuration;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
-using Etrea2.Core;
 using System.Threading;
+using Etrea3.Core;
 
-namespace Etrea2.Networking
+namespace Etrea3.Networking
 {
-    internal class TcpServer
+    public class TcpServer
     {
-        private bool _accept = false;
-        private TcpListener _listener;
-        private CancellationTokenSource _tokenSource;
-        private string _ip;
-        private int _port;
-        private byte[] _buffer = new byte[1024];
+        private bool accept = false;
+        private TcpListener listener;
+        private CancellationTokenSource tokenSource;
+        private string ip;
+        private int port;
 
-        internal TcpServer(string ipAddress, int port)
+        public bool Init(out string errMsg)
         {
-            _tokenSource = new CancellationTokenSource();
-            _ip = ipAddress;
-            _port = port;
+            errMsg = string.Empty;
+            if (!IPAddress.TryParse(ConfigurationManager.AppSettings["ListenerIP"], out IPAddress listenerIP))
+            {
+                errMsg = $"Unable to parse ListenerIP: value {ConfigurationManager.AppSettings["ListenerIP"]} is not a valid IP address";
+                return false;
+            }
+            if (!int.TryParse(ConfigurationManager.AppSettings["ListenerPort"], out int listenerPort))
+            {
+                errMsg = $"Unable to parse ListenerPort: value {ConfigurationManager.AppSettings["ListenerPort"]} is not a valid number";
+                return false;
+            }
+            if (listenerPort <= 0 || listenerPort >= 65000)
+            {
+                errMsg = $"Port {listenerPort} is not valid. Value must be >0 and <65000";
+                return false;
+            }
+            this.ip = listenerIP.ToString();
+            this.port = listenerPort;
+            this.tokenSource = new CancellationTokenSource();
+            return true;
         }
 
-        internal void StartServer(uint startRoom)
+        public void Start()
         {
             try
             {
-                IPAddress listenerIP = IPAddress.Parse(_ip);
-                _listener = new TcpListener(listenerIP, _port);
-                _listener.Start();
-                _accept = true;
-                Game.LogMessage($"INFO: Listening for connections on {_listener.LocalEndpoint}", LogLevel.Info, true);
+                IPAddress listenerIP = IPAddress.Parse(ip);
+                listener = new TcpListener(listenerIP, port);
+                listener.Start();
+                accept = true;
+                Game.LogMessage($"INFO: Listening for connections on {listener.LocalEndpoint}", LogLevel.Info, true);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Game.LogMessage($"ERROR: Error starting listener: {ex.Message}", LogLevel.Error, true);
-                _accept = false;
+                accept = false;
             }
         }
 
-        internal void Listen()
+        public void Listen()
         {
             Task.Run(async () =>
             {
-                if (_listener != null && _accept)
+                if (listener != null && accept)
                 {
                     while (true)
                     {
-                        if (_tokenSource.Token.IsCancellationRequested)
+                        if (tokenSource.Token.IsCancellationRequested)
                         {
-                            Game.LogMessage($"INFO: Stopping TCP listener...", LogLevel.Info, true);
-                            _accept = false;
-                            _listener.Stop();
+                            Game.LogMessage($"INFO: Stopping TCP listener", LogLevel.Info, true);
+                            accept = false;
+                            listener.Stop();
                             break;
                         }
-                        var clientTask = _listener.AcceptTcpClientAsync();
+                        var clientTask = listener.AcceptTcpClientAsync();
                         if (clientTask.Result != null)
                         {
                             var client = clientTask.Result;
                             Game.LogMessage($"CONNECTION: Accepting new connection from {client.Client.RemoteEndPoint}", LogLevel.Connection, true);
-                            await SessionManager.Instance.NewDescriptor(client);
+                            await SessionManager.Instance.NewSession(client);
                         }
                     }
                 }
-            }, _tokenSource.Token);
+            }, tokenSource.Token);
         }
 
-        internal void Shutdown()
+        public void ShutDown()
         {
-            Game.LogMessage($"INFO: Requesting TCP listener stop", LogLevel.Info, true);
-            _tokenSource.Cancel();
+            Game.LogMessage($"INFO: Requesting the TCP listener to stop", LogLevel.Info, true);
+            tokenSource.Cancel();
         }
     }
 }

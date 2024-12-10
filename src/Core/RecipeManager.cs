@@ -1,147 +1,142 @@
-﻿using Etrea2.Entities;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
+using Etrea3.Objects;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class RecipeManager
+    public class RecipeManager
     {
-        private static RecipeManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<uint, Recipe> Recipes;
+        private static RecipeManager instance = null;
+        private ConcurrentDictionary<int, CraftingRecipe> Recipes { get; set; }
+        public int Count => Recipes.Count;
 
         private RecipeManager()
         {
-            Recipes = new Dictionary<uint, Recipe>();
+            Recipes = new ConcurrentDictionary<int, CraftingRecipe>();
         }
 
-        internal static RecipeManager Instance
+        public static RecipeManager Instance
         {
             get
             {
-                if (_instance == null)
+                if (instance == null)
                 {
-                    _instance = new RecipeManager();
+                    instance = new RecipeManager();
                 }
-                return _instance;
+                return instance;
             }
         }
 
-        internal bool RecipeExists(uint id)
-        {
-            return Instance.Recipes.ContainsKey(id);
-        }
-
-        internal Recipe GetRecipe(uint id)
+        public CraftingRecipe GetRecipe(int id)
         {
             return Instance.Recipes.ContainsKey(id) ? Instance.Recipes[id] : null;
         }
 
-        internal Recipe GetRecipe(string name)
+        public List<CraftingRecipe> GetRecipe(int start, int end)
         {
-            lock (_lock)
+            return Instance.Recipes.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
+        }
+
+        public List<CraftingRecipe> GetRecipe(string criteria)
+        {
+            return Instance.Recipes.Values.Where(x => x.Name.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        }
+
+        public List<CraftingRecipe> GetRecipe()
+        {
+            return Instance.Recipes.Values.ToList();
+        }
+
+        public List<CraftingRecipe> GetRecipe(RecipeType recipeType)
+        {
+            return Instance.Recipes.Values.Where(x => x.RecipeType == recipeType).ToList();
+        }
+
+        public bool RecipeExists(int id)
+        {
+            return Instance.Recipes.ContainsKey(id);
+        }
+
+        public void SetRecipeLockState(int id, bool locked, Session session)
+        {
+            if (Instance.Recipes.ContainsKey(id))
             {
-                return Instance.Recipes.Values.Where(x => Regex.IsMatch(x.RecipeName, name, RegexOptions.IgnoreCase)).FirstOrDefault();
+                Instance.Recipes[id].OLCLocked = locked;
+                Instance.Recipes[id].LockHolder = locked ? session.ID : Guid.Empty;
             }
         }
 
-        internal List<Recipe> GetAllCraftingRecipes(string criteria)
+        public bool GetRecipeLockState(int id, out Guid lockHolder)
         {
-            lock (_lock)
+            lockHolder = Guid.Empty;
+            if (Instance.Recipes.ContainsKey(id))
             {
-                if (!string.IsNullOrEmpty(criteria))
-                {
-                    return Instance.Recipes.Values.Where(x => Regex.IsMatch(x.RecipeName, criteria, RegexOptions.IgnoreCase)
-                    || Regex.IsMatch(x.RecipeDescription, criteria, RegexOptions.IgnoreCase)).ToList();
-                }
-                return Instance.Recipes.Values.ToList();
+                lockHolder = Instance.Recipes[id].LockHolder;
+                return Instance.Recipes[id].OLCLocked;
             }
+            return false;
         }
 
-        internal int GetRecipeCount()
-        {
-            lock(_lock)
-            {
-                return Instance.Recipes.Count;
-            }
-        }
-
-        internal void LoadAllRecipes(out bool hasError)
-        {
-            var result = DatabaseManager.LoadAllRecipes(out hasError);
-            if (!hasError && result != null)
-            {
-                lock(_lock)
-                {
-                    Instance.Recipes.Clear();
-                    Instance.Recipes = result;
-                }
-            }
-        }
-
-        internal bool AddRecipe(ref Descriptor desc, Recipe recipe)
+        public bool AddOrUpdateRecipe(CraftingRecipe recipe, bool isNew)
         {
             try
             {
-                lock(_lock)
+                if (!DatabaseManager.SaveRecipeToWorldDatabase(recipe, isNew))
                 {
-                    Instance.Recipes.Add(recipe.RecipeID, recipe);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} added Recipe {recipe.RecipeID} ({recipe.RecipeName}) to RecipeManager", LogLevel.OLC, true);
-                    return true;
+                    Game.LogMessage($"ERROR: Failed to save Recipe {recipe.Name} ({recipe.ID}) to the World Database", LogLevel.Error, true);
+                    return false;
                 }
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding Recipe {recipe.RecipeID} ({recipe.RecipeName}) to RecipeManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool UpdateRecipe(ref Descriptor desc, Recipe recipe)
-        {
-            try
-            {
-                lock(_lock)
+                if (isNew)
                 {
-                    if (Instance.Recipes.ContainsKey(recipe.RecipeID))
+                    if (!Instance.Recipes.TryAdd(recipe.ID, recipe))
                     {
-                        Instance.Recipes.Remove(recipe.RecipeID);
-                        Instance.Recipes.Add(recipe.RecipeID, recipe);
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} has updated Recipe {recipe.RecipeID} ({recipe.RecipeName}) in RecipeManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} has tried to update Recipe {recipe.RecipeID} ({recipe.RecipeName}) in RecipeManager but the ID could not be found, it will be added instead", LogLevel.OLC, true);
-                        bool OK = AddRecipe(ref desc, recipe);
-                        return OK;
+                        Game.LogMessage($"ERROR: Failed to add new Recipe {recipe.Name} ({recipe.ID}) to Recipe Manager", LogLevel.Error, true);
+                        return false;
                     }
                 }
+                else
+                {
+                    if (!Instance.Recipes.TryGetValue(recipe.ID, out CraftingRecipe existingRecipe))
+                    {
+                        Game.LogMessage($"ERROR: Recipe {recipe.ID} not found in Recipe Manager for update", LogLevel.Error, true);
+                        return false;
+                    }
+                    if (!Instance.Recipes.TryUpdate(recipe.ID, recipe, existingRecipe))
+                    {
+                        Game.LogMessage($"ERROR: Failed to update Recipe {recipe.ID} in Recipe Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Recipe {recipe.RecipeID} ({recipe.RecipeName}) in RecipeManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in RecipeManager.AddOrUpdateRecipe(): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool RemoveRecipe(ref Descriptor desc, uint id, string name)
+        public bool RemoveRecipe(int id)
         {
-            try
+            if (Instance.Recipes.ContainsKey(id))
             {
-                lock(_lock)
-                {
-                    Instance.Recipes.Remove(id);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} removed Recipe {id} ({name}) from RecipeManager", LogLevel.OLC, true);
-                    return true;
-                }
+                return Instance.Recipes.TryRemove(id, out _) && DatabaseManager.RemoveRecipe(id);
             }
-            catch(Exception ex)
+            Game.LogMessage($"ERROR: Error removing Recipe with ID {id}: No such Recipe in RecipeManager", LogLevel.Error, true);
+            return false;
+        }
+
+        public void LoadAllRecipes(out bool hasErr)
+        {
+            var result = DatabaseManager.LoadAllRecipes(out hasErr);
+            if (!hasErr && result != null)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Recipe {id} ({name}) from RecipeManager: {ex.Message}", LogLevel.Error, true);
-                return false;
+                foreach(var r in result)
+                {
+                    Instance.Recipes.AddOrUpdate(r.Key, r.Value, (k, v) => r.Value);
+                }
             }
         }
     }

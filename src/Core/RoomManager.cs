@@ -1,492 +1,280 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Etrea2.Entities;
+using Etrea3.Objects;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class RoomManager
+    public class RoomManager
     {
-        private static RoomManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<uint, Room> Rooms { get; set; }
+        private static RoomManager instance = null;
+        private ConcurrentDictionary<int, Room> Rooms { get; set; }
+        public int Count => Instance.Rooms.Count;
 
         private RoomManager()
         {
-            Rooms = new Dictionary<uint, Room>();
+            Rooms = new ConcurrentDictionary<int, Room>();
         }
 
-        internal static RoomManager Instance
+        public static RoomManager Instance
         {
             get
             {
-                lock (_lock)
+                if (instance == null)
                 {
-                    if (_instance == null)
-                    {
-                        _instance = new RoomManager();
-                    }
-                    return _instance;
+                    instance = new RoomManager();
                 }
+                return instance;
             }
         }
 
-        internal Dictionary<uint, Room> GetAllRooms()
+        public void SetRoomLockState(int id, bool locked, Session session)
         {
-            lock(_lock)
+            if (Instance.Rooms.ContainsKey(id))
             {
-                return Instance.Rooms;
+                Instance.Rooms[id].OLCLocked = locked;
+                Instance.Rooms[id].LockHolder = locked ? session.ID : Guid.Empty;
             }
         }
 
-        internal bool RoomExists(uint roomId)
+        public bool GetRoomLockState(int id, out Guid lockHolder)
         {
-            lock (_lock)
+            lockHolder = Guid.Empty;
+            if (Instance.Rooms.ContainsKey(id))
             {
-                return Instance.Rooms.ContainsKey(roomId);
+                lockHolder = Instance.Rooms[id].LockHolder;
+                return Instance.Rooms[id].OLCLocked;
             }
+            return false;
         }
 
-        internal void LoadAllRooms(out bool hasError)
+        public List<Room> GetRoomsWithItems()
+        {
+            return Instance.Rooms.Values.Where(x => x.ItemsInRoom.Count > 0).ToList();
+        }
+
+        public List<Room> GetRoom()
+        {
+            return Instance.Rooms.Values.ToList();
+        }
+
+        public bool RoomExists(int id)
+        {
+            return Instance.Rooms.ContainsKey(id);
+        }
+
+        public void LoadAllRooms(out bool hasError)
         {
             var result = DatabaseManager.LoadAllRooms(out hasError);
             if (!hasError && result != null)
             {
-                lock (_lock)
+                foreach(var r in result)
                 {
-                    Instance.Rooms.Clear();
-                    Instance.Rooms = result;
+                    Instance.Rooms.AddOrUpdate(r.Key, r.Value, (k, v) => r.Value);
                 }
             }
         }
 
-        internal void UpdateNPCsInRoom(uint rid, bool isLeaving, bool wasTeleported, ref NPC n)
+        public List<Room> GetRoomsForZone(int zoneId)
         {
-            lock (_lock)
-            {
-                if (isLeaving)
-                {
-                    var playersToNotify = Instance.GetPlayersInRoom(rid);
-                    if (playersToNotify != null && playersToNotify.Count > 0)
-                    {
-                        foreach (var p in playersToNotify.Where(x => !x.Player.IsInCombat))
-                        {
-                            p.Send($"{Constants.NewLine}{n.DepartureMessage}{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    var playersToNotify = Instance.GetPlayersInRoom(rid);
-                    if (playersToNotify != null && playersToNotify.Count > 0)
-                    {
-                        foreach (var p in playersToNotify.Where(x => !x.Player.IsInCombat))
-                        {
-                            p.Send($"{Constants.NewLine}{n.ArrivalMessage}{Constants.NewLine}");
-                        }
-                    }
-                }
-            }
+            return (from r in Instance.Rooms.Values where r.ZoneID == zoneId select r).ToList();
         }
 
-        internal void UpdatePlayersInRoom(uint rid, ref Descriptor desc, bool playerLeaving, bool wasTeleported, bool isQuittingGame, bool isJoiningGame)
+        public Room GetRoom(int roomId)
         {
-            var pn = desc.Player.Name;
-            if (playerLeaving)
+            if (Instance.Rooms.ContainsKey(roomId))
             {
-                lock (_lock)
-                {
-                    string msg = string.Empty;
-                    if (!isQuittingGame)
-                    {
-                        if (desc.Player.Visible)
-                        {
-                            msg = wasTeleported ? $"{desc.Player.Name} is spirited away by the Winds of Magic!{Constants.NewLine}" : $"{desc.Player.Name} walks away{Constants.NewLine}";
-                        }
-                        else
-                        {
-                            msg = wasTeleported ? $"The Winds of Magic swirl and spirit something away...{Constants.NewLine}" : $"There is a slight breeze as something walks away{Constants.NewLine}";
-                        }
-                    }
-                    else
-                    {
-                        msg = desc.Player.Visible ? $"{desc.Player.Name} fades out of existence...{Constants.NewLine}" : $"Something fades out of existence...{Constants.NewLine}";
-                    }
-                    foreach (var d in Instance.GetPlayersInRoom(rid).Where(x => x.Player.Name != pn))
-                    {
-                        d.Send(msg);
-                    }
-                }
+                return Instance.Rooms[roomId];
             }
-            else
-            {
-                lock (_lock)
-                {
-                    string msg = string.Empty;
-                    if (!isJoiningGame)
-                    {
-                        if (desc.Player.Visible)
-                        {
-                            msg = wasTeleported ? $"{desc.Player.Name} arrives from a swirling cloud of magic! {Constants.NewLine}" : $"{desc.Player.Name} arrives {Constants.NewLine}";
-                        }
-                        else
-                        {
-                            msg = wasTeleported ? $"A swirling cloud of magic signals the arrival of something{Constants.NewLine}" : $"There is a slight breeze as something arrives{Constants.NewLine}";
-                        }
-                    }
-                    else
-                    {
-                        msg = desc.Player.Visible ? $"{desc.Player.Name} fades into existence...{Constants.NewLine}" : $"Something fades into existence...{Constants.NewLine}";
-                    }
-                    foreach (var d in Instance.GetPlayersInRoom(rid).Where(x => x.Player.Name != pn))
-                    {
-                        d.Send(msg);
-                    }
-                }
-            }
+            return null;
         }
 
-        internal List<Room> GetRoomIDsForZone(uint zoneId)
+        public List<Room> GetRoom(string criteria)
         {
-            lock(_lock)
+            if (string.IsNullOrEmpty(criteria))
             {
-                return (from r in Instance.Rooms.Values where r.ZoneID == zoneId select r).ToList();
+                return null;
             }
+            return (from r in Instance.Rooms.Values where Regex.IsMatch(r.RoomName, criteria, RegexOptions.IgnoreCase)
+                    || Regex.IsMatch(r.ShortDescription, criteria, RegexOptions.IgnoreCase)
+                    || Regex.IsMatch(r.LongDescription, criteria, RegexOptions.IgnoreCase) select r).ToList();
         }
 
-        internal void LoadPlayerInRoom(uint roomId, ref Descriptor desc)
+        public List<Room> GetRoom(int start, int end)
         {
-            lock (_lock)
+            if (end < start || end == start)
             {
-                var playersInRoom = Instance.GetPlayersInRoom(roomId);
-                var pName = desc.Player?.Name;
-                foreach (var p in playersInRoom.Where(x => x.Player.Name != pName))
-                {
-                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                    {
-                        p.Send($"With a burst of light {desc.Player.Name} appears in the world!{Constants.NewLine}");
-                    }
-                }
+                return null;
             }
+            return (from r in Instance.Rooms.Values where r.ID >= start && r.ID <= end select r).ToList();
         }
 
-        internal void ProcessEnvironmentBuffs(uint rid)
+        public void LoadPlayerIntoRoom(int roomID, Session session)
         {
-            var players = Instance.GetPlayersInRoom(rid);
-            var npcs = NPCManager.Instance.GetNPCsInRoom(rid);
-            lock (_lock)
+            if (Instance.Rooms.ContainsKey(roomID))
             {
-                Instance.GetRoom(rid).HasLightSource = false;
-            }
-            if (players != null && players.Count > 0)
-            {
-                if (players.Any(x => x.Player.HasBuff("Light")))
+                var playersInRoom = Instance.Rooms[roomID].PlayersInRoom.Where(x => x.ID != session.ID && session.Player.CanBeSeenBy(x.Player)).ToList();
+                if (playersInRoom != null && playersInRoom.Count > 0)
                 {
-                    lock (_lock)
+                    foreach(var player in playersInRoom)
                     {
-                        Instance.GetRoom(rid).HasLightSource = true;
-                    }
-                }
-            }
-            if (npcs != null && npcs.Count > 0)
-            {
-                if (npcs.Any(x => x.HasBuff("Light")))
-                {
-                    lock (_lock)
-                    {
-                        Instance.GetRoom(rid).HasLightSource = true;
+                        player.Send($"With a burst of light {session.Player.Name} appears in the world!{Constants.NewLine}");
                     }
                 }
             }
         }
 
-        internal bool AddItemToRoomInventory(uint rid, ref InventoryItem i)
+        public bool AddItemToRoomInventory(int roomID, InventoryItem item)
+        {
+            if (!Instance.Rooms.ContainsKey(roomID))
+            {
+                Game.LogMessage($"ERROR: Attempt to add an item to Room {roomID} but no such Room in RoomManager", LogLevel.Error, true);
+                return false;
+            }
+            if (item == null)
+            {
+                Game.LogMessage($"ERROR: Attempt to add a null to the inventory of Room {roomID}", LogLevel.Error, true);
+                return false;
+            }
+            try
+            {
+                Instance.Rooms[roomID].ItemsInRoom.TryAdd(item.ItemID, item);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in RoomManager.AddItemToRoomInventory(): {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        public bool RemoveItemFromRoomInventory(int roomID, InventoryItem item)
+        {
+            if (!Instance.Rooms.ContainsKey(roomID))
+            {
+                Game.LogMessage($"ERROR: Attempt to remove an item from the inventory of Room {roomID} but no such Room in RoomManager", LogLevel .Error, true);
+                return false;
+            }
+            if (item == null)
+            {
+                Game.LogMessage($"ERROR: Attempt to remove null from the inventory of Room {roomID}", LogLevel.Error, true);
+                return false;
+            }
+            try
+            {
+                return Instance.Rooms[roomID].ItemsInRoom.TryRemove(item.ItemID, out _);
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in RoomManager.RemoveItemFromRoomInventory(): {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        public bool ClearRoomInventory(int roomID)
+        {
+            if (Instance.Rooms.ContainsKey(roomID))
+            {
+                Instance.Rooms[roomID].ItemsInRoom.Clear();
+                return true;
+            }
+            return false;
+        }
+
+        public bool UpdateRoomNode(int roomID, ResourceNode node)
+        {
+            if (!Instance.Rooms.ContainsKey(roomID))
+            {
+                return false;
+            }
+            Instance.Rooms[roomID].RSSNode = node;
+            return true;
+        }
+
+        public bool RoomIDInUse(int roomID)
+        {
+            if (Instance.RoomExists(roomID))
+            {
+                return true;
+            }
+            if (DatabaseManager.RoomIDInUse(roomID))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public bool AddOrUpdateRoom(Room r, bool isNew)
         {
             try
             {
-                if (i != null)
+                if (!DatabaseManager.SaveRoomToWorldDatabase(r, isNew))
                 {
-                    lock (_lock)
-                    {
-                        Instance.Rooms[rid].ItemsInRoom.Add(i);
-                    }
-                    return true;
-                }
-                else
-                {
-                    Game.LogMessage($"WARN: Attempt to add null to the Inventory of RID {rid}", LogLevel.Warning, true);
+                    Game.LogMessage($"ERROR: Failed to save Room {r.RoomName} ({r.ID}) to the World Database", LogLevel.Error, true);
                     return false;
                 }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error adding Item {i.Name} to ItemsInRoom for Room {rid}: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool RemoveItemFromRoomInventory(uint rid, ref InventoryItem i)
-        {
-            try
-            {
-                lock (_lock)
+                if (isNew)
                 {
-                    Instance.Rooms[rid].ItemsInRoom.Remove(i);
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error removing Item {i.Name} from ItemsInRoom for Room {rid}: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool ClearRoomInventory(uint rid)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    Instance.Rooms[rid].ItemsInRoom.Clear();
-                    Instance.Rooms[rid].GoldInRoom = 0;
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error clearing Inventory for Room {rid}: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool AddNewRoom(ref Descriptor desc, Room r)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    Instance.Rooms.Add(r.RoomID, r);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} has added Room {r.RoomID} ({r.RoomName}) to RoomManager", LogLevel.OLC, true);
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding Room {r.RoomID} ({r.RoomName}) to RoomManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool RemoveRoom(uint rid, string roomName, ref Descriptor desc)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    Instance.Rooms.Remove(rid);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} removed Room {rid} ({roomName}) from RoomManager", LogLevel.OLC, true);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Room {rid} ({roomName}) from RoomManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool UpdateRoom(ref Descriptor desc, Room r)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (Instance.Rooms.ContainsKey(r.RoomID))
+                    if (!Instance.Rooms.TryAdd(r.ID, r))
                     {
-                        Instance.Rooms.Remove(r.RoomID);
-                        Instance.Rooms.Add(r.RoomID, r);
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} updated Room {r.RoomID} ({r.RoomName}) in RoomManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: RoomManager does not contain a Room with ID {r.RoomID} to update, it will be added instead", LogLevel.OLC, true);
-                        bool OK = AddNewRoom(ref desc, r);
-                        return OK;
+                        Game.LogMessage($"ERROR: Failed to add new Room {r.RoomName} ({r.ID}) to Room Manager", LogLevel.Error, true);
+                        return false;
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Room {r.RoomID} ({r.RoomName}) in RoomManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool AddGoldToRoom(uint rid, ulong gold)
-        {
-            try
-            {
-                lock (_lock)
+                else
                 {
-                    if (Instance.Rooms.ContainsKey(rid))
+                    if (!Instance.Rooms.TryGetValue(r.ID, out Room existingRoom))
                     {
-                        Instance.Rooms[rid].GoldInRoom += gold;
+                        Game.LogMessage($"ERROR: Room {r.ID} not found in Room Manager for update", LogLevel.Error, true);
+                        return false;
+                    }
+                    if (!Instance.Rooms.TryUpdate(r.ID, r, existingRoom))
+                    {
+                        Game.LogMessage($"ERROR: Failed to update Room {r.ID} in Room Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
                     }
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error adding {gold:N0} gold to Room {rid}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in RoomManager.AddOrUpdateRoom(): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool RemoveGoldFromRoom(uint rid, ulong gold)
+        public bool RemoveRoom(int roomID)
         {
-            try
+            if (Instance.Rooms.ContainsKey(roomID))
             {
-                lock(_lock)
-                {
-                    if (Instance.Rooms.ContainsKey(rid))
-                    {
-                        Instance.Rooms[rid].GoldInRoom -= gold;
-                    }
-                }
+                return Instance.Rooms.TryRemove(roomID, out _) && DatabaseManager.RemoveRoom(roomID);
+            }
+            Game.LogMessage($"ERROR: Error removing Room with ID {roomID}, no such Room in RoomManager", LogLevel.Error, true);
+            return false;
+        }
+
+        public bool AddGoldToRoom(int roomID, ulong gold)
+        {
+            if (Instance.Rooms.ContainsKey(roomID))
+            {
+                Instance.Rooms[roomID].GoldInRoom += gold;
                 return true;
             }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error removing {gold:N0} gold from Room {rid}: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
+            Game.LogMessage($"ERROR: Attempt to add {gold:N0} gold to Room {roomID}, no such Room in RoomManager", LogLevel.Error, true);
+            return false;
         }
 
-        internal List<NPC> GetNPCsInRoom(uint rid)
+        public bool RemoveGoldFromRoom(int roomID, ulong gold)
         {
-            try
+            if (Instance.Rooms.ContainsKey(roomID))
             {
-                lock(_lock)
-                {
-                    if (Instance.Rooms.ContainsKey(rid))
-                    {
-                        return Instance.Rooms[rid].NPCsInRoom;
-                    }
-                    return null;
-                }
+                Instance.Rooms[roomID].GoldInRoom -= gold;
+                return true;
             }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error getting list of NPCs in Room {rid}: {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal List<Descriptor> GetPlayersInRoom(uint rid)
-        {
-            try
-            {
-                lock(_lock)
-                {
-                    if (Instance.Rooms.ContainsKey(rid))
-                    {
-                        return Instance.Rooms[rid].PlayersInRoom;
-                    }
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error getting list of Players in Room {rid}: {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal List<Room> GetRoomsWithSpecifiedShop(uint shopID)
-        {
-            try
-            {
-                lock(_lock)
-                {
-                    return Instance.Rooms.Values.Where(x => x.ShopID.HasValue && x.ShopID.Value == shopID).ToList();
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error getting list of Rooms with Shop ID {shopID}: {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal Room GetRoom(uint roomID)
-        {
-            lock(_lock)
-            {
-                return Instance.Rooms.ContainsKey(roomID) ? Instance.Rooms[roomID] : null;
-            }
-        }
-
-        internal List<Room> GetRoomsByIDRange(uint start, uint end)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    return Instance.Rooms.Values.Where(x => x.RoomID >= start && x.RoomID <= end).ToList();
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error getting Rooms in range {start}-{end}: {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal List<Room> GetRoomByNameOrDescription(string n)
-        {
-            try
-            {
-                lock(_lock)
-                {
-                    return (from r in Instance.Rooms.Values
-                            where Regex.IsMatch(r.RoomName, n, RegexOptions.IgnoreCase) ||
-                            Regex.IsMatch(r.ShortDescription, n, RegexOptions.IgnoreCase) ||
-                            Regex.IsMatch(r.LongDescription, n, RegexOptions.IgnoreCase)
-                            select r).ToList();
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error in GetRoomByNameOrDescription (Criteria: {n}): {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal List<Room> GetRoomsWithPlayers()
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    return Instance.Rooms.Values.Where(x => x.PlayersInRoom.Count > 0).ToList();
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error in GetRoomsWithPlayers(): {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal int GetRoomCount()
-        {
-            lock(_lock)
-            {
-                return Instance.Rooms.Count;
-            }
+            Game.LogMessage($"ERROR: Attempt to remove {gold:N0} gold from Room {roomID}, no such Room in RoomManager", LogLevel.Error, true);
+            return false;
         }
     }
 }

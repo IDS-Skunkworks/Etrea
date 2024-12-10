@@ -1,371 +1,292 @@
-﻿using Etrea2.Core;
-using System;
+﻿using Etrea3.Core;
+using System.Data.SQLite;
 using System.Text;
 
-namespace Etrea2.OLC
+namespace Etrea3.OLC
 {
-    internal static partial class OLC
+    public static partial class OLC
     {
-        internal static void StartOLC(ref Descriptor desc)
+        public static void StartOLC(Session session)
         {
-            if (desc.Player.Level >= Constants.ImmLevel)
+            if (!session.Player.IsImmortal)
             {
-                Game.LogMessage($"OLC: Player {desc.Player.Name} has started OLC", LogLevel.OLC, true);
-                bool validInput = false;
-                while (!validInput)
-                {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"Welcome to the Online Constructor (OLC), {desc.Player.Name}!");
-                    sb.AppendLine("Using this tool you can create, edit and delete game objects such as Zones,");
-                    sb.AppendLine("Rooms, Items and NPCs.");
-                    sb.AppendLine("To begin, choose from the following options:");
-                    sb.AppendLine("1. Create game assets");
-                    sb.AppendLine("2. Edit game assets");
-                    sb.AppendLine("3. Delete game assets");
-                    sb.AppendLine("4. Exit OLC and return to the game");
-                    sb.Append("Selection: ");
-                    desc.Send(sb.ToString());
-                    var input = desc.Read().Trim();
-                    if (Helpers.ValidateInput(input))
-                    {
-                        if (uint.TryParse(input, out uint option))
-                        {
-                            if (option > 0 && option <= 4)
-                            {
-                                switch (option)
-                                {
-                                    case 1:
-                                        CreateNewObject(ref desc);
-                                        break;
-
-                                    case 2:
-                                        EditExistingObject(ref desc);
-                                        break;
-
-                                    case 3:
-                                        DeleteExistingObject(ref desc);
-                                        break;
-
-                                    case 4:
-                                        desc.Send($"Goodbye!{Constants.NewLine}");
-                                        Game.LogMessage($"OLC: Player {desc.Player.Name} has exited OLC", LogLevel.OLC, true);
-                                        validInput = true;
-                                        break;
-                                }
-                            }
-                        }
-                    }
-                }
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to start OLC but they are not Immortal", LogLevel.Warning, true);
+                return;
             }
-            else
-            {
-                desc.Send($"Only the Gods may reshape reality!{Constants.NewLine}");
-                Game.LogMessage($"WARN: Player {desc.Player.Name} attempted to start OLC", LogLevel.Warning, true);
-            }
-        }
-
-        private static void CreateNewObject(ref Descriptor desc)
-        {
-            bool validInput = false;
-            while (!validInput)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("This will allow you to create a new game asset for use in the world.");
-                sb.AppendLine("Which type of asset do you want to create:");
-                sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}2. Zone");
-                sb.AppendLine($"3. Room{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}4. Shop");
-                sb.AppendLine($"5. NPC{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}6. Emote");
-                sb.AppendLine($"7. Resource Node{Constants.TabStop}8. Crafting Recipe");
-                sb.AppendLine($"9. Quest{Constants.TabStop}{Constants.TabStop}10. Spell");
-                sb.AppendLine("11. Return to main menu");
-                sb.Append("Selection: ");
-                desc.Send(sb.ToString());
-                var input = desc.Read().Trim();
-                if (Helpers.ValidateInput(input))
-                {
-                    if (uint.TryParse(input, out uint option))
-                    {
-                        if (option > 0 && option <= 11)
-                        {
-                            switch (option)
-                            {
-                                case 1:
-                                    CreateNewItem(ref desc);
-                                    break;
-
-                                case 2:
-                                    CreateNewZone(ref desc);
-                                    break;
-
-                                case 3:
-                                    CreateNewRoom(ref desc);
-                                    break;
-
-                                case 4:
-                                    CreateNewShop(ref desc);
-                                    break;
-
-                                case 5:
-                                    CreateNewNPC(ref desc);
-                                    break;
-
-                                case 6:
-                                    CreateNewEmote(ref desc);
-                                    break;
-
-                                case 7:
-                                    CreateNewResourceNode(ref desc);
-                                    break;
-
-                                case 8:
-                                    CreateNewCraftingRecipe(ref desc);
-                                    break;
-
-                                case 9:
-                                    CreateNewQuest(ref desc);
-                                    break;
-
-                                case 10:
-                                    CreateNewSpell(ref desc);
-                                    break;
-
-                                case 11:
-                                    validInput = true;
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void EditExistingObject(ref Descriptor desc)
-        {
-            bool isValid = false;
+            Game.LogMessage($"OLC: Player {session.Player.Name} has started OLC", LogLevel.OLC, true);
             StringBuilder sb = new StringBuilder();
-            while (!isValid)
+            while (true)
             {
-                sb.Clear();
+                sb.AppendLine($"%BGT%Weldome to OLC {session.Player.Name}!%PT%");
+                sb.AppendLine("OLC allows you to create, change and remove the fabric of the Realms");
                 sb.AppendLine();
-                sb.AppendLine("This will allow you to modify an existing world asset.");
-                sb.AppendLine("Which type of asset do you wish to modify?");
-                sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Zone");
-                sb.AppendLine($"3. Room{Constants.TabStop}{Constants.TabStop}4. Shop");
-                sb.AppendLine($"5. NPC{Constants.TabStop}{Constants.TabStop}6. Emote");
-                sb.AppendLine($"7. Resource Node{Constants.TabStop}8. Crafting Recipe");
-                sb.AppendLine($"9. Quest{Constants.TabStop}{Constants.TabStop}10. Spell");
-                sb.AppendLine("11. Return to main menu");
-                sb.Append("Selection: ");
-                desc.Send(sb.ToString());
-                var input = desc.Read().Trim();
-                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                sb.AppendLine("Options:");
+                sb.AppendLine($"1. Create{Constants.TabStop}2. Change");
+                sb.AppendLine($"3. Remove{Constants.TabStop}4. Return");
+                session.Send(sb.ToString());
+                session.Send("Choice: ");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
                 {
-                    if (result >= 1 && result <= 11)
+                    switch (option)
                     {
-                        switch (result)
-                        {
-                            case 1:
-                                EditExistingItem(ref desc);
-                                break;
+                        case 1:
+                            Create(session);
+                            break;
 
-                            case 2:
-                                EditExistingZone(ref desc);
-                                break;
+                        case 2:
+                            Change(session);
+                            break;
 
-                            case 3:
-                                EditExistingRoom(ref desc);
-                                break;
+                        case 3:
+                            Delete(session);
+                            break;
 
-                            case 4:
-                                EditExistingShop(ref desc);
-                                break;
+                        case 4:
+                            Game.LogMessage($"OLC: Player {session.Player.Name} has exited OLC", LogLevel.OLC, true);
+                            return;
 
-                            case 5:
-                                EditExistingNPC(ref desc);
-                                break;
-
-                            case 6:
-                                EditExistingEmote(ref desc);
-                                break;
-
-                            case 7:
-                                EditExistingNode(ref desc);
-                                break;
-
-                            case 8:
-                                EditExistingRecipe(ref desc);
-                                break;
-
-                            case 9:
-                                EditExistingQuest(ref desc);
-                                break;
-
-                            case 10:
-                                EditExistingSpell(ref desc);
-                                break;
-
-                            case 11:
-                                isValid = true;
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"{Constants.InvalidChoice}{Constants.NewLine}");
+                        default:
+                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            break;
                     }
                 }
                 else
                 {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                 }
             }
         }
 
-        private static void DeleteExistingObject(ref Descriptor desc)
+        private static void Create(Session session)
         {
-            bool isValid = false;
             StringBuilder sb = new StringBuilder();
-            while (!isValid)
+            while(true)
             {
                 sb.Clear();
-                sb.AppendLine();
-                sb.AppendLine("This will allow you to delete existing game assets.");
-                sb.AppendLine("Deleted assets cannot be recovered unless a backup of the World database is restored.");
-                sb.AppendLine("Which type of asset do you wish to delete?");
-                sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Zone");
-                sb.AppendLine($"3. Room{Constants.TabStop}{Constants.TabStop}4. Shop");
-                sb.AppendLine($"5. NPC{Constants.TabStop}{Constants.TabStop}6. Emote");
-                sb.AppendLine($"7. Resource Node{Constants.TabStop}{Constants.TabStop}8. Crafting Recipe");
-                sb.AppendLine($"9. Quest{Constants.TabStop}{Constants.TabStop}10. Spell");
-                sb.AppendLine("11. Return to main menu");
-                sb.Append("Selection: ");
-                desc.Send(sb.ToString());
-                var input = desc.Read().Trim();
-                if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint result))
+                sb.AppendLine($"%BGT%Create which type of asset?%PT%");
+                sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Shop{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}3. NPC");
+                sb.AppendLine($"4. Recipe{Constants.TabStop}5. Emote{Constants.TabStop}{Constants.TabStop}6. Quest");
+                sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
+                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
+                sb.AppendLine("Choice: ");
+                session.Send(sb.ToString());
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
                 {
-                    if (result >= 1 && result <= 11)
+                    switch (option)
                     {
-                        switch (result)
-                        {
-                            case 1:
-                                DeleteItem(ref desc);
-                                break;
+                        case 1:
+                            CreateItem(session);
+                            break;
 
-                            case 2:
-                                DeleteZone(ref desc);
-                                break;
+                        case 2:
+                            CreateShop(session);
+                            break;
 
-                            case 3:
-                                DeleteRoom(ref desc);
-                                break;
+                        case 3:
+                            CreateNPC(session);
+                            break;
 
-                            case 4:
-                                DeleteShop(ref desc);
-                                break;
+                        case 4:
+                            CreateRecipe(session);
+                            break;
 
-                            case 5:
-                                DeleteNPC(ref desc);
-                                break;
+                        case 5:
+                            CreateEmote(session);
+                            break;
 
-                            case 6:
-                                DeleteEmote(ref desc);
-                                break;
+                        case 6:
+                            CreateQuest(session);
+                            break;
 
-                            case 7:
-                                DeleteResourceNode(ref desc);
-                                break;
+                        case 7:
+                            CreateRoom(session);
+                            break;
 
-                            case 8:
-                                DeleteCraftingRecipe(ref desc);
-                                break;
+                        case 8:
+                            CreateZone(session);
+                            break;
 
-                            case 9:
-                                DeleteQuest(ref desc);
-                                break;
+                        case 9:
+                            CreateSpell(session);
+                            break;
 
-                            case 10:
-                                DeleteSpell(ref desc);
-                                break;
+                        case 10:
+                            CreateMobProg(session);
+                            break;
 
-                            case 11:
-                                isValid = true;
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"{Constants.InvalidChoice}{Constants.NewLine}");
+                        case 11:
+                            CreateNode(session);
+                            break;
+
+                        case 12:
+                            return;
+
+                        default:
+                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            break;
                     }
                 }
                 else
                 {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                 }
             }
         }
 
-        private static bool GetAssetBooleanValue(ref Descriptor desc, string prompt)
+        private static void Delete(Session session)
         {
-            desc.Send(prompt);
-            var input = desc.Read().Trim();
-            if (Helpers.ValidateInput(input) && bool.TryParse(input, out bool retval))
+            StringBuilder sb = new StringBuilder();
+            while (true)
             {
-                return retval;
+                sb.Clear();
+                sb.AppendLine($"%BGT%Remove which type of asset?%PT%");
+                sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Shop{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}3. NPC");
+                sb.AppendLine($"4. Recipe{Constants.TabStop}5. Emote{Constants.TabStop}{Constants.TabStop}6. Quest");
+                sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
+                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
+                sb.AppendLine("Choice: ");
+                session.Send(sb.ToString());
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
+                {
+                    switch (option)
+                    {
+                        case 1:
+                            DeleteItem(session);
+                            break;
+
+                        case 2:
+                            DeleteShop(session);
+                            break;
+
+                        case 3:
+                            DeleteNPC(session);
+                            break;
+
+                        case 4:
+                            DeleteRecipe(session);
+                            break;
+
+                        case 5:
+                            DeleteEmote(session);
+                            break;
+
+                        case 6:
+                            DeleteQuest(session);
+                            break;
+
+                        case 7:
+                            DeleteRoom(session);
+                            break;
+
+                        case 8:
+                            DeleteZone(session);
+                            break;
+
+                        case 9:
+                            DeleteSpell(session);
+                            break;
+
+                        case 10:
+                            DeleteMobProg(session);
+                            break;
+
+                        case 11:
+                            DeleteNode(session);
+                            break;
+
+                        case 12:
+                            return;
+
+                        default:
+                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            break;
+                    }
+                }
+                else
+                {
+                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                }
             }
-            desc.Send($"Input could not be validated{Constants.NewLine}");
-            return false;
         }
 
-        private static string GetAssetStringValue(ref Descriptor desc, string prompt)
+        private static void Change(Session session)
         {
-            desc.Send(prompt);
-            var input = desc.Read().Trim();
-            if (Helpers.ValidateInput(input))
+            StringBuilder sb = new StringBuilder();
+            while (true)
             {
-                return input;
-            }
-            desc.Send($"Input could not be validated{Constants.NewLine}");
-            return string.Empty;
-        }
+                sb.Clear();
+                sb.AppendLine($"%BGT%Change which type of asset?%PT%");
+                sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Shop{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}3. NPC");
+                sb.AppendLine($"4. Recipe{Constants.TabStop}5. Emote{Constants.TabStop}{Constants.TabStop}6. Quest");
+                sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
+                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
+                sb.AppendLine("Choice: ");
+                session.Send(sb.ToString());
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
+                {
+                    switch (option)
+                    {
+                        case 1:
+                            ChangeItem(session);
+                            break;
 
-        private static uint GetAssetUintValue(ref Descriptor desc, string prompt)
-        {
-            desc.Send(prompt);
-            var input = desc.Read().Trim();
-            if (Helpers.ValidateInput(input) && uint.TryParse(input, out uint retval))
-            {
-                return retval;
-            }
-            desc.Send($"Input must be an integer >= 0{Constants.NewLine}");
-            return 0;
-        }
+                        case 2:
+                            ChangeShop(session);
+                            break;
 
-        private static T GetAssetEnumValue<T>(ref Descriptor desc, string prompt) where T : struct, Enum
-        {
-            desc.Send(prompt);
-            var input = desc.Read().Trim();
-            if (Helpers.ValidateInput(input) && Enum.TryParse<T>(input, true, out T retval))
-            {
-                return retval;
-            }
-            desc.Send($"Unable to parse input to a valid value{Constants.NewLine}");
-            return default;
-        }
+                        case 3:
+                            ChangeNPC(session);
+                            break;
 
-        private static int GetAssetIntegerValue(ref Descriptor desc, string prompt)
-        {
-            desc.Send(prompt);
-            var input = desc.Read().Trim();
-            if (Helpers.ValidateInput(input) && int.TryParse(input, out int retval))
-            {
-                return retval;
+                        case 4:
+                            ChangeRecipe(session);
+                            break;
+
+                        case 5:
+                            ChangeEmote(session);
+                            break;
+
+                        case 6:
+                            ChangeQuest(session);
+                            break;
+
+                        case 7:
+                            ChangeRoom(session);
+                            break;
+
+                        case 8:
+                            ChangeZone(session);
+                            break;
+
+                        case 9:
+                            ChangeSpell(session);
+                            break;
+
+                        case 10:
+                            ChangeMobProg(session);
+                            break;
+
+                        case 11:
+                            ChangeNode(session);
+                            break;
+
+                        case 12:
+                            return;
+
+                        default:
+                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            break;
+                    }
+                }
+                else
+                {
+                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                }
             }
-            desc.Send($"Input must be a valid integer{Constants.NewLine}");
-            return 0;
         }
     }
 }

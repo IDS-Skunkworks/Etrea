@@ -1,10 +1,10 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum Gender
+    public enum Gender
     {
-        Unknown,
+        Undefined,
         Male,
         Female,
-        Genderless
+        NonBinary,
     }
 }

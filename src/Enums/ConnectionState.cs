@@ -1,15 +1,13 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum ConnectionState
+    public enum ConnectionState
     {
-        Playing,
-        Disconnected,
-        GetUsername,
-        GetPassword,
-        NewUsername,
-        NewPassword,
-        VerifyPassword,
-        CreatingCharacter,
         MainMenu,
+        CreatingCharacter,
+        GetUserName,
+        GetPassword,
+        Playing,
+        InOLC,
+        Disconnected
     }
 }

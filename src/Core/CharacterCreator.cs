@@ -1,624 +1,534 @@
-﻿using System;
-using System.Collections.Generic;
-using Etrea2.Entities;
+﻿using Etrea3.Objects;
+using System;
 using System.Text;
+using System.Text.RegularExpressions;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal static class CharacterCreator
+    public static class CharacterCreator
     {
-        private static bool ValidateInput(string input)
+        private static readonly string pattern = @"^[A-Za-z]+$";
+        private static readonly Regex regex = new Regex(pattern);
+
+        public static Player CreateNewCharacter(Session playerSession)
         {
-            return !string.IsNullOrEmpty(input) && Encoding.UTF8.GetByteCount(input) == input.Length;
-        }
-
-        internal static void CreateNewCharacter(ref Descriptor _desc)
-        {
-            // select race, select class, modify stats, select gender, enter name, title & description
-            Game.LogMessage($"INFO: Client at {_desc.Client.Client.RemoteEndPoint} has started the character creator", LogLevel.Info, true);
-            _desc.Player = null;
-            bool validRace = false;
-            bool validClass = false;
-            bool validStats = false;
-            bool validGender = false;
-            bool validNameAndDesc = false;
-            bool validPwd = false;
-            uint statPointsToAllocate = 10;
-            string playerName = string.Empty;
-            string playerTitle = string.Empty;
-            string playerLongDesc = string.Empty;
-            string playerShortDesc = string.Empty;
-            string playerPwd = string.Empty;
-            Player p = new Player();
-            p.ShowDetailedRollInfo = false;
-            p.Visible = true;
-            p.Strength = 10;
-            p.Dexterity = 10;
-            p.Constitution = 10;
-            p.Intelligence = 10;
-            p.Wisdom = 10;
-            p.Charisma = 10;
-            p.CurrentSP = 20;
-            p.MaxSP = 20;
-            p.BaseArmourClass = 10; 
-            p.Inventory = new List<InventoryItem>();
-            p.Buffs = new Dictionary<string, int>();
-            p.Skills = new List<Skill>();
-            p.Spells = new List<Spell>();
-            p.Recipes = new List<Recipe>();
-            p.CompletedQuests = new HashSet<Guid>();
-            p.ActiveQuests = new List<Quest>();
-            p.CommandAliases = new Dictionary<string, string>();
-            p.KnownLanguages = Languages.Common;
-            p.SpokenLanguage = Languages.Common;
-            p.NumberOfAttacks = 1;
-            p.PVP = false;
-            while (!validRace)
+            Game.LogMessage($"INFO: Client at {playerSession.Client.Client.RemoteEndPoint} has started the Character Creator", LogLevel.Info, true);
+            Player player = new Player
             {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Select a race for your new character:");
-                sb.AppendLine("1. Human (no stat modifiers, +25% Exp gain, bonus stat points)");
-                sb.AppendLine("2. Elf (+2 Int, +1 Cha, -1 Con, -1 Str)");
-                sb.AppendLine("3. Half-Elf (+1 Int, +1 Dex)");
-                sb.AppendLine("4. Orc (+2 Str, +2 Con, -2 Int, -2 Cha, +1 AC)");
-                sb.AppendLine("5. Dwarf (+1 Str, +2 Con, -1 Dex, -1 Cha)");
-                sb.AppendLine("6. Hobbit (+2 Dex, +1 Cha, -2 Str, -1 Con)");
-                sb.AppendLine("7. Exit Character Creator");
-                sb.Append("Selection: ");
-                _desc.Send(sb.ToString());
-                var input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    if (uint.TryParse(input, out uint selection))
-                    {
-                        switch (selection)
-                        {
-                            case 1:
-                                p.Race = ActorRace.Human;
-                                statPointsToAllocate = 12;
-                                validRace = true;
-                                break;
-
-                            case 2:
-                                p.Race = ActorRace.Elf;
-                                p.Intelligence += 2;
-                                p.Charisma += 1;
-                                p.Constitution -= 1;
-                                p.Strength -= 1;
-                                p.KnownLanguages |= Languages.Elvish;
-                                validRace = true;
-                                break;
-
-                            case 3:
-                                p.Race = ActorRace.HalfElf;
-                                p.Intelligence += 1;
-                                p.Dexterity += 1;
-                                p.KnownLanguages |= Languages.Elvish;
-                                validRace = true;
-                                break;
-
-                            case 4:
-                                p.Race = ActorRace.Orc;
-                                p.Strength += 2;
-                                p.Constitution += 2;
-                                p.Intelligence -= 2;
-                                p.Charisma -= 2;
-                                p.BaseArmourClass += 1;
-                                p.KnownLanguages |= Languages.Orcish;
-                                validRace = true;
-                                break;
-
-                            case 5:
-                                p.Race = ActorRace.Dwarf;
-                                p.Strength += 1;
-                                p.Constitution += 2;
-                                p.Charisma -= 1;
-                                p.Dexterity -= 1;
-                                p.KnownLanguages |= Languages.Dwarvish;
-                                validRace = true;
-                                break;
-
-                            case 6:
-                                p.Race = ActorRace.Hobbit;
-                                p.Dexterity += 2;
-                                p.Charisma += 1;
-                                p.Strength -= 2;
-                                p.Constitution -= 1;
-                                validRace = true;
-                                break;
-
-                            case 7:
-                                return;
-
-                            default:
-                                _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    _desc.Send($"{Constants.NewLine}Sorry, I didn't understand that{Constants.NewLine}");
-                }
-            }
-            while (!validClass)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Select a class for your new character:");
-                sb.AppendLine("1. Wizard (+2 Int, -1 Str, -1 Con)");
-                sb.AppendLine("2. Thief (+2 Dex, -1 Str, -1 Con)");
-                sb.AppendLine("3. Cleric (+2 Wis, -1 Str, -1 Con");
-                sb.AppendLine("4. Fighter (+2 Str, +2 Con, -1 Dex, -1 Int, -1 Cha)");
-                sb.AppendLine("5. Exit Character Creator");
-                sb.Append("Selection: ");
-                _desc.Send(sb.ToString());
-                var input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    if (uint.TryParse(input, out uint selection))
-                    {
-                        switch (selection)
-                        {
-                            case 1:
-                                p.Intelligence += 2;
-                                p.Strength -= 1;
-                                p.Constitution -= 1;
-                                p.Class = ActorClass.Wizard;
-                                p.AddSkill("Light Armour");
-                                p.AddSkill("Simple Weapons");
-                                p.AddSpell("Magic Missile");
-                                p.AddSpell("Light");
-                                p.KnownLanguages |= Languages.Draconic;
-                                validClass = true;
-                                break;
-
-                            case 2:
-                                p.Dexterity += 2;
-                                p.Strength -= 1;
-                                p.Constitution -= 1;
-                                p.Class = ActorClass.Thief;
-                                p.AddSkill("Light Armour");
-                                p.AddSkill("Simple Weapons");
-                                p.AddSkill("Martial Weapons");
-                                p.AddSkill("Hide");
-                                validClass = true;
-                                break;
-
-                            case 3:
-                                p.Wisdom += 2;
-                                p.Strength -= 1;
-                                p.Constitution -= 1;
-                                p.Class = ActorClass.Cleric;
-                                p.AddSkill("Light Armour");
-                                p.AddSkill("Simple Weapons");
-                                p.AddSkill("Martial Weapons");
-                                p.AddSpell("Cure Light Wounds");
-                                p.AddSpell("Regen");
-                                validClass = true;
-                                break;
-
-                            case 4:
-                                p.Strength += 2;
-                                p.Constitution += 2;
-                                p.Dexterity -= 1;
-                                p.Intelligence -= 1;
-                                p.Charisma -= 1;
-                                p.Class = ActorClass.Fighter;
-                                p.AddSkill("Light Armour");
-                                p.AddSkill("Medium Armour");
-                                p.AddSkill("Heavy Armour");
-                                p.AddSkill("Simple Weapons");
-                                p.AddSkill("Martial Weapons");
-                                validClass = true;
-                                break;
-
-                            case 5:
-                                return;
-
-                            default:
-                                _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    _desc.Send($"{Constants.NewLine}Sorry, I didn't understand that{Constants.NewLine}");
-                }
-            }
-            while (!validStats)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Your current stats from your race and class selection are:");
-                sb.AppendLine($"1. Strength:{Constants.TabStop}{Constants.TabStop}{p.Strength}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Strength)})");
-                sb.AppendLine($"2. Dexterity:{Constants.TabStop}{Constants.TabStop}{p.Dexterity}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Dexterity)})");
-                sb.AppendLine($"3. Constitution:{Constants.TabStop}{p.Constitution}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Constitution)})");
-                sb.AppendLine($"4. Intelligence:{Constants.TabStop}{p.Intelligence}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Intelligence)})");
-                sb.AppendLine($"5. Wisdom:{Constants.TabStop}{Constants.TabStop}{p.Wisdom}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Wisdom)})");
-                sb.AppendLine($"6. Charisma:{Constants.TabStop}{Constants.TabStop}{p.Charisma}{Constants.TabStop}({Helpers.CalculateAbilityModifier(p.Charisma)})");
-                sb.AppendLine("7. Exit Character Creator");
-                sb.AppendLine($"You have {Constants.BoldText}{statPointsToAllocate} points{Constants.PlainText} to spend on increasing stats");
-                sb.Append("Selection: ");
-                _desc.Send(sb.ToString());
-                var input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    if (uint.TryParse(input, out uint selection))
-                    {
-                        switch (selection)
-                        {
-                            case 1:
-                                p.Strength++;
-                                statPointsToAllocate--;
-                                break;
-
-                            case 2:
-                                p.Dexterity++;
-                                statPointsToAllocate--;
-                                break;
-
-                            case 3:
-                                p.Constitution++;
-                                statPointsToAllocate--;
-                                break;
-
-                            case 4:
-                                p.Intelligence++;
-                                statPointsToAllocate--;
-                                break;
-
-                            case 5:
-                                p.Wisdom++;
-                                statPointsToAllocate--;
-                                break;
-
-                            case 6:
-                                p.Charisma++;
-                                statPointsToAllocate--;
-                                break;
-
-                            case 7:
-                                return;
-
-                            default:
-                                _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                                break;
-                        }
-                        validStats = statPointsToAllocate == 0;
-                    }
-                    else
-                    {
-                        _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    _desc.Send($"{Constants.NewLine}Sorry, I didn't understand that{Constants.NewLine}");
-                }
-            }
-            while (!validGender)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Select a gender for your new character:");
-                sb.AppendLine("1. Male");
-                sb.AppendLine("2. Female");
-                sb.AppendLine("3. Genderless");
-                sb.AppendLine("4. Exit Character Creator");
-                sb.Append("Selection: ");
-                _desc.Send(sb.ToString());
-                var input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    if (uint.TryParse(input, out uint selection))
-                    {
-                        switch (selection)
-                        {
-                            case 1:
-                                p.Gender = Gender.Male;
-                                validGender = true;
-                                break;
-
-                            case 2:
-                                p.Gender = Gender.Female;
-                                validGender = true;
-                                break;
-
-                            case 3:
-                                p.Gender = Gender.Genderless;
-                                validGender = true;
-                                break;
-
-                            case 4:
-                                return;
-
-                            default:
-                                _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    _desc.Send($"{Constants.NewLine}Sorry, I didn't understand that{Constants.NewLine}");
-                }
-            }
-            while (!validNameAndDesc)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"Name: {p.Name ?? string.Empty}");
-                sb.AppendLine($"Title: {p.Title ?? string.Empty}");
-                sb.AppendLine($"Short Description: {p.ShortDescription ?? string.Empty}");
-                sb.AppendLine($"Long Description: {p.LongDescription ?? string.Empty}");
-                sb.AppendLine($"Race: {p.Race}{Constants.TabStop}Class: {p.Class}{Constants.TabStop}Gender: {p.Gender}");
-                sb.AppendLine($"Languages: {p.KnownLanguages}");
-                sb.AppendLine();
-                sb.AppendLine("1. Change Name");
-                sb.AppendLine("2. Change Title");
-                sb.AppendLine("3. Enter Short Description");
-                sb.AppendLine("4. Enter Long Description");
-                sb.AppendLine("5. Exit Character Creator");
-                sb.Append("Selection: ");
-                _desc.Send(sb.ToString());
-                var input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    if (uint.TryParse(input, out uint selection))
-                    {
-                        switch (selection)
-                        {
-                            case 1:
-                                playerName = GetNewCharName(ref _desc);
-                                p.Name = playerName;
-                                break;
-
-                            case 2:
-                                playerTitle = GetNewCharTitle(ref _desc);
-                                p.Title = playerTitle;
-                                break;
-
-                            case 3:
-                                playerShortDesc = GetNewCharShortDesc(ref _desc);
-                                p.ShortDescription = playerShortDesc;
-                                break;
-
-                            case 4:
-                                playerLongDesc = GetNewCharLongDesc(ref _desc);
-                                p.LongDescription = playerLongDesc;
-                                break;
-
-                            case 5:
-                                return;
-
-                            default:
-                                _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        _desc.Send($"{Constants.NewLine}Sorry, that doesn't seem like a valid option{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    _desc.Send($"{Constants.NewLine}Sorry, I didn't understand that{Constants.NewLine}");
-                }
-                validNameAndDesc = !string.IsNullOrEmpty(playerName) && !string.IsNullOrEmpty(playerTitle) && !string.IsNullOrEmpty(playerShortDesc) && !string.IsNullOrEmpty(playerLongDesc);
-            }
-            while (!validPwd)
-            {
-                StringBuilder sb = new StringBuilder();
-                _desc.Send($"Please enter a password for the new character{Constants.NewLine}");
-                _desc.Send("Password: ");
-                var input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    playerPwd = input;
-                    validPwd = true;
-                }
-            }
-
-            // Set starting HP/MP and items base off class
-            switch (p.Class)
-            {
-                case ActorClass.Cleric:
-                    p.MaxHP = 8 + Helpers.CalculateAbilityModifier(p.Constitution);
-                    p.MaxMP = 8 + Helpers.CalculateAbilityModifier(p.Wisdom);
-                    break;
-
-                case ActorClass.Fighter:
-                    p.MaxHP = 10 + Helpers.CalculateAbilityModifier(p.Constitution);
-                    p.MaxMP = 4 + Helpers.CalculateAbilityModifier(p.Intelligence);
-                    break;
-
-                case ActorClass.Thief:
-                    p.MaxHP = 6 + Helpers.CalculateAbilityModifier(p.Constitution);
-                    p.MaxMP = 6 + Helpers.CalculateAbilityModifier(p.Intelligence);
-                    break;
-
-                case ActorClass.Wizard:
-                    p.MaxHP = 4 + Helpers.CalculateAbilityModifier(p.Constitution);
-                    p.MaxMP = 10 + Helpers.CalculateAbilityModifier(p.Intelligence);
-                    break;
-
-                default:
-                    p.MaxHP = 6 + Helpers.CalculateAbilityModifier(p.Constitution);
-                    p.MaxMP = 8 + Helpers.CalculateAbilityModifier(p.Intelligence);
-                    break;
-            }
-
-            p.Position = ActorPosition.Standing;
-            p.Level = 1;
-            p.MaxSP += Helpers.CalculateAbilityModifier(p.Constitution);
-            p.CurrentSP = p.MaxSP;
-            p.CurrentHP = p.MaxHP;
-            p.CurrentMP = p.MaxMP;
-            p.CalculateArmourClass();
-            p.Alignment = Alignment.Neutral;
-            p.Gold = 50 + Helpers.RollDice(25, 2);
-            p.CurrentRoom = Constants.PlayerStartRoom();
-            p.ActorType = ActorType.Player;
-
-            _desc.Player = p;
-
-            DatabaseManager.SavePlayer(ref _desc, true, playerPwd);
-
-            Game.LogMessage($"INFO: {_desc.Client.Client.RemoteEndPoint} has entered the world as a new character: {p.Name}", LogLevel.Info, true);
-
-            RoomManager.Instance.UpdatePlayersInRoom(Constants.PlayerStartRoom(), ref _desc, false, false, false, true);
-        }
-
-        private static string GetNewCharTitle(ref Descriptor _desc)
-        {
-            bool valid = false;
-            string input = string.Empty;
-            while (!valid)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Enter a title for your character. An example title might be Countess, Lord or");
-                sb.AppendLine("Adventurer. Your title should be 15 characters or less and may be changed at any point in the game.");
-                sb.Append("Character Title: ");
-                _desc.Send(sb.ToString());
-                input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    if (input.Length <= 15)
-                    {
-                        valid = true;
-                    }
-                    else
-                    {
-                        _desc.Send($"Sorry, that is too long to be a title.{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    _desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
-                }
-            }
-            return input;
-        }
-
-        private static string GetNewCharShortDesc(ref Descriptor _desc)
-        {
-            bool valid = false;
-            string input = string.Empty;
-            while (!valid)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Enter a short description for your character. Short descriptions should be no longer");
-                sb.AppendLine("than 40 characters and can be changed at any point in the game.");
-                sb.AppendLine("An example short description might be: the cloaked and sinster mage");
-                sb.Append("Short Description: ");
-                _desc.Send(sb.ToString());
-                input = _desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    if (input.Length <= 40)
-                    {
-                        valid = true;
-                    }
-                    else
-                    {
-                        _desc.Send($"Sorry, that is too long to be your short description{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    _desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
-                }
-            }
-            return input;
-        }
-
-        private static string GetNewCharLongDesc(ref Descriptor _desc)
-        {
-            int row = 1;
-            StringBuilder charDesc = new StringBuilder();
-            bool valid = false;
+                ID = playerSession.ID,
+            };
+            player.KnownLanguages.TryAdd("Common", true);
+            bool charComplete = false;
+            bool statsAssigned = false;
+            string charPassword = string.Empty;
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Enter a description for your character. Your description should be no more than");
-            sb.AppendLine("30 lines long and each line should be no longer than 80 characters.");
-            sb.AppendLine("Your description may be changed at any point in the game.");
-            sb.AppendLine("Enter END on a new line to finish editing.");
-            _desc.Send(sb.ToString());
-            while (!valid)
+            while (!charComplete)
             {
-                _desc.Send($"[{row}] ");
-                var input = _desc.Read().Trim();
-                if (ValidateInput(input) && input.Length <= 80)
+                sb.Clear();
+                ShowCharData(playerSession, player);
+                sb.AppendLine("Options:");
+                sb.AppendLine($"1. Set Race{Constants.TabStop}{Constants.TabStop}2. Set Class{Constants.TabStop}{Constants.TabStop}3. Assign Stat Points");
+                sb.AppendLine($"4. Set Title{Constants.TabStop}{Constants.TabStop}5. Set Name{Constants.TabStop}{Constants.TabStop}6. Set Short Description");
+                sb.AppendLine($"7. Set Long Description{Constants.TabStop}{Constants.TabStop}8. Set Gender{Constants.TabStop}{Constants.TabStop}9. Set Password");
+                sb.AppendLine($"10. Start Playing{Constants.TabStop}{Constants.TabStop}11. Return to Main Menu");
+                sb.AppendLine("Selection:");
+                playerSession.Send(sb.ToString());
+                var input = playerSession.Read();
+                if (string.IsNullOrEmpty(input))
                 {
-                    if (input.ToUpper() == "END" && row >= 2)
-                    {
-                        valid = true;
-                    }
-                    else
-                    {
-                        charDesc.AppendLine(input);
-                        row++;
-                        if (row > 30)
-                        {
-                            valid = true;
-                        }
-                    }
+                    continue;
                 }
-                else
+                if (!int.TryParse(input, out int option))
                 {
-                    _desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
+                    playerSession.Send($"That does not look like a valid option...{Constants.NewLine}");
+                    continue;
                 }
-            }
-            return charDesc.ToString();
-        }
-
-        private static string GetNewCharName(ref Descriptor _desc)
-        {
-            bool valid = false;
-            string input = string.Empty;
-            while (!valid)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Enter a name for your character. Names must be unique and no longer than");
-                sb.AppendLine("20 characters. The name of your character cannot be changed in the game.");
-                sb.Append("Character Name: ");
-                _desc.Send(sb.ToString());
-                input = _desc.Read().Trim();
-                if (ValidateInput(input))
+                switch (option)
                 {
-                    if (input.Length <= 20 && !DatabaseManager.CharacterExistsInDatabase(input))
-                    {
-                        if (input.IndexOf(' ') >= 0)
+                    case 1:
+                        if (!statsAssigned)
                         {
-                            _desc.Send($"Your name cannot contain whitespace{Constants.NewLine}");
-                            valid = false;
+                            player.Race = GetPlayerRace(playerSession);
                         }
                         else
                         {
-                            valid = true;
+                            playerSession.Send($"You have already committed your stat points, your Race can no longer be changed.{Constants.NewLine}");
                         }
+                        break;
+
+                    case 2:
+                        player.Class = GetPlayerClass(playerSession);
+                        break;
+
+                    case 3:
+                        if (player.Race == Race.None)
+                        {
+                            playerSession.Send($"You must choose a Race before you can assign Stat Points.{Constants.NewLine}");
+                            break;
+                        }
+                        if (statsAssigned)
+                        {
+                            playerSession.Send($"You have already assigned your Stat Points!{Constants.NewLine}");
+                            break;
+                        }
+                        AssignStatPoints(playerSession, ref player);
+                        statsAssigned = true;
+                        break;
+
+                    case 4:
+                        player.Title = GetPlayerTitle(playerSession);
+                        break;
+
+                    case 5:
+                        player.Name = GetPlayerName(playerSession);
+                        break;
+
+                    case 6:
+                        player.ShortDescription = GetPlayerShortDescription(playerSession);
+                        break;
+
+                    case 7:
+                        player.LongDescription = GetPlayerLongDescription(playerSession);
+                        break;
+
+                    case 8:
+                        player.Gender = GetPlayerGender(playerSession);
+                        break;
+
+                    case 9:
+                        charPassword = GetPlayerPassword(playerSession);
+                        break;
+
+                    case 10:
+                        if (!statsAssigned)
+                        {
+                            playerSession.Send($"You need to assign your stat points first...{Constants.NewLine}");
+                            break;
+                        }
+                        if (string.IsNullOrEmpty(charPassword))
+                        {
+                            playerSession.Send($"You need to provide a password for your character...{Constants.NewLine}");
+                            break;
+                        }
+                        if (!ValidateCharacter(playerSession, ref player))
+                        {
+                            break;
+                        }
+                        charComplete = true;
+                        break;
+
+                    case 11:
+                        player = null;
+                        return null;
+
+                    default:
+                        playerSession.Send($"That does not look like a valid option...{Constants.NewLine}");
+                        break;
+                }
+            }
+            FinalisePlayer(ref player);
+            playerSession.Player = player;
+            DatabaseManager.SavePlayer(playerSession, true, charPassword);
+            return player;
+        }
+
+        private static void FinalisePlayer(ref Player player)
+        {
+            switch(player.Race)
+            {
+                case Race.Elf:
+                    player.Intelligence += 2;
+                    player.Charisma += 1;
+                    player.Constitution -= 1;
+                    player.Strength -= 1;
+                    player.KnownLanguages.TryAdd("Elvish", true);
+                    break;
+
+                case Race.HalfElf:
+                    player.Intelligence += 1;
+                    player.Dexterity += 1;
+                    player.KnownLanguages.TryAdd("Elvish", true);
+                    break;
+
+                case Race.Orc:
+                    player.Strength += 2;
+                    player.Constitution += 2;
+                    player.Intelligence -= 2;
+                    player.Charisma -= 2;
+                    player.KnownLanguages.TryAdd("Orcish", true);
+                    break;
+
+                case Race.Dwarf:
+                    player.Strength += 1;
+                    player.Constitution += 2;
+                    player.Dexterity -= 1;
+                    player.Charisma -= 1;
+                    player.KnownLanguages.TryAdd("Dwarvish", true);
+                    break;
+
+                case Race.Hobbit:
+                    player.Dexterity += 2;
+                    player.Charisma += 1;
+                    player.Strength -= 2;
+                    player.Constitution -= 1;
+                    break;
+            }
+            switch(player.Class)
+            {
+                case ActorClass.Wizard:
+                    player.Intelligence += 2;
+                    player.Strength -= 1;
+                    player.Constitution -= 1;
+                    player.KnownLanguages.TryAdd("Draconic", true);
+                    player.MaxHP = Math.Max(4, 4 + Helpers.CalculateAbilityModifier(player.Constitution));
+                    player.MaxMP = Math.Max(10, 10 + Helpers.CalculateAbilityModifier(player.Intelligence));
+                    player.AddSpell("Magic Missile");
+                    player.AddSpell("Mage Armour");
+                    player.AddSkill("Light Armour");
+                    player.AddSkill("Simple Weapons");
+                    break;
+
+                case ActorClass.Thief:
+                    player.Dexterity += 2;
+                    player.Strength -= 1;
+                    player.Constitution -= 1;
+                    player.MaxHP = Math.Max(6, 6 + Helpers.CalculateAbilityModifier(player.Constitution));
+                    player.MaxMP = Math.Max(6, 6 + Helpers.CalculateAbilityModifier(player.Intelligence));
+                    player.AddSkill("Light Armour");
+                    player.AddSkill("Simple Weapons");
+                    player.AddSkill("Martial Weapons");
+                    break;
+
+                case ActorClass.Cleric:
+                    player.Wisdom += 2;
+                    player.Strength -= 1;
+                    player.Constitution -= 1;
+                    player.MaxHP = Math.Max(8, 8 + Helpers.CalculateAbilityModifier(player.Constitution));
+                    player.MaxMP = Math.Max(8, 8 + Helpers.CalculateAbilityModifier(player.Wisdom));
+                    player.AddSpell("Cure Light Wounds");
+                    player.AddSpell("Bless");
+                    player.AddSkill("Simple Weapons");
+                    player.AddSkill("Martial Weapons");
+                    player.AddSkill("Light Armour");
+                    player.AddSkill("Medium Armour");
+                    break;
+
+                case ActorClass.Fighter:
+                    player.Strength += 2;
+                    player.Constitution += 2;
+                    player.Dexterity -= 1;
+                    player.Intelligence -= 1;
+                    player.Charisma -= 1;
+                    player.MaxHP = Math.Max(10, 10 + Helpers.CalculateAbilityModifier(player.Constitution));
+                    player.MaxMP = Math.Max(4, 4 + Helpers.CalculateAbilityModifier(player.Intelligence));
+                    player.AddSkill("Light Armour");
+                    player.AddSkill("Medium Armour");
+                    player.AddSkill("Heavy Armour");
+                    player.AddSkill("Simple Weapons");
+                    player.AddSkill("Martial Weapons");
+                    break;
+            }
+            player.Gold = Helpers.RollDice<ulong>(10, 10);
+            player.MaxSP = Math.Max(20, 20 + Helpers.CalculateAbilityModifier(player.Constitution));
+            player.CurrentHP = player.MaxHP;
+            player.CurrentMP = player.MaxMP;
+            player.CurrentSP = player.MaxSP;
+            player.CurrentRoom = Game.PlayerStartRoom;
+        }
+
+        private static bool ValidateCharacter(Session session, ref Player p)
+        {
+            if (p.Race == Race.None)
+            {
+                session.Send($"You need to select a Race to continue...{Constants.NewLine}");
+                return false;
+            }
+            if (p.Class == ActorClass.Undefined)
+            {
+                session.Send($"You need to choose a Class to continue...{Constants.NewLine}");
+                return false;
+            }
+            if (p.Gender == Gender.Undefined)
+            {
+                session.Send($"You need to select a Gender to continue...{Constants.NewLine}");
+                return false;
+            }
+            if (string.IsNullOrEmpty(p.Name))
+            {
+                session.Send($"You need to choose a Name to continue...{Constants.NewLine}");
+                return false;
+            }
+            if (string.IsNullOrEmpty(p.ShortDescription))
+            {
+                session.Send($"You need to give yourself a short description to continue...{Constants.NewLine}");
+                return false;
+            }
+            if (string.IsNullOrEmpty(p.LongDescription))
+            {
+                session.Send($"You need to give yourself a full description to continue...{Constants.NewLine}");
+                return false;
+            }
+            return true;
+        }
+
+        private static void ShowCharData(Session session, Player p)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Title: {p.Title}{Constants.TabStop}Name: {p.Name}");
+            sb.AppendLine($"Gender: {p.Gender}{Constants.TabStop}Race: {p.Race}{Constants.TabStop}Class: {p.Class}");
+            sb.AppendLine($"Short Description: {p.ShortDescription}");
+            sb.AppendLine($"Long Description: {p.LongDescription}");
+            sb.AppendLine($"STR: {p.Strength}{Constants.TabStop}{Constants.TabStop}DEX: {p.Dexterity}{Constants.TabStop}{Constants.TabStop}CON: {p.Constitution}");
+            sb.AppendLine($"INT: {p.Intelligence}{Constants.TabStop}{Constants.TabStop}WIS: {p.Wisdom}{Constants.TabStop}{Constants.TabStop}CHA: {p.Charisma}");
+            sb.AppendLine("Your final stats will be calculated when you begin playing");
+            session.Send(sb.ToString());
+        }
+
+        private static Race GetPlayerRace(Session session)
+        {
+            bool validInput = false;
+            Race retval = default;
+            while (!validInput)
+            {
+                session.Send($"Valid Races: Human, HalfElf, Elf, Dwarf, Orc, Hobbit{Constants.NewLine}");
+                session.Send($"Human: no stat modifiers, 25% Exp gain, +2 stat points{Constants.NewLine}");
+                session.Send($"HalfElf: +1 INT, +1 DEX{Constants.NewLine}");
+                session.Send($"Elf: +2 INT, +1 CHA, -1 CON, -1 STR{Constants.NewLine}");
+                session.Send($"Dwarf: +1 STR, +2 CON, -1 DEX, -1 CHA{Constants.NewLine}");
+                session.Send($"Orc: +2 STR, +2 CON, -2 INT, -2 CHA, 1+ AC{Constants.NewLine}");
+                session.Send($"Hobbit: +2 DEX, +1 CHA, -2 STR, -1 CON{Constants.NewLine}");
+                session.Send($"Selection (or END to return):");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input))
+                {
+                    if (input.Trim().ToUpper() == "END")
+                    {
+                        validInput = true;
                     }
                     else
                     {
-                        _desc.Send($"Either that name is already taken or it is too long.{Constants.NewLine}");
+                        if (Enum.TryParse<Race>(input.Trim(), true, out retval))
+                        {
+                            validInput = true;
+                        }
                     }
                 }
-                else
+            }
+            return retval;
+        }
+
+        private static ActorClass GetPlayerClass(Session session)
+        {
+            bool validInput = false;
+            ActorClass retval = default;
+            while (!validInput)
+            {
+                session.Send($"Valid Classes: Wizard, Thief, Cleric, Fighter{Constants.NewLine}");
+                session.Send($"Wizard: +2 INT, -1 STR, -1 CON{Constants.NewLine}");
+                session.Send($"Thief: +2 DEX, -1 STR, -1 CON{Constants.NewLine}");
+                session.Send($"Cleric: +2 WIS, -1 STR, -1 CON{Constants.NewLine}");
+                session.Send($"Fighter: +2 STR, +2 CON, -1 DEX, -1 INT, -1 CHA{Constants.NewLine}");
+                session.Send($"Selection (or END to return):");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input))
                 {
-                    _desc.Send($"Sorry, that doesn't seem to be valid.{Constants.NewLine}");
+                    if (input.Trim().ToUpper() == "END")
+                    {
+                        validInput = true;
+                    }
+                    else
+                    {
+                        if (Enum.TryParse<ActorClass>(input.Trim(), true, out retval))
+                        {
+                            validInput = true;
+                        }
+                    }
                 }
             }
-            return input;
+            return retval;
+        }
+
+        private static void AssignStatPoints(Session session, ref Player p)
+        {
+            int pointsToAllocate = p.Race == Race.Human ? 12 : 10;
+            StringBuilder sb = new StringBuilder();
+            while(pointsToAllocate > 0)
+            {
+                sb.Clear();
+                sb.AppendLine($"Points available: {pointsToAllocate}");
+                sb.AppendLine($"STR: {p.Strength}{Constants.TabStop}{Constants.TabStop}DEX: {p.Dexterity}{Constants.TabStop}{Constants.TabStop}CON: {p.Constitution}");
+                sb.AppendLine($"INT: {p.Intelligence}{Constants.TabStop}{Constants.TabStop}WIS: {p.Wisdom}{Constants.TabStop}{Constants.TabStop}CHA: {p.Charisma}");
+                sb.AppendLine("Enter Stat to increase:");
+                session.Send(sb.ToString());
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input))
+                {
+                    switch(input.Trim().ToUpper())
+                    {
+                        case "STR":
+                            p.Strength++;
+                            pointsToAllocate--;
+                            break;
+
+                        case "DEX":
+                            p.Dexterity++;
+                            pointsToAllocate--;
+                            break;
+
+                        case "CON":
+                            p.Constitution++;
+                            pointsToAllocate--;
+                            break;
+
+                        case "INT":
+                            p.Intelligence++;
+                            pointsToAllocate--;
+                            break;
+
+                        case "WIS":
+                            p.Wisdom++;
+                            pointsToAllocate--;
+                            break;
+
+                        case "CHA":
+                            p.Charisma++;
+                            pointsToAllocate--;
+                            break;
+
+                        default:
+                            session.Send($"That doesn't seem like a valid option...{Constants.NewLine}");
+                            break;
+                    }
+                }
+            }
+        }
+
+        private static Gender GetPlayerGender(Session session)
+        {
+            bool validInput = false;
+            Gender retval = default;
+            while (!validInput)
+            {
+                session.Send($"Valid Genders: Male, Female, NonBinary{Constants.NewLine}");
+                session.Send($"Selection (or END to return):");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input))
+                {
+                    if (input.Trim().ToUpper() == "END")
+                    {
+                        validInput = true;
+                    }
+                    else
+                    {
+                        if (Enum.TryParse<Gender>(input.Trim(), true, out retval))
+                        {
+                            validInput = true;
+                        }
+                    }
+                }
+            }
+            return retval;
+        }
+
+        private static string GetPlayerName(Session session)
+        {
+            bool validInput = false;
+            string pName = string.Empty;
+            while (!validInput)
+            {
+                session.Send($"Enter your name:");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && regex.IsMatch(input.Trim()))
+                {
+                    pName = input.Trim();
+                    validInput = true;
+                }
+            }
+            return pName;
+        }
+
+        private static string GetPlayerShortDescription(Session session)
+        {
+            bool validInput = false;
+            string pShortDescription = string.Empty;
+            while (!validInput)
+            {
+                session.Send($"Enter short description, max. 50 characters:");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && input.Trim().Length <= 50)
+                {
+                    pShortDescription = input.Trim();
+                    validInput = true;
+                }
+            }
+            return pShortDescription;
+        }
+
+        private static string GetPlayerLongDescription(Session session)
+        {
+            int row = 1;
+            StringBuilder sb = new StringBuilder();
+            bool validInput = false;
+            session.Send($"Enter your full description. This should be 30 lines or less");
+            session.Send($"and each line should be 80 characters or less.");
+            session.Send($"Descriptions can be changed later if you want.");
+            session.Send($"Enter END on a new line to finish.{Constants.NewLine}");
+            while (!validInput)
+            {
+                session.Send($"[{row}] ");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && input.Trim().Length <= 80)
+                {
+                    if (input.Trim().ToUpper() == "END")
+                    {
+                        validInput = true;
+                    }
+                    else
+                    {
+                        sb.AppendLine(input.Trim());
+                        row++;
+                        if (row > 30)
+                        {
+                            validInput = true;
+                        }
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        private static string GetPlayerTitle(Session session)
+        {
+            bool validInput = false;
+            string pTitle = string.Empty;
+            while (!validInput)
+            {
+                session.Send($"Enter your title, max. 15 characters:");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && regex.IsMatch(input.Trim()) && input.Trim().Length <= 15)
+                {
+                    pTitle = input.Trim();
+                    validInput = true;
+                }
+            }
+            return pTitle;
+        }
+
+        private static string GetPlayerPassword(Session session)
+        {
+            bool validInput = false;
+            string pPassword = string.Empty;
+            while (!validInput)
+            {
+                session.Send($"Enter your password:");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input))
+                {
+                    pPassword = input.Trim();
+                    validInput = true;
+                }
+            }
+            return pPassword;
         }
     }
 }

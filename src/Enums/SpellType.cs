@@ -1,13 +1,11 @@
-﻿using System;
-
-namespace Etrea2
+﻿namespace Etrea3
 {
-    [Flags]
-    internal enum SpellType
+    public enum SpellType
     {
-        Buff = 1,
-        Debuff = 2,
-        Damage = 4,
-        Healing = 8
+        Undefined,
+        Damage,
+        Healing,
+        Buff,
+        Debuff
     }
 }

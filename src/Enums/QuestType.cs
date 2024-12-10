@@ -1,7 +1,8 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum QuestType
+    public enum QuestType
     {
+        Undefined,
         Fetch,
         Kill,
         Escort

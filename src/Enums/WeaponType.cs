@@ -1,16 +1,17 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum WeaponType
+    public enum WeaponType
     {
+        Undefined,
         Dagger,
         Sword,
-        GreatSword,
         Axe,
-        Staff,
-        Club,
-        Bow,
         Spear,
-        Crossbow,
+        Staff,
         Polearm,
+        Crossbow,
+        Shortbow,
+        Longbow,
+        Greatsword,
     }
 }

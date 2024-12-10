@@ -1,23 +1,23 @@
-﻿using System;
+﻿using Etrea3.Objects;
+using System;
+using System.IO;
 using System.Text;
 using System.Threading;
-using Etrea2.Interfaces;
-using System.IO;
-using System.Text.RegularExpressions;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class Connection : IInputValidator
+    public class Connection
     {
-        private Descriptor _desc;
-        private readonly ILogonProvider _logonProvider;
+        private Session playerSession;
 
-        internal Connection(Descriptor desc)
+        public Connection(Session session)
         {
-            _desc = desc;
-            _logonProvider = new LogonProvider();
-            var thread = new Thread(HandleConnection);
-            thread.IsBackground = true;
+            playerSession = session;
+            Thread thread = new Thread(HandleConnection)
+            {
+                IsBackground = true,
+                Priority = ThreadPriority.AboveNormal
+            };
             thread.Start();
         }
 
@@ -25,58 +25,75 @@ namespace Etrea2.Core
         {
             WelcomeMessage();
             MainMenu();
+            if (playerSession.IsConnected && playerSession.Player == null)
+            {
+                HandleConnection();
+            }
+            if (!playerSession.IsConnected)
+            {
+                return;
+            }
             bool first = true;
-            while (_desc != null && _desc.IsConnected)
+            while (playerSession != null && playerSession.IsConnected)
             {
                 if (first)
                 {
-                    // if the player is trying to load into a room that no longer exits, port them to Limbo to avoid a crash...
-                    uint pStartRoom = _desc.Player.CurrentRoom;
-                    if (!RoomManager.Instance.RoomExists(pStartRoom))
-                    {
-                        Game.LogMessage($"WARN: Player {_desc.Player.Name} tried to load in room {pStartRoom} which doesn't exist - moving to Limo", LogLevel.Warning, true);
-                        _desc.Player.CurrentRoom = Constants.LimboRID();
-                        _desc.Send($"The world has shifted and the Gods have transported you to Limbo for safe keeping!{Constants.NewLine}");
-                    }
-                    RoomManager.Instance.ProcessEnvironmentBuffs(pStartRoom);
-                    RoomManager.Instance.GetRoom(_desc.Player.CurrentRoom).DescribeRoom(ref _desc, true);
                     var motd = DatabaseManager.GetMOTD();
                     if (!string.IsNullOrEmpty(motd))
                     {
+                        // show the message of the day
                         StringBuilder sb = new StringBuilder();
                         sb.AppendLine();
                         sb.AppendLine($"  {new string('=', 77)}");
-                        sb.AppendLine($"|| Message Of The Day:");
-                        foreach (var line in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                        sb.AppendLine($"|| MESSAGE OF THE DAY");
+                        foreach(var line in motd.Split(new[] {Constants.NewLine}, StringSplitOptions.None))
                         {
-                            if (!string.IsNullOrEmpty(line))
-                            {
-                                sb.AppendLine($"|| {line}");
-                            }
+                            sb.AppendLine($"|| {line}");
                         }
-                        sb.AppendLine($"  {new string('=', 77)}{Constants.NewLine}");
-                        _desc.Send(sb.ToString());
+                        sb.AppendLine($"  {new string('=', 77)}");
+                        playerSession.Send(sb.ToString());
                     }
+                    if (!RoomManager.Instance.RoomExists(playerSession.Player.CurrentRoom))
+                    {
+                        // Player is trying to load into a room that doesn't exist, so move them to Limbo
+                        Game.LogMessage($"WARN: Player {playerSession.Player.Name} tried to load into Room {playerSession.Player.CurrentRoom} which does not exist, transferring to Limbo", LogLevel.Warning, true);
+                        playerSession.Send($"The world has shifted and the Gods have transported you to Limbo!{Constants.NewLine}");
+                        SessionManager.Instance.GetSession(playerSession.ID).Player.CurrentRoom = Game.Limbo;
+                    }
+                    RoomManager.Instance.LoadPlayerIntoRoom(playerSession.Player.CurrentRoom, playerSession);
+                    RoomManager.Instance.GetRoom(playerSession.Player.CurrentRoom).DescribeRoom(playerSession);
+                    SessionManager.Instance.UpdateSessionStatus(playerSession.ID, ConnectionState.Playing);
+                    SessionManager.Instance.SetLastInputTime(playerSession.ID, DateTime.UtcNow);
                     first = false;
                 }
-                string prompt = $"{Constants.NewLine}{Constants.BrightRedText}{_desc.Player.CurrentHP:N0}/{_desc.Player.MaxHP:N0} HP{Constants.PlainText}; {Constants.BrightBluetext}{_desc.Player.CurrentMP:N0}/{_desc.Player.MaxMP:N0} MP{Constants.PlainText}; {Constants.BrightYellowText}{_desc.Player.CurrentSP:N0}/{_desc.Player.MaxSP:N0} SP{Constants.PlainText} >>";
-                _desc.Send(prompt);
-                var input = _desc.Read();
-                _desc.LastInputTime = DateTime.UtcNow;
+                string prompt = string.Empty;
+                switch(playerSession.Player.PromptStyle)
+                {
+                    case PlayerPrompt.Normal:
+                        prompt = $"{Constants.NewLine}{Constants.BrightRedText}{playerSession.Player.CurrentHP:N0}/{playerSession.Player.MaxHP:N0} HP{Constants.PlainText}; {Constants.BrightGreenText}{playerSession.Player.CurrentMP:N0}/{playerSession.Player.MaxMP:N0} MP{Constants.PlainText}; {Constants.BrightYellowText}{playerSession.Player.CurrentSP:N0}/{playerSession.Player.MaxSP:N0} SP{Constants.PlainText} >>";
+                        break;
+
+                    case PlayerPrompt.Percentage:
+                        prompt = $"{Constants.NewLine}{Constants.BrightRedText}{Math.Round((double)playerSession.Player.CurrentHP / playerSession.Player.MaxHP * 100, 0)}% HP{Constants.PlainText}; {Constants.BrightGreenText}{Math.Round((double)playerSession.Player.CurrentMP / playerSession.Player.MaxMP * 100, 0)}% MP{Constants.PlainText}; {Constants.BrightYellowText}{Math.Round((double)playerSession.Player.CurrentSP / playerSession.Player.MaxSP * 100, 0)}% SP{Constants.PlainText} >>";
+                        break;
+                }                    
+                playerSession.Send(prompt);
+                var input = playerSession.Read();
                 if (!string.IsNullOrEmpty(input))
                 {
-                    input = input.Trim();
-                    if (ValidateInput(input))
+                    SessionManager.Instance.SetLastInputTime(playerSession.ID, DateTime.UtcNow);
+                    string tInput = input.Trim();
+                    if (ValidateInput(tInput))
                     {
                         try
                         {
-                            CommandParser.ParseCommand(ref _desc, input);
+                            CommandParser.Parse(playerSession, ref tInput);
                         }
                         catch (Exception ex)
                         {
-                            Game.LogMessage($"ERROR: Error parsing input from {_desc.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
-                            _desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                            Game.LogMessage($"DEBUG: Error parsing input from {_desc.Client.Client.RemoteEndPoint}: {input}", LogLevel.Debug, false);
+                            Game.LogMessage($"ERROR: Error parsing input from {playerSession.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
+                            Game.LogMessage($"DEBUG: Input from {playerSession.Client.Client.RemoteEndPoint}: {tInput}", LogLevel.Debug, true);
+                            playerSession.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
                         }
                     }
                 }
@@ -87,67 +104,20 @@ namespace Etrea2.Core
             }
         }
 
-        private void CreateNewChar()
+        private bool ValidateInput(string input)
         {
-            _desc.State = ConnectionState.CreatingCharacter;
-            CharacterCreator.CreateNewCharacter(ref _desc);
-            if (_desc.Player == null)
+            if (string.IsNullOrEmpty(input))
             {
-                _desc.Send($"A valid character was not created, returning to the main menu...{Constants.NewLine}");
-                MainMenu();
+                // string is empty
+                return false;
             }
-        }
-
-        private void MainMenu()
-        {
-            _desc.State = ConnectionState.MainMenu;
-            bool validSelection = false;
-            while (_desc != null && _desc.IsConnected && !validSelection)
+            if (Encoding.UTF8.GetByteCount(input) != input.Length)
             {
-                try
-                {
-                    var pInput = _desc.Read().Trim();
-                    if (ValidateInput(pInput) && int.TryParse(pInput, out int opt))
-                    {
-                        if (opt >= 1 && opt <= 3)
-                        {
-                            validSelection = true;
-                            if (opt == 1)
-                            {
-                                _logonProvider.LogonPlayer(ref _desc);
-                                if (_desc.Player != null)
-                                {
-                                    _desc.State = ConnectionState.Playing;
-                                    return;
-                                }
-                                MainMenu();
-                            }
-                            if (opt == 2)
-                            {
-                                CreateNewChar();
-                            }
-                            if (opt == 3)
-                            {
-                                SessionManager.Instance.Close(_desc);
-                            }
-                        }
-                        else
-                        {
-                            _desc.Send($"Sorry, that doesn't look like a valid option.{Constants.NewLine}");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Game.LogMessage($"ERROR: Error reading from socket at MainMenu(): {ex.Message}", LogLevel.Error, true);
-                    SessionManager.Instance.Close(_desc);
-                }
+                // string length and byte count don't match
+                return false;
             }
-        }
-
-        public bool ValidateInput(string input)
-        {
-            return !string.IsNullOrEmpty(input) && Encoding.UTF8.GetByteCount(input) == input.Length;
+            // TODO: Possibly some additional RegEx checks to make sure we're not sending bizarro special characters
+            return true;
         }
 
         private void WelcomeMessage()
@@ -155,28 +125,82 @@ namespace Etrea2.Core
             try
             {
                 string welcomePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resources");
-                string[] welcomeLines = File.ReadAllLines($"{welcomePath}\\welcome.txt");
+                string[] welcomeMessage = File.ReadAllLines($"{welcomePath}\\welcome.txt");
                 StringBuilder sb = new StringBuilder();
-                foreach (string currentLine in welcomeLines)
+                foreach(string line in welcomeMessage)
                 {
-                    var line = Regex.Replace(currentLine, "{BR}", Constants.BrightRedText);
-                    line = Regex.Replace(line, "{RE}", Constants.PlainText);
-                    line = Regex.Replace(line, "{BY}", Constants.BrightYellowText);
-                    line = Regex.Replace(line, "{G}", Constants.GreenText);
-                    line = Regex.Replace(line, "{W}", Constants.WhiteText);
-                    line = Regex.Replace(line, "{BW}", Constants.BrightWhiteText);
-                    line = Regex.Replace(line, "{BB}", Constants.BrightBluetext);
-
-                    sb.AppendLine(line);
+                    sb.AppendLine(Helpers.ParseColourCodes(line));
                 }
-                _desc.Send(Constants.BoldText);
-                _desc.Send(sb.ToString());
-                _desc.Send(Constants.PlainText);
+                playerSession.Send(Constants.BoldText);
+                playerSession.Send(sb.ToString());
+                playerSession.Send(Constants.PlainText);
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error sending welcome message to {_desc.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error sending welcome message to {playerSession.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
             }
+        }
+
+        private void MainMenu()
+        {
+            SessionManager.Instance.UpdateSessionStatus(playerSession.ID, ConnectionState.MainMenu);
+            bool validSelection = false;
+            while (playerSession != null && playerSession.IsConnected && !validSelection)
+            {
+                try
+                {
+                    var playerInput = playerSession.Read();
+                    if (playerInput != null && int.TryParse(playerInput.Trim(), out int option))
+                    {
+                        switch(option)
+                        {
+                            case 1:
+                                var player = LogonProvider.LogonPlayer(playerSession);
+                                if (player != null)
+                                {
+                                    SessionManager.Instance.UpdateSessionPlayer(playerSession.ID, player);
+                                    validSelection = true;
+                                }
+                                break;
+
+                            case 2:
+                                player = CreateNewCharacter();
+                                if (player != null)
+                                {
+                                    SessionManager.Instance.UpdateSessionPlayer(playerSession.ID, player);
+                                    validSelection = true;
+                                }
+                                break;
+
+                            case 3:
+                                validSelection = true;
+                                SessionManager.Instance.Close(playerSession);
+                                break;
+
+                            default:
+                                playerSession.Send($"Sorry, that is not a valid option.{Constants.NewLine}");
+                                break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Game.LogMessage($"ERROR: Error reading from socket at Connecton.MainMenu(): {ex.Message}", LogLevel.Error, true);
+                    SessionManager.Instance.Close(playerSession);
+                }
+            }
+        }
+
+        private Player CreateNewCharacter()
+        {
+            SessionManager.Instance.UpdateSessionStatus(playerSession.ID, ConnectionState.CreatingCharacter);
+            Player newPlayer = CharacterCreator.CreateNewCharacter(playerSession);
+            if (newPlayer == null)
+            {
+                playerSession.Send($"A valid character was not created, returning to the main menu...{Constants.NewLine}");
+                MainMenu();
+            }
+            return newPlayer;
         }
     }
 }

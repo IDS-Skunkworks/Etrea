@@ -1,2550 +1,3442 @@
-﻿using System;
+﻿using Etrea3.Objects;
+using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Diagnostics;
-using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
-using Etrea2.Entities;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal static partial class CommandParser
+    public static class ActImmortal
     {
-        private static void DonationRoom(ref Descriptor desc, ref string input)
+        public static void GenerateAPIKey(Session session, string arg)
         {
-            if (desc.Player.Level >= Constants.ImmLevel)
+            if (!session.Player.IsImmortal)
             {
-                var verb = GetVerb(ref input);
-                var line = input.Remove(0, verb.Length).Trim();
-                if (string.IsNullOrEmpty(line))
-                {
-                    desc.Send($"The Donation Room is currently RID {Game.GetDonationRoomRID()}{Constants.NewLine}");
-                    desc.Send($"Use donroom <RID> to change the Donation Room RID{Constants.NewLine}");
-                    return;
-                }
-                if (uint.TryParse(line, out uint newDonRoomRID))
-                {
-                    Game.SetDonationRoomRID(newDonRoomRID);
-                    desc.Send($"Donation Room updated to RID {newDonRoomRID}{Constants.NewLine}");
-                }
-                else
-                {
-                    desc.Send($"Use donroom <RID> to change the Donation Room RID{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void PulseShop(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var verb = GetVerb(ref input);
-                var shopID = input.Remove(0, verb.Length).Trim();
-                if (uint.TryParse(shopID, out uint sid))
-                {
-                    var s = ShopManager.Instance.GetShop(sid);
-                    if (s != null)
-                    {
-                        s.RestockShop();
-                        desc.Send($"Shop restock process complete{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        desc.Send($"No Shop with that ID could be found{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"That doesn't seem like a valid Shop ID!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowShopStats(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var verb = GetVerb(ref input);
-                var shop = input.Remove(0, verb.Length).Trim();
-                if (uint.TryParse(shop, out uint shopID))
-                {
-                    var s = ShopManager.Instance.GetShop(shopID);
-                    if (s != null)
-                    {
-                        StringBuilder sb = new StringBuilder();
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        sb.AppendLine($"|| Name: {s.ShopName}");
-                        sb.AppendLine($"|| Gold: {s.CurrentGold}");
-                        sb.AppendLine($"|| Inventory:");
-                        foreach(var i in s.InventoryItems)
-                        {
-                            sb.AppendLine($"|| {i.Value} x {ItemManager.Instance.GetItemByID(i.Key).Name}");
-                        }
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        desc.Send($"No matching Shop could be found...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"That isn't a valid Shop ID!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowMudResourceUsage(ref Descriptor desc)
-        {
-            if (desc.Player.Level < Constants.ImmLevel)
-            {
-                desc.Send($"Only the Gods can do that...{Constants.NewLine}");
-                Game.LogMessage($"WARN: Player {desc.Player.Name} attempted to query MUD resource usage", LogLevel.Warning, true);
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to query or generate an API key, but they are not Immortal", LogLevel.Warning, true);
                 return;
             }
-            else
+            if (string.IsNullOrEmpty(arg))
             {
-                using (Process p = Process.GetCurrentProcess())
+                session.Send($"%BRT%Usage: apikey <query | generate> <player>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%apikey query <player> will show the API key for the player, if there is one%PT%{Constants.NewLine}");
+                session.Send($"%BRT%apikey generate <player> will generate an API key for the player, if that player is Immortal%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length != 2)
+            {
+                session.Send($"%BRT%Usage: apikey <query | generate> <player>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%apikey query <player> will show the API key for the player, if there is one%PT%{Constants.NewLine}");
+                session.Send($"%BRT%apikey generate <player> will generate an API key for the player, if that player is Immortal%PT%{Constants.NewLine}");
+                return;
+            }
+            switch(args[0].Trim().ToLower())
+            {
+                case "query":
+                    var key = DatabaseManager.GetPlayerAPIKey(args[1]);
+                    if (string.IsNullOrEmpty(key))
+                    {
+                        session.Send($"%BRT%That player does not exist or does not have an API Key!%PT%{Constants.NewLine}");
+                        Game.LogMessage($"INFO: Player {session.Player.Name} queried the API key for {args[1]} but no player or key was found", LogLevel.Info, true);
+                        return;
+                    }
+                    session.Send($"%BGT%API Key: {key}%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} queried the API key for {args[1]}", LogLevel.Info, true);
+                    break;
+
+                case "generate":
+                    var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.Player.Name.IndexOf(args[1], StringComparison.OrdinalIgnoreCase) >= 0).FirstOrDefault();
+                    if (target == null)
+                    {
+                        session.Send($"%BRT%That person isn't here!%PT%{Constants.NewLine}");
+                        Game.LogMessage($"INFO: Player {session.Player.Name} attempted to generate an API key for {args[1]} but no such player was found", LogLevel.Info, true);
+                        return;
+                    }
+                    if (!target.Player.IsImmortal)
+                    {
+                        session.Send($"%BRT%{target.Player.Name} is not Immortal!%PT%{Constants.NewLine}");
+                        Game.LogMessage($"INFO: Player {session.Player.Name} attempted to generate an API key for {target.Player.Name} but that player is not Immortal", LogLevel.Info, true);
+                        return;
+                    }
+                    using (SHA512 sha = SHA512.Create())
+                    {
+                        var nBytes = Encoding.UTF8.GetBytes(target.Player.Name);
+                        var hash = sha.ComputeHash(nBytes);
+                        var hashString = Convert.ToBase64String(hash);
+                        if (DatabaseManager.UpdatePlayerAPIKey(target.Player.Name, hashString))
+                        {
+                            Game.LogMessage($"INFO: Player {session.Player.Name} generated an API key for {target.Player.Name}", LogLevel.Info, true);
+                            session.Send($"%BGT%API key for {target.Player.Name} generated successfully.%PT%{Constants.NewLine}");
+                        }
+                        else
+                        {
+                            Game.LogMessage($"%ERROR: Player {session.Player.Name} encountered an error generating an API key for {target.Player.Name}", LogLevel.Error, true);
+                            session.Send($"%BRT%Failed to create an API key for {target.Player.Name}, check error logs for more details.%PT%{Constants.NewLine}");
+                        }
+                    }
+                    break;
+
+                default:
+                    session.Send($"%BRT%Usage: apikey <query | generate> <player>%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%apikey query <player> will show the API key for the player, if there is one%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%apikey generate <player> will generate an API key for the player, if that player is Immortal%PT%{Constants.NewLine}");
+                    return;
+            }
+        }
+
+        public static void RemoveNodeFromRoom(Session session)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to destroy the Resource Node in Room {session.Player.CurrentRoom} but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode == null)
+            {
+                session.Send($"%BRT%There is no Resource Node here to destroy!%PT%{Constants.NewLine}");
+                return;
+            }
+            RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode = null;
+            session.Send($"%BYT%Calling on mystic energies you destroy the resource node in this area!%PT%{Constants.NewLine}");
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+            Game.LogMessage($"INFO: Player {session.Player.Name} destroyed the Resource Node in Room {session.Player.CurrentRoom}", LogLevel.Info, true);
+            if (localPlayers.Count > 0)
+            {
+                foreach (var player in localPlayers)
                 {
-                    desc.Send($"Current RAM Usage: {p.WorkingSet64 / 1024:N0} KB; CPU Time: {p.TotalProcessorTime.TotalSeconds:N0} seconds");
+                    var msg = session.Player.CanBeSeenBy(player.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and the resource node is swallowed by the Winds of Magic!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic swirl, swallowing the resource node!%PT%{Constants.NewLine}";
+                    player.Send(msg);
                 }
             }
         }
 
-        private static void MOTD(ref Descriptor desc, ref string input)
+        public static void AddNodeToRoom(Session session, string arg)
         {
-            if (desc.Player.Level < Constants.ImmLevel)
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to create a Resource Node in Room {session.Player.CurrentRoom} but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode != null)
+            {
+                session.Send($"%BRT%There is already a Node here!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg) || !int.TryParse(arg.Trim(), out int nodeID))
+            {
+                session.Send($"%BRT%That isn't a valid Node ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!NodeManager.Instance.NodeExists(nodeID))
+            {
+                session.Send($"%BRT%No Resource Node with that ID was found in Node Manager!%PT%{Constants.NewLine}");
+                return;
+            }
+            var n = NodeManager.Instance.GetNode(nodeID);
+            if (n != null)
+            {
+                var newNode = Helpers.Clone(n);
+                newNode.Depth = Helpers.RollDice<int>(1, 4);
+                RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode = newNode;
+                session.Send($"%BYT%You have create a {newNode.Name} here to mine!%PT%{Constants.NewLine}");
+                Game.LogMessage($"INFO: Player {session.Player.Name} created Resource Node {newNode.Name} ({newNode.ID}) in Room {session.Player.CurrentRoom}", LogLevel.Info, true);
+                var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+                if (localPlayers.Count > 0)
+                {
+                    foreach (var player in localPlayers)
+                    {
+                        var msg = session.Player.CanBeSeenBy(player.Player) ? $"%BYT%{session.Player} makes an arcane gesture and creates {newNode.Name}!%PT%{Constants.NewLine}" :
+                            $"%BYT%The Winds of Magic shift about and create {newNode.Name}!%PT%{Constants.NewLine}";
+                        player.Send(msg);
+                    }
+                }
+            }
+        }
+
+        public static void ShowShopInfo(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to review Shop information but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: shopinfo <id>%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(arg, out int shopID))
+            {
+                session.Send($"%BRT%Usage: shopinfo <id>%PT%{Constants.NewLine}");
+                return;
+            }
+            var shop = ShopManager.Instance.GetShop(shopID);
+            if (shop == null)
+            {
+                session.Send($"%BRT%No Shop with that ID could be found in Shop Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"%BYT%  {new string('=', 77)}");
+            sb.AppendLine($"%BYT%|| Name: {shop.ShopName}{Constants.TabStop}ID: {shop.ID}");
+            sb.AppendLine($"%BYT%|| Gold: {shop.CurrentGold:N0} / {shop.BaseGold:N0}");
+            if (shop.CurrentInventory.Count > 0)
+            {
+                sb.AppendLine($"%BYT%|| Current Inventory:");
+                foreach(var i in shop.CurrentInventory)
+                {
+                    var item = ItemManager.Instance.GetItem(i.Key);
+                    if (item == null)
+                    {
+                        sb.AppendLine($"%BYT%|| {i.Value} x Unknown Item ({i.Key})");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%|| {i.Value} x {item.Name} ({item.ID})");
+                    }
+                }
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}");
+            session.Send(sb.ToString());
+            Game.LogMessage($"INFO: Player {session.Player.Name} reviewed stats for Shop {shop.ID}", LogLevel.Info, true);
+        }
+
+        public static void TickShop(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to force a Shop refresh but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: tickshop <id>%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(arg, out int shopID))
+            {
+                session.Send($"%BRT%Usage: tickshop <id>%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!ShopManager.Instance.ShopExists(shopID))
+            {
+                session.Send($"%BRT%No Shop with that ID could be found in Shop Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            var shop = ShopManager.Instance.GetShop(shopID);
+            Game.LogMessage($"INFO: Player {session.Player.Name} forced a refresh of Shop {shop.ShopName} ({shop.ID})", LogLevel.Info, true);
+            shop.RestockShop();
+            session.Send($"%BGT%Shop {shop.ShopName} refreshed succesfully.%PT%{Constants.NewLine}");
+        }
+
+        public static void ShutDownGame(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to initiate a shutdown but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (session.Player.Level < 110)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to initiate a shutdown but they are not Level 110", LogLevel.Warning, true);
+                return;
+            }
+            if (!string.IsNullOrEmpty(arg) && bool.TryParse(arg, out bool force))
+            {
+                Game.ImmShutdown(session, force);
+            }
+            else
+            {
+                session.Send($"%BRT%Usage: shutdown <true | false>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%true = shutdown even if all players cannot be saved.%PT%{Constants.NewLine}");
+                session.Send($"%BRT%false = abort shutdown if all players cannot be saved.%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void MessageOfTheDay(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to perform an MOTD operation but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
             {
                 var motd = DatabaseManager.GetMOTD();
-                if (!string.IsNullOrEmpty(motd))
+                if (string.IsNullOrEmpty(motd))
                 {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine("Current MOTD:");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    foreach (var motdLine in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
-                    {
-                        if (!string.IsNullOrEmpty(motdLine))
-                        {
-                            sb.AppendLine($"|| {motdLine}");
-                        }
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    desc.Send(sb.ToString());
+                    session.Send($"%BYT%No MOTD has been configured.%PT%{Constants.NewLine}");
                 }
                 else
                 {
-                    desc.Send($"No MOTD message is configured.{Constants.NewLine}");
+                    session.Send($"%BYT%Current MOTD:{Constants.NewLine}");
+                    session.Send(motd);
                 }
-            }
-            else
-            {
-                var verb = GetVerb(ref input);
-                var line = input.Remove(0, verb.Length).Trim();
-                var tokens = TokeniseInput(ref line);
-                bool printUsage = false;
-                if (tokens.Length < 1)
-                {
-                    printUsage = true;
-                }
-                else
-                {
-                    switch (tokens[0].ToLower().Trim())
-                    {
-                        case "show":
-                            var motd = DatabaseManager.GetMOTD();
-                            if (!string.IsNullOrEmpty(motd))
-                            {
-                                StringBuilder sb = new StringBuilder();
-                                sb.AppendLine("Current MOTD:");
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                foreach (var motdLine in motd.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
-                                {
-                                    if (!string.IsNullOrEmpty(motdLine))
-                                    {
-                                        sb.AppendLine($"|| {motdLine}");
-                                    }
-                                }
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                desc.Send(sb.ToString());
-                            }
-                            else
-                            {
-                                desc.Send($"No MOTD message is configured.{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "set":
-                            string newMOTD = Helpers.GetNewMOTD(ref desc);
-                            if (DatabaseManager.SetMOTD(ref desc, newMOTD))
-                            {
-                                desc.Send($"The MOTD message has been successfully updated.{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"An error was encountered setting the new MOTD message.{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "clear":
-                            if (DatabaseManager.SetMOTD(ref desc, string.Empty))
-                            {
-                                desc.Send($"The MOTD message has been successfully cleared.{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"An error was encountered clearing the MOTD message.{Constants.NewLine}");
-                            }
-                            break;
-
-                        default:
-                            printUsage = true;
-                            break;
-                    }
-                }
-                if (printUsage)
-                {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine("Usage:");
-                    sb.AppendLine("motd - show this message");
-                    sb.AppendLine("motd show - print the current MOTD message, if there is one");
-                    sb.AppendLine("motd clear - clear the current MOTD message");
-                    sb.AppendLine("motd set - set a new MOTD for players at login");
-                    desc.Send(sb.ToString());
-                }
-            }
-        }
-
-        private static void GivePlayerLanguage(ref Descriptor desc, ref string input)
-        {
-            // givelang
-            var verb = GetVerb(ref input);
-            var line = input.Remove(0, verb.Length).Trim();
-            var tokens = TokeniseInput(ref line);
-            if (tokens.Length == 2)
-            {
-                var playerName = tokens[0];
-                var langName = tokens[1];
-                if (Enum.TryParse<Languages>(langName, true, out Languages lang))
-                {
-                    if (lang != Languages.Common)
-                    {
-                        var p = SessionManager.Instance.GetPlayer(playerName);
-                        if (p != null)
-                        {
-                            p.Player.KnownLanguages |= lang;
-                            p.Send($"{desc.Player.Name} has granted you knoweldge of the {lang} language!{Constants.NewLine}");
-                            desc.Send($"You have granted {p.Player} knowledge of the {lang} language!{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Everyone already knows the Common language!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"No such language exists in the Realms!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Usage: givelang <player> <language>{Constants.NewLine}");
-            }
-        }
-
-        private static void RemovePlayerLanguage(ref Descriptor desc, ref string input)
-        {
-            // removelang
-            var verb = GetVerb(ref input);
-            var line = input.Remove(0, verb.Length).Trim();
-            var tokens = TokeniseInput(ref line);
-            if (tokens.Length == 2)
-            {
-                var playerName = tokens[0];
-                var langName = tokens[1];
-                if (Enum.TryParse<Languages>(langName, true, out Languages lang))
-                {
-                    if (lang != Languages.Common)
-                    {
-                        var p = SessionManager.Instance.GetPlayer(playerName);
-                        if (p != null)
-                        {
-                            p.Player.KnownLanguages &= lang;
-                            p.Send($"{desc.Player.Name} has removed your knoweldge of the {lang} language!{Constants.NewLine}");
-                            p.Player.SpokenLanguage = Languages.Common;
-                            desc.Send($"You have removed {p.Player}'s knowledge of the {lang} language!{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot remove the Common language from someone!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"No such language exists in the Realms!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Usage: removelang <player> <language>{Constants.NewLine}");
-            }
-        }
-
-        private static void AddRecipeToPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                var lineElements = TokeniseInput(ref line);
-                if (lineElements.Length >= 2)
-                {
-                    var tp = SessionManager.Instance.GetPlayer(lineElements[0].Trim());
-                    if (tp != null)
-                    {
-                        var recipeName = line.Replace(lineElements[0], string.Empty).Trim();
-                        if (RecipeManager.Instance.GetRecipe(recipeName) != null)
-                        {
-                            if (!tp.Player.KnowsRecipe(recipeName))
-                            {
-                                var r = RecipeManager.Instance.GetRecipe(recipeName);
-                                tp.Player.Recipes.Add(r);
-                                tp.Send($"{desc.Player} has granted you knowledge of crafting {r.RecipeName}!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"{tp.Player} already knows that recipe!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That recipe doesn't exist!{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That person doesn't seem to be in the world right now.{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"Usage: addrecipe <player> <recipe name>{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void RemoveRecipeFromPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                var lineElements = TokeniseInput(ref line);
-                if (lineElements.Length >= 2)
-                {
-                    var tpName = lineElements[0].Trim();
-                    var tp = SessionManager.Instance.GetPlayer(tpName);
-                    if (tp != null)
-                    {
-                        var recipeName = line.Replace(tpName, string.Empty).Trim();
-                        var r = RecipeManager.Instance.GetRecipe(recipeName);
-                        if (r != null)
-                        {
-                            if (tp.Player.KnowsRecipe(recipeName))
-                            {
-                                SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.Recipes.Remove(r);
-                                tp.Send($"{desc.Player} has removed your knowledge of crafting {r.RecipeName}!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"{tp.Player} doesn't know that recipe!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That recipe doesn't exist!{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That person doesn't seem to be around right now.{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"Usage: removerecipe <player> <recipe name>{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void AddResouceNodeToRoom(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode == null)
-                {
-                    var n = NodeManager.Instance.GetNode(Helpers.RollDice(1, 100));
-                    RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode = n;
-                    desc.Send($"Calling on the Winds of Magic you create a {n.NodeName} node for mining!{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {desc.Player} created a {n.NodeName} node (Depth: {n.NodeDepth}) in Room {desc.Player.CurrentRoom}", LogLevel.Info, true);
-                }
-                else
-                {
-                    desc.Send($"There is already a Resource Node in this room!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ClearCharacterDescription(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var target = TokeniseInput(ref input).Last().Trim();
-                var p = SessionManager.Instance.GetPlayer(target);
-                if (p != null)
-                {
-                    p.Player.LongDescription = string.Empty;
-                    p.Send($"{desc.Player.Name} has wiped your character's long description!{Constants.NewLine}");
-                    desc.Send($"You have wiped {p.Player.Name}'s long description!{Constants.NewLine}");
-                    Game.LogMessage($"INFO: {desc.Player.Name} has wiped the long description of player {p.Player.Name}", LogLevel.Info, true);
-                }
-                else
-                {
-                    desc.Send($"No player with that name could be found in the world!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ListAllNPCS(ref Descriptor desc)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"  {new string('=', 77)}");
-                var npcsInGame = NPCManager.Instance.GetAllNPCInstances().Values;
-                if (npcsInGame != null && npcsInGame.Count > 0)
-                {
-                    foreach (var n in npcsInGame.Select(x => new { x.NPCID, x.Name }).Distinct().OrderBy(x => x.Name))
-                    {
-                        var npcLocations = npcsInGame.Where(x => x.NPCID == n.NPCID).Select(x => x.CurrentRoom).Distinct().OrderBy(x => x).ToList();
-                        if (npcLocations.Count > 1)
-                        {
-                            foreach (var loc in npcLocations)
-                            {
-                                var cnt = npcsInGame.Where(x => x.NPCID == n.NPCID && x.CurrentRoom == loc).Count();
-                                sb.AppendLine($"|| {cnt} x {n.Name} (ID: {n.NPCID}) in Room {loc}");
-                            }
-                        }
-                        else
-                        {
-                            var loc = npcLocations.First();
-                            var cnt = npcsInGame.Where(x => x.NPCID == n.NPCID && x.CurrentRoom == loc).Count();
-                            sb.AppendLine($"|| {cnt} x {n.Name} (ID: {n.NPCID}) in Room: {loc}");
-                        }
-                    }
-                    sb.AppendLine($"||{new string('=', 77)}");
-                    sb.AppendLine($"|| {npcsInGame.Count} NPCs are currently in the world.");
-                }
-                else
-                {
-                    sb.AppendLine("|| No NPCs are currently in the world");
-                }
-                sb.AppendLine($"  {new string('=', 77)}");
-                desc.Send(sb.ToString());
-            }
-            else
-            {
-                desc.Send($"Only the Gods have that power...{Constants.NewLine}");
-            }
-        }
-
-        private static void TransferPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 2)
-                {
-                    desc.Send($"Usage: transport <target> <rid>{Constants.NewLine}");
-                    return;
-                }
-                var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if (target != null)
-                {
-                    if (uint.TryParse(elements[2].Trim(), out uint tRid))
-                    {
-                        if (RoomManager.Instance.RoomExists(tRid))
-                        {
-                            var tCurrentRID = target.Player.CurrentRoom;
-                            target.Send($"{desc.Player.Name} has transported you elsewhere!{Constants.NewLine}");
-                            target.Player.Move(tCurrentRID, tRid, true, true);
-                            Game.LogMessage($"INFO: Player {desc.Player.Name} transferred player {target.Player.Name} to RID {tRid}", LogLevel.Info, true);
-                        }
-                        else
-                        {
-                            desc.Send($"No Room with ID {tRid} could be found{Constants.NewLine}");
-                            Game.LogMessage($"WARN: Player {desc.Player.Name} tried to teleport player {target.Player.Name} to RID {tRid} but no room with that ID could be found", LogLevel.Warning, true);
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"The RID {elements[2]} doesn't seem to be valid...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"That person doesn't seem to be in the world...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void AddSkillToPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 2)
-                {
-                    desc.Send($"Usage: addskill <target> <skill name>{Constants.NewLine}");
-                    return;
-                }
-                var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if (target != null)
-                {
-                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
-                    {
-                        desc.Send($"You cannot set the skills of a higher level character!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        var skill = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if (SkillManager.Instance.SkillExists(skill))
-                        {
-                            if (!target.Player.HasSkill(skill))
-                            {
-                                target.Player.AddSkill(skill);
-                                desc.Send($"You have granted knowledge of {skill} to {target.Player.Name}{Constants.NewLine}");
-                                target.Send($"{desc.Player.Name} has granted you knowledge of {skill}!{Constants.NewLine}");
-                                Game.LogMessage($"INFO: Player {desc.Player.Name} has given {target.Player.Name} the skill: {skill}", LogLevel.Info, true);
-                            }
-                            else
-                            {
-                                desc.Send($"{target.Player.Name} alreayd knows that skill!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That skill does not exist!{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void RemoveSkillFromPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 2)
-                {
-                    desc.Send($"Usage: removeskill <target> <skillname>{Constants.NewLine}");
-                    return;
-                }
-                var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if (target != null)
-                {
-                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
-                    {
-                        desc.Send($"You cannot set the skills of a higher level character!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        var skill = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if (SkillManager.Instance.SkillExists(skill))
-                        {
-                            if (target.Player.HasSkill(skill))
-                            {
-                                target.Player.RemoveSkill(skill);
-                                desc.Send($"You have removed {target.Player.Name}'s knowledge of {skill}!{Constants.NewLine}");
-                                target.Send($"{desc.Player.Name} has removed your knowledge of {skill}!{Constants.NewLine}");
-                                Game.LogMessage($"INFO: {desc.Player.Name} has removed the skill '{skill}' from player {target.Player.Name}", LogLevel.Info, true);
-                            }
-                            else
-                            {
-                                desc.Send($"{target.Player.Name} does not know that skill!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That skill does not exist!{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void AddSpellToPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 2)
-                {
-                    desc.Send($"Usage: addspell <target> <spellname>{Constants.NewLine}");
-                    return;
-                }
-                var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if (target != null)
-                {
-                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
-                    {
-                        desc.Send($"You cannot set the spells of a higher level character!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        var spell = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if (SpellManager.Instance.SpellExists(spell))
-                        {
-                            if (!target.Player.HasSpell(spell))
-                            {
-                                target.Player.AddSpell(spell);
-                                desc.Send($"You have granted knowledge of the spell {spell} to {target.Player.Name}{Constants.NewLine}");
-                                target.Send($"{desc.Player.Name} has granted you knowledge of the spell {spell}!{Constants.NewLine}");
-                                Game.LogMessage($"INFO: Player {desc.Player.Name} has given {target.Player.Name} the spell: {spell}", LogLevel.Info, true);
-                            }
-                            else
-                            {
-                                desc.Send($"{target.Player.Name} already knows that spell!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That spell does not exist!{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void RemoveSpellFromPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 2)
-                {
-                    desc.Send($"Usage: removespell <target> <spellname>{Constants.NewLine}");
-                    return;
-                }
-                var target = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, elements[1], RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                if (target != null)
-                {
-                    if (target.Player.Level >= desc.Player.Level && target.Player.Name != desc.Player.Name)
-                    {
-                        desc.Send($"You cannot set the spells of a higher level character!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        var spell = input.Replace(GetVerb(ref input), string.Empty).Replace(elements[1], string.Empty).Trim();
-                        if (SpellManager.Instance.SpellExists(spell))
-                        {
-                            if (target.Player.HasSpell(spell))
-                            {
-                                target.Player.RemoveSpell(spell);
-                                desc.Send($"You have removed {target.Player.Name}'s knowledge of the spell {spell}!{Constants.NewLine}");
-                                target.Send($"{desc.Player.Name} has removed your knowledge of the spell {spell}!{Constants.NewLine}");
-                                Game.LogMessage($"INFO: {desc.Player.Name} has removed the spell '{spell}' from player {target.Player.Name}", LogLevel.Info, true);
-                            }
-                            else
-                            {
-                                desc.Send($"{target.Player.Name} does not know that spell!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That spell does not exist!{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void GetCurrentConnections(ref Descriptor desc)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"  {new string('=', 77)}");
-                int i = 0;
-                foreach (var con in SessionManager.Instance.Connections)
-                {
-                    sb.AppendLine($"|| Endpoint: {con.Client.Client.RemoteEndPoint}");
-                    sb.AppendLine($"|| Connect Time: {con.ConnectionTime} UTC");
-                    sb.AppendLine($"|| Player: {(con.Player == null ? "No Player" : con.Player.Name)}");
-                    i++;
-                    if (i < SessionManager.Instance.Connections.Count)
-                    {
-                        sb.AppendLine($"||{new string('=', 77)}");
-                    }
-                }
-                sb.AppendLine($"  {new string('=', 77)}");
-                desc.Send(sb.ToString());
-                Game.LogMessage($"INFO: Player {desc.Player} queried current connections to the game", LogLevel.Info, true);
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-                Game.LogMessage($"WARN: Player {desc.Player} attempted to query current connections to the game", LogLevel.Warning, true);
-            }
-        }
-
-        private static void ShowLastBackup(ref Descriptor desc)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                if (Game.GetBackupInfo(out DateTime bkTime, out uint bkTick))
-                {
-                    var nxtBackup = bkTime.AddSeconds(bkTick);
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Last Backup: {bkTime:dd-MM-yyyy HH:mm:ss} UTC");
-                    sb.AppendLine($"|| Next Backup: {nxtBackup:dd-MM-yyyy HH:mm:ss} UTC");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    desc.Send(sb.ToString());
-                }
-                else
-                {
-                    desc.Send($"The World and Player databases have not been backed up this session{Constants.NewLine}");
-                    desc.Send($"The first backup this session is due at approx: {Game.GetStartTime().AddSeconds(bkTick):yyyy-MM-dd HH:mm:ss} UTC");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may look into the past!{Constants.NewLine}");
-            }
-        }
-
-        private static void DoImmInv(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                // imminv <npc | player> <target>
-                //var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 3)
-                {
-                    desc.Send($"Usage: imminv <npc | player> <target>{Constants.NewLine}");
-                    return;
-                }
-                var target = elements.Last().Trim();
-                if (!string.IsNullOrEmpty(target))
-                {
-                    if (elements[1].ToLower() == "npc")
-                    {
-                        var objNpc = GetTargetNPC(ref desc, target);
-                        if (objNpc != null)
-                        {
-                            StringBuilder sb = new StringBuilder();
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            if (objNpc.Inventory != null && objNpc.Inventory.Count > 0)
-                            {
-                                sb.AppendLine($"|| {objNpc.Name} is carrying:");
-                                foreach (var i in objNpc.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
-                                {
-                                    var cnt = objNpc.Inventory.Where(y => y.ID == i.ID).Count();
-                                    sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription} ({i.ID})");
-                                }
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                desc.Send(sb.ToString());
-                            }
-                            else
-                            {
-                                desc.Send($"{objNpc.Name} is not carrying any items!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"You can't see anything like that here!{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        var objTgt = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                        if (objTgt != null)
-                        {
-                            StringBuilder sb = new StringBuilder();
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            if (objTgt.Player.Inventory != null && objTgt.Player.Inventory.Count > 0)
-                            {
-                                sb.AppendLine($"|| {objTgt.Player.Name} is carrying:");
-                                foreach (var i in objTgt.Player.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
-                                {
-                                    var cnt = objTgt.Player.Inventory.Where(y => y.ID == i.ID).Count();
-                                    sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription} ({i.ID})");
-                                }
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                desc.Send(sb.ToString());
-                            }
-                            else
-                            {
-                                desc.Send($"{objTgt.Player.Name} is not carrying any items!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"No player with that name could be found.{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"Look for who, exactly?{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowUptimeInfo(ref Descriptor desc)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var startTime = Game.GetStartTime();
-                var uptime = DateTime.UtcNow - startTime;
-                Game.LogMessage($"INFO: Player {desc.Player.Name} queried uptime", LogLevel.Info, true);
-                desc.Send($"The world was started at {startTime:HH:mm:ss} UTC on {startTime:dd/MM/yyyy}{Constants.NewLine}");
-                desc.Send($"The world has been online for {uptime.Days} days, {uptime.Hours} hours, {uptime.Minutes} minutes and {uptime.Seconds} seconds{Constants.NewLine}");
-            }
-            else
-            {
-                desc.Send($"Only the Gods can know how long the world has truly existed!{Constants.NewLine}");
-            }
-        }
-
-        private static void DoWhereCheck(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                // usage: where <item | npc | node> <search string>
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 2 || (elements[1].ToLower() != "item" && elements[1].ToLower() != "npc" && elements[1].ToLower() != "node"))
-                {
-                    desc.Send($"Usage: where <item | npc | node> <search string>{Constants.NewLine}");
-                    return;
-                }
-                if (elements[1].ToLower() == "npc")
-                {
-                    var target = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
-                    var result = NPCManager.Instance.GetAllNPCInstances().Values.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
-                    if (result != null && result.Count > 0)
-                    {
-                        StringBuilder sb = new StringBuilder();
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        foreach (var r in result)
-                        {
-                            sb.AppendLine($"|| {r.NPCID} - {r.Name} in room {r.CurrentRoom}");
-                        }
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        desc.Send($"Nothing like that appears in the world...{Constants.NewLine}");
-                    }
-                    return;
-                }
-                if (elements[1].ToLower() == "item")
-                {
-                    var target = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
-                    var result = RoomManager.Instance.GetAllRooms().Values.Where(x => x.ItemsInRoom.Count > 0).ToList();
-                    uint matchingItems = 0;
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    foreach (var (r, i) in from r in result
-                                           from i in
-                                               from i in r.ItemsInRoom
-                                               where Regex.Match(i.Name, target, RegexOptions.IgnoreCase).Success
-                                               select i
-                                           select (r, i))
-                    {
-                        sb.AppendLine($"|| {i.ID} - {i.Name} in room {r.RoomID}");
-                        matchingItems++;
-                    }
-
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    if (matchingItems > 0)
-                    {
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        desc.Send($"Nothing like that appears in the world...{Constants.NewLine}");
-                    }
-                    return;
-                }
-                if (elements[1].ToLower() == "node")
-                {
-                    var target = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
-                    var result = RoomManager.Instance.GetAllRooms().Values.Where(x => x.ResourceNode != null && Regex.Match(x.ResourceNode.NodeName, target, RegexOptions.IgnoreCase).Success).ToList();
-                    if (result != null && result.Count > 0)
-                    {
-                        StringBuilder sb = new StringBuilder();
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        foreach (var r in result)
-                        {
-                            sb.AppendLine($"|| {r.ResourceNode.NodeName} in Room {r.RoomID}");
-                        }
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        desc.Send($"You cannot sense any such Nodes in the world right now.{Constants.NewLine}");
-                    }
-                    return;
-                }
-                desc.Send($"Usage: where <item | npc | node> <search string>{Constants.NewLine}");
                 return;
             }
-            else
+            if (arg.ToLower() == "clear")
             {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ImmSight(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var verb = GetVerb(ref input);
-                var target = input.Remove(0, verb.Length).Trim();
-                if (!string.IsNullOrEmpty(target))
+                if (DatabaseManager.ClearMOTD())
                 {
-                    StringBuilder sb = new StringBuilder();
-                    var p = SessionManager.Instance.GetAllPlayers().Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                    if (p != null)
-                    {
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        sb.AppendLine($"|| Name: {p.Player.Name}{Constants.TabStop}{Constants.TabStop}Gender: {p.Player.Gender}{Constants.TabStop}Class: {p.Player.Class}{Constants.TabStop}Race: {p.Player.Race}");
-                        sb.AppendLine($"|| Level: {p.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {p.Player.Exp}{Constants.TabStop}Next: {LevelTable.GetExpForNextLevel(p.Player.Level, p.Player.Exp)}");
-                        sb.AppendLine($"|| Alignment: {p.Player.Alignment}({p.Player.AlignmentScale}){Constants.TabStop}Gold: {p.Player.Gold}");
-                        sb.AppendLine($"||");
-                        sb.AppendLine($"|| Stats:");
-                        sb.AppendLine($"|| STR: {p.Player.Strength} ({Helpers.CalculateAbilityModifier(p.Player.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {p.Player.Dexterity} ({Helpers.CalculateAbilityModifier(p.Player.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {p.Player.Constitution} ({Helpers.CalculateAbilityModifier(p.Player.Constitution)})");
-                        sb.AppendLine($"|| INT: {p.Player.Intelligence} ({Helpers.CalculateAbilityModifier(p.Player.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {p.Player.Wisdom} ({Helpers.CalculateAbilityModifier(p.Player.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {p.Player.Charisma} ({Helpers.CalculateAbilityModifier(p.Player.Charisma)})");
-                        sb.AppendLine($"|| Current HP: {p.Player.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {p.Player.MaxHP}");
-                        sb.AppendLine($"|| Current MP: {p.Player.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {p.Player.MaxMP}");
-                        sb.AppendLine($"|| Armour Class: {p.Player.ArmourClass}{Constants.TabStop}No. Of Attacks: {p.Player.NumberOfAttacks}");
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        var n = GetTargetNPC(ref desc, target);
-                        if (n != null)
-                        {
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            sb.AppendLine($"|| Name: {n.Name}{Constants.TabStop}GUID: {n.NPCGuid}");
-                            sb.AppendLine($"|| Alignment: {n.Alignment}");
-                            sb.AppendLine($"|| Template: {n.NPCID}");
-                            sb.AppendLine($"||");
-                            sb.AppendLine($"|| Stats:");
-                            sb.AppendLine($"|| STR: {n.Strength} ({Helpers.CalculateAbilityModifier(n.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {n.Dexterity} ({Helpers.CalculateAbilityModifier(n.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {n.Constitution} ({Helpers.CalculateAbilityModifier(n.Constitution)})");
-                            sb.AppendLine($"|| INT: {n.Intelligence} ({Helpers.CalculateAbilityModifier(n.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {n.Wisdom} ({Helpers.CalculateAbilityModifier(n.Wisdom)}){Constants.TabStop}{Constants.TabStop}CHA: {n.Charisma} ({Helpers.CalculateAbilityModifier(n.Charisma)})");
-                            sb.AppendLine($"|| Hit Dice: {n.NumberOfHitDice}d{n.HitDieSize}");
-                            sb.AppendLine($"|| Current HP: {n.CurrentHP}{Constants.TabStop}{Constants.TabStop}Max HP: {n.MaxHP}");
-                            sb.AppendLine($"|| Current MP: {n.CurrentMP}{Constants.TabStop}{Constants.TabStop}Max MP: {n.MaxMP}");
-                            sb.AppendLine($"|| Armour Class: {n.ArmourClass}{Constants.TabStop}Exp: {n.BaseExpAward}{Constants.TabStop}Gold: {n.Gold}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            desc.Send(sb.ToString());
-                        }
-                        else
-                        {
-                            desc.Send($"Even with the sight of Gods, you cannot see that...{Constants.NewLine}");
-                        }
-                    }
+                    session.Send($"%BYT%MOTD has been cleared.%PT%{Constants.NewLine}");
                 }
                 else
                 {
-                    desc.Send($"Use ImmSight on what, exactly?{Constants.NewLine}");
+                    session.Send($"%BRT%Unable to clear the Message of the Day.%PT%{Constants.NewLine}");
                 }
+                return;
             }
-            else
+            if (arg.ToLower() == "set")
             {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void GetObjectList(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                // list <item | room | zone | npc | skills | spells | node | recipe | quest> <id | string>
-                string v = GetVerb(ref input);
-                var line = input.Remove(0, v.Length).Trim();
-                var objectType = TokeniseInput(ref line).FirstOrDefault().Trim();
-                var target = string.IsNullOrEmpty(objectType) ? string.Empty : line.Remove(0, objectType.Length).Trim();
-                if (!string.IsNullOrEmpty(objectType))
+                var motd = Helpers.GetMOTD(session);
+                if (string.IsNullOrEmpty(motd))
                 {
-                    bool targetIsID = uint.TryParse(target, out var targetID);
-                    StringBuilder sb = new StringBuilder();
-                    if (targetIsID)
-                    {
-                        switch (objectType.ToLower())
-                        {
-                            case "quest":
-                                var q = QuestManager.Instance.GetQuest(targetID);
-                                if (q != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    sb.AppendLine($"|| GUID: {q.QuestGUID}");
-                                    sb.AppendLine($"|| ID: {q.QuestID}");
-                                    sb.AppendLine($"|| Name: {q.QuestName}");
-                                    sb.AppendLine($"|| Quest Text:");
-                                    foreach(var l in q.QuestText.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
-                                    {
-                                        sb.AppendLine($"|| {Constants.TabStop}{l.Trim()}");
-                                    }
-                                    sb.AppendLine($"|| Zone: {q.QuestZone}");
-                                    sb.AppendLine($"|| Type: {q.QuestType}");
-                                    if (q.FetchItems != null && q.FetchItems.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Required Items:");
-                                        foreach (var qi in q.FetchItems)
-                                        {
-                                            var fi = ItemManager.Instance.GetItemByID(qi.Key);
-                                            if (fi != null)
-                                            {
-                                                sb.AppendLine($"||{Constants.TabStop}{qi.Value} x {fi.Name}");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Required Items: None");
-                                    }
-                                    if (q.Monsters != null && q.Monsters.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Monsters:");
-                                        foreach (var m in q.Monsters)
-                                        {
-                                            var qm = NPCManager.Instance.GetNPCByID(m.Key);
-                                            if (qm != null)
-                                            {
-                                                sb.AppendLine($"||{Constants.TabStop}{m.Value} x {qm.Name}");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Monsters: None");
-                                    }
-                                    sb.AppendLine($"|| Reward Gold: {q.RewardGold}");
-                                    sb.AppendLine($"|| Reward Exp: {q.RewardExp}");
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No Quest with that ID could be found.{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "item":
-                                var i = ItemManager.Instance.GetItemByID(targetID);
-                                if (i != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    sb.AppendLine($"|| ID: {i.ID}");
-                                    sb.AppendLine($"|| Name: {i.Name}");
-                                    sb.AppendLine($"|| Item Type: {i.ItemType}");
-                                    sb.AppendLine($"|| Short Description: {i.ShortDescription}");
-                                    sb.AppendLine($"|| Long Description:");
-                                    foreach(var l in i.LongDescription.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
-                                    {
-                                        sb.AppendLine($"|| {Constants.TabStop}{l}");
-                                    }
-                                    sb.AppendLine($"|| Base Value: {i.BaseValue}");
-                                    sb.AppendLine($"|| Item Slot: {i.Slot}");
-                                    sb.AppendLine($"|| No. of Damage Dice: {i.NumberOfDamageDice}");
-                                    sb.AppendLine($"|| Size of Damage Dice: {i.SizeOfDamageDice}");
-                                    sb.AppendLine($"|| Is Magical?: {i.IsMagical}");
-                                    sb.AppendLine($"|| Is Cursed?: {i.IsCursed}");
-                                    sb.AppendLine($"|| Is Two Handed? {i.IsTwoHanded}");
-                                    sb.AppendLine($"|| Is Finesse?: {i.IsFinesse}");
-                                    sb.AppendLine($"|| Is Monster Item: {i.IsMonsterItem}");
-                                    sb.AppendLine($"|| Base Weapon Type: {i.BaseWeaponType}");
-                                    sb.AppendLine($"|| Base Armour Type: {i.BaseArmourType}");
-                                    sb.AppendLine($"|| Required Skill: {i.RequiredSkill?.Name ?? string.Empty}");
-                                    sb.AppendLine($"|| Hit Modifier: {i.HitModifier}");
-                                    sb.AppendLine($"|| Damage Modifier: {i.DamageModifier}");
-                                    sb.AppendLine($"|| Damage Reduction Modifier: {i.DamageReductionModifier}");
-                                    sb.AppendLine($"|| Armour Class Modifier: {i.ArmourClassModifier}");
-                                    sb.AppendLine($"|| Consumable Effect: {i.ConsumableEffect}");
-                                    sb.AppendLine($"|| Is Toxic?: {i.IsToxic}");
-                                    sb.AppendLine($"|| Casts Spell: {i.CastsSpell}");
-                                    sb.AppendLine($"|| Applies Buff: {(i.AppliedBuffs != null && i.AppliedBuffs.Count > 0 ? String.Join(", ", i.AppliedBuffs) : "Nothing")}");
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No such Item could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "room":
-                                var r = RoomManager.Instance.GetRoom(targetID);
-                                if (r != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    sb.AppendLine($"|| ID: {r.RoomID}");
-                                    sb.AppendLine($"|| Zone: {r.ZoneID}");
-                                    sb.AppendLine($"|| Name: {r.RoomName}");
-                                    sb.AppendLine($"|| Short Description: {r.ShortDescription}");
-                                    sb.AppendLine($"|| Long Description:");
-                                    foreach(var l in r.LongDescription.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
-                                    {
-                                        sb.AppendLine($"|| {Constants.TabStop}{l}");
-                                    }
-                                    if (r.RoomExits != null && r.RoomExits.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Exits:");
-                                        foreach(var x in r.RoomExits)
-                                        {
-                                            sb.AppendLine($"|| {Constants.TabStop}{x.ExitDirection} to {x.DestinationRoomID}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Exits: None");
-                                    }
-                                    sb.AppendLine($"|| Flags: {r.Flags}");
-                                    if (r.SpawnNPCsAtStart != null && r.SpawnNPCsAtStart.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Loaded NPCs:");
-                                        foreach(var ln in r.SpawnNPCsAtStart)
-                                        {
-                                            var lnpc = NPCManager.Instance.GetNPCByID(ln.Key);
-                                            if (lnpc != null)
-                                            {
-                                                sb.AppendLine($"|| {Constants.TabStop}{ln.Value} x {lnpc.Name} ({ln.Key})");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Loaded NPCs: None");
-                                    }
-                                    if (r.SpawnNPCsAtTick != null && r.SpawnNPCsAtTick.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Tick NPCs:");
-                                        foreach(var tn in r.SpawnNPCsAtTick)
-                                        {
-                                            var tnpc = NPCManager.Instance.GetNPCByID(tn.Key);
-                                            if (tnpc != null)
-                                            {
-                                                sb.AppendLine($"|| {Constants.TabStop}{tn.Value} x {tnpc.Name} ({tn.Key})");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Tick NPCs: None");
-                                    }
-                                    if (r.SpawnItemsAtTick != null && r.SpawnItemsAtTick.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Tick Items:");
-                                        foreach(var ti in r.SpawnItemsAtTick)
-                                        {
-                                            var titem = ItemManager.Instance.GetItemByID(ti.Key);
-                                            if (titem != null)
-                                            {
-                                                sb.AppendLine($"|| {Constants.TabStop}{ti.Value} x {titem.Name} ({ti.Key})");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Tick Items: None");
-                                    }
-                                    sb.AppendLine($"|| Shop ID: {(r.ShopID.HasValue ? r.ShopID.Value.ToString() : "None")}");
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No such Room could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "zone":
-                                var z = ZoneManager.Instance.GetZone(targetID);
-                                if (z != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var p in z.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                                    {
-                                        sb.AppendLine($"|| {p.Name}: {p.GetValue(z, null)}");
-                                    }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No such Zone could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "npc":
-                                var n = NPCManager.Instance.GetNPCByID(targetID);
-                                if (n != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    sb.AppendLine($"|| ID: {n.NPCID}");
-                                    sb.AppendLine($"|| Name: {n.Name}");
-                                    sb.AppendLine($"|| Level: {n.Level}");
-                                    sb.AppendLine($"|| Short Description: {n.ShortDescription}");
-                                    sb.AppendLine($"|| Long Description:");
-                                    foreach(var l in n.LongDescription.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries))
-                                    {
-                                        sb.AppendLine($"||{Constants.TabStop}{l}");
-                                    }
-                                    sb.AppendLine($"|| Flags: {n.BehaviourFlags}");
-                                    sb.AppendLine($"|| STR: {n.Strength}{Constants.TabStop}DEX: {n.Dexterity}{Constants.TabStop}{Constants.TabStop}CON: {n.Constitution}");
-                                    sb.AppendLine($"|| INT: {n.Intelligence}{Constants.TabStop}WIS: {n.Wisdom}{Constants.TabStop}{Constants.TabStop}CHA: {n.Charisma}");
-                                    sb.AppendLine($"|| Zone: {n.AppearsInZone}{Constants.TabStop}Number of Attacks: {n.NumberOfAttacks}");
-                                    sb.AppendLine($"|| Frequency: {n.AppearChance}{Constants.TabStop}{Constants.TabStop}Max Number: {n.MaxNumber}");
-                                    sb.AppendLine($"|| Number of Hit Dice: {n.NumberOfHitDice}{Constants.TabStop}Size of Hit Dice: {n.HitDieSize}");
-                                    sb.AppendLine($"|| Base Armour Class: {n.BaseArmourClass}{Constants.TabStop}Exp Award: {n.BaseExpAward}{Constants.TabStop}Gold: {n.Gold}");
-                                    sb.AppendLine($"|| Alignment: {n.Alignment}");
-                                    if (n.Skills != null && n.Skills.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Skills: {string.Join(", ", n.Skills)}");
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Skills: None");
-                                    }
-                                    if (n.Spells != null && n.Spells.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Spells: {string.Join(", ", n.Spells)}");
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Spells: None");
-                                    }
-                                    sb.AppendLine($"|| Equip Head: {n.EquipHead?.Name ?? "Nothing"}{Constants.TabStop}{Constants.TabStop}Equip Neck: {n.EquipNeck?.Name ?? "Nothing"}");
-                                    sb.AppendLine($"|| Equp Armour: {n.EquipArmour?.Name ?? "Nothing"}{Constants.TabStop}{Constants.TabStop}Equip Weapon: {n.EquipWeapon?.Name ?? "Nothing"}");
-                                    sb.AppendLine($"|| Finger (L): {n.EquipLeftFinger?.Name ?? "Nothing"}{Constants.TabStop}{Constants.TabStop}Finger (R): {n.EquipRightFinger?.Name ?? "Nothing"}");
-                                    sb.AppendLine($"|| Held: {n.EquipHeld?.Name ?? "Nothing"}");
-                                    sb.AppendLine($"|| Resistances:");
-                                    sb.AppendLine($"|| {Constants.TabStop}Fire: {n.ResistFire}{Constants.TabStop}{Constants.TabStop}Ice: {n.ResistIce}{Constants.TabStop}{Constants.TabStop}Lightning: {n.ResistLightning}");
-                                    sb.AppendLine($"|| {Constants.TabStop}Earth: {n.ResistEarth}{Constants.TabStop}Dark: {n.ResistDark}{Constants.TabStop}{Constants.TabStop}Holy: {n.ResistHoly}");
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No such NPC could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "emote":
-                                var emote = EmoteManager.Instance.GetEmoteByID(targetID);
-                                if (emote != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    foreach (var e in emote.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                                    {
-                                        sb.AppendLine($"|| {e.Name}:");
-                                        sb.AppendLine($"||{Constants.TabStop}{e.GetValue(emote, null)}");
-                                    }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No Emote with that ID could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "node":
-                                var node = NodeManager.Instance.GetNodeByID(targetID);
-                                if (node != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    sb.AppendLine($"|| ID: {node.ID}");
-                                    sb.AppendLine($"|| Appearance Chance: {node.AppearanceChance}");
-                                    if (node.CanFind != null && node.CanFind.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Can Find:");
-                                        foreach(var cf in node.CanFind)
-                                        {
-                                            sb.AppendLine($"||{Constants.TabStop}{cf.Name}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Can Find: Nothing");
-                                    }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No Resource Node with that ID could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "recipe":
-                                var recipe = RecipeManager.Instance.GetRecipe(targetID);
-                                if (recipe != null)
-                                {
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    sb.AppendLine($"|| ID: {recipe.RecipeID}");
-                                    sb.AppendLine($"|| Name: {recipe.RecipeName}");
-                                    sb.AppendLine($"|| Type: {recipe.RecipeType}");
-                                    sb.AppendLine($"|| Description: {recipe.RecipeDescription}");
-                                    var recipeResult = ItemManager.Instance.GetItemByID(recipe.RecipeResult);
-                                    if (recipeResult != null)
-                                    {
-                                        sb.AppendLine($"|| Produces: {recipeResult.Name} ({recipeResult.ID})");
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Produced: Nothing - this is broken, report to an Imm");
-                                    }
-                                    if (recipe.RequiredMaterials != null && recipe.RequiredMaterials.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Required Materials:");
-                                        foreach(var material in recipe.RequiredMaterials)
-                                        {
-                                            var reqMat = ItemManager.Instance.GetItemByID(material.Key);
-                                            if (reqMat != null)
-                                            {
-                                                sb.AppendLine($"||{Constants.TabStop}{material.Value} x {reqMat.Name}");
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        sb.AppendLine($"|| Required Materials: None - this is broken, report to an Imm");
-                                    }
-                                    sb.AppendLine($"  {new string('=', 77)}");
-                                    desc.Send(sb.ToString());
-                                }
-                                else
-                                {
-                                    desc.Send($"No Recipe with that ID could be found{Constants.NewLine}");
-                                }
-                                break;
-
-                            default:
-                                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        bool targetIsNumRange = Regex.IsMatch(target, @"\d+-\d+");
-                        if (targetIsNumRange)
-                        {
-                            var targetParts = target.Split('-');
-                            uint.TryParse(targetParts[0], out uint rangeStart);
-                            uint.TryParse(targetParts[1], out uint rangeEnd);
-                            switch (objectType.ToLower())
-                            {
-                                case "quest":
-                                    var questRange = QuestManager.Instance.GetQuestsByIDRange(rangeStart, rangeEnd).OrderBy(x => x.QuestID).ToList();
-                                    if (questRange != null && questRange.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var q in questRange)
-                                        {
-                                            sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {questRange.Count} Quests found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No Quests in that ID range were found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "room":
-                                    var roomRange = RoomManager.Instance.GetRoomsByIDRange(rangeStart, rangeEnd).OrderBy(x => x.RoomID).ToList();
-                                    if (roomRange != null && roomRange.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in roomRange)
-                                        {
-                                            sb.AppendLine($"|| {i.RoomID} - {i.RoomName}, {i.ShortDescription}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {roomRange.Count} Rooms found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No Rooms in that ID range were found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "item":
-                                    var itemRange = ItemManager.Instance.GetItemByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ID).ToList();
-                                    if (itemRange != null && itemRange.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in itemRange)
-                                        {
-                                            sb.AppendLine($"|| {i.ID} - {i.Name}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {itemRange.Count} Items found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No Items in that ID range were found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "zone":
-                                    var zoneRange = ZoneManager.Instance.GetZoneByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ZoneID).ToList();
-                                    if (zoneRange != null && zoneRange.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in zoneRange)
-                                        {
-                                            sb.AppendLine($"|| {i.ZoneID} - {i.ZoneName}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {zoneRange.Count} Zones found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No Zones in that ID range were found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "npc":
-                                    var npcRange = NPCManager.Instance.GetNPCByIDRange(rangeStart, rangeEnd).OrderBy(x => x.NPCID).ToList();
-                                    if (npcRange != null && npcRange.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in npcRange)
-                                        {
-                                            sb.AppendLine($"|| {i.NPCID} - {i.Name}, {i.ShortDescription}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {npcRange.Count} NPCs found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No NPCs in that ID range were found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "shop":
-                                    var shopRange = ShopManager.Instance.GetShopByIDRange(rangeStart, rangeEnd).OrderBy(x => x.ID).ToList();
-                                    if (shopRange != null && shopRange.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in shopRange)
-                                        {
-                                            sb.AppendLine($"|| ID: {i.ID}{Constants.TabStop}Name: {i.ShopName}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {shopRange.Count} Shops found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No Shops in that ID range were found.{Constants.NewLine}");
-                                    }
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            switch (objectType.ToLower())
-                            {
-                                case "player":
-                                    var matchingPlayers = DatabaseManager.GetAllPlayers(ref desc, target);
-                                    if (matchingPlayers != null)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        if (matchingPlayers.Count == 0)
-                                        {
-                                            sb.AppendLine($"|| No players matching that name could be found");
-                                            sb.AppendLine($"  {new string('=', 77)}");
-                                        }
-                                        else
-                                        {
-                                            foreach(var p in matchingPlayers)
-                                            {
-                                                var isConnected = SessionManager.Instance.GetPlayer(p) != null;
-                                                sb.AppendLine($"|| {p}: Online: {(isConnected ? "Yes" : "No")}");
-                                            }
-                                            sb.AppendLine($"  {new string('=', 77)}");
-                                            sb.AppendLine($"|| {matchingPlayers.Count} players found");
-                                            sb.AppendLine($"  {new string('=', 77)}");
-                                        }
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"There was an error looking up players{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "quest":
-                                    var matchingQuests = QuestManager.Instance.GetQuestsByNameOrDescription(target).OrderBy(x => x.QuestID).ToList();
-                                    if (matchingQuests != null && matchingQuests.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var q in matchingQuests)
-                                        {
-                                            sb.AppendLine($"|| {q.QuestID} - {q.QuestName} ({q.QuestType} in Zone {q.QuestZone})");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingQuests.Count} Quests found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Quests could be found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "buff":
-                                    var allBuffs = BuffManager.Instance.GetAllBuffs();
-                                    if (allBuffs != null && allBuffs.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var b in allBuffs)
-                                        {
-                                            sb.AppendLine($"|| {b.BuffName} ({b.BuffDuration}): {b.Description}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {allBuffs.Count} Items found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No Buffs could be found{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "item":
-                                    var matchingItems = ItemManager.Instance.GetItemByNameOrDescription(target).OrderBy(x => x.ID).ToList();
-                                    if (matchingItems != null && matchingItems.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in matchingItems)
-                                        {
-                                            sb.AppendLine($"|| {i.ID} - {i.Name}, {i.ShortDescription}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingItems.Count} Items found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Items could be found{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "room":
-                                    var matchingRooms = RoomManager.Instance.GetRoomByNameOrDescription(target).OrderBy(x => x.RoomID).ToList();
-                                    if (matchingRooms != null && matchingRooms.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in matchingRooms)
-                                        {
-                                            sb.AppendLine($"|| {i.RoomID} - {i.RoomName}, {i.ShortDescription}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingRooms.Count} Rooms found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Rooms could be found{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "zone":
-                                    var matchingZones = ZoneManager.Instance.GetZoneByName(target).OrderBy(x => x.ZoneID).ToList();
-                                    if (matchingZones != null && matchingZones.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in matchingZones)
-                                        {
-                                            sb.AppendLine($"|| {i.ZoneID} - {i.ZoneName}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingZones.Count} Zones found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Zones could be found{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "npc":
-                                    var matchingNPCs = NPCManager.Instance.GetNPCByNameOrDescription(target).OrderBy(x => x.NPCID).ToList();
-                                    if (matchingNPCs != null && matchingNPCs.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in matchingNPCs)
-                                        {
-                                            sb.AppendLine($"|| {i.NPCID} - {i.Name}, {i.ShortDescription}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingNPCs.Count} NPCs found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching NPCs could be found{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "shop":
-                                    var matchingShops = ShopManager.Instance.GetShopsByName(target).OrderBy(x => x.ID).ToList();
-                                    if (matchingShops != null && matchingShops.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var i in matchingShops)
-                                        {
-                                            sb.AppendLine($"|| ID: {i.ID}{Constants.TabStop}Name: {i.ShopName}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingShops.Count} Shops found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No mathcing Shops could be found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "emote":
-                                    var matchingEmotes = EmoteManager.Instance.GetAllEmotes(target).OrderBy(x => x.EmoteName).ToList();
-                                    if (matchingEmotes != null && matchingEmotes.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var e in matchingEmotes)
-                                        {
-                                            sb.AppendLine($"|| {e.ID} - {e.EmoteName}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingEmotes.Count} Emotes found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Emotes could be found{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "skills":
-                                case "skill":
-                                    var skills = SkillManager.Instance.GetSkillByNameOrDescription(target).OrderBy(x => x.Name).ToList();
-                                    if (skills != null && skills.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var skill in skills)
-                                        {
-                                            sb.AppendLine($"|| {skill.Name} - {skill.Description}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {skills.Count} Skills found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Skill could be found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "spells":
-                                case "spell":
-                                    var matchingSpells = SpellManager.Instance.GetSpells(target).OrderBy(x => x.SpellName).ToList();
-                                    if (matchingSpells != null && matchingSpells.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var s in matchingSpells)
-                                        {
-                                            sb.AppendLine($"|| Name: {s.SpellName}{Constants.TabStop}MP: {s.MPCost}");
-                                            sb.AppendLine($"|| Type: {s.SpellType}{Constants.TabStop}{Constants.TabStop}Damage Dice: {s.NumOfDamageDice}D{s.SizeOfDamageDice}");
-                                            sb.AppendLine($"|| Additional Damage: {s.AdditionalDamage}{Constants.TabStop}{Constants.TabStop}Gold: {s.GoldToLearn}");
-                                            sb.AppendLine($"|| Auto-Hit: {s.AutoHitTarget}{Constants.TabStop}Element: {s.SpellElement}");
-                                            sb.AppendLine($"|| AOE: {s.AOESpell}{Constants.TabStop}Bypass Resistance: {s.BypassResistCheck}{Constants.TabStop}Apply Ability Modifier: {s.ApplyAbilityModifier}");
-                                            sb.AppendLine($"||{new string('=', 77)}");
-                                        }
-                                        sb.AppendLine($"|| {matchingSpells.Count} Spells found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Spell could be found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "node":
-                                    var matchingNodes = NodeManager.Instance.GetNodeByNameOrDescription(target).OrderBy(x => x.NodeName).ToList();
-                                    if (matchingNodes != null && matchingNodes.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var n in matchingNodes)
-                                        {
-                                            sb.AppendLine($"|| ID: {n.ID}{Constants.TabStop}Name: {n.NodeName}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingNodes.Count} Nodes found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Resource Node could be found{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                case "recipe":
-                                    var matchingRecipes = RecipeManager.Instance.GetAllCraftingRecipes(target).OrderBy(x => x.RecipeName).ToList();
-                                    if (matchingRecipes != null && matchingRecipes.Count > 0)
-                                    {
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        foreach (var r in matchingRecipes)
-                                        {
-                                            sb.AppendLine($"|| ID: {r.RecipeID}{Constants.TabStop}Name: {r.RecipeName}");
-                                        }
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                        sb.AppendLine($"|| {matchingRecipes.Count} Recipies found");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"No matching Crafting Recipe could be found.{Constants.NewLine}");
-                                    }
-                                    break;
-
-                                default:
-                                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                                    break;
-                            }
-                        }
-                    }
+                    session.Send($"%BRT%MOTD was empty. If you want to clear the MOTD use motd clear%PT%{Constants.NewLine}");
                 }
                 else
                 {
-                    desc.Send($"List what, exactly?{Constants.NewLine}");
+                    if (DatabaseManager.SetMOTD(motd))
+                    {
+                        session.Send($"%BYT%Message of the Day updated successfully.%PT%{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%Could not update Message of the Day.%PT%{Constants.NewLine}");
+                    }
                 }
+                return;
             }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
+            session.Send($"%BRT%Usage: motd - show the current MOTD%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: motd clear - clear the current MOTD%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: motd set - set a new MOTD%PT%{Constants.NewLine}");
         }
 
-        private static void Purge(ref Descriptor desc, ref string input)
+        public static void ShowBackupInfo(Session session, string arg)
         {
-            if (desc.Player.Level >= Constants.ImmLevel)
+            if (!session.Player.IsImmortal)
             {
-                var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                string msgToPlayer = string.Empty;
-                string[] msgToOthers = new string[] { string.Empty, string.Empty };
-                if (!string.IsNullOrEmpty(target))
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to perform a backup operation but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                if (Game.GetBackupInfo(out var backupTime, out var backupTimer))
                 {
-                    bool targetFound = false;
-                    var t = GetTargetItem(ref desc, target, false);
-                    if (t != null)
-                    {
-                        targetFound = true;
-                        RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Remove(t);
-                        msgToPlayer = $"With arcane fire you burn {t.Name} from the fabric of the world!{Constants.NewLine}";
-                        msgToOthers[0] = $"{desc.Player.Name} makes occult gestures and {t.Name} is consumed by arcane fire!{Constants.NewLine}";
-                        msgToOthers[1] = $"The Winds of Magic shift and {t.Name} is burned from the world by arcane fire!{Constants.NewLine}";
-                    }
-                    else
-                    {
-                        var n = GetTargetNPC(ref desc, target);
-                        if (n != null)
-                        {
-                            targetFound = true;
-                            n.Kill();
-                            msgToPlayer = $"With arcane fire you burn {n.Name} from the fabric of the world!{Constants.NewLine}";
-                            msgToOthers[0] = $"{desc.Player.Name} makes occult gestures and {n.Name} is consumed by arcane fire!{Constants.NewLine}";
-                            msgToOthers[1] = $"The Winds of Magic shift and {n.Name} is burned from the world by arcane fire!{Constants.NewLine}";
-                        }
-                    }
-                    if (targetFound)
-                    {
-                        desc.Send(msgToPlayer);
-                        var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
-                        if (playersInRoom != null && playersInRoom.Count > 1)
-                        {
-                            foreach (var p in playersInRoom)
-                            {
-                                if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
-                                {
-                                    if (p.Player.Level >= Constants.ImmLevel || desc.Player.Visible)
-                                    {
-                                        p.Send(msgToOthers[0]);
-                                    }
-                                    else
-                                    {
-                                        p.Send(msgToOthers[1]);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That doesn't seem to exist...{Constants.NewLine}");
-                    }
+                    var nextBackup = backupTime.AddSeconds(backupTimer);
+                    session.Send($"%BYT%Last Bacup: {backupTime}%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%Next Backup: {nextBackup}%PT%{Constants.NewLine}");
                 }
                 else
                 {
-                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                    if (localPlayers != null && localPlayers.Count > 1)
-                    {
-                        foreach (var p in localPlayers)
-                        {
-                            if (p.Player.Name != desc.Player.Name)
-                            {
-                                var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} purges the area with holy fire!{Constants.NewLine}"
-                                    : $"The Winds of Magic shift and the area is purged with holy fire!{Constants.NewLine}";
-                                p.Send(msg);
-                            }
-                        }
-                    }
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom != null && RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Count > 0)
-                    {
-                        RoomManager.Instance.ClearRoomInventory(desc.Player.CurrentRoom);
-                    }
-                    if (NPCManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom) != null && NPCManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom).Count > 0)
-                    {
-                        while (NPCManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom).Count > 0)
-                        {
-                            var n = NPCManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom)[0];
-                            if (n.FollowingPlayer == Guid.Empty)
-                            {
-                                NPCManager.Instance.RemoveNPCFromWorld(n.NPCGuid);
-                            }
-                        }
-                    }
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
-                    {
-                        var gp = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
-                        RoomManager.Instance.RemoveGoldFromRoom(desc.Player.CurrentRoom, gp);
-                    }
-                    desc.Send($"Calling on the Winds of Magic, you purge the area with holy fire!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ImmInvis(ref Descriptor desc)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                string toPlayer = desc.Player.Visible ? $"You shimmer and fade from view...{Constants.NewLine}" :
-                    $"You burst into full view with a blast of light!{Constants.NewLine}";
-                desc.Send(toPlayer);
-                if (playersToNotify != null && playersToNotify.Count > 1)
-                {
-                    foreach (var p in playersToNotify)
-                    {
-                        if (p.Player.Name != desc.Player.Name)
-                        {
-                            string msgToPlayer = desc.Player.Visible ? $"{desc.Player.Name} shimmers and fades away...{Constants.NewLine}" :
-                                $"With a blast of light {desc.Player.Name} becomes visible again!{Constants.NewLine}";
-                            p.Send(msgToPlayer);
-                        }
-                    }
-                }
-                desc.Player.Visible = !desc.Player.Visible;
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ImmSetStat(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var inputElements = TokeniseInput(ref input);
-                if (inputElements.Length != 4)
-                {
-                    desc.Send($"Usage: set <target> <attribute> <value>{Constants.NewLine}");
-                    return;
-                }
-                Descriptor targetPlayer = SessionManager.Instance.GetPlayer(inputElements[1].Trim());
-                NPC targetNPC = null;
-                if (targetPlayer == null)
-                {
-                    targetNPC = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).NPCsInRoom.Where(x => Regex.IsMatch(x.Name, inputElements[1].Trim(), RegexOptions.IgnoreCase)).FirstOrDefault();
-                }
-                if (targetPlayer == null && targetNPC == null)
-                {
-                    desc.Send($"No matching player or NPC could be found with that name!{Constants.NewLine}");
-                    return;
-                }
-                if (targetPlayer != null)
-                {
-                    if (targetPlayer.Player.Level < desc.Player.Level || targetPlayer.ID == desc.ID)
-                    {
-                        string stat = inputElements[2].Trim().ToLower();
-                        string value = inputElements[3].Trim();
-                        targetPlayer.Player.SetStat(stat, value, ref desc, out bool changeSuccess, out string statChanged, out string newValue);
-                        if (changeSuccess)
-                        {
-                            targetPlayer.Send($"{desc.Player.Name} has changed your {statChanged} to {newValue}!{Constants.NewLine}");
-                            Game.LogMessage($"INFO: {desc.Player.Name} has changed {targetPlayer.Player.Name}'s {statChanged} to {newValue}", LogLevel.Info, true);
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You don't have the power to change {targetPlayer.Player.Name}'s stats!{Constants.NewLine}");
-                    }
-                    return;
-                }
-                if (targetNPC != null)
-                {
-                    string stat = inputElements[2].Trim().ToLower();
-                    string value = inputElements[3].Trim();
-                    targetNPC.SetStat(stat, value, ref desc, out bool changeSuccess, out string statChanged, out string setValue);
-                    if (changeSuccess)
-                    {
-                        Game.LogMessage($"INFO: {desc.Player.Name} has changed {targetNPC.Name}'s {statChanged} to {setValue}", LogLevel.Info, true);
-                    }
+                    session.Send($"%BYT%The World has not yet been backed up. The next Backup is due {Game.StartTime.AddSeconds(backupTimer)}%PT%{Constants.NewLine}");
                     return;
                 }
             }
-            else
+            if (arg.ToLower() == "backupnow")
             {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
+                Game.BackupNow();
+                Game.LogMessage($"INFO: Player {session.Player.Name} triggered a backup of World databases", LogLevel.Info, true);
+                return;
             }
+            session.Send($"%BRT%Usage: backupinfo - show backup information%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: backupinfo backupnow - force an immediate backup%PT%{Constants.NewLine}");
         }
 
-        private static bool SaveAllPlayers(ref Descriptor desc)
+        public static void ToggleImmInvis(Session session)
         {
-            if (desc.Player.Level >= Constants.ImmLevel)
+            if (!session.Player.IsImmortal)
             {
-                bool OK = true;
-                var connectedPlayers = SessionManager.Instance.GetAllPlayers().Where(x => x.IsConnected).ToList();
-                if (connectedPlayers != null && connectedPlayers.Count > 0)
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to use ImmInvis but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            session.Player.Visible = !session.Player.Visible;
+        }
+
+        public static void ShowUpTime(Session session)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to query uptime but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            var upTime = DateTime.UtcNow - Game.StartTime;
+            session.Send($"%BYT%The World came to life on {Game.StartTime} and has been up for {upTime.Days} day(s), {upTime.Hours:00}:{upTime.Minutes:00}:{upTime.Seconds:00}%PT%{Constants.NewLine}");
+        }
+
+        public static void SetDonationRoom(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to change the Donation Room but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length == 1)
+            {
+                session.Send($"%BYT%The current Donation Room is {Game.DonationRoomID}%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(args[1].Trim(), out int rid))
+            {
+                session.Send($"%BRT%That is not a valid setting for the Donation Room.%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: donroom - show the current Donation Room%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: donroom 200 - set the Donation Room to Room 200%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!RoomManager.Instance.RoomExists(rid))
+            {
+                session.Send($"%BRT%The specified Room does not exist.%PT%{Constants.NewLine}");
+                return;
+            }
+            Game.LogMessage($"INFO: Player {session.Player.Name} has changed the Donation Room from {Game.DonationRoomID} to {rid}", LogLevel.Info, true);
+            Game.SetDonationRoom(rid);
+            session.Send($"%BYT%The Donation Room has been updated successfully.%PT%{Constants.NewLine}");
+        }
+
+        public static void LogAction(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to perform a log action but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 1)
+            {
+                session.Send($"%BRT%Usage: log read <info | connection | combat | warn | error | debug | olc> <amount>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: log clear%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: log read olc 10%PT%{Constants.NewLine}");
+                return;
+            }
+            if (args[0].Trim().ToLower() == "clear")
+            {
+                if (DatabaseManager.ClearLogTable(out int rCount))
                 {
-                    foreach (var player in connectedPlayers)
-                    {
-                        var p = player;
-                        if (DatabaseManager.SavePlayer(ref p, false))
-                        {
-                            Game.LogMessage($"INFO: SaveAllPlayers called by {desc.Player.Name}: Successfully saved player {p.Player.Name}", LogLevel.Info, true);
-                        }
-                        else
-                        {
-                            OK = false;
-                            Game.LogMessage($"ERROR: SaveAllPlayers called by {desc.Player.Name}: Failed to save player {p.Player.Name}", LogLevel.Error, true);
-                        }
-                    }
-                    return OK;
+                    session.Send($"%BYT%Logs cleared, {rCount:N0} entries removed.%PT%{Constants.NewLine}");
                 }
                 else
                 {
-                    Game.LogMessage($"INFO: SaveAllPlayers called by {desc.Player.Name}: No players to save.", LogLevel.Info, true);
-                    desc.Send($"No connected players to save{Constants.NewLine}");
-                    return OK;
+                    session.Send($"BRT%Failed to clear the Logs table.%PT%{Constants.NewLine}");
                 }
+                return;
             }
-            else
+            if (args[0].Trim().ToLower() == "read")
             {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-                return false;
-            }
-        }
-
-        private static void ImmSummonPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var inputElements = TokeniseInput(ref input);
-                string target = inputElements.Length > 1 ? inputElements[1] : string.Empty;
-                if (!string.IsNullOrEmpty(target))
+                if (args.Length < 3)
                 {
-                    var p = SessionManager.Instance.GetPlayer(target);
-                    if (p != null)
-                    {
-                        if (p.Player.Level <= desc.Player.Level)
-                        {
-                            var msg = desc.Player.Visible ? $"{Constants.NewLine}The universe swirls as {desc.Player.Name} yanks you through the fabric of reality...{Constants.NewLine}" :
-                                $"{Constants.NewLine}The universe swirls as something yanks you through the fabric of reality...{Constants.NewLine}";
-                            p.Send(msg);
-                            p.Player.Move(p.Player.CurrentRoom, desc.Player.CurrentRoom, true, true);
-                        }
-                        else
-                        {
-                            desc.Send($"You are not powerful enough to summon {p.Player.Name}...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"{target} doesn't seem to be in the world at the moment.{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You can't summon that!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ImmTeleportToPlayer(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var inputElements = TokeniseInput(ref input);
-                string target = inputElements.Length > 1 ? inputElements[1] : string.Empty;
-                if (!string.IsNullOrEmpty(target))
-                {
-                    if (uint.TryParse(target, out uint targetRID))
-                    {
-                        // target is a number, so assume its a RID and try to move there, but check the RID exists first
-                        if (RoomManager.Instance.RoomExists(targetRID))
-                        {
-                            var currentRID = desc.Player.CurrentRoom;
-                            desc.Player.Move(currentRID, targetRID, true, true);
-                        }
-                        else
-                        {
-                            desc.Send($"Sorry, but that doesn't seem to exist...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        // target is a string or otherwise not a valid RID, so assume we're porting to a player's location
-                        var p = SessionManager.Instance.GetPlayer(target);
-                        if (p != null)
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, p.Player.CurrentRoom, true, true);
-                        }
-                        else
-                        {
-                            desc.Send($"{target} doesn't seem to be in the world at the moment.{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"Teleport to what, exactly...?{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void Slay(ref Descriptor desc, ref string line)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var inputElements = TokeniseInput(ref line);
-                string target = inputElements.Length > 1 ? inputElements[1].Trim() : string.Empty;
-                if (!string.IsNullOrEmpty(target))
-                {
-                    var targetPlayer = SessionManager.Instance.GetPlayer(target);
-                    if (targetPlayer != null)
-                    {
-                        if (targetPlayer.Player.Name == desc.Player.Name)
-                        {
-                            // player is trying to SLAY themselves...
-                            desc.Send($"Suicide isn't the answer...{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            if (targetPlayer.Player.Level <= desc.Player.Level)
-                            {
-                                var playersInTargetRoom = RoomManager.Instance.GetPlayersInRoom(targetPlayer.Player.CurrentRoom);
-                                if (targetPlayer.Player.CurrentRoom == desc.Player.CurrentRoom)
-                                {
-                                    if (playersInTargetRoom != null && playersInTargetRoom.Count > 2)
-                                    {
-                                        // killer and target are in the same room with other players present, so notify them of the killing
-                                        foreach (var p in playersInTargetRoom)
-                                        {
-                                            if (p.Player.Name.ToLower() != targetPlayer.Player.Name.ToLower() && p.Player.Name.ToLower() != desc.Player.Name.ToLower())
-                                            {
-                                                string deathMessage = string.Empty;
-                                                if (p.Player.Level >= Constants.ImmLevel)
-                                                {
-                                                    // player being notified is an Immortal so can see everything
-                                                    deathMessage = $"{desc.Player.Name} makes an arcane gesture, forcing {targetPlayer.Player.Name}'s life from their body...{Constants.NewLine}";
-                                                }
-                                                else
-                                                {
-                                                    // player being notified is not an Immortal so check visibility of killer and target
-                                                    if (desc.Player.Visible)
-                                                    {
-                                                        // killer visible
-                                                        if (targetPlayer.Player.Visible)
-                                                        {
-                                                            // killer and target visible
-                                                            deathMessage = $"{desc.Player.Name} makes an arcane gesture, forcing {targetPlayer.Player.Name}'s life from their body...{Constants.NewLine}";
-                                                        }
-                                                        else
-                                                        {
-                                                            // killer visible, target invisible
-                                                            deathMessage = $"{desc.Player.Name} makes an arcane gesture, forcing something to die horribly...{Constants.NewLine}";
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        // killer invisible
-                                                        if (targetPlayer.Player.Visible)
-                                                        {
-                                                            // killer invisible, target visible
-                                                            deathMessage = $"You feel a sudden chill as {targetPlayer.Player.Name}'s life is forced from their body...{Constants.NewLine}";
-                                                        }
-                                                        else
-                                                        {
-                                                            // killer and target invisible
-                                                            deathMessage = $"There is a strange sound as something dies and is taken by the Winds of Magic...{Constants.NewLine}";
-                                                        }
-                                                    }
-                                                }
-                                                if (!string.IsNullOrEmpty(deathMessage))
-                                                {
-                                                    p.Send(deathMessage);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    var playersInSlayerRoom = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                    if (playersInSlayerRoom != null && playersInSlayerRoom.Count > 1)
-                                    {
-                                        // killer and target are in different rooms, killer has other players present so notify them of something strange...
-                                        foreach (var p in playersInSlayerRoom)
-                                        {
-                                            if (p.Player.Name.ToLower() != desc.Player.Name.ToLower())
-                                            {
-                                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                                {
-                                                    p.Send($"{desc.Player.Name} makes an arcane gesture and the world feels colder...{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    p.Send($"The Winds of Magic swirl and the world feels colder...{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (playersInTargetRoom != null && playersInTargetRoom.Count > 1)
-                                    {
-                                        // there are other players around the target so let them know what's happened...
-                                        foreach (var p in playersInTargetRoom)
-                                        {
-                                            if (p.Player.Name.ToLower() != targetPlayer.Player.Name.ToLower())
-                                            {
-                                                if (targetPlayer.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                                {
-                                                    p.Send($"{targetPlayer.Player.Name} suddenly falls down dead!{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    p.Send($"There is a strange sound as something dies and is taken by the Winds of Magic...{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                targetPlayer.Send($"You feel the gaze of {desc.Player.Name} upon you as your life ebbs away...{Constants.NewLine}");
-                                targetPlayer.Player.CurrentHP = 0;
-                                targetPlayer.Player.Kill();
-                            }
-                            else
-                            {
-                                desc.Send($"That doesn't seem like a good idea...{Constants.NewLine}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"The target of your wrath does not seem to exist...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"The target of your wrath does not seem to exist...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ShutdownWorld(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                if (SaveAllPlayers(ref desc))
-                {
-                    Game.LogMessage($"SHUTDOWN: {desc.Player.Name} has shut down the game world, all players were successfully saved.", LogLevel.Info, true);
-                    Program.Stop();
-                }
-                else
-                {
-                    if (input.ToLower() == "shutdown force")
-                    {
-                        Game.LogMessage($"SHUTDOWN: {desc.Player.Name} has forced shutdown of the game world, players may not have been saved.", LogLevel.Warning, true);
-                        Program.Stop();
-                    }
-                    else
-                    {
-                        desc.Send($"Failed to save all connected players, cannot shut down safely.{Constants.NewLine}");
-                        desc.Send($"Use: shutdown force to shutdown without saving players first.{Constants.NewLine}");
-                    }
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods may stop the world...{Constants.NewLine}");
-            }
-        }
-
-        private static void VoiceOfGod(ref Descriptor desc, ref string line)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var verb = GetVerb(ref line).Trim();
-                var msg = line.Remove(0, verb.Length).Trim();
-                var toSend = $"The voice of {desc.Player.Name} echoes throughout the realms, saying \"{msg}\"{Constants.NewLine}";
-                SessionManager.Instance.SendToAllClients(toSend);
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void DoForce(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                var elements = TokeniseInput(ref input);
-                if (elements.Length < 3)
-                {
-                    desc.Send($"Usage: force <player> <command>{Constants.NewLine}");
-                }
-                else
-                {
-                    var cmd = string.Empty;
-                    for (int i = 2; i < elements.Length; i++)
-                    {
-                        cmd = $"{cmd} {elements[i]}";
-                    }
-                    cmd = cmd.Trim();
-                    var target = elements[1];
-                    var p = SessionManager.Instance.GetPlayer(target);
-                    if (p != null)
-                    {
-                        if (p.Player.Level >= desc.Player.Level)
-                        {
-                            desc.Send($"You cannot use that on someone more powerful than yourself!{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            p.Send($"{desc.Player.Name}'s power overcomes you and you act against your will!{Constants.NewLine}");
-                            desc.Send($"You compell {p.Player.Name} to act against their will!{Constants.NewLine}");
-                            ParseCommand(ref p, cmd);
-                            Game.LogMessage($"INFO: {desc.Player.Name} FORCED {p.Player.Name}: {cmd}", LogLevel.Info, true);
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That person doesn't seem to be in the world right now...{Constants.NewLine}");
-                    }
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods have that power!{Constants.NewLine}");
-            }
-        }
-
-        private static void ImmHeal(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                string targetPlayer = TokeniseInput(ref input).LastOrDefault();
-                string msgToPlayer = string.Empty;
-                string msgToTarget = string.Empty;
-                if (!string.IsNullOrEmpty(targetPlayer))
-                {
-                    var tp = SessionManager.Instance.GetPlayer(targetPlayer);
-                    if (tp != null)
-                    {
-                        tp.Send($"You feel a swell of energy as {desc.Player.Name} restores you with holy power!{Constants.NewLine}");
-                        desc.Send($"With holy power you restore {tp.Player.Name}{Constants.NewLine}");
-                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.CurrentHP = tp.Player.MaxHP;
-                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.CurrentMP = tp.Player.MaxMP;
-                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.CurrentSP = tp.Player.MaxSP;
-                        SessionManager.Instance.GetPlayerByGUID(tp.ID).Player.Position = ActorPosition.Standing;
-                        Game.LogMessage($"INFO: {desc.Player.Name} has restored {tp.Player.Name}", LogLevel.Info, true);
-                    }
-                }
-            }
-            else
-            {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
-            }
-        }
-
-        private static void ImmSpawnItem(ref Descriptor desc, ref string input)
-        {
-            // create <item | npc> <id | string>
-            if (desc.Player.Level >= Constants.ImmLevel)
-            {
-                string msgToPlayer = string.Empty;
-                bool targetCreated = false;
-                string[] msgToOthers = { string.Empty, string.Empty };
-                var lineElements = TokeniseInput(ref input);
-                if (lineElements.Length < 3)
-                {
-                    desc.Send($"Proper usage: create <item | npc> <id | string>");
+                    session.Send($"%BRT%Usage: log read <type> <amount>%PT%{Constants.NewLine}");
                     return;
                 }
-                var spawnObjectType = lineElements[1];
-                if (spawnObjectType.ToLower() != "item" && spawnObjectType.ToLower() != "npc")
+                var lType = args[1].Trim().ToLower();
+                if (!int.TryParse(args[2].Trim(), out int lAmount))
                 {
-                    desc.Send($"Proper usage: create <item | npc> <id | string>");
+                    session.Send($"%BRT%That is not a valid value for amount.%PT%{Constants.NewLine}");
                     return;
                 }
-                string target = input.Replace(GetVerb(ref input), string.Empty).Replace(spawnObjectType, string.Empty).Trim();
-                if (uint.TryParse(target, out uint uid))
+                var results = DatabaseManager.GetLogEntries(lType, lAmount);
+                if (results == null || results.Count == 0)
                 {
-                    // creation target is a uid so attempt to spawn the relevant item or npc in the player's room
-                    if (spawnObjectType.ToLower() == "item")
+                    session.Send($"%BRT%No Log Entries found.%PT%{Constants.NewLine}");
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                foreach(var log in results)
+                {
+                    sb.AppendLine($"%BYT%||%PT% {log.LogDate} - {log.LogMessage}");
+                }
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            session.Send($"%BRT%Usage: log read <info | connection | combat | warn | error | debug | olc> <amount>%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: log clear%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Example: log read olc 10%PT%{Constants.NewLine}");
+            return;
+        }
+
+        public static void AddPlayerLanguage(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to modify the languages of another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: addlang <player> <language>%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: addlang <player> <language>%PT%{Constants.NewLine}");
+                return;
+            }
+            var tPlayer = SessionManager.Instance.GetSession(args[0].Trim());
+            if (tPlayer == null)
+            {
+                session.Send($"%BRT%That person cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            var argLang = arg.Remove(0, tPlayer.Player.Name.Length).Trim();
+            var lang = Constants.Languages.FirstOrDefault(x => x.IndexOf(argLang, StringComparison.OrdinalIgnoreCase) > 0);
+            if (string.IsNullOrEmpty(lang))
+            {
+                session.Send($"%BRT%You can't add a language that doesn't exist!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (tPlayer.Player.KnowsLanguage(lang))
+            {
+                session.Send($"%BRT%{tPlayer.Player.Name} already knows the {lang} language!%PT%{Constants.NewLine}");
+                return;
+            }
+            tPlayer.Player.AddLanguage(lang);
+            var msg = session.Player.CanBeSeenBy(tPlayer.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic and grants you the ability to use the {lang} language!%PT%{Constants.NewLine}" :
+                $"%BYT%Something calls upon the Winds of Magic and you find you can suddenly use the {lang} langauge!%PT%{Constants.NewLine}";
+            tPlayer.Send(msg);
+            session.Send($"%BYT%You have granted {tPlayer.Player.Name} the ability to use the {lang} language!%PT%{Constants.NewLine}");
+            Game.LogMessage($"INFO: {session.Player} has added the {lang} language to {tPlayer.Player.Name}", LogLevel.Info, true);
+        }
+
+        public static void RemovePlayerLanguage(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to modify the languages of another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: removelang <player> <language>%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: removelang <player> <language>%PT%{Constants.NewLine}");
+                return;
+            }
+            var tPlayer = SessionManager.Instance.GetSession(args[0].Trim());
+            if (tPlayer == null)
+            {
+                session.Send($"%BRT%That person cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            var argLang = arg.Remove(0, tPlayer.Player.Name.Length).Trim();
+            var lang = Constants.Languages.FirstOrDefault(x => x.IndexOf(argLang, StringComparison.OrdinalIgnoreCase) > 0);
+            if (string.IsNullOrEmpty(lang))
+            {
+                session.Send($"%BRT%You can't remove a language that doesn't exist!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!tPlayer.Player.KnowsLanguage(lang))
+            {
+                session.Send($"%BRT%{tPlayer.Player.Name} doesn't know the {lang} language!%PT%{Constants.NewLine}");
+                return;
+            }
+            tPlayer.Player.AddLanguage(lang);
+            var msg = session.Player.CanBeSeenBy(tPlayer.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic and removes your ability to use the {lang} language!%PT%{Constants.NewLine}" :
+                $"%BYT%Something calls upon the Winds of Magic and you find you can no longer use the {lang} langauge!%PT%{Constants.NewLine}";
+            tPlayer.Send(msg);
+            session.Send($"%BYT%You have removed {tPlayer.Player.Name}'s ability to use the {lang} language!%PT%{Constants.NewLine}");
+            Game.LogMessage($"INFO: {session.Player} has removed the {lang} language from {tPlayer.Player.Name}", LogLevel.Info, true);
+        }
+
+        public static void GiveRecipe(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to award a Recipe to another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: giverecipe <target> <recipe name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: giverecipe fred tower shield%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: giverecipe <target> <recipe name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: giverecipe fred tower shield%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0]);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            var recipeName = arg.Remove(0, args[0].Length).Trim();
+            var recipe = RecipeManager.Instance.GetRecipe(recipeName).FirstOrDefault();
+            if (recipe == null)
+            {
+                session.Send($"%BRT%No such Recipe exists in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot grant Recipes to those more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.AddRecipe(recipe.ID))
+            {
+                session.Send($"%BYT%You have granted the {recipe.Name} Recipe to {target.Player.Name}!%PT%{Constants.NewLine}");
+                var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to grant you knowledge of the {recipe.Name} Recipe!%PT%{Constants.NewLine}" :
+                    $"%BYT%The Winds of Magic swirl about you, granting you the {recipe.Name} Recipe!%PT%{Constants.NewLine}";
+                target.Send(msg);
+                Game.LogMessage($"INFO: Player {session.Player.Name} has granted {target.Player.Name} the {recipe.Name} Recipe", LogLevel.Info, true);
+            }
+            else
+            {
+                session.Send($"%BRT%You failed to grant the Recipe to {target.Player.Name}!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void RemoveRecipe(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"%WARN: Player {session.Player.Name} attempted to remove a Recipe from another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: removerecipe <target> <recipe name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: removerecipe fred tower shield%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: removerecipe <target> <recipe name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: removerecipe fred tower shield%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0]);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot remove Recipes from those more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            var recipeName = arg.Remove(0, args[0].Length).Trim();
+            if (target.Player.RemoveRecipe(recipeName))
+            {
+                session.Send($"%BYT%You have removed the Recipe from {target.Player.Name}!%PT%{Constants.NewLine}");
+                var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to remove your knowledge of the {recipeName} Recipe!%PT%{Constants.NewLine}" :
+                    $"%BYT%The Winds of Magic swirl about you, removing the knowledge of the {recipeName} Recipe!%PT%{Constants.NewLine}";
+                target.Send(msg);
+                Game.LogMessage($"INFO: Player {session.Player.Name} has removed the {recipeName} Recipe from {target.Player.Name}", LogLevel.Info, true);
+            }
+            else
+            {
+                session.Send($"%BRT%You failed to remove that Spell from {target.Player.Name}!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void GiveSpell(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to award a Spell to another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: awardspell <target> <spell name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: awardspell fred magic missile%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: awardspell <target> <spell name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: awardspell fred magic missile%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0]);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            var spellName = arg.Remove(0, args[0].Length).Trim();
+            var spell = SpellManager.Instance.GetSpell(spellName);
+            if (spell == null)
+            {
+                session.Send($"%BRT%No such Spell exists within the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot grant Spells to those more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.AddSpell(spellName))
+            {
+                session.Send($"%BYT%You have granted the {spell.Name} Spell to {target.Player.Name}!%PT%{Constants.NewLine}");
+                var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to grant you knowledge of the {spell.Name} Spell!%PT%{Constants.NewLine}" :
+                    $"%BYT%The Winds of Magic swirl about you, granting you the {spell.Name} Spell!%PT%{Constants.NewLine}";
+                target.Send(msg);
+                Game.LogMessage($"INFO: Player {session.Player.Name} has granted {target.Player.Name} the {spell.Name} Spell", LogLevel.Info, true);
+            }
+            else
+            {
+                session.Send($"%BRT%You failed to grant that Spell to {target.Player.Name}, they may already have it!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void ShowImmInventory(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to view the inventory of someone else but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: imminv <player | npc> <target>%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: imminv <player | npc> <target>%PT%{Constants.NewLine}");
+                return;
+            }
+            var targetType = args[0].Trim();
+            var targetName = args[1].Trim();
+            switch(targetType.ToLower())
+            {
+                case "player":
+                    ShowPlayerInventory(session, targetName);
+                    break;
+
+                case "npc":
+                    ShowNPCInventory(session, targetName);
+                    break;
+
+                default:
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} called ShowImmInventory() with unsupported TargetType: {targetType}", LogLevel.Debug, true);
+                    session.Send($"%BRT%Only Players and NPCs can be a target of this power!%PT%{Constants.NewLine}");
+                    return;
+            }
+        }
+
+        public static void ShowImmCharSheet(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to view the character sheet of someone else but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: immstat <player | npc> <target>%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: immstat <player | npc> <target>%PT%{Constants.NewLine}");
+                return;
+            }
+            var targetType = args[0].Trim();
+            var targetName = args[1].Trim();
+            switch (targetType.ToLower())
+            {
+                case "player":
+                    ShowPlayerCharSheet(session, targetName);
+                    break;
+
+                case "npc":
+                    ShowNPCCharSheet(session, targetName);
+                    break;
+
+                default:
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} called ShowImmCharSheet() with unsupported TargetType: {targetType}", LogLevel.Debug, true);
+                    session.Send($"%BRT%Only Players and NPCs can be a target of this power!%PT%{Constants.NewLine}");
+                    return;
+            }
+        }
+
+        public static void RemoveSpell(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"%WARN: Player {session.Player.Name} attempted to remove a Spell from another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: removespell <target> <spell name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: removespell fred magic missile%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: removespell <target> <spell name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: removespell fred magic missile%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0]);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot remove Spells from those more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            var spellName = arg.Remove(0, args[0].Length).Trim();
+            if (target.Player.RemoveSpell(spellName))
+            {
+                session.Send($"%BYT%You have removed the Spell from {target.Player.Name}!%PT%{Constants.NewLine}");
+                var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to remove your knowledge of the {spellName} Spell!%PT%{Constants.NewLine}" :
+                    $"%BYT%The Winds of Magic swirl about you, removing the knowledge of the {spellName} Spell!%PT%{Constants.NewLine}";
+                target.Send(msg);
+                Game.LogMessage($"INFO: Player {session.Player.Name} has removed the {spellName} Spell from {target.Player.Name}", LogLevel.Info, true);
+            }
+            else
+            {
+                session.Send($"%BRT%You failed to remove that Spell from {target.Player.Name}!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void RemoveSkill(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"%WARN: Player {session.Player.Name} attempted to remove a Skill from another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: removeskill <target> <skill name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: removeskill fred heavy armour%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: removeskill <target> <skill name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: removeskill fred heavy armour%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0]);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot remove Skills from those more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            var skillName = arg.Remove(0, args[0].Length).Trim();
+            if (target.Player.RemoveSkill(skillName))
+            {
+                session.Send($"%BYT%You have removed the Skill from {target.Player.Name}!%PT%{Constants.NewLine}");
+                var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to remove your knowledge of the {skillName} Skill!%PT%{Constants.NewLine}" : 
+                    $"%BYT%The Winds of Magic swirl about you, removing the knowledge of the {skillName} Skill!%PT%{Constants.NewLine}";
+                target.Send(msg);
+                Game.LogMessage($"INFO: Player {session.Player.Name} has removed the {skillName} Skill from {target.Player.Name}", LogLevel.Info, true);
+            }
+            else
+            {
+                session.Send($"%BRT%You failed to remove that Skill from {target.Player.Name}!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void GiveSkill(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to award a Skill to another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: awardskill <target> <skill name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: awardskill fred heavy armour%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: awardskill <target> <spell name>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: awardskill fred heavy armour%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0]);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            var skillName = arg.Remove(0, args[0].Length).Trim();
+            var skill = SkillManager.Instance.GetSkill(skillName);
+            if (skill == null)
+            {
+                session.Send($"%BRT%No such Skill exists within the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot grant Skills to those more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.AddSkill(skillName))
+            {
+                session.Send($"%BYT%You have granted the {skill.Name} Skill to {target.Player.Name}!%PT%{Constants.NewLine}");
+                var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to grant you the {skill.Name} Skill!%PT%{Constants.NewLine}" :
+                    $"%BYT%The Winds of Magic swirl about you, granting you the {skill.Name} Skill!%PT%{Constants.NewLine}";
+                target.Send(msg);
+                Game.LogMessage($"INFO: Player {session.Player.Name} has granted {target.Player.Name} the {skill.Name} Skill", LogLevel.Info, true);
+            }
+            else
+            {
+                session.Send($"%BRT%You failed to grant that Skill to {target.Player.Name}, they may already have it!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void ImmHeal(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to use ImmHeal to restore someone but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: immheal <target>%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(arg);
+            if (target == null)
+            {
+                session.Send($"%BRT%You can't restore someone that isn't in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            target.Player.Restore();
+            var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} channels the Winds of Magic through you, restoring you!%PT%{Constants.NewLine}" :
+                $"%BYT%You feel the Winds of Magic course through you, restoring you!%PT%{Constants.NewLine}";
+            target.Send(msg);
+            session.Send($"%BYT%You restore {target.Player.Name}!%PT%{Constants.NewLine}");
+        }
+
+        public static void ChangeExp(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to modify the Exp of another player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: addexp <target> <amount>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: addexp fred 1000%PT%");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: addexp <target> <amount>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: addexp fred 1000%PT%");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0]);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot modify the Exp of someone more powerful than yourself.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(args[1], out int exp))
+            {
+                session.Send($"%BRT%That is not a valid value for Exp.%PT%{Constants.NewLine}");
+                return;
+            }
+            exp = Math.Max(exp, 0);
+            target.Player.AdjustExp(exp, true, false);
+            var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%Calling on the Winds of Magic, {session.Player.Name} grants you {exp} Exp!%PT%{Constants.NewLine}" :
+                $"%BYT%The Winds of Magic swirl about you, granting {exp} Exp!%PT%{Constants.NewLine}";
+            target.Send(msg);
+            session.Send($"%BYT%You have granted {target.Player.Name} {exp} Exp!%PT%{Constants.NewLine}");
+            Game.LogMessage($"INFO: Player {session.Player.Name} granted {target.Player.Name} {exp} Exp", LogLevel.Info, true);
+        }
+
+        public static void VoiceOfGod(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to use the Voice of God, but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to have something to say in order to use the Voice of God!%PT%{Constants.NewLine}");
+                return;
+            }
+            SessionManager.Instance.SendToAllPlayers($"An ethereal voice echoes across the Realms saying \"{arg}\"{Constants.NewLine}");
+        }
+
+        public static void FindAsset(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to locate something in the Realms but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: <where | find> <item | npc> <id | criteria>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: where item 10%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: where npc fred%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: <where | find> <item | npc> <id | criteria>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: where item 10%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: where npc fred%PT%{Constants.NewLine}");
+                return;
+            }
+            var assetType = args[0].Trim();
+            var targetString = arg.Remove(0, assetType.Length).Trim();
+            switch(assetType.ToLower())
+            {
+                case "item":
+                    FindItemInWorld(session, targetString);
+                    break;
+
+                case "npc":
+                    FindNPCInWorld(session, targetString);
+                    break;
+
+                default:
+                    session.Send($"%BRT%You can only use this power to find Items or NPCs!%PT%{Constants.NewLine}");
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} called FindAsset() with unspported asset type: {assetType}", LogLevel.Debug, true);
+                    return;
+            }
+        }
+
+        public static void SetActorAttribute(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to modify attributes of another actor but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 3)
+            {
+                session.Send($"%BRT%Usage: set <target> <attribute> <value>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: set fred currenthp 100%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0].Trim());
+            if (target == null)
+            {
+                session.Send($"%BRT%You cannot change the attributes of someone that doesn't exist!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot change the attributes of someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            switch (args[1].Trim().ToLower())
+            {
+                case "hp":
+                case "currenthp":
+                    if (!int.TryParse(args[2], out int hpVal))
                     {
-                        if (ItemManager.Instance.ItemExists(uid))
+                        session.Send($"%BRT%That is not a valid value for HP!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    hpVal = Math.Max(hpVal, 1);
+                    target.Player.CurrentHP = hpVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Current HP to {hpVal:N0}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s HP to {hpVal}", LogLevel.Info, true);
+                    var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your HP!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and your HP changes!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "mp":
+                case "currentmp":
+                    if (!int.TryParse(args[2], out int mpVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for MP!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    mpVal = Math.Max(mpVal, 1);
+                    target.Player.CurrentMP = mpVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Current MP to {mpVal:N0}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s MP to {mpVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your MP!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and your MP changes!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "maxhp":
+                    if (!int.TryParse(args[2], out int mhpVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for HP!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    mhpVal = Math.Max(mhpVal, 1);
+                    target.Player.MaxHP = mhpVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Max HP to {mhpVal:N0}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Max HP to {mhpVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your Max HP!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and your Max HP changes!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "maxmp":
+                    if (!int.TryParse(args[2], out int mmpVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for MP!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    mmpVal = Math.Max(mmpVal, 1);
+                    target.Player.MaxMP = mmpVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Max MP to {mmpVal:N0}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Max MP to {mmpVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your Max MP!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and your Max MP changes!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "sp":
+                case "currentsp":
+                    if (!int.TryParse(args[2], out int spVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for SP!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    spVal = Math.Max(spVal, 1);
+                    target.Player.CurrentSP = spVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Current SP to {spVal:N0}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s SP to {spVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your SP!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and your SP changes!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "maxsp":
+                    if (!int.TryParse(args[2], out int mspVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for SP!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    mspVal = Math.Max(mspVal, 1);
+                    target.Player.MaxSP = mspVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Max SP to {mspVal:N0}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Max SP to {mspVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your Max SP!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and your Max SP changes!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "str":
+                case "strength":
+                    if (!int.TryParse(args[2], out int strVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Strength!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    strVal = Math.Max(strVal, 1);
+                    target.Player.Strength = strVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Strength to {strVal}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Strength to {strVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Strength changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Strength changing...%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "dex":
+                case "dexterity":
+                    if (!int.TryParse(args[2], out int dexVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Dexterity!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    dexVal = Math.Max(dexVal, 1);
+                    target.Player.Dexterity = dexVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Dexterity to {dexVal}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Dexterity to {dexVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Dexterity changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Dexterity changing...%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "con":
+                case "constitution":
+                    if (!int.TryParse(args[2], out int conVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Constitution!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    conVal = Math.Max(conVal, 1);
+                    target.Player.Constitution = conVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Constitution to {conVal}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Constitution to {conVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Constitution changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Constitution changing...%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "int":
+                case "intelligence":
+                    if (!int.TryParse(args[2], out int intVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Intelligence!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    intVal = Math.Max(intVal, 1);
+                    target.Player.Intelligence = intVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Intelligence to {intVal}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Intelligence to {intVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Intelligence changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Intelligence changing...%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "wis":
+                case "wisdom":
+                    if (!int.TryParse(args[2], out int wisVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Wisdom!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    wisVal = Math.Max(wisVal, 1);
+                    target.Player.Wisdom = wisVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Wisdom to {wisVal}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Wisdom to {wisVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Wisdom changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Wisdom changing...%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "cha":
+                case "charisma":
+                    if (!int.TryParse(args[2], out int chaVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Charisma!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    chaVal = Math.Max(chaVal, 1);
+                    target.Player.Charisma = chaVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Charisma to {chaVal}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Charisma to {chaVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Charisma changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Charisma changing...%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "gold":
+                case "gp":
+                    if (!ulong.TryParse(args[2], out ulong gpVal))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Gold!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    gpVal = Math.Max(gpVal, 0);
+                    target.Player.Gold = gpVal;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Gold to {gpVal}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Gold to {gpVal}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Gold balance changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Gold balance changing!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                case "level":
+                case "lvl":
+                    if (!int.TryParse(args[2], out int lvl))
+                    {
+                        session.Send($"%BRT%That is not a valid value for Level!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    if (lvl < 1 || lvl > 109)
+                    {
+                        session.Send($"%BRT%Level can only be set between 1 and 109.%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    if (target.Player.Level > session.Player.Level)
+                    {
+                        session.Send($"%BRT%You cannot set the Level of someone higher than yourself!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    target.Player.Level = lvl;
+                    session.Send($"%BYT%You have changed {target.Player.Name}'s Level to {lvl}.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Level to {lvl}", LogLevel.Info, true);
+                    msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Level changing!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift and you feel your Level changing!%PT%{Constants.NewLine}";
+                    target.Send(msg);
+                    break;
+
+                default:
+                    session.Send($"%BRT%It doesn't look like you can change that... %PT%{Constants.NewLine}");
+                    break;
+            }
+        }
+
+        public static void TransferTarget(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to transport a target but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%That power requires a target!%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2 || !int.TryParse(args[1].Trim(), out int rid))
+            {
+                session.Send($"%BRT%Usage: transport <target> <room id>%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!RoomManager.Instance.RoomExists(rid))
+            {
+                session.Send($"%BRT%No Room with that ID was found in Room Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(args[0].Trim());
+            if (target == null)
+            {
+                session.Send($"%BRT%You cannot transport someone that doesn't exist!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!target.Player.CanMove())
+            {
+                session.Send($"%BRT%{target.Player.Name} cannot be teleported right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot transfer someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Send($"%BYT%Calling on the Winds of Magic, you shift {target.Player.Name}'s position in the world!%PT%{Constants.NewLine}");
+            var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic and your find yourself transported!%PT%{Constants.NewLine}" :
+                $"%BYT%You feel the Winds of Magic shift and you find yourself transported elsewhere!%PT%{Constants.NewLine}";
+            target.Send(msg);
+            target.Player.Move(rid, true);
+        }
+
+        public static void ForceActor(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to FORCE another to perform an action but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%That power requires a target!%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: force <target> <action>%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = args[0].Trim();
+            var actionString = arg.Remove(0, target.Length).Trim();
+            if (string.IsNullOrEmpty(actionString))
+            {
+                session.Send($"%BRT%You must provide an action to perform!%PT%{Constants.NewLine}");
+                return;
+            }
+            var targetActor = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(target, session.Player);
+            if (targetActor == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetActor.ActorType == ActorType.Player)
+            {
+                var player = (Player)targetActor;
+                if (player.ID == session.Player.ID)
+                {
+                    session.Send($"%BRT%You cannot use that power on yourself!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var tSession = SessionManager.Instance.GetSession(player.ID);
+                if (tSession == null)
+                {
+                    session.Send($"%BRT%The target of your power cannot be found!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (tSession.Player.Level > session.Player.Level)
+                {
+                    session.Send($"%BRT%You cannot force someone more powerful than yourself!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var msg = session.Player.CanBeSeenBy(tSession.Player) ? $"%BYT%{session.Player.Name}'s power overcomes you and you act against your will!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic flood your mind, forcing you to act against your will!%PT%{Constants.NewLine}";
+                tSession.Send(msg);
+                CommandParser.Parse(tSession, ref actionString);
+                Game.LogMessage($"INFO: Player {session.Player.Name} used FORCE on {tSession.Player.Name}: {actionString}", LogLevel.Info, true);
+                return;
+            }
+            if (targetActor.ActorType == ActorType.NonPlayer)
+            {
+                ActMob.ParseCommand((NPC)targetActor, actionString, session);
+                Game.LogMessage($"INFO: Player {session.Player.Name} used FORCE on NPC {targetActor.Name}: {actionString}", LogLevel.Info, true);
+                return;
+            }
+            Game.LogMessage($"DEBUG: {session.Player.Name} called ForceActor() on an unsupported Actor Type: {targetActor.ActorType}", LogLevel.Debug, true);
+            session.Send($"%BRT%You cannot use FORCE on {targetActor.ActorType}!%PT%{Constants.NewLine}");
+        }
+
+        public static void CreateAsset(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to spawn in-game items but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: <create | spawn> <item | npc> <name | id>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: create npc fred%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: create item 10%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            var assetType = args[0];
+            var assetId = arg.Remove(0, assetType.Length).Trim();
+            if (string.IsNullOrEmpty(assetType) || string.IsNullOrEmpty(assetId))
+            {
+                session.Send($"%BRT%Usage: <create | spawn> <item | npc> <name | id>%PT%{Constants.NewLine}");
+                return;
+            }
+            switch(assetType.ToLower())
+            {
+                case "item":
+                    CreateItem(session, assetId);
+                    break;
+
+                case "npc":
+                    CreateNPC(session, assetId);
+                    break;
+
+                default:
+                    session.Send($"%BRT%This power can only be used to create items or NPCs.%PT%{Constants.NewLine}");
+                    return;
+            }
+        }
+
+        public static void SummonTarget(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to summon a target to their location but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You must provide a target for this power!%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(arg);
+            if (target == null)
+            {
+                session.Send($"%BRT%That person doesn't seem to be in the Realms right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!target.Player.CanMove())
+            {
+                session.Send($"%BRT%{target.Player.Name} cannot be teleported right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot summon someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} reaches through the Universe, summoning you to them!%PT%{Constants.NewLine}" :
+                $"%BYT%You feel a strange sensation as some power pulls you through the very fabric of reality!%PT%{Constants.NewLine}";
+            target.Player.Move(session.Player.CurrentRoom, true);
+        }
+
+        public static void Destroy(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to destroy items but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                RoomManager.Instance.GetRoom(session.Player.CurrentRoom).ItemsInRoom.Clear();
+                session.Send($"%BYT%Bathing the area in holy fire, you burn any stray items from the world!%PT%{Constants.NewLine}");
+                var players = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+                if (players != null && players.Count > 1)
+                {
+                    foreach(var lp in players.Where(x => x.ID != session.ID))
+                    {
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture, purging stray items from the world!%PT%{Constants.NewLine}" :
+                            $"%BYT%The air shifts suddenly, and stray items are burned from the world!%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetItem(arg);
+            if (target == null)
+            {
+                session.Send($"%BRT%There is nothing like that here!%PT%{Constants.NewLine}");
+                return;
+            }
+            RoomManager.Instance.GetRoom(session.Player.CurrentRoom).ItemsInRoom.TryRemove(target.ItemID, out _);
+            session.Send($"%BYT%With an arcane gesure you burn {target.ShortDescription} from the world!%PT%{Constants.NewLine}");
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+            if (localPlayers != null || localPlayers.Count > 1)
+            {
+                foreach(var lp in localPlayers.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesure and burns {target.ShortDescription} from the world!%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts suddenly and {target.ShortDescription} is burned from the world!%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+        }
+
+        public static void TeleportToTarget(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: {session.Player.Name} attempted to teleport to a target but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You must provide a target for this power!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!session.Player.CanMove())
+            {
+                session.Send($"%BRT%You aren't in a position to teleport anywhere right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (int.TryParse(arg, out int rid))
+            {
+                var room = RoomManager.Instance.GetRoom(rid);
+                if (room == null)
+                {
+                    session.Send($"%BRT%No Room with the specified ID could be found in Room Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                session.Player.Move(room.ID, true);
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(arg);
+            if (target == null)
+            {
+                session.Send($"%BRT%You can't find anyone of that name in the Realms right now.%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.Move(target.Player.CurrentRoom, true);
+        }
+
+        public static void Slay(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to slay someone but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You must provide a target for this power!%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.ActorType != ActorType.Player)
+            {
+                session.Send($"%BRT%You cannot use this power on that target!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot smite someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            ((Player)target).Kill(session.Player, false);
+            Game.LogMessage($"INFO: Player {session.Player.Name} used holy power to smite {target.Name}", LogLevel.Info, true);
+            session.Send($"%BYT%Calling on holy power, you smite {target.Name}, killing them instantly!%PT%{Constants.NewLine}");
+        }
+
+        public static void Purge(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to purge with holy fire but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                var npcs = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).NPCsInRoom;
+                if (npcs == null || npcs.Count == 0)
+                {
+                    session.Send($"%BRT%There is nothing to Purge!%PT%{Constants.NewLine}");
+                    return;
+                }
+                foreach(var npc in npcs)
+                {
+                    npc.Kill(session.Player, false);
+                }
+                session.Send($"%BYT%You bathe the area in purifying holy fire, burning the area clean!%PT%{Constants.NewLine}");
+                var roomPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+                if (roomPlayers != null && roomPlayers.Count > 0)
+                {
+                    foreach(var lp in roomPlayers.Where(x => x.ID != session.ID))
+                    {
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} bathes the area in holy fire, purging the area clean!%PT%{Constants.NewLine}" :
+                            $"%BYT%The air shifts and the area is purged in holy fire and burned clean!%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your wrath cannot be found!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.ActorType == ActorType.Player)
+            {
+                session.Send($"%BRT%You cannot Purge Players, use SLAY or SMITE instead.%PT%{Constants.NewLine}");
+                return;
+            }
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+            session.Send($"%BYT%You bathe {target.Name} in holy fire, burning them from the fabric of the world!%PT%{Constants.NewLine}");
+            if (localPlayers != null & localPlayers.Count > 1)
+            {
+                foreach(var lp in localPlayers.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesure and {target.Name} is consumed in holy fire!%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts and {target.Name} is consumed in holy fire!%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+            ((NPC)target).Kill(session.Player, false);
+        }
+
+        public static void ListAssets(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to list World assets but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: list <asset type> <search criteria>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: list room 100%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: list npc etrea guard%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: list item 100-150%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 1)
+            {
+                session.Send($"%BRT%Incorrect number of arguments.%PT%{Constants.NewLine}");
+                return;
+            }
+            var assetType = args[0];
+            var criteria = arg.Remove(0, assetType.Length).Trim();
+            switch(assetType.ToLower())
+            {
+                case "room":
+                    ListRooms(session, criteria);
+                    break;
+
+                case "npc":
+                    ListNPCs(session, criteria);
+                    break;
+
+                case "npcinstance":
+                    ListNPCInstances(session, criteria);
+                    break;
+
+                case "item":
+                    ListItems(session, criteria);
+                    break;
+
+                case "emote":
+                    ListEmotes(session, criteria);
+                    break;
+
+                case "zone":
+                    ListZones(session, criteria);
+                    break;
+
+                case "quest":
+                    ListQuests(session, criteria);
+                    break;
+
+                case "recipe":
+                    ListRecipes(session, criteria);
+                    break;
+
+                case "buff":
+                    ListBuffs(session, criteria);
+                    break;
+
+                case "spell":
+                    ListSpells(session, criteria);
+                    break;
+
+                case "skill":
+                    ListSkills(session, criteria);
+                    break;
+
+                case "node":
+                case "resourcenode":
+                    ListNodes(session, criteria);
+                    break;
+
+                case "shop":
+                    ListShops(session, criteria);
+                    break;
+
+                default:
+                    session.Send($"%BRT%Unsupported asset type: {assetType}%PT%{Constants.NewLine}");
+                    Game.LogMessage($"WARN: LIST was called with an unsupported asset type: {assetType}", LogLevel.Warning, true);
+                    break;
+            }
+        }
+
+        #region Private Functions
+        private static void ShowPlayerCharSheet(Session session, string targetName)
+        {
+            var targetPlayer = SessionManager.Instance.GetSession(targetName);
+            if (targetPlayer == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetPlayer.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot use this on someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            sb.AppendLine($"%BYT%||%PT% Name: {targetPlayer.Player.Name}{Constants.TabStop}Level: {targetPlayer.Player.Level}{Constants.TabStop}Race: {targetPlayer.Player.Race}");
+            sb.AppendLine($"%BYT%||%PT% Alignment: {targetPlayer.Player.Alignment}{Constants.TabStop}Class: {targetPlayer.Player.Class}");
+            sb.AppendLine($"%BYT%||%PT% STR: {targetPlayer.Player.Strength} ({Helpers.CalculateAbilityModifier(targetPlayer.Player.Strength)}){Constants.TabStop}DEX: {targetPlayer.Player.Dexterity} ({Helpers.CalculateAbilityModifier(targetPlayer.Player.Dexterity)}){Constants.TabStop}CON: {targetPlayer.Player.Constitution} ({Helpers.CalculateAbilityModifier(targetPlayer.Player.Constitution)})");
+            sb.AppendLine($"%BYT%||%PT% INT: {targetPlayer.Player.Intelligence} ({Helpers.CalculateAbilityModifier(targetPlayer.Player.Intelligence)}){Constants.TabStop}WIS: {targetPlayer.Player.Wisdom} ({Helpers.CalculateAbilityModifier(targetPlayer.Player.Wisdom)}){Constants.TabStop}CHA: {targetPlayer.Player.Charisma} ({Helpers.CalculateAbilityModifier(targetPlayer.Player.Charisma)})");
+            sb.AppendLine($"%BYT%||%PT% HP: %BRT%{targetPlayer.Player.CurrentHP:N0}%PT% / %BRT%{targetPlayer.Player.MaxHP:N0}%PT%{Constants.TabStop}MP: %BGT%{targetPlayer.Player.CurrentMP:N0}%PT% / %BGT%{targetPlayer.Player.MaxMP:N0}%PT%{Constants.TabStop}SP: %BYT%{targetPlayer.Player.CurrentSP:N0}%PT% / %BYT%{targetPlayer.Player.MaxSP:N0}%PT%");
+            sb.AppendLine($"%BYT%||%PT% Armour Class: {targetPlayer.Player.ArmourClass}{Constants.TabStop}Attacks: {targetPlayer.Player.NumberOfAttacks}");
+            sb.AppendLine($"%BYT%||%PT% Languages: {string.Join(", ", targetPlayer.Player.KnownLanguages.Keys)}");
+            sb.AppendLine($"%BYT%||%PT% Exp: {targetPlayer.Player.Exp:N0}{Constants.TabStop}Next: {LevelTable.ExpForNextLevel(targetPlayer.Player.Level, targetPlayer.Player.Exp)}");
+            sb.AppendLine($"%BYT%||%PT% Gold: %YT%{targetPlayer.Player.Gold:N0}%PT%");
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        private static void ShowNPCCharSheet(Session session, string targetName)
+        {
+            var targetNPC = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(targetName, session.Player);
+            if (targetNPC == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetNPC.ActorType != ActorType.NonPlayer)
+            {
+                session.Send($"%BRT%That is not a valid target for this power!%PT%{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            sb.AppendLine($"%BYT%||%PT% Name: {targetNPC.Name}{Constants.TabStop}Level: {targetNPC.Level}");
+            sb.AppendLine($"%BYT%||%PT% Alignment: {targetNPC.Alignment}");
+            sb.AppendLine($"%BYT%||%PT% STR: {targetNPC.Strength} ({Helpers.CalculateAbilityModifier(targetNPC.Strength)}){Constants.TabStop}DEX: {targetNPC.Dexterity} ({Helpers.CalculateAbilityModifier(targetNPC.Dexterity)}){Constants.TabStop}CON: {targetNPC.Constitution} ({Helpers.CalculateAbilityModifier(targetNPC.Constitution)})");
+            sb.AppendLine($"%BYT%||%PT% INT: {targetNPC.Intelligence} ({Helpers.CalculateAbilityModifier(targetNPC.Intelligence)}){Constants.TabStop}WIS: {targetNPC.Wisdom} ({Helpers.CalculateAbilityModifier(targetNPC.Wisdom)}){Constants.TabStop}CHA: {targetNPC.Charisma} ({Helpers.CalculateAbilityModifier(targetNPC.Charisma)})");
+            sb.AppendLine($"%BYT%||%PT% HP: %BRT%{targetNPC.CurrentHP:N0}%PT% / %BRT%{targetNPC.MaxHP:N0}%PT%{Constants.TabStop}MP: %BGT%{targetNPC.CurrentMP:N0}%PT% / %BGT%{targetNPC.MaxMP:N0}%PT%");
+            sb.AppendLine($"%BYT%||%PT% Armour Class: {targetNPC.ArmourClass}{Constants.TabStop}Attacks: {targetNPC.NumberOfAttacks}");
+            sb.AppendLine($"%BYT%||%PT% Gold: %YT%{targetNPC.Gold:N0}%PT%");
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        private static void ShowPlayerInventory(Session session, string targetName)
+        {
+            var targetPlayer = SessionManager.Instance.GetSession(targetName);
+            if (targetPlayer == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetPlayer.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot use this on someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetPlayer.Player.Inventory == null || targetPlayer.Player.Inventory.Count == 0)
+            {
+                session.Send($"%BYT%{targetPlayer.Player.Name} is not carrying anything!%PT%{Constants.NewLine}");
+                if (targetPlayer.Player.Gold > 0)
+                {
+                    session.Send($"%BYT%{targetPlayer.Player.Name} has {targetPlayer.Player.Gold:N0} Gold%PT%");
+                }
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"%BYT%{targetPlayer.Player.Name} is carrying:%PT%");
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            foreach (var i in targetPlayer.Player.Inventory.Values.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(x => x.ID))
+            {
+                var cnt = targetPlayer.Player.Inventory.Values.Where(x => x.ID == i.ID).Count();
+                sb.AppendLine($"%BYT%||%PT% {cnt} x {i.Name}, {i.ShortDescription}");
+            }
+            if (targetPlayer.Player.Gold > 0)
+            {
+                sb.AppendLine($"%BYT%|| Gold: {targetPlayer.Player.Gold:N0}%PT%");
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        private static void ShowNPCInventory(Session session, string targetName)
+        {
+            var targetNPC = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(targetName, session.Player);
+            if (targetNPC == null)
+            {
+                session.Send($"%BRT%The target of your power could not be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetNPC.ActorType != ActorType.NonPlayer)
+            {
+                session.Send($"%BRT%That is not a valid target for this power!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetNPC.Inventory == null || targetNPC.Inventory.Count == 0)
+            {
+                session.Send($"%BYT%{targetNPC.Name} is not carrying anything!%PT%{Constants.NewLine}");
+                if (targetNPC.Gold > 0)
+                {
+                    session.Send($"%BYT%{targetNPC.Name} has {targetNPC.Gold:N0} Gold%PT%");
+                }
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"%BYT%{targetNPC.Name} is carrying:%PT%");
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            foreach (var i in targetNPC.Inventory.Values.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(x => x.ID))
+            {
+                var cnt = targetNPC.Inventory.Values.Where(x => x.ID == i.ID).Count();
+                sb.AppendLine($"%BYT%||%PT% {cnt} x {i.Name}, {i.ShortDescription}");
+            }
+            if (targetNPC.Gold > 0)
+            {
+                sb.AppendLine($"%BYT%|| Gold: {targetNPC.Gold:N0}%PT%");
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        private static void FindItemInWorld(Session session, string targetString)
+        {
+            if (int.TryParse(targetString, out int itemID))
+            {
+                var roomsWithItems = RoomManager.Instance.GetRoomsWithItems();
+                if (roomsWithItems == null || roomsWithItems.Count == 0)
+                {
+                    session.Send($"%BRT%No Item with that ID could be found in the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"  {new string('=', 77)}");
+                bool matchFound = false;
+                foreach(var room in roomsWithItems)
+                {
+                    var matchingItems = room.ItemsInRoom.Values.Where(x => x.ID == itemID).ToList();
+                    if (matchingItems != null && matchingItems.Count > 0)
+                    {
+                        matchFound = true;
+                        foreach(var item in matchingItems)
                         {
-                            var i = ItemManager.Instance.GetItemByID(uid).ShallowCopy();
-                            RoomManager.Instance.AddItemToRoomInventory(desc.Player.CurrentRoom, ref i);
-                            msgToPlayer = $"With arcane power you create {i.Name}{Constants.NewLine}";
-                            msgToOthers[0] = $"{desc.Player.Name} makes an arcane gesture and creates {i.Name}{Constants.NewLine}";
-                            msgToOthers[1] = $"Something moves, and the shifting Winds of Magic create {i.Name}{Constants.NewLine}";
-                            targetCreated = true;
+                            sb.AppendLine($"|| {item.ID} - {item.Name}: Room: {room.ID}");
+                        }
+                    }
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                if (matchFound)
+                {
+                    session.Send(sb.ToString());
+                }
+                else
+                {
+                    session.Send($"%BRT%No Item with that ID could be found in the Realms!%PT%{Constants.NewLine}");
+                }
+            }
+            else
+            {
+                var roomsWithItems = RoomManager.Instance.GetRoomsWithItems();
+                if (roomsWithItems == null || roomsWithItems.Count == 0)
+                {
+                    session.Send($"%BRT%No Item matching that criteria could be found in the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"  {new string('=', 77)}");
+                bool matchFound = false;
+                foreach (var room in roomsWithItems)
+                {
+                    var matchingItems = room.ItemsInRoom.Values.Where(x => x.Name.IndexOf(targetString, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                    if (matchingItems != null && matchingItems.Count > 0)
+                    {
+                        matchFound = true;
+                        foreach (var item in matchingItems)
+                        {
+                            sb.AppendLine($"|| {item.ID} - {item.Name}: Room: {room.ID}");
+                        }
+                    }
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                if (matchFound)
+                {
+                    session.Send(sb.ToString());
+                }
+                else
+                {
+                    session.Send($"%BRT%No Item with that ID could be found in the Realms!%PT%{Constants.NewLine}");
+                }
+            }
+        }
+
+        private static void FindNPCInWorld(Session session, string targetString)
+        {
+            if (int.TryParse(targetString, out int npcID))
+            {
+                var npcs = NPCManager.Instance.AllNPCInstances.Where(x => x.TemplateID == npcID).ToList();
+                if (npcs == null || npcs.Count == 0)
+                {
+                    session.Send($"%BRT%No NPCs with that ID could be found in the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var npc in npcs)
+                {
+                    sb.AppendLine($"|| {npc.ID}: {npc.TemplateID} - {npc.Name} in Room {npc.CurrentRoom}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+            }
+            else
+            {
+                var npcs = NPCManager.Instance.AllNPCInstances.Where(x => x.Name.IndexOf(targetString, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                if (npcs == null || npcs.Count == 0)
+                {
+                    session.Send($"%BRT%No NPCs matching that criteria could be found in the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var npc in npcs)
+                {
+                    sb.AppendLine($"|| {npc.ID}: {npc.TemplateID} - {npc.Name} in Room {npc.CurrentRoom}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+            }
+        }
+
+        private static void CreateNPC(Session session, string id)
+        {
+            if (int.TryParse(id, out int npcID))
+            {
+                var npc = NPCManager.Instance.GetNPC(npcID);
+                if (npc == null)
+                {
+                    session.Send($"%BRT%No NPC with that ID could be found in NPC Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                NPCManager.Instance.AddNewNPCInstance(npc.TemplateID, session.Player.CurrentRoom);
+                session.Send($"%BYT%Calling on the Winds of Magic, you bring life to {npc.ShortDescription}!%PT%{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+                if (localPlayers != null && localPlayers.Count > 1)
+                {
+                    foreach(var lp in localPlayers.Where(x => x.ID != session.ID))
+                    {
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {npc.ShortDescription}!%PT%{Constants.NewLine}" :
+                            $"%BYT%The Winds of Magic shift, bringing life to {npc.ShortDescription}!%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var tNPC = NPCManager.Instance.GetNPC(id).FirstOrDefault();
+            if (tNPC == null)
+            {
+                session.Send($"%BRT%No NPC matching that name could be found in NPC Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            NPCManager.Instance.AddNewNPCInstance(tNPC.TemplateID, session.Player.CurrentRoom);
+            session.Send($"%BYT%Calling on the Winds of Magic, you bring life to {tNPC.ShortDescription}!%PT%{Constants.NewLine}");
+            var players = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+            if (players != null && players.Count > 1)
+            {
+                foreach (var lp in players.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {tNPC.ShortDescription}!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift, bringing life to {tNPC.ShortDescription}!%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+        }
+
+        private static void CreateItem(Session session, string id)
+        {
+            if (int.TryParse(id, out int itemID))
+            {
+                var item = ItemManager.Instance.GetItem(itemID);
+                if (item == null)
+                {
+                    session.Send($"%BRT%No Item with that ID was found in Item Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                dynamic newItem = null;
+                switch(item.ItemType)
+                {
+                    case ItemType.Misc:
+                        newItem = Helpers.Clone<InventoryItem>(item);
+                        break;
+
+                    case ItemType.Weapon:
+                        newItem = Helpers.Clone<Weapon>(item);
+                        break;
+
+                    case ItemType.Consumable:
+                        newItem = Helpers.Clone<Consumable>(item);
+                        break;
+
+                    case ItemType.Armour:
+                        newItem = Helpers.Clone<Armour>(item);
+                        break;
+
+                    case ItemType.Ring:
+                        newItem = Helpers.Clone<Ring>(item);
+                        break;
+
+                    case ItemType.Scroll:
+                        newItem = Helpers.Clone<Scroll>(item);
+                        break;
+                }
+                newItem.ItemID = Guid.NewGuid();
+                RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, newItem);
+                session.Send($"%BYT%Calling on the Winds of Magic, you summon {newItem.ShortDescription} into existence!%PT%{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+                if (localPlayers != null && localPlayers.Count > 1)
+                {
+                    foreach (var lp in localPlayers.Where(x => x.ID != session.ID))
+                    {
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {item.ShortDescription}!%PT%{Constants.NewLine}" :
+                            $"%BYT%The Winds of Magic shift, creating {item.ShortDescription}!%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var mItem = ItemManager.Instance.GetItem(id);
+            if (mItem == null)
+            {
+                session.Send($"%BRT%No Item matching that criteria was found in Item Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            dynamic mItemNew = null;
+            switch (mItem.ItemType)
+            {
+                case ItemType.Misc:
+                    mItemNew = Helpers.Clone<InventoryItem>(mItem);
+                    break;
+
+                case ItemType.Weapon:
+                    mItemNew = Helpers.Clone<Weapon>(mItem);
+                    break;
+
+                case ItemType.Consumable:
+                    mItemNew = Helpers.Clone<Consumable>(mItem);
+                    break;
+
+                case ItemType.Armour:
+                    mItemNew = Helpers.Clone<Armour>(mItem);
+                    break;
+
+                case ItemType.Ring:
+                    mItemNew = Helpers.Clone<Ring>(mItem);
+                    break;
+
+                case ItemType.Scroll:
+                    mItemNew = Helpers.Clone<Scroll>(mItem);
+                    break;
+            }
+            mItemNew.ItemID = Guid.NewGuid();
+            RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, mItemNew);
+            session.Send($"%BYT%Calling on the Winds of Magic, you summon {mItemNew.ShortDescription} into existence!%PT%{Constants.NewLine}");
+            var players = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+            if (players != null && players.Count > 1)
+            {
+                foreach (var lp in players.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {mItemNew.ShortDescription}!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift, creating {mItemNew.ShortDescription}!%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+        }
+
+        private static void ListShops(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var shops = ShopManager.Instance.GetShop();
+                if (shops == null || shops.Count == 0)
+                {
+                    session.Send($"%BRT%No Shops were found in Shop Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var shop in shops)
+                {
+                    sb.AppendLine($"|| {shop.ID} - {shop.ShopName}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int shopID))
+            {
+                var shop = ShopManager.Instance.GetShop(shopID);
+                if (shop == null)
+                {
+                    session.Send($"%BRT%No Shop with that ID was found in Shop Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {shop.ID}");
+                sb.AppendLine($"|| Name: {shop.ShopName}");
+                sb.AppendLine($"|| Base Gold: {shop.BaseGold}");
+                if (shop.BaseInventory.Count == 0)
+                {
+                    sb.AppendLine($"|| Base Inventory: Nothing");
+                }
+                else
+                {
+                    sb.AppendLine($"|| Base Inventory:");
+                    foreach (var i in shop.BaseInventory)
+                    {
+                        var item = ItemManager.Instance.GetItem(i.Key);
+                        if (item == null)
+                        {
+                            sb.AppendLine($"|| {i.Value} x Unknown Item ({i.Key})");
                         }
                         else
                         {
-                            desc.Send($"That doesn't seem to exist...{Constants.NewLine}");
-                            Game.LogMessage($"WARN: {desc.Player.Name} attempted to load item {uid} but this was not found in Item Manager", LogLevel.Warning, true);
+                            sb.AppendLine($"|| {i.Value} x {item.Name} ({item.ID})");
                         }
-
+                    }
+                }
+                if (shop.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(shop.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"|| OLC Locked: {shop.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
                     }
                     else
                     {
-                        if (NPCManager.Instance.NPCExists(uid))
+                        sb.AppendLine($"|| OLC Locked: {shop.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {shop.OLCLocked}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var shops = ShopManager.Instance.GetShop(start, end);
+                if (shops == null || shops.Count == 0)
+                {
+                    session.Send($"%BRT%No Shops in the ID range could be found in Shop Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var shop in shops)
+                {
+                    sb.AppendLine($"|| {shop.ID} - {shop.ShopName}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingShops = ShopManager.Instance.GetShop(criteria);
+            if (matchingShops == null || matchingShops.Count == 0)
+            {
+                session.Send($"%BRT%No Shops matching the specified criteria were found in Shop Manager.%PT%{Constants.NewLine}" );
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var shop in matchingShops)
+            {
+                sb.AppendLine($"|| {shop.ID} - {shop.ShopName}");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListNodes(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var nodes = NodeManager.Instance.GetNode();
+                if (nodes == null || nodes.Count == 0)
+                {
+                    session.Send($"%BRT%No Resource Nodes were found in Node Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var node in nodes)
+                {
+                    sb.AppendLine($"|| {node.ID} - {node.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int nodeID))
+            {
+                var node = NodeManager.Instance.GetNode(nodeID);
+                if (node == null)
+                {
+                    session.Send($"%BRT%No Resource Node with that ID could be found in Node Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {node.ID}");
+                sb.AppendLine($"|| Name: {node.Name}");
+                sb.AppendLine($"|| Appearance Chance: {node.ApperanceChance}");
+                if (node.CanFind.Count == 0)
+                {
+                    sb.AppendLine($"|| Findable Items: None");
+                }
+                else
+                {
+                    sb.AppendLine($"|| Findable Items:");
+                    foreach(var i in node.CanFind)
+                    {
+                        var item = ItemManager.Instance.GetItem(i.Key);
+                        if (item == null)
                         {
-                            var n = NPCManager.Instance.GetNPCByID(uid);
-                            if (n != null)
-                            {
-                                NPCManager.Instance.AddNPCToWorld(n.NPCID, desc.Player.CurrentRoom);
-                                msgToPlayer = $"With arcane power you summon forth {n.Name}{Constants.NewLine}";
-                                msgToOthers[0] = $"{desc.Player.Name} makes arcane gestures and summons forth {n.Name}{Constants.NewLine}";
-                                msgToOthers[1] = $"Something moves and the shifting Winds of Magic bring forth {n.Name}{Constants.NewLine}";
-                                targetCreated = true;
-                            }
-                            else
-                            {
-                                desc.Send($"Try as you might, that just doesn't work!{Constants.NewLine}");
-                                Game.LogMessage($"WARN: {desc.Player.Name} attempted to load NPC {uid} but this was not found in NPC Manager", LogLevel.Warning, true);
-                            }
+                            sb.AppendLine($"||   Unknown Item ({i.Key})");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||   {item.Name} ({item.ID})");
+                        }
+                    }
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingNodes = NodeManager.Instance.GetNode(criteria);
+            if (matchingNodes == null || matchingNodes.Count == 0)
+            {
+                session.Send($"%BRT%No Resource Nodes matching the given criteria were found in Node Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var node in matchingNodes)
+            {
+                sb.AppendLine($"|| {node.ID} - {node.Name}");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListSkills(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var skills = SkillManager.Instance.GetSkill();
+                if (skills == null || skills.Count == 0)
+                {
+                    session.Send($"%BRT%No Skills were found in Skill Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var skill in skills)
+                {
+                    sb.AppendLine($"|| {skill.Name} ({skill.LearnCost} gold)");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (Enum.TryParse<ActorClass>(criteria, true, out var actorClass))
+            {
+                var skills = SkillManager.Instance.GetSkill(actorClass);
+                if (skills == null || skills.Count == 0)
+                {
+                    session.Send($"%BRT%No Skills were found in Skill Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| Skills available to the {actorClass} Class:");
+                foreach(var skill in skills)
+                {
+                    sb.AppendLine($"|| {skill.Name} ({skill.LearnCost} gold)");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingSkill = SkillManager.Instance.GetSkill(criteria);
+            if (matchingSkill == null)
+            {
+                session.Send($"%BRT%No Skill with that name in Skill Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            sb.AppendLine($"|| Name: {matchingSkill.Name}{Constants.TabStop}Cost: {matchingSkill.LearnCost:N0} gold");
+            sb.AppendLine($"|| Description: {matchingSkill.Description}");
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListSpells(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var spells = SpellManager.Instance.GetSpell();
+                if (spells == null || spells.Count == 0)
+                {
+                    session.Send($"%BRT%No Spells were found in Spell Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var spell in spells)
+                {
+                    sb.AppendLine($"|| {spell.ID} - {spell.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int spellID))
+            {
+                var spell = SpellManager.Instance.GetSpell(spellID);
+                if (spell == null)
+                {
+                    session.Send($"%BRT%No Spell with that ID could be found in Spell Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {spell.ID}{Constants.TabStop}Type: {spell.SpellType}{Constants.TabStop}Auto Hit: {spell.AutoHitTarget}");
+                sb.AppendLine($"|| Name: {spell.Name}");
+                sb.AppendLine($"|| Available To: {spell.AvailableToClass}");
+                sb.AppendLine($"|| MP Cost: {spell.MPCostExpression}");
+                sb.AppendLine($"|| Learn Cost: {spell.LearnCost}{Constants.TabStop}AOE: {spell.IsAOE}{Constants.TabStop}Ability Modifier: {spell.ApplyAbilityModifier}");
+                if (!string.IsNullOrEmpty(spell.DamageExpression))
+                {
+                    sb.AppendLine($"|| HP Effect: {spell.DamageExpression}");
+                }
+                if (spell.AppliedBuffs.Count > 0)
+                {
+                    sb.AppendLine($"|| Applied Buffs:");
+                    foreach(var b in spell.AppliedBuffs)
+                    {
+                        var buff = BuffManager.Instance.GetBuff(b.Key);
+                        if (buff != null)
+                        {
+                            sb.AppendLine($"||    {buff.Name}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||    Unknown Buff ({b.Key})");
+                        }
+                    }
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var spells = SpellManager.Instance.GetSpell(start, end);
+                if (spells == null || spells.Count == 0)
+                {
+                    session.Send($"%BRT%No Spells in that ID range were found in Spell Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var spell in spells)
+                {
+                    sb.AppendLine($"|| {spell.ID} - {spell.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingSpells = SpellManager.Instance.GetSpell(criteria, true);
+            if (matchingSpells == null || matchingSpells.Count == 0)
+            {
+                session.Send($"%BRT%No Spells matching the criteria were found in Spell Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var spell in matchingSpells)
+            {
+                sb.AppendLine($"|| {spell.ID} - {spell.Name}");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListBuffs(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var buffs = BuffManager.Instance.GetBuff();
+                if (buffs == null || buffs.Count == 0)
+                {
+                    session.Send($"%BRT%No Buffs were found in Buff Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var buff in buffs)
+                {
+                    sb.AppendLine($"|| Name: {buff.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingBuff = BuffManager.Instance.GetBuff(criteria);
+            if (matchingBuff == null)
+            {
+                session.Send($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            sb.AppendLine($"|| Name: {matchingBuff.Name}");
+            sb.AppendLine($"|| Description: {matchingBuff.Description}");
+            sb.AppendLine($"|| Duration: {matchingBuff.Duration}");
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListRecipes(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var recipes = RecipeManager.Instance.GetRecipe();
+                if (recipes == null || recipes.Count == 0)
+                {
+                    session.Send($"%BRT%No Recipes were found in Recipe Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var recipe in recipes)
+                {
+                    sb.AppendLine($"|| {recipe.ID} - {recipe.Name} ({recipe.RecipeType})");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int recipieID))
+            {
+                var recipe = RecipeManager.Instance.GetRecipe(recipieID);
+                if (recipe == null)
+                {
+                    session.Send($"%BRT%No Recipe with that ID was found in Recipe Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {recipe.ID}{Constants.TabStop}Type: {recipe.RecipeType}");
+                sb.AppendLine($"|| Description: {recipe.Description}");
+                if (recipe.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(recipe.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"|| OLC Locked: {recipe.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| OLC Locked: {recipe.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {recipe.OLCLocked}");
+                }
+                var recipeResult = ItemManager.Instance.GetItem(recipe.RecipeResult);
+                if (recipeResult == null)
+                {
+                    sb.AppendLine($"|| Result: Unknown Item ({recipe.RecipeResult})");
+                }
+                else
+                {
+                    sb.AppendLine($"|| Result: {recipeResult.Name} ({recipeResult.ID})");
+                }
+                if (recipe.RequiredItems.Count > 0)
+                {
+                    sb.AppendLine("|| Required Items:");
+                    foreach(var i in recipe.RequiredItems)
+                    {
+                        var item = ItemManager.Instance.GetItem(i.Key);
+                        if (item != null)
+                        {
+                            sb.AppendLine($"||    {i.Value} x {item.Name} ({item.ID})");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||    {i.Value} x Unknown Item ({i.Key})");
                         }
                     }
                 }
                 else
                 {
-                    // creation target is a string so attempt to look up the relevant object and spawn it in the player's room
-                    if (spawnObjectType.ToLower() == "item")
+                    sb.AppendLine($"|| Required Items: None");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var recipes = RecipeManager.Instance.GetRecipe(start, end);
+                if (recipes == null || recipes.Count == 0)
+                {
+                    session.Send($"%BRT%No Recipes with IDs in the specified range were found in Recipe Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var recipe in recipes)
+                {
+                    sb.AppendLine($"|| {recipe.ID} - {recipe.Name} ({recipe.RecipeType})");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingRecipes = RecipeManager.Instance.GetRecipe(criteria);
+            if (matchingRecipes == null || matchingRecipes.Count == 0)
+            {
+                session.Send($"%BRT%No Recipes matching the specified criteria were found in Recipe Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var recipe in matchingRecipes)
+            {
+                sb.AppendLine($"|| {recipe.ID} - {recipe.Name} ({recipe.RecipeType})");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListQuests(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var quests = QuestManager.Instance.GetQuest();
+                if (quests == null || quests.Count == 0)
+                {
+                    session.Send($"%BRT%No Quests were found in Quest Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var quest in quests)
+                {
+                    sb.AppendLine($"|| {quest.ID} - {quest.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int questID))
+            {
+                var quest = QuestManager.Instance.GetQuest(questID);
+                if (quest == null)
+                {
+                    session.Send($"%BRT%No Quest with that ID could be found in Quest Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {quest.ID}{Constants.TabStop}Zone: {quest.Zone}{Constants.TabStop}Type: {quest.QuestType}");
+                sb.AppendLine($"|| Name: {quest.Name}");
+                sb.AppendLine($"|| Flavour Text: {quest.FlavourText}");
+                sb.AppendLine($"|| Exp: {quest.RewardExp}{Constants.TabStop}Gold: {quest.RewardGold}");
+                if (quest.RequiredMonsters.Count > 0)
+                {
+                    sb.AppendLine($"|| Required Monsters:");
+                    foreach(var m in quest.RequiredMonsters)
                     {
-                        var i = ItemManager.Instance.GetItemByName(target);
-                        if (i != null)
+                        var monster = NPCManager.Instance.GetNPC(m.Key);
+                        if (monster != null)
                         {
-                            RoomManager.Instance.AddItemToRoomInventory(desc.Player.CurrentRoom, ref i);
-                            msgToPlayer = $"With arcane power you create {i.Name}{Constants.NewLine}";
-                            msgToOthers[0] = $"{desc.Player.Name} makes an arcane gesture and creates {i.Name}{Constants.NewLine}";
-                            msgToOthers[1] = $"Something moves, and the shifting Winds of Magic create {i.Name}{Constants.NewLine}";
-                            targetCreated = true;
+                            sb.AppendLine($"||   {m.Value} x {monster.Name} ({monster.TemplateID})");
                         }
                         else
                         {
-                            desc.Send($"That doesn't seem to exist...{Constants.NewLine}");
-                            Game.LogMessage($"WARN: {desc.Player.Name} attempted to load item '{target}' but this was not found in Item Manager", LogLevel.Warning, true);
-                        }
-                    }
-                    else
-                    {
-                        var n = NPCManager.Instance.GetNPCByNameOrDescription(target).FirstOrDefault();
-                        if (n != null)
-                        {
-                            NPCManager.Instance.AddNPCToWorld(n.NPCID, desc.Player.CurrentRoom);
-                            msgToPlayer = $"With arcane power you summon forth {n.Name}{Constants.NewLine}";
-                            msgToOthers[0] = $"{desc.Player.Name} makes arcane gestures and summons forth {n.Name}{Constants.NewLine}";
-                            msgToOthers[1] = $"Something moves and the shifting Winds of Magic bring forth {n.Name}{Constants.NewLine}";
-                            targetCreated = true;
-                        }
-                        else
-                        {
-                            desc.Send($"That doesn't seem to exist...{Constants.NewLine}");
-                            Game.LogMessage($"WARN: {desc.Player.Name} attempted to load NPC '{target}' but this was not found in NPC Manager", LogLevel.Warning, true);
+                            sb.AppendLine($"||   {m.Value} x Unknown Monster ({m.Key})");
                         }
                     }
                 }
-                if (targetCreated)
+                else
                 {
-                    desc.Send(msgToPlayer);
-                    if (RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Count > 1)
+                    sb.AppendLine($"|| Required Monsters: None");
+                }
+                if (quest.RequiredItems.Count > 0)
+                {
+                    sb.AppendLine($"|| Required Items:");
+                    foreach(var i in quest.RequiredItems)
                     {
-                        var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        foreach (var p in localPlayers)
+                        var item = ItemManager.Instance.GetItem(i.Key);
+                        if (item != null)
                         {
-                            if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
-                            {
-                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                {
-                                    p.Send(msgToOthers[0]);
-                                }
-                                else
-                                {
-                                    p.Send(msgToOthers[1]);
-                                }
-                            }
+                            sb.AppendLine($"||    {i.Value} x {item.Name} ({item.ID})");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||    {i.Value} x Unknown Item ({i.Key})");
                         }
                     }
+                }
+                else
+                {
+                    sb.AppendLine($"|| Required Items: None");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') >= -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var quests = QuestManager.Instance.GetQuest(start, end);
+                if (quests == null || quests.Count == 0)
+                {
+                    session.Send($"%BRT%No Quests in the specified ID range were found in Quest Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var quest in quests)
+                {
+                    sb.AppendLine($"|| {quest.ID} - {quest.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingQuests = QuestManager.Instance.GetQuest(criteria);
+            if (matchingQuests == null || matchingQuests.Count == 0)
+            {
+                session.Send($"%BRT%No Quests matching the specified criteria were found in Quest Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var quest in matchingQuests)
+            {
+                sb.AppendLine($"|| {quest.ID} - {quest.Name}");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListZones(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var zones = ZoneManager.Instance.GetZone();
+                if (zones == null || zones.Count == 0)
+                {
+                    session.Send($"%BRT%No Zones were found in Zone Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var zone in zones)
+                {
+                    sb.AppendLine($"|| {zone.ZoneID} - {zone.ZoneName}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int zoneId))
+            {
+                var zone = ZoneManager.Instance.GetZone(zoneId);
+                if (zone == null)
+                {
+                    session.Send($"%BRT%No Zone with that ID was found in Zone Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {zone.ZoneID}{Constants.TabStop}Name: {zone.ZoneName}");
+                sb.AppendLine($"|| Start RID: {zone.MinRoom}{Constants.TabStop}End RID: {zone.MaxRoom}");
+                if (zone.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(zone.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"|| OLC Locked: {zone.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| OLC Locked: {zone.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {zone.OLCLocked}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var zones = ZoneManager.Instance.GetZone(start, end);
+                if (zones == null || zones.Count == 0)
+                {
+                    session.Send($"%BRT%No Zones in the specified ID range could be found in Zone Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var zone in zones)
+                {
+                    sb.AppendLine($"|| {zone.ZoneID} - {zone.ZoneName}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingZone = ZoneManager.Instance.GetZone(criteria);
+            if (matchingZone == null)
+            {
+                session.Send($"%BRT%No Zone matching the specified criteria was found in Zone Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            sb.AppendLine($"|| ID: {matchingZone.ZoneID}{Constants.TabStop}Name: {matchingZone.ZoneName}");
+            sb.AppendLine($"|| Start RID: {matchingZone.MinRoom}{Constants.TabStop}End RID: {matchingZone.MaxRoom}");
+            if (matchingZone.OLCLocked)
+            {
+                var lockingSession = SessionManager.Instance.GetSession(matchingZone.LockHolder);
+                if (lockingSession != null)
+                {
+                    sb.AppendLine($"|| OLC Locked: {matchingZone.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {matchingZone.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
                 }
             }
             else
             {
-                desc.Send($"Only the Gods can do that!{Constants.NewLine}");
+                sb.AppendLine($"|| OLC Locked: {matchingZone.OLCLocked}");
             }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
         }
+
+        private static void ListEmotes(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var emotes = EmoteManager.Instance.GetEmote();
+                if (emotes == null || emotes.Count == 0)
+                {
+                    session.Send($"%BRT%No Emotes were found in Emote Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var emote in emotes)
+                {
+                    sb.AppendLine($"|| {emote.ID} - {emote.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int emoteID))
+            {
+                var emote = EmoteManager.Instance.GetEmote(emoteID);
+                if (emote == null)
+                {
+                    session.Send($"%BRT%No Emote with that ID could be found in Emote Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {emote.ID}{Constants.TabStop}Name: {emote.Name}");
+                sb.AppendLine($"|| Messages to Performer:");
+                foreach(var m in emote.MessageToPerformer)
+                {
+                    sb.AppendLine($"|| {m}");
+                }
+                sb.AppendLine($"|| Messages to Others:");
+                foreach(var m in emote.MessageToOthers)
+                {
+                    sb.AppendLine($"|| {m}");
+                }
+                sb.AppendLine($"|| Message to Target:");
+                sb.AppendLine($"||  {emote.MessageToTarget}");
+                if (emote.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(emote.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"OLC Locked: {emote.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| OLC Locked: {emote.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {emote.OLCLocked}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var emotes = EmoteManager.Instance.GetEmote(start, end);
+                if (emotes == null || emotes.Count == 0)
+                {
+                    session.Send($"%BRT%No Emotes in the specified range could be found in Emote Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var emote in emotes)
+                {
+                    sb.AppendLine($"|| {emote.ID} - {emote.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingEmote = EmoteManager.Instance.GetEmote(criteria);
+            if (matchingEmote == null)
+            {
+                session.Send($"%BRT%No Emote matching that criteria could be found in Emote Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            sb.AppendLine($"|| ID: {matchingEmote.ID}{Constants.TabStop}Name: {matchingEmote.Name}");
+            sb.AppendLine($"|| Messages to Performer:");
+            foreach (var m in matchingEmote.MessageToPerformer)
+            {
+                sb.AppendLine($"|| {m}");
+            }
+            sb.AppendLine($"|| Messages to Others:");
+            foreach (var m in matchingEmote.MessageToOthers)
+            {
+                sb.AppendLine($"|| {m}");
+            }
+            sb.AppendLine($"|| Message to Target:");
+            sb.AppendLine($"||  {matchingEmote.MessageToTarget}");
+            if (matchingEmote.OLCLocked)
+            {
+                var lockingSession = SessionManager.Instance.GetSession(matchingEmote.LockHolder);
+                if (lockingSession != null)
+                {
+                    sb.AppendLine($"OLC Locked: {matchingEmote.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {matchingEmote.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                }
+            }
+            else
+            {
+                sb.AppendLine($"|| OLC Locked: {matchingEmote.OLCLocked}");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListItems(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var items = ItemManager.Instance.GetItem();
+                if (items == null || items.Count == 0)
+                {
+                    session.Send($"%BRT%No Items found in Item Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var item in items)
+                {
+                    sb.AppendLine($"|| {item.ID} - {item.Name} ({item.ItemType})");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int itemID))
+            {
+                var item = ItemManager.Instance.GetItem(itemID);
+                if (item == null)
+                {
+                    session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {item.ID}{Constants.TabStop}Type: {item.ItemType}{Constants.TabStop}Value: {item.BaseValue}");
+                sb.AppendLine($"|| Name: {item.Name}");
+                sb.AppendLine($"|| Short Desc: {item.ShortDescription}");
+                foreach(var ln in item.LongDescription.Split(new[] { Constants.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    sb.AppendLine($"|| {ln}");
+                }
+                if (item.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(item.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"|| OLC Locked: {item.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| OLC Locked: {item.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {item.OLCLocked}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var items = ItemManager.Instance.GetItem(start, end);
+                if (items == null || items.Count == 0)
+                {
+                    session.Send($"%BRT%No Items in the specified range could be found in Item Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var item in items)
+                {
+                    sb.AppendLine($"|| {item.ID} - {item.Name} ({item.ItemType})");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingItems = ItemManager.Instance.GetItem(criteria);
+            if (matchingItems == null || matchingItems.Count == 0)
+            {
+                session.Send($"%BRT%No Items matching the specified criteria could be found in Item Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var item in matchingItems)
+            {
+                sb.AppendLine($"|| {item.ID} - {item.Name} ({item.ItemType})");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+            return;
+        }
+
+        private static void ListNPCInstances(Session session, string criteria)
+        {
+            List<NPC> npcInstances = new List<NPC>();
+            if (!int.TryParse(criteria, out var templateID))
+            {
+                npcInstances = string.IsNullOrEmpty(criteria) ? NPCManager.Instance.AllNPCInstances.OrderBy(x => x.Name).OrderBy(x => x.CurrentRoom).ToList() :
+                        NPCManager.Instance.AllNPCInstances.Where(x => x.Name.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0).OrderBy(x => x.Name).OrderBy(x => x.CurrentRoom).ToList();
+            }
+            else
+            {
+                npcInstances = NPCManager.Instance.AllNPCInstances.Where(x => x.TemplateID == templateID).OrderBy(x => x.Name).OrderBy(x => x.CurrentRoom).ToList();
+            }
+            if (npcInstances == null || npcInstances.Count == 0)
+            {
+                session.Send($"%BRT%No NPC Instances could be found.%PT%{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            foreach (var npc in npcInstances)
+            {
+                sb.AppendLine($"%BYT%||%PT%Name: {npc.Name} (ID: {npc.ID}) in Room {npc.CurrentRoom}");
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListNPCs(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var npcs = NPCManager.Instance.GetNPC();
+                if (npcs == null || npcs.Count == 0)
+                {
+                    session.Send($"%BRT%No NPC Templates found in NPC Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var npc in npcs)
+                {
+                    sb.AppendLine($"|| {npc.TemplateID} - {npc.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int id))
+            {
+                var npc = NPCManager.Instance.GetNPC(id);
+                if (npc == null)
+                {
+                    session.Send($"%BRT%No NPC with that Template ID could be found in NPC Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| Template ID: {npc.TemplateID}{Constants.TabStop}Zone: {npc.ZoneID}");
+                sb.AppendLine($"|| Name: {npc.Name}{Constants.TabStop}Flags: {npc.Flags}");
+                sb.AppendLine($"|| Short Desc: {npc.ShortDescription}");
+                sb.AppendLine($"|| STR: {npc.Strength}{Constants.TabStop}DEX: {npc.Dexterity}{Constants.TabStop}CON: {npc.Constitution}");
+                sb.AppendLine($"|| INT: {npc.Intelligence}{Constants.TabStop}WIS: {npc.Wisdom}{Constants.TabStop}CHA: {npc.Charisma}");
+                sb.AppendLine($"|| Hit Die: {npc.NumberOfHitDice}D{npc.HitDieSize}{Constants.TabStop}Base AC: {npc.BaseArmourClass}");
+                sb.AppendLine($"|| Exp: {npc.ExpAward:N0}{Constants.TabStop}Gold: {npc.Gold:N0}");
+                sb.AppendLine($"|| Appear Chance: {npc.AppearanceChance}{Constants.TabStop}Max Number: {npc.MaxNumberInWorld}");
+                sb.AppendLine($"|| Arrival Msg: {npc.ArrivalMessage}");
+                sb.AppendLine($"|| Departure Msg: {npc.DepatureMessage}");
+                if (npc.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(npc.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"|| OLC Locked: {npc.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| OLC Locked: {npc.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {npc.OLCLocked}");
+                }
+                sb.AppendLine($"|| Long Description:");
+                foreach (var ln in npc.LongDescription.Split(new[] { Constants.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    sb.AppendLine($"||  {ln}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var npcs = NPCManager.Instance.GetNPC(start, end);
+                if (npcs == null || npcs.Count == 0)
+                {
+                    session.Send($"%BRT%No NPC Templates in the specified range were found in NPC Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var npc in npcs)
+                {
+                    sb.AppendLine($"|| {npc.TemplateID} - {npc.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingNPCs = NPCManager.Instance.GetNPC(criteria);
+            if (matchingNPCs == null || matchingNPCs.Count == 0)
+            {
+                session.Send($"%BRT%No NPC Templates matching the criteria could be found in NPC Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var npc in matchingNPCs)
+            {
+                sb.AppendLine($"|| {npc.TemplateID} - {npc.Name}");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+        }
+
+        private static void ListRooms(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var rooms = RoomManager.Instance.GetRoom();
+                if (rooms == null || rooms.Count == 0)
+                {
+                    session.Send($"%BRT%No Rooms found in Room Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var room in rooms)
+                {
+                    sb.AppendLine($"|| {room.ID} - {room.RoomName}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int rid))
+            {
+                var room = RoomManager.Instance.GetRoom(rid);
+                if (room == null)
+                {
+                    session.Send($"%BRT%No Room with that ID could be found in Room Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| Room ID: {room.ID}{Constants.TabStop}Flags: {room.Flags}");
+                if (room.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(room.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"|| OLC Locked: {room.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| OLC Locked: {room.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| OLC Locked: {room.OLCLocked}");
+                }
+                sb.AppendLine($"|| Room Name: {room.RoomName}");
+                sb.AppendLine($"|| Short Desc: {room.ShortDescription}");
+                sb.AppendLine($"|| Long Desc:");
+                foreach(var ln in room.LongDescription.Split(new[] { Constants.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    sb.AppendLine($"|| {ln}");
+                }
+                sb.AppendLine($"|| Exits: {string.Join(", ", room.RoomExits.OrderBy(x => x.Value.ExitDirection).Select(x => x.Value.ExitDirection).ToArray())}");
+                if (room.StartingNPCs.Count > 0)
+                {
+                    sb.AppendLine($"|| Starting NPCs:");
+                    foreach(var n in room.StartingNPCs)
+                    {
+                        var npc = NPCManager.Instance.GetNPC(n.Key);
+                        if (npc != null)
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{n.Value} x {npc.Name} ({npc.TemplateID})");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{n.Value} x Unknown NPC ({n.Key})");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| Starting NPCs: None");
+                }
+                if (room.StartingItems.Count > 0)
+                {
+                    sb.AppendLine($"|| Starting Items:");
+                    foreach(var i in room.StartingItems)
+                    {
+                        var item = ItemManager.Instance.GetItem(i.Key);
+                        if (item != null)
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{i.Value} x {item.Name} ({item.ID})");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{i.Value} x Unknown Item ({i.Key})");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| Starting Items: None");
+                }
+                if (room.SpawnNPCsOnTick.Count > 0)
+                {
+                    sb.AppendLine($"|| Tick NPCs:");
+                    foreach (var n in room.SpawnNPCsOnTick)
+                    {
+                        var npc = NPCManager.Instance.GetNPC(n.Key);
+                        if (npc != null)
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{n.Value} x {npc.Name} ({npc.TemplateID})");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{n.Value} x Unknown NPC ({n.Key})");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| Tick NPCs: None");
+                }
+                if (room.SpawnItemsOnTick.Count > 0)
+                {
+                    sb.AppendLine($"|| Tick Items:");
+                    foreach (var i in room.SpawnItemsOnTick)
+                    {
+                        var item = ItemManager.Instance.GetItem(i.Key);
+                        if (item != null)
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{i.Value} x {item.Name} ({item.ID})");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"||{Constants.TabStop}{i.Value} x Unknown Item ({i.Key})");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"|| Tick Items: None");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > -1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (start < 0 || end < 0)
+                {
+                    session.Send($"%BRT%Start and End must be greater than 0. End must be higher than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var rooms = RoomManager.Instance.GetRoom(start, end);
+                if (rooms == null || rooms.Count == 0)
+                {
+                    session.Send($"%BRT%No Rooms in the specified ID range were found in Room Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach (var room in rooms)
+                {
+                    sb.AppendLine($"|| {room.ID} - {room.RoomName}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            var matchingRooms = RoomManager.Instance.GetRoom(criteria);
+            if (matchingRooms == null || matchingRooms.Count == 0)
+            {
+                session.Send($"%BRT%No Rooms matching the given criteria were found in Room Manager.%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var room in matchingRooms)
+            {
+                sb.AppendLine($"|| {room.ID} - {room.RoomName}");
+            }
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
+            return;
+        }
+        #endregion
     }
 }

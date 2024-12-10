@@ -1,161 +1,143 @@
-﻿using System;
+﻿using Etrea3.Objects;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using Etrea2.Entities;
 using System.Linq;
-using System.Text.RegularExpressions;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class NodeManager
+    public class NodeManager
     {
-        private static NodeManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<uint, ResourceNode> _nodes;
+        private static NodeManager instance = null;
+        private ConcurrentDictionary<int, ResourceNode> Nodes;
+        public int Count => Instance.Nodes.Count;
 
-        private NodeManager()
+        public NodeManager()
         {
-            _nodes = new Dictionary<uint, ResourceNode>();
+            Nodes = new ConcurrentDictionary<int, ResourceNode>();
         }
 
-        internal static NodeManager Instance
+        public static NodeManager Instance
         {
             get
             {
-                if (_instance == null)
+                if (instance == null)
                 {
-                    _instance = new NodeManager();
+                    instance = new NodeManager();
                 }
-                return _instance;
+                return instance;
             }
         }
 
-        internal bool NodeExists(uint nodeId)
+        public void SetNodeLockState(int id, bool locked, Session session)
         {
-            return Instance._nodes.ContainsKey(nodeId);
+            if (Instance.Nodes.ContainsKey(id))
+            {
+                Instance.Nodes[id].OLCLocked = locked;
+                Instance.Nodes[id].LockHolder = locked ? session.ID : Guid.Empty;
+            }
         }
 
-        internal bool AddNode(ref Descriptor desc, ResourceNode node)
+        public bool GetNodeLockState(int id, out Guid lockHolder)
+        {
+            lockHolder = Guid.Empty;
+            if (Instance.Nodes.ContainsKey(id))
+            {
+                lockHolder = Instance.Nodes[id].LockHolder;
+                return Instance.Nodes[id].OLCLocked;
+            }
+            return false;
+        }
+
+        public bool NodeExists(int id)
+        {
+            return Instance.Nodes.ContainsKey(id);
+        }
+
+        public ResourceNode GetRandomNode(int roll)
+        {
+            return Instance.Nodes.Values.Where(x => x.ApperanceChance <= roll).ToList().GetRandomElement();
+        }
+
+        public ResourceNode GetNode(int id)
+        {
+            return Instance.Nodes.ContainsKey(id) ? Instance.Nodes[id] : null;
+        }
+
+        public List<ResourceNode> GetNode(int start, int end)
+        {
+            return end <= start ? null : (from n in Instance.Nodes.Values where n.ID >= start && n.ID <= end select n).ToList();
+        }
+
+        public List<ResourceNode> GetNode(string criteria)
+        {
+            return Instance.Nodes.Values.Where(x => x.Name.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        }
+
+        public List<ResourceNode> GetNode()
+        {
+            return Instance.Nodes.Values.ToList();
+        }
+
+        public bool AddOrUpdateNode(ResourceNode node, bool isNew)
         {
             try
             {
-                lock (_lock)
+                if (!DatabaseManager.SaveNodeToWorldDatabase(node, isNew))
                 {
-                    Instance._nodes.Add(node.ID, node);
-                    Game.LogMessage($"OLC: {desc.Player.Name} has added ResourceNode {node.ID} ({node.NodeName}) to NodeManager", LogLevel.OLC, true);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: {desc.Player.Name} encountered an error adding ResourceNode {node.NodeName} ({node.ID}) to NodeManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool RemoveNode(ref Descriptor desc, ResourceNode node)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (Instance._nodes.ContainsKey(node.ID))
-                    {
-                        Instance._nodes.Remove(node.ID);
-                        Game.LogMessage($"OLC: {desc.Player.Name} removed ResourceNode {node.ID} ({node.NodeName}) from NodeManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    Game.LogMessage($"OLC: {desc.Player.Name} was unable to remove ResourceNode {node.ID} from NodeManager, the ID does not exist", LogLevel.OLC, true);
+                    Game.LogMessage($"ERROR: Failed to save Node {node.Name} ({node.ID}) to the World Database", LogLevel.Error, true);
                     return false;
                 }
+                if (isNew)
+                {
+                    if (!Instance.Nodes.TryAdd(node.ID, node))
+                    {
+                        Game.LogMessage($"ERROR: Failed to add new Node {node.Name} ({node.ID}) to Node Manager", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!Instance.Nodes.TryGetValue(node.ID, out ResourceNode existingNode))
+                    {
+                        Game.LogMessage($"ERROR: Node {node.ID} not found in Node Manager for update", LogLevel.Error, true);
+                        return false;
+                    }
+                    if (!Instance.Nodes.TryUpdate(node.ID, node, existingNode))
+                    {
+                        Game.LogMessage($"ERROR: Failed to update Node {node.ID} in Node Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                return true;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing ResourceNode {node.ID} from NodeManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in NodeManager.AddOrUpdateNode(): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool UpdateNode(ref Descriptor desc, ResourceNode node)
+        public bool RemoveNode(int id)
         {
-            try
+            if (Instance.Nodes.ContainsKey(id))
             {
-                lock (_lock)
+                return Instance.Nodes.TryRemove(id, out _) && DatabaseManager.RemoveResourceNode(id);
+            }
+            Game.LogMessage($"ERROR: Error removing Resource Node with ID {id}: No such Node in Node Manager", LogLevel.Error, true);
+            return false;
+        }
+
+        public void LoadAllNodes(out bool hasErr)
+        {
+            var result = DatabaseManager.LoadAllNodes(out hasErr);
+            if (!hasErr && result != null)
+            {
+                foreach(var node in result)
                 {
-                    if (Instance._nodes.ContainsKey(node.ID))
-                    {
-                        Instance._nodes.Remove(node.ID);
-                        Instance._nodes.Add(node.ID, node);
-                        Game.LogMessage($"OLC: {desc.Player.Name} updated ResourceNode {node.ID} ({node.NodeName}) in NodeManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: NodeManager does not contain a ResourceNode with ID {node.ID} to update, it will be added instead", LogLevel.OLC, true);
-                        bool OK = AddNode(ref desc, node);
-                        return OK;
-                    }
+                    Instance.Nodes.AddOrUpdate(node.Key, node.Value, (k, v) => node.Value);
                 }
             }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating ResourceNode {node.ID} ({node.NodeName}) in NodeManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal ResourceNode GetNode(uint roll)
-        {
-            if (Instance._nodes != null && Instance._nodes.Count > 0)
-            {
-                var nodes = Instance._nodes.Values.Where(x => x.AppearanceChance >= roll).ToList();
-                if (nodes.Count > 0)
-                {
-                    var rnd = new Random(DateTime.UtcNow.GetHashCode());
-                    var n = nodes[rnd.Next(nodes.Count)].ShallowCopy();
-                    n.NodeDepth = Helpers.RollDice(1, 4);
-                    return n;
-                }
-            }
-            return null;
-        }
-
-        internal ResourceNode GetNodeByID(uint id)
-        {
-            lock (_lock)
-            {
-                if (Instance._nodes.ContainsKey(id))
-                {
-                    return Instance._nodes[id];
-                }
-            }
-            return null;
-        }
-
-        internal List<ResourceNode> GetNodeByNameOrDescription(string name)
-        {
-            lock (_lock)
-            {
-                if (!string.IsNullOrEmpty(name))
-                {
-                    return Instance._nodes.Values.Where(x => Regex.IsMatch(x.NodeName, name, RegexOptions.IgnoreCase)).ToList();
-                }
-                return Instance._nodes.Values.ToList();
-            }
-        }
-
-        internal void LoadAllNodes(out bool hasError)
-        {
-            var result = DatabaseManager.LoadAllResourceNodes(out hasError);
-            if (!hasError && result != null)
-            {
-                Instance._nodes.Clear();
-                Instance._nodes = result;
-            }
-        }
-
-        internal int GetNodeCount()
-        {
-            return Instance._nodes.Count;
         }
     }
 }

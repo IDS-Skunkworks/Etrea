@@ -1,16 +1,16 @@
 ﻿using System;
 
-namespace Etrea2
+namespace Etrea3
 {
     [Flags]
     internal enum Languages
     {
         Common = 0,
-        Elvish = 1 << 0,
-        Dwarvish = 1 << 1,
-        Orcish = 1 << 2,
-        Draconic = 1 << 3,
-        Infernal = 1 << 4,
-        Celestial = 1 << 5,
+        Infernal = 1 << 0,
+        Celestial = 1 << 1,
+        Draconic = 1 << 2,
+        Orcish = 1 << 3,
+        Elvish = 1 << 4,
+        Dwarvish = 1 << 5,
     }
 }

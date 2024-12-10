@@ -1,732 +1,603 @@
-﻿using Etrea2.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using static Etrea2.OLC.OLC;
+﻿using static Etrea3.OLC.OLC;
+using static Etrea3.Core.ActImmortal;
+using static Etrea3.Core.ActPlayer;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal static partial class CommandParser
+    public static class CommandParser
     {
-        internal static void ParseCommand(ref Descriptor desc, string input)
+        public static void Parse(Session session, ref string input)
         {
-            switch (GetVerb(ref input).ToLower())
+            string arg = string.Empty;
+            var verb = Helpers.GetVerb(ref input);
+            if (string.IsNullOrEmpty(verb))
             {
-                #region MiscCommands
-                case "exorcise":
-                    ExorciseCursedItem(ref desc, ref input);
-                    break;
-
-                case "alias":
-                    DoPlayerAlias(ref desc, ref input);
-                    break;
-
-                case "lang":
-                case "language":
-                    PlayerLanguages(ref desc, ref input);
-                    break;
-
-                case "bank":
-                    PlayerBanking(ref desc, ref input);
-                    break;
-
-                case "quest":
-                case "quests":
-                    PlayerQuests(ref desc, ref input);
-                    break;
-
-                case "mail":
-                    PlayerMail(ref desc, ref input);
-                    break;
-
-                case "describe":
-                    DescribeSkill(ref desc, ref input);
-                    break;
-
-                case "hire":
-                    HireFollower(ref desc, ref input);
-                    break;
-
-                case "dismiss":
-                    DismissFollower(ref desc, ref input);
-                    break;
-
-                case "follower":
-                    ShowFollowerInfo(ref desc, ref input);
-                    break;
-
-                case "bet":
-                case "gamble":
-                case "dice":
-                    DoDiceGamble(ref desc, ref input);
-                    break;
-
-                case "emote":
-                case "emotes":
-                    ShowAllEmotes(ref desc, ref input);
-                    break;
-
-                case "showrolls":
-                    desc.Send($"Setting ShowRolls to {!desc.Player.ShowDetailedRollInfo}{Constants.NewLine}");
-                    desc.Player.ShowDetailedRollInfo = !desc.Player.ShowDetailedRollInfo;
-                    break;
-
-                case "browse":
-                case "peruse":
-                    ListShopWares(ref desc, ref input);
-                    break;
-
-                case "appraise":
-                case "value":
-                    AppraiseItemForSale(ref desc, ref input);
-                    break;
-
-                case "buy":
-                case "purchase":
-                    BuyItemFromShop(ref desc, ref input);
-                    break;
-
-                case "learn":
-                    LearnSkillOrSpell(ref desc, ref input);
-                    break;
-
-                case "train":
-                    TrainPlayerStat(ref desc, ref input);
-                    break;
-
-                case "donate":
-                    DonateItem(ref desc, ref input);
-                    break;
-
-                case "sell":
-                    SellItemToShop(ref desc, ref input);
-                    break;
-
-                case "look":
-                case "l":
-                    Look(ref desc, ref input);
-                    break;
-
-                case "who":
-                    Who(ref desc);
-                    break;
-
-                case "save":
-                    desc.Send($"Saving your character...{DatabaseManager.SavePlayer(ref desc, false)}{Constants.NewLine}");
-                    break;
-
-                case "quit":
-                    DatabaseManager.SavePlayer(ref desc, false);
-                    desc.Send($"Goodbye, we hope to see you again soon!{Constants.NewLine}");
-                    RoomManager.Instance.UpdatePlayersInRoom(desc.Player.CurrentRoom, ref desc, true, false, true, false);
-                    SessionManager.Instance.Close(desc);
-                    break;
-
-                case "delete":
-                    DeleteCharacter(ref desc);
-                    break;
-
-                case "unlock":
-                case "lock":
-                    LockOrUnlockDoor(ref desc, ref input);
-                    break;
-
-                case "open":
-                case "close":
-                    OpenOrCloseDoor(ref desc, ref input);
-                    break;
-                #endregion
-
-                #region SkillCommands
-                case "hide":
-                    DoHideSkill(ref desc);
-                    break;
-
-                case "backstab":
-                    Backstab(ref desc, ref input);
-                    break;
-
-                case "pickpocket":
-                    Pickpocket(ref desc, ref input);
-                    break;
-
-                case "mine":
-                    MineResourceNode(ref desc, ref input);
-                    break;
-
-                case "craft":
-                    CraftItem(ref desc, ref input);
-                    break;
-                #endregion
-
+                session.Send($"I'm sorry, I didn't understand that...{Constants.NewLine}");
+                return;
+            }
+            switch(verb.ToLower())
+            {
                 #region Movement
-                case "stand":
-                case "rest":
+                case "n":
+                case "north":
+                case "w":
+                case "west":
+                case "e":
+                case "east":
+                case "s":
+                case "south":
+                case "u":
+                case "up":
+                case "d":
+                case "down":
+                case "nw":
+                case "northwest":
+                case "ne":
+                case "northeast":
+                case "se":
+                case "southeast":
+                case "sw":
+                case "southwest":
+                    Move(session, verb);
+                    break;
+
                 case "sit":
-                    ChangePlayerPosition(ref desc, ref input);
-                    break;
-
-                case "position":
-                    desc.Send($"You are currently {desc.Player.Position.ToString().ToLower()}{Constants.NewLine}");
-                    break;
-
-                case "push":
-                    PushTarget(ref desc, ref input);
+                case "stand":
+                case "sleep":
+                case "rest":
+                    ChangePosition(session, verb);
                     break;
 
                 case "recall":
-                    DoRecall(ref desc);
+                    PlayerRecall(session);
                     break;
 
-                case "down":
-                case "d":
-                case "up":
-                case "u":
-                case "west":
-                case "w":
-                case "east":
-                case "e":
-                case "north":
-                case "n":
-                case "south":
-                case "s":
-                case "northwest":
-                case "nw":
-                case "southwest":
-                case "sw":
-                case "northeast":
-                case "ne":
-                case "southeast":
-                case "se":
-                    MovePlayer(ref desc, ref input);
+                case "push":
+                case "shove":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerPushTarget(session, arg);
                     break;
                 #endregion
 
                 #region Inventory
-                case "equipment":
-                case "equip":
-                case "eq":
-                    ShowEquippedItems(ref desc);
-                    break;
-
                 case "use":
                 case "wear":
                 case "wield":
-                    EquipItem(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    EquipItem(session, arg);
                     break;
 
-                case "read":
-                    ReadScroll(ref desc, ref input);
+                case "eq":
+                case "equip":
+                case "equipment":
+                    ShowEquipment(session);
                     break;
 
-                case "remove":
-                    RemoveEquippedItem(ref desc, ref input);
-                    break;
-
+                case "inv":
                 case "inventory":
                 case "i":
-                case "inv":
-                    ShowCharInventory(ref desc);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowInventory(session, verb, arg);
+                    break;
+
+                case "vault":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    DoVaultAction(session, arg);
+                    break;
+
+                case "bank":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    DoBankingAction(session, arg);
                     break;
 
                 case "get":
-                    GetItemFromRoom(ref desc, ref input);
-                    break;
-
-                case "drink":
-                case "quoff":
-                case "eat":
-                case "consume":
-                    ConsumeItem(ref desc, ref input);
+                case "take":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    GetItem(session, arg);
                     break;
 
                 case "drop":
-                    DropCharacterItem(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    DropItem(session, arg);
                     break;
 
                 case "give":
                 case "trade":
-                    GiveItemToTarget(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    TradeItem(session, arg);
                     break;
 
-                case "vault":
-                    PlayerVault(ref desc, ref input);
-                    break;
-                #endregion
-
-                #region CharInfo
-                case "pvp":
-                    ShowOrTogglePVPFlag(ref desc, ref input);
+                case "donate":
+                case "don":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    DonateItem(session, arg);
                     break;
 
-                case "buff":
-                case "buffs":
-                    ShowBuffs(ref desc, ref input);
+                case "sacrifice":
+                case "sac":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    SacrificeItem(session, arg);
                     break;
 
-                case "skill":
-                case "skills":
-                    ShowPlayerSkills(ref desc);
+                case "remove":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    RemoveEquipment(session, arg);
                     break;
 
-                case "spell":
-                case "spells":
-                    ShowPlayerSpells(ref desc);
+                case "read":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerReadScrolls(session, arg);
                     break;
 
-                case "recipe":
-                case "recipes":
-                    ShowPlayerRecipes(ref desc, ref input);
-                    break;
-
-                case "ldesc":
-                case "longdesc":
-                    ChangeCharacterLongDesc(ref desc);
-                    break;
-
-                case "sdesc":
-                case "shortdesc":
-                    ChangeCharacterShortDesc(ref desc);
-                    break;
-
-                case "title":
-                    ChangeCharacterTitle(ref desc, ref input);
-                    break;
-
-                case "passwd":
-                    ChangePlayerPassword(ref desc, ref input);
-                    break;
-
-                case "score":
-                case "stats":
-                case "charsheet":
-                    ShowCharSheet(ref desc);
+                case "drink":
+                case "eat":
+                case "quoff":
+                case "consume":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerConsumeItem(session, arg);
                     break;
                 #endregion
 
                 #region Combat
-                case "consider":
-                    DoConsiderCheck(ref desc, ref input);
-                    break;
-
-                case "cast":
-                    CastSpell(ref desc, ref input);
-                    break;
-
-                case "attack":
                 case "kill":
                 case "k":
-                    StartCombat(ref desc, ref input);
+                case "attack":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    StartCombat(session, arg);
                     break;
 
-                case "pkill":
-                    StartPVPCombat(ref desc, ref input);
+                case "rollinfo":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ToggleRollInfo(session, arg);
+                    break;
+
+                case "backstab":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerBackstab(session, arg);
                     break;
 
                 case "flee":
-                    FleeCombat(ref desc);
+                    PlayerFleeCombat(session);
                     break;
                 #endregion
 
                 #region Communication
                 case "say":
-                    SayToRoom(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    CharSayRoom(session, arg);
                     break;
 
                 case "whisper":
+                case "sayto":
                 case "tell":
-                    SayToCharacter(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    CharWhisper(session, arg);
+                    break;
+
+                case "shout":
+                case "yell":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    CharShout(session, arg);
+                    break;
+
+                case "lang":
+                case "language":
+                case "languages":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerLanguages(session, arg);
+                    break;
+
+                case "mail":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerMailAction(session, arg);
                     break;
                 #endregion
 
-                // IMM only commands
-                #region ImmOnlyCommands
-                case "donroom":
-                    DonationRoom(ref desc, ref input);
+                #region Magic
+                case "cast":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerCastSpell(session, arg);
+                    break;
+                #endregion
+
+                #region Shops
+                case "shop":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    EnterShop(session, arg);
                     break;
 
-                case "shopstats":
-                    ShowShopStats(ref desc, ref input);
+                case "leave":
+                    LeaveShop(session);
                     break;
 
-                case "pulseshop":
-                    PulseShop(ref desc, ref input);
+                case "browse":
+                case "peruse":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowShopInventory(session, arg);
+                    break;
+
+                case "appraise":
+                case "value":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShopAppraiseItem(session, arg);
+                    break;
+
+                case "buy":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PurchaseItem(session, arg);
+                    break;
+
+                case "sell":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    SellItem(session, arg);
+                    break;
+                #endregion
+
+                #region Misc
+                case "quit":
+                    QuitGame(session);
+                    break;
+
+                case "save":
+                    SaveCharacter(session);
+                    break;
+
+                case "delete":
+                    DeleteCharacter(session);
+                    break;
+
+                case "prompt":
+                    ChangePrompt(session);
+                    break;
+
+                case "mine":
+                    PlayerMineNode(session);
+                    break;
+
+                case "emotes":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerListEmotes(session, arg);
+                    break;
+
+                case "learn":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    LearnSkill(session, arg);
+                    break;
+
+                case "train":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    TrainStat(session, arg);
+                    break;
+
+                case "study":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    StudyMagic(session, arg);
+                    break;
+
+                case "look":
+                case "l":
+                    arg = input.Remove(0, verb.Length).Trim().ToLower();
+                    Look(session, arg);
+                    break;
+
+                case "who":
+                    arg = input.Remove(0, verb.Length).Trim().ToLower();
+                    ShowWho(session, arg);
+                    break;
+
+                case "pickpocket":
+                case "steal":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerPickPocket(session, arg);
+                    break;
+
+                case "hide":
+                    PlayerHide(session);
+                    break;
+
+                case "skills":
+                case "skill":
+                    ShowSkills(session);
+                    break;
+
+                case "spells":
+                case "spell":
+                    ShowSpells(session);
+                    break;
+
+                case "buffs":
+                case "buff":
+                    ShowBuffs(session);
+                    break;
+
+                case "recipe":
+                case "recipes":
+                    ShowRecipes(session);
+                    break;
+
+                case "sdesc":
+                case "shortdesc":
+                case "shortdescription":
+                    PlayerChangeShortDesc(session);
+                    break;
+
+                case "ldesc":
+                case "longdesc":
+                case "description":
+                case "longdescription":
+                    PlayerChangeLongDesc(session);
+                    break;
+
+                case "title":
+                    PlayerChangeTitle(session);
+                    break;
+
+                case "chpasswd":
+                    PlayerChangePassword(session);
+                    break;
+
+                case "quest":
+                case "quests":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowQuests(session, arg);
+                    break;
+
+                case "score":
+                case "stats":
+                case "charsheet":
+                    ShowCharSheet(session);
+                    break;
+
+                case "alias":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ManagePlayerAliases(session, arg);
+                    break;
+
+                case "bet":
+                case "gamble":
+                case "dice":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayDice(session, arg);
+                    break;
+
+                case "craft":
+                case "make":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerCraftItem(session, arg);
+                    break;
+                #endregion
+
+                #region Immortal
+                case "olc":
+                    StartOLC(session);
+                    break;
+
+                case "apikey":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    GenerateAPIKey(session, arg);
+                    break;
+
+                case "shutdown":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShutDownGame(session, arg);
                     break;
 
                 case "motd":
-                    MOTD(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    MessageOfTheDay(session, arg);
                     break;
 
-                case "givelang":
-                    GivePlayerLanguage(ref desc, ref input);
-                    break;
-
-                case "removelang":
-                    RemovePlayerLanguage(ref desc, ref input);
-                    break;
-
-                case "connection":
-                case "connections":
-                    GetCurrentConnections(ref desc);
-                    break;
-
+                case "spawnnode":
                 case "addnode":
-                    AddResouceNodeToRoom(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    AddNodeToRoom(session, arg);
                     break;
 
-                case "addskill":
-                    AddSkillToPlayer(ref desc, ref input);
+                case "removenode":
+                    RemoveNodeFromRoom(session);
                     break;
 
-                case "addrecipe":
-                    AddRecipeToPlayer(ref desc, ref input);
+                case "donroom":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    SetDonationRoom(session, arg);
                     break;
 
-                case "removerecipe":
-                    RemoveRecipeFromPlayer(ref desc, ref input);
+                case "tickshop":
+                case "refreshshop":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    TickShop(session, arg);
                     break;
 
-                case "removeskill":
-                case "remskill":
-                    RemoveSkillFromPlayer(ref desc, ref input);
-                    break;
-
-                case "addspell":
-                    AddSpellToPlayer(ref desc, ref input);
-                    break;
-
-                case "removespell":
-                case "remspell":
-                    RemoveSpellFromPlayer(ref desc, ref input);
-                    break;
-
-                case "transfer":
-                case "transport":
-                case "trans":
-                    TransferPlayer(ref desc, ref input);
+                case "shopinfo":
+                case "shopstats":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowShopInfo(session, arg);
                     break;
 
                 case "uptime":
-                    ShowUptimeInfo(ref desc);
-                    break;
-
-                case "rss":
-                case "resourceusage":
-                    ShowMudResourceUsage(ref desc);
-                    break;
-
-                case "imminv":
-                    DoImmInv(ref desc, ref input);
-                    break;
-
-                case "where":
-                    DoWhereCheck(ref desc, ref input);
-                    break;
-
-                case "npclist":
-                case "npcwho":
-                    ListAllNPCS(ref desc);
-                    break;
-
-                case "immsight":
-                case "immstat":
-                    ImmSight(ref desc, ref input);
-                    break;
-
-                case "purge":
-                    Purge(ref desc, ref input);
-                    break;
-
-                case "list":
-                    GetObjectList(ref desc, ref input);
-                    break;
-
-                case "immheal":
-                    ImmHeal(ref desc, ref input);
-                    break;
-
-                case "olc":
-                case "constructor":
-                    StartOLC(ref desc);
-                    break;
-
-                case "create":
-                case "spawn":
-                    ImmSpawnItem(ref desc, ref input);
-                    break;
-
-                case "saveall":
-                    SaveAllPlayers(ref desc);
+                    ShowUpTime(session);
                     break;
 
                 case "imminvis":
-                    ImmInvis(ref desc);
+                    ToggleImmInvis(session);
+                    break;
+
+                case "backupinfo":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowBackupInfo(session, arg);
+                    break;
+
+                case "log":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    LogAction(session, arg);
+                    break;
+
+                case "immheal":
+                case "immrestore":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ImmHeal(session, arg);
+                    break;
+
+                case "vog":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    VoiceOfGod(session, arg);
+                    break;
+
+                case "addexp":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ChangeExp(session, arg);
+                    break;
+
+                case "giverecipe":
+                case "awardrecipe":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    GiveRecipe(session, arg);
+                    break;
+
+                case "removerecipe":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    RemoveRecipe(session, arg);
+                    break;
+
+                case "giveskill":
+                case "awardskill":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    GiveSkill(session, arg);
+                    break;
+
+                case "removeskill":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    RemoveSkill(session, arg);
+                    break;
+
+                case "givespell":
+                case "awardspell":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    GiveSpell(session, arg);
+                    break;
+
+                case "removespell":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    RemoveSpell(session, arg);
+                    break;
+
+                case "addlang":
+                case "addlanguage":
+                case "givelang":
+                case "givelanguage":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    AddPlayerLanguage(session, arg);
+                    break;
+
+                case "removelang":
+                case "removelanguage":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    RemovePlayerLanguage(session, arg);
+                    break;
+
+                case "imminv":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowImmInventory(session, arg);
+                    break;
+
+                case "immscore":
+                case "immstat":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowImmCharSheet(session, arg);
+                    break;
+
+                case "where":
+                case "find":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    FindAsset(session, arg);
+                    break;
+
+                case "set":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    SetActorAttribute(session, arg);
+                    break;
+
+                case "list":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ListAssets(session, arg);
+                    break;
+
+                case "purge":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    Purge(session, arg);
+                    break;
+
+                case "destroy":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    Destroy(session, arg);
                     break;
 
                 case "slay":
                 case "smite":
-                    Slay(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    Slay(session, arg);
                     break;
 
-                case "force":
-                    DoForce(ref desc, ref input);
-                    break;
-
-                case "set":
-                    ImmSetStat(ref desc, ref input);
-                    break;
-
-                case "cleardesc":
-                    ClearCharacterDescription(ref desc, ref input);
-                    break;
-
-                case "shutdown":
-                    ShutdownWorld(ref desc, ref input);
-                    break;
-
-                case "voiceofgod":
-                case "vog":
-                    VoiceOfGod(ref desc, ref input);
-                    break;
-
-                case "teleport":
                 case "port":
-                    ImmTeleportToPlayer(ref desc, ref input);
+                case "teleport":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    TeleportToTarget(session, arg);
                     break;
 
                 case "summon":
-                    ImmSummonPlayer(ref desc, ref input);
+                    arg = input.Remove(0, verb.Length).Trim();
+                    SummonTarget(session, arg);
                     break;
 
-                case "lastbackup":
-                case "backupinfo":
-                    ShowLastBackup(ref desc);
+                case "trans":
+                case "transfer":
+                case "transport":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    TransferTarget(session, arg);
                     break;
 
+                case "create":
+                case "spawn":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    CreateAsset(session, arg);
+                    break;
+
+                case "force":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ForceActor(session, arg);
+                    break;
+                #endregion
+
+                #region Default
                 default:
-                    if (input.Length > 1)
+                    if (verb.Length > 1)
                     {
-                        var verb = GetVerb(ref input);
-                        if (desc.Player.CommandAliases.ContainsKey(verb))
+                        if (session.Player.CommandAliases.ContainsKey(verb))
                         {
-                            var command = desc.Player.CommandAliases[verb];
-                            var line = input.Remove(0, verb.Length).Trim();
-                            ParseCommand(ref desc, $"{command} {line}");
+                            var cmd = session.Player.CommandAliases[verb];
+                            var line = $"{cmd} {input.Remove(0, verb.Length).Trim()}";
+                            Parse(session, ref line);
                         }
                         else
                         {
-                            var emote = EmoteManager.Instance.GetEmoteByName(GetVerb(ref input));
-                            if (emote != null)
+                            if (EmoteManager.Instance.EmoteExists(verb))
                             {
-                                DoEmote(ref desc, ref input, emote);
+                                arg = input.Remove(0, verb.Length).Trim();
+                                PlayerEmote(session, verb, arg);
                             }
                             else
                             {
-                                desc.Send($"Sorry, I didn't understand that.{Constants.NewLine}");
+                                session.Send($"%BRT%Sorry, I didn't understand that.%PT%{Constants.NewLine}");
                             }
                         }
                     }
                     else
                     {
-                        desc.Send($"Sorry, I didn't understand that.{Constants.NewLine}");
+                        session.Send($"%BRT%Sorry, I didn't understand that.%PT%{Constants.NewLine}");
                     }
                     break;
-                    #endregion
+                #endregion
             }
         }
-
-        #region Functions
-        private static string[] TokeniseInput(ref string input)
-        {
-            List<string> tokens = new List<string>();
-            int startIndex = 0;
-            bool inToken = false;
-            int length = input.Length;
-
-            for (int i = 0; i < length; i++)
-            {
-                char c = input[i];
-                if (char.IsSeparator(c))
-                {
-                    if (inToken)
-                    {
-                        tokens.Add(input.Substring(startIndex, i - startIndex).Trim());
-                        inToken = false;
-                    }
-                }
-                else if (!inToken)
-                {
-                    inToken = true;
-                    startIndex = i;
-                }
-            }
-
-            if (inToken)
-            {
-                tokens.Add(input.Substring(startIndex, length - startIndex).Trim());
-            }
-
-            return tokens.ToArray();
-        }
-
-
-        private static string GetSkillOrSpellName(ref string input)
-        {
-            Regex rx = new Regex("\"(.*?)\"");
-            Regex rx2 = new Regex("'(.*?)'");
-            if (rx.Match(input).Success)
-            {
-                return rx.Match(input).Groups[1].Value.Trim();
-            }
-            if (rx2.Match(input).Success)
-            {
-                return rx2.Match(input).Groups[1].Value.Trim();
-            }
-            return string.Empty;
-        }
-
-        private static string GetVerb(ref string line)
-        {
-            return line.Split(' ').First();
-        }
-
-        private static NPC GetTargetNPC(ref Descriptor desc, string target)
-        {
-            try
-            {
-                var targetNo = target.IndexOf(':') > -1 ? target.Split(':')[1].Trim() : string.Empty;
-                if (!string.IsNullOrEmpty(targetNo))
-                {
-                    if (int.TryParse(targetNo, out int index))
-                    {
-                        target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
-                        target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                        var matchingNPCs = RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
-                        if (index >= 0)
-                        {
-                            if (matchingNPCs.Count >= 0 && matchingNPCs.Count >= index)
-                            {
-                                return matchingNPCs[index];
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                    return RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player} encountered an error in CommandParser.GetTargetNPC(): {ex.Message}", LogLevel.Error, true);
-            }
-            return null;
-        }
-
-        private static InventoryItem GetTargetItem(ref Descriptor desc, string target, bool fromInventory, bool fromVault = false)
-        {
-            try
-            {
-                var targetNo = target.IndexOf(':') > -1 ? target.Split(':')[1].Trim() : string.Empty;
-                if (fromInventory)
-                {
-                    if (!string.IsNullOrEmpty(targetNo))
-                    {
-                        if (int.TryParse(targetNo, out int index))
-                        {
-                            target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
-                            target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                            var invItems = desc.Player.Inventory.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
-                            if (index >= 0)
-                            {
-                                if (invItems.Count >= 0 && invItems.Count >= index)
-                                {
-                                    return invItems[index];
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                        return desc.Player.Inventory.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                    }
-                }
-                else
-                {
-                    if (fromVault)
-                    {
-                        if (!string.IsNullOrEmpty(targetNo))
-                        {
-                            if (int.TryParse(targetNo, out int index))
-                            {
-                                target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
-                                target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                                var vaultItems = desc.Player.VaultStore.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
-                                if (index >= 0)
-                                {
-                                    if (vaultItems.Count >= 0 && vaultItems.Count >= index)
-                                    {
-                                        return vaultItems[index];
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                            return desc.Player.VaultStore.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                        }
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(targetNo))
-                        {
-                            if (int.TryParse(targetNo, out int index))
-                            {
-                                target = target.Replace(targetNo, string.Empty).Replace(":", string.Empty).Trim();
-                                target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                                var roomItems = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).ToList();
-                                if (index >= 0)
-                                {
-                                    if (roomItems.Count >= 0 && roomItems.Count >= index)
-                                    {
-                                        return roomItems[index];
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            target = Regex.Replace(target, @"[^\w\d\s]", string.Empty);
-                            return RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Where(x => Regex.Match(x.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player} encountered an error in CommandParser.GetTargetItem(): {ex.Message}", LogLevel.Error, true);
-            }
-            return null;
-        }
-
-        private static bool ValidateInput(string input)
-        {
-            return !string.IsNullOrWhiteSpace(input) && Encoding.UTF8.GetByteCount(input) == input.Length;
-        }
-
-        private static T ParseEnumValue<T>(ref string valIn) where T : struct, Enum
-        {
-            if (Enum.TryParse<T>(valIn, true, out T retval))
-            {
-                return retval;
-            }
-            return default;
-        }
-        #endregion
     }
 }

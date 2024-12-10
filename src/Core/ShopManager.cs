@@ -1,154 +1,139 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Etrea2.Entities;
-using System.Text.RegularExpressions;
+using Etrea3.Objects;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class ShopManager
+    public class ShopManager
     {
-        private static ShopManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<uint, Shop> _shops { get; set; }
+        private static ShopManager instance = null;
+        private ConcurrentDictionary<int, Shop> Shops { get; set; }
+        public int Count => Shops.Count;
 
         private ShopManager()
         {
-            _shops = new Dictionary<uint, Shop>();
+            Shops = new ConcurrentDictionary<int, Shop>();
         }
 
-        internal static ShopManager Instance
+        public static ShopManager Instance
         {
             get
             {
-                lock (_lock)
+                if (instance == null)
                 {
-                    if (_instance == null)
-                    {
-                        _instance = new ShopManager();
-                    }
-                    return _instance;
+                    instance = new ShopManager();
                 }
+                return instance;
             }
         }
 
-        internal bool AddNewShop(ref Descriptor desc, Shop s)
+        public void SetShopLockStatus(int id, bool locked, Session session)
+        {
+            if (Instance.Shops.ContainsKey(id))
+            {
+                Instance.Shops[id].OLCLocked = locked;
+                Instance.Shops[id].LockHolder = locked ? session.ID : Guid.Empty;
+            }
+        }
+
+        public bool GetShopLockedStatus(int id, out Guid lockHolder)
+        {
+            lockHolder = Guid.Empty;
+            if (Instance.Shops.ContainsKey(id))
+            {
+                lockHolder = Instance.Shops[id].LockHolder;
+                return Instance.Shops[id].OLCLocked;
+            }
+            return false;
+        }
+
+        public bool AddOrUpdateShop(Shop shop, bool isNew)
         {
             try
             {
-                lock(_lock)
+                if (!DatabaseManager.SaveShopToWorldDatabase(shop, isNew))
                 {
-                    Instance._shops.Add(s.ID, s);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} has added Shop {s.ID} ({s.ShopName}) to ShopManager", LogLevel.OLC, true);
+                    Game.LogMessage($"ERROR: Failed to save Shop {shop.ShopName} ({shop.ID}) to the World Database", LogLevel.Error, true);
+                    return false;
+                }
+                if (isNew)
+                {
+                    if (!Instance.Shops.TryAdd(shop.ID, shop))
+                    {
+                        Game.LogMessage($"ERROR: Failed to add new Shop {shop.ShopName} ({shop.ID}) to Shop Manager", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!Instance.Shops.TryGetValue(shop.ID, out Shop existingShop))
+                    {
+                        Game.LogMessage($"ERROR: Shop {shop.ID} not found in Shop Manager for update", LogLevel.Error, true);
+                        return false;
+                    }
+                    if (!Instance.Shops.TryUpdate(shop.ID, shop, existingShop))
+                    {
+                        Game.LogMessage($"ERROR: Failed to update Shop {shop.ID} in Shop Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
+                    }
                 }
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding Shop ID {s.ID} ({s.ShopName}) to ShopManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in ShopManager.AddOrUpdateShop(): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool UpdateShop(ref Descriptor desc, Shop s)
+        public bool RemoveShop(int id)
         {
-            try
+            if (Instance.Shops.ContainsKey(id))
             {
-                lock (_lock)
-                {
-                    if (Instance._shops.ContainsKey(s.ID))
-                    {
-                        Instance._shops.Remove(s.ID);
-                        Instance._shops.Add(s.ID, s);
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} updated Shop {s.ID} ({s.ShopName}) in ShopManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: ShopManager does not contain a Shop with ID {s.ID} to update, it will be added instead", LogLevel.OLC, true);
-                        bool OK = AddNewShop(ref desc, s);
-                        return OK;
-                    }
-                }
+                return Instance.Shops.TryRemove(id, out _) && DatabaseManager.RemoveShop(id);
             }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Shop {s.ID} ({s.ShopName}) in ShopManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
+            Game.LogMessage($"ERROR: Error removing Shop with ID {id}, no such Shop in ShopManager", LogLevel.Error, true);
+            return false;
         }
 
-        internal bool RemoveShop(ref Descriptor desc, uint id, string name)
+        public Shop GetShop(int id)
         {
-            try
-            {
-                lock (_lock)
-                {
-                    Instance._shops.Remove(id);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} removed Shop {id} ({name}) from ShopManager", LogLevel.OLC, true);
-                    return true;
-                }
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Shop {id} ({name}) from ShopManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
+            return Instance.Shops.ContainsKey(id) ? Instance.Shops[id] : null;
         }
 
-        internal List<Shop> GetShopByIDRange(uint start, uint end)
+        public List<Shop> GetShop(int start, int end)
         {
-            var retval = Instance._shops.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
-            return retval;
+            return end <= start ? null : Instance.Shops.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
         }
 
-        internal List<Shop> GetAllShops()
+        public List<Shop> GetShop(string criteria)
         {
-            lock (_lock)
-            {
-                return Instance._shops.Values.ToList();
-            }
+            return string.IsNullOrEmpty(criteria) ? null :
+                Instance.Shops.Values.Where(x => x.ShopName.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
         }
 
-        internal List<Shop> GetShopsByName(string name)
+        public List<Shop> GetShop()
         {
-            if (!string.IsNullOrEmpty(name))
-            {
-                var result = Instance._shops.Values.Where(x => Regex.IsMatch(x.ShopName, name, RegexOptions.IgnoreCase)).ToList();
-                return result;
-            }
-            return Instance._shops.Values.ToList();
+            return Instance.Shops.Values.ToList();
         }
 
-        internal int GetShopCount()
+        public bool ShopExists(int id)
         {
-            return Instance._shops.Count;
+            return Instance.Shops.ContainsKey(id);
         }
 
-        internal Shop GetShop(uint id)
+        public void LoadAllShops(out bool hasErr)
         {
-            lock (_lock)
-            {
-                if (Instance._shops.ContainsKey(id))
-                {
-                    return Instance._shops[id];
-                }
-            }
-            return null;
-        }
-
-        internal bool ShopExists(uint id)
-        {
-            return Instance._shops.ContainsKey(id);
-        }
-
-        internal void LoadAllShops(out bool hasErr)
-        {
+            hasErr = false;
             var result = DatabaseManager.LoadAllShops(out hasErr);
             if (!hasErr && result != null)
             {
-                Instance._shops.Clear();
-                Instance._shops = result;
+                foreach (var shop in result)
+                {
+                    Instance.Shops.AddOrUpdate(shop.Key, shop.Value, (k, v) => shop.Value);
+                }
             }
         }
     }

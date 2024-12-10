@@ -1,16 +1,13 @@
-﻿namespace Etrea2
+﻿namespace Etrea3
 {
-    internal enum ActorPosition
+    public enum ActorPosition
     {
-        Dead,
-        Dying,
-        Incapacitated,
-        Stunned,
-        Sleeping,
-        Resting,
-        Sitting,
         Standing,
-        Fighting,
-        InOLC
+        Sitting,
+        Resting,
+        Sleeping,
+        Stunned,
+        Dying,
+        Dead
     }
 }

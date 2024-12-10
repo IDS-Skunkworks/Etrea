@@ -1,11 +1,14 @@
-﻿namespace Etrea2
+﻿using System;
+
+namespace Etrea3
 {
-    internal enum ActorClass
+    [Flags]
+    public enum ActorClass
     {
-        Undefined,
-        Wizard,
-        Thief,
-        Cleric,
-        Fighter,
+        Undefined = 0,
+        Wizard = 1,
+        Thief = 2,
+        Cleric = 4,
+        Fighter = 8,
     }
 }

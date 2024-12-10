@@ -1,7260 +1,3164 @@
-﻿using Etrea2.Entities;
+﻿using Etrea3.Objects;
+using NCalc;
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal static partial class CommandParser
+    public static class ActPlayer
     {
-        private static void DoConsiderCheck(ref Descriptor desc, ref string input)
+        #region Communication
+        public static void PlayerMailAction(Session session, string arg)
         {
-            // consider <target>
-            var verb = GetVerb(ref input);
-            var target = input.Remove(0, verb.Length).Trim();
-            if (string.IsNullOrEmpty(target))
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.PostBox))
             {
-                desc.Send($"Consider what, exactly?{Constants.NewLine}");
+                session.Send($"%BRT%There is no Mailbox here!%PT%{Constants.NewLine}");
                 return;
             }
-            var tNPC = GetTargetNPC(ref desc, target);
-            if (tNPC == null)
+            if (string.IsNullOrEmpty(arg))
             {
-                desc.Send($"That doesn't seem to be here right now...{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail <list | read | write | delete>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail list - list all your mail, if any%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail read <id> - read the specified mail%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail delete <id> - delete the specified mail%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail write - write a mail to another player%PT%{Constants.NewLine}");
                 return;
             }
-            int consScore = 0;
-            if (desc.Player.Strength != tNPC.Strength)
+            var args = arg.Split(' ');
+            if (args.Length == 0)
             {
-                if (desc.Player.Strength > tNPC.Strength)
-                {
-                    consScore++;
-                }
-                if (desc.Player.Strength < tNPC.Strength)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.Dexterity != tNPC.Dexterity)
-            {
-                if (desc.Player.Dexterity > tNPC.Dexterity)
-                {
-                    consScore++;
-                }
-                if (desc.Player.Dexterity < tNPC.Dexterity)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.Constitution != tNPC.Constitution)
-            {
-                if (desc.Player.Constitution > tNPC.Constitution)
-                {
-                    consScore++;
-                }
-                if (desc.Player.Constitution < tNPC.Constitution)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.Intelligence != tNPC.Intelligence)
-            {
-                if (desc.Player.Intelligence > tNPC.Intelligence)
-                {
-                    consScore++;
-                }
-                if (desc.Player.Intelligence < tNPC.Intelligence)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.Wisdom != tNPC.Wisdom)
-            {
-                if (desc.Player.Wisdom > tNPC.Wisdom)
-                {
-                    consScore++;
-                }
-                if (desc.Player.Wisdom < tNPC.Wisdom)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.Charisma != tNPC.Charisma)
-            {
-                if (desc.Player.Charisma > tNPC.Charisma)
-                {
-                    consScore++;
-                }
-                if (desc.Player.Charisma < tNPC.Charisma)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.CurrentHP != tNPC.CurrentHP)
-            {
-                if (desc.Player.CurrentHP > tNPC.CurrentHP)
-                {
-                    consScore++;
-                }
-                if (desc.Player.CurrentHP < tNPC.CurrentHP)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.CurrentMP != tNPC.CurrentMP)
-            {
-                if (desc.Player.CurrentMP > tNPC.CurrentMP)
-                {
-                    consScore++;
-                }
-                if (desc.Player.CurrentMP < tNPC.CurrentMP)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.CurrentHP < desc.Player.MaxHP)
-            {
-                consScore--;
-            }
-            if (desc.Player.CurrentMP < desc.Player.MaxMP)
-            {
-                consScore--;
-            }
-            desc.Player.CalculateArmourClass();
-            tNPC.CalculateArmourClass();
-            if (desc.Player.ArmourClass != tNPC.ArmourClass)
-            {
-                if (desc.Player.ArmourClass < tNPC.ArmourClass)
-                {
-                    consScore--;
-                }
-                if (desc.Player.ArmourClass > tNPC.ArmourClass)
-                {
-                    consScore++;
-                }
-            }
-            if (desc.Player.EquipWeapon != null && tNPC.EquipWeapon != null)
-            {
-                if (desc.Player.EquipWeapon.NumberOfDamageDice > tNPC.EquipWeapon.NumberOfDamageDice)
-                {
-                    consScore++;
-                }
-                if (desc.Player.EquipWeapon.NumberOfDamageDice < tNPC.EquipWeapon.NumberOfDamageDice)
-                {
-                    consScore--;
-                }
-                if (desc.Player.EquipWeapon.SizeOfDamageDice > tNPC.EquipWeapon.SizeOfDamageDice)
-                {
-                    consScore++;
-                }
-                if (desc.Player.EquipWeapon.SizeOfDamageDice < tNPC.EquipWeapon.SizeOfDamageDice)
-                {
-                    consScore--;
-                }
-            }
-            if (desc.Player.EquipWeapon == null && tNPC.EquipWeapon != null)
-            {
-                consScore--;
-            }
-            if (desc.Player.EquipWeapon != null && tNPC.EquipWeapon == null)
-            {
-                consScore++;
-            }
-            if (desc.Player.Level != tNPC.Level)
-            {
-                if (desc.Player.Level < tNPC.Level)
-                {
-                    consScore--;
-                }
-                if (desc.Player.Level > tNPC.Level)
-                {
-                    consScore++;
-                }
-            }
-            // check value of conScore and give result, low number is bad, higher number is good
-            if (consScore == 0)
-            {
-                desc.Send($"Your chances of defeating {tNPC.Name} are about evens...{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail <list | read | write | delete>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail list - list all your mail, if any%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail read <id> - read the specified mail%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail delete <id> - delete the specified mail%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: mail write - write a mail to another player%PT%{Constants.NewLine}");
                 return;
             }
-            if (consScore == 1)
+            var operation = args[0].Trim().ToLower();
+            if (operation == "list")
             {
-                desc.Send($"You should be able to get the better of {tNPC.Name}...{Constants.NewLine}");
+                PlayerMail.ListMail(session);
                 return;
             }
-            if (consScore == 2)
+            if (operation == "read")
             {
-                desc.Send($"You shouldn't have any difficulty dealing with {tNPC.Name}...{Constants.NewLine}");
+                if (args.Length < 2)
+                {
+                    session.Send($"%BRT%Usage: mail <list | read | write | delete>%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail list - list all your mail, if any%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail read <id> - read the specified mail%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail delete <id> - delete the specified mail%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail write - write a mail to another player%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (!int.TryParse(args[1].Trim(), out int mailID))
+                {
+                    session.Send($"%BRT%That isn't a valid Mail ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                PlayerMail.ReadMail(session, mailID);
                 return;
             }
-            if (consScore == 3)
+            if (operation == "write")
             {
-                desc.Send($"You should be able to make a meal of {tNPC.Name}...{Constants.NewLine}");
+                PlayerMail.ComposeMail(session);
                 return;
             }
-            if (consScore >= 4)
+            if (operation == "delete")
             {
-                desc.Send($"{tNPC.Name} should pose no challenge at all!{Constants.NewLine}");
+                if (args.Length < 2)
+                {
+                    session.Send($"%BRT%Usage: mail <list | read | write | delete>%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail list - list all your mail, if any%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail read <id> - read the specified mail%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail delete <id> - delete the specified mail%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: mail write - write a mail to another player%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (!int.TryParse(args[1].Trim(), out int mailID))
+                {
+                    session.Send($"%BRT%That isn't a valid Mail ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                PlayerMail.DeleteMail(session, mailID);
                 return;
             }
-            if (consScore == -1)
+            session.Send($"%BRT%Usage: mail <list | read | write | delete>%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: mail list - list all your mail, if any%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: mail read <id> - read the specified mail%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: mail delete <id> - delete the specified mail%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: mail write - write a mail to another player%PT%{Constants.NewLine}");
+        }
+
+        public static void CharShout(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
             {
-                desc.Send($"{tNPC.Name} should be able to get the better of you...{Constants.NewLine}");
+                session.Send($"Shout what, exactly?{Constants.NewLine}");
                 return;
             }
-            if (consScore == -2)
+            var currentZone = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom);
+            var zonePlayers = SessionManager.Instance.ActivePlayers.Where(x => x.ID != session.ID && ZoneManager.Instance.GetZoneForRID(x.Player.CurrentRoom) == currentZone).ToList();
+            session.Send($"%BGT%You bellow \"{arg}\" as loudly as you can! Hope everyone can hear!{Constants.NewLine}%PT%");
+            if (zonePlayers != null && zonePlayers.Count > 0)
             {
-                desc.Send($"{tNPC.Name} shouldn't have any issues dispatching you...{Constants.NewLine}");
-                return;
-            }
-            if (consScore == -3)
-            {
-                desc.Send($"{tNPC.Name} will make a meal of you... Maybe think again...{Constants.NewLine}");
-                return;
-            }
-            if (consScore <= -4)
-            {
-                desc.Send($"Even the Gods laugh at the idea! You have no chance!{Constants.NewLine}");
-                return;
+                foreach (var p in zonePlayers)
+                {
+                    string pName = session.Player.CanBeSeenBy(p.Player) ? session.Player.Name : "Someone";
+                    string msg = string.Empty;
+                    switch(p.Player.KnowsLanguage(session.Player.SpokenLanguage))
+                    {
+                        case true:
+                            msg = $"%BGT%{pName} bellows \"{arg}\"{Constants.NewLine}%PT%";
+                            break;
+
+                        case false:
+                            msg = $"%BGT%{pName} bellows something in {session.Player.SpokenLanguage} which you don't understand.{Constants.NewLine}%PT%";
+                            break;
+                    }
+                    p.Send(msg);
+                }
             }
         }
 
-        private static void ExorciseCursedItem(ref Descriptor desc, ref string input)
+        public static void CharWhisper(Session session, string line)
         {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Exorcist))
-            {
-                var verb = GetVerb(ref input);
-                var targetSlot = input.Remove(0, verb.Length).Trim();
-                if (!string.IsNullOrEmpty(targetSlot))
-                {
-                    if (targetSlot.ToLower() == "price")
-                    {
-                        var p = Helpers.GetNewPurchasePrice(ref desc, 2500);
-                        desc.Send($"The priest looks solemn. \"Removing this curse will cost {p:N0} gold.\"{Constants.NewLine}");
-                        return;
-                    }
-                    InventoryItem i = null;
-                    switch (targetSlot.ToLower())
-                    {
-                        case "head":
-                            if (desc.Player.EquipHead != null && desc.Player.EquipHead.IsCursed)
-                            {
-                                i = desc.Player.EquipHead;
-                            }
-                            else
-                            {
-                                desc.Send($"You aren't wearing anything cursed on your head!{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "neck":
-                            if (desc.Player.EquipNeck != null && desc.Player.EquipNeck.IsCursed)
-                            {
-                                i = desc.Player.EquipNeck;
-                            }
-                            else
-                            {
-                                desc.Send($"You aren't wearing anything cursed around your neck!{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "armour":
-                            if (desc.Player.EquipArmour != null && desc.Player.EquipArmour.IsCursed)
-                            {
-                                i = desc.Player.EquipArmour;
-                            }
-                            else
-                            {
-                                desc.Send($"Your armour isn't cursed!{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "weapon":
-                            if (desc.Player.EquipWeapon != null && desc.Player.EquipWeapon.IsCursed)
-                            {
-                                i = desc.Player.EquipWeapon;
-                            }
-                            else
-                            {
-                                desc.Send($"Your weapon isn't cursed!{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "held":
-                            if (desc.Player.EquipHeld != null && desc.Player.EquipHeld.IsCursed)
-                            {
-                                i = desc.Player.EquipHeld;
-                            }
-                            else
-                            {
-                                desc.Send($"You aren't holding anything cursed!{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "fingerright":
-                            if (desc.Player.EquipRightFinger != null && desc.Player.EquipRightFinger.IsCursed)
-                            {
-                                i = desc.Player.EquipRightFinger;
-                            }
-                            else
-                            {
-                                desc.Send($"You aren't wearing anything with a curse on your right hand!{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "fingerleft":
-                            if (desc.Player.EquipLeftFinger != null && desc.Player.EquipLeftFinger.IsCursed)
-                            {
-                                i = desc.Player.EquipLeftFinger;
-                            }
-                            else
-                            {
-                                desc.Send($"You aren't wearing anything with a curse on your left hand!{Constants.NewLine}");
-                            }
-                            break;
-                    }
-                    if (i != null)
-                    {
-                        var removePrice = Helpers.GetNewPurchasePrice(ref desc, 2500);
-                        if (removePrice > desc.Player.Gold)
-                        {
-                            desc.Send($"The exorcist gives you a solemn look. \"You can't afford that, it seems.\"{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Send($"The exorcist stashes your gold in his robe. \"Excellent! One moment...\"{Constants.NewLine}");
-                            desc.Player.Gold -= removePrice;
-                            desc.Player.Inventory.Add(i);
-                            switch (targetSlot.ToLower())
-                            {
-                                case "head":
-                                    desc.Player.EquipHead = null;
-                                    break;
-
-                                case "neck":
-                                    desc.Player.EquipNeck = null;
-                                    break;
-
-                                case "armour":
-                                    desc.Player.EquipArmour = null;
-                                    break;
-
-                                case "weapon":
-                                    desc.Player.EquipWeapon = null;
-                                    break;
-
-                                case "held":
-                                    desc.Player.EquipHeld = null;
-                                    break;
-
-                                case "fingerright":
-                                    desc.Player.EquipRightFinger = null;
-                                    break;
-
-                                case "fingerleft":
-                                    desc.Player.EquipLeftFinger = null;
-                                    break;
-
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"Usage: exorcise <price | equipment slot>{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no one here that can help exorcise cursed items...{Constants.NewLine}");
-            }
-        }
-
-        private static void PlayerLanguages(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input);
-            var line = input.Remove(0, verb.Length).Trim();
             if (string.IsNullOrEmpty(line))
             {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"You are currently speaking {desc.Player.SpokenLanguage}");
-                sb.AppendLine($"You know the following languages: {desc.Player.KnownLanguages}");
-                desc.Send(sb.ToString());
+                session.Send($"Whisper what to who?{Constants.NewLine}");
+                return;
             }
-            else
+            string[] elements = line.Split(' ');
+            if (elements.Length == 0)
             {
-                var lang = ParseEnumValue<Languages>(ref line);
-                if (desc.Player.KnownLanguages.HasFlag(lang))
-                {
-                    desc.Player.SpokenLanguage = lang;
-                    desc.Send($"You are now speaking {lang}.{Constants.NewLine}");
-                }
-                else
-                {
-                    desc.Send($"You don't know that language!{Constants.NewLine}");
-                }
+                session.Send($"Whisper what to who?{Constants.NewLine}");
+                return;
             }
+            string targetName = elements[0].Trim();
+            string toSay = line.Remove(0, targetName.Length).Trim();
+            if (string.IsNullOrEmpty(toSay))
+            {
+                session.Send($"Whisper what, exactly?{Constants.NewLine}");
+                return;
+            }
+            var tp = SessionManager.Instance.ActivePlayers.Where(x => x.Player.CanBeSeenBy(session.Player) && x.Player.Name.IndexOf(targetName, StringComparison.OrdinalIgnoreCase) >= 0).FirstOrDefault();
+            if (tp == null)
+            {
+                session.Send($"That person doesn't seem to be in the Realms right now...{Constants.NewLine}");
+                return;
+            }
+            session.Send($"You whisper \"{toSay}\" to {tp.Player.Name}{Constants.NewLine}");
+            string pName = session.Player.CanBeSeenBy(tp.Player) ? session.Player.Name : "Someone";
+            tp.Send($"%BYT%{pName} whispers \"{toSay}\"{Constants.NewLine}%PT%");
         }
 
-        private static void PlayerVault(ref Descriptor desc, ref string input)
+        public static void CharSayRoom(Session session, string saying)
         {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.ItemVault))
+            if (string.IsNullOrEmpty(saying))
             {
-                var verb = GetVerb(ref input);
-                var line = input.Remove(0, verb.Length).Trim();
-                var tokens = TokeniseInput(ref line);
-                // vault deposit fox
-                if (tokens.Length >= 1)
+                session.Send($"Say what, exactly?{Constants.NewLine}");
+                return;
+            }
+            session.Send($"%BGT%You say \"{saying}\"{Constants.NewLine}%PT%");
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+            if (localPlayers != null && localPlayers.Count > 0)
+            {
+                foreach(var lp in localPlayers)
                 {
-                    switch (tokens[0].ToLower().Trim())
+                    string msg = string.Empty;
+                    string pName = session.Player.CanBeSeenBy(lp.Player) ? session.Player.Name : "Something";
+                    switch(lp.Player.KnowsLanguage(session.Player.SpokenLanguage))
                     {
-                        case "check":
-                        case "c":
-                            if (desc.Player.VaultStore != null && desc.Player.VaultStore.Count > 0)
-                            {
-                                StringBuilder sb = new StringBuilder();
-                                sb.AppendLine($"The vault wardern rifles through his paperwork. \"You have the following things in storage.\"");
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                foreach (var o in desc.Player.VaultStore.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
-                                {
-                                    var cnt = desc.Player.VaultStore.Where(x => x.ID == o.ID).Count();
-                                    sb.AppendLine($"|| {cnt} x {o.Name}, {o.ShortDescription}");
-                                }
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                desc.Send(sb.ToString());
-                            }
-                            else
-                            {
-                                desc.Send($"The vault wardern rifles through his paperwork. \"You don't have anything in storage,\" he says.{Constants.NewLine}");
-                            }
+                        case true:
+                            msg = $"%BGT%{pName} says \"{saying}\"%PT%{Constants.NewLine}";
                             break;
 
-                        case "store":
-                        case "s":
-                            var item = line.Remove(0, tokens[0].Length).Trim();
-                            var i = GetTargetItem(ref desc, item, true);
-                            if (i != null)
-                            {
-                                desc.Player.Inventory.Remove(i);
-                                desc.Player.VaultStore.Add(i);
-                                desc.Send($"The vault warden smiles, \"Certainly, we'll keep that safe for you, you can collect it any time.\"{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"You don't seem to be carrying anything like that.{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "withdraw":
-                        case "w":
-                            var vItem = line.Remove(0, tokens[0].Length).Trim();
-                            var vaultItem = GetTargetItem(ref desc, vItem, false, true);
-                            if (vaultItem != null)
-                            {
-                                desc.Player.VaultStore.Remove(vaultItem);
-                                desc.Player.Inventory.Add(vaultItem);
-                                desc.Send($"The vault warden smiles, \"Certainly, returned to you safe and sound!\"{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"The vault warden tuts, \"You don't have anything like that in storage.\"{Constants.NewLine}");
-                            }
-                            break;
-
-                        default:
-                            desc.Send($"Usage: vault <<check> | <store | withdraw> <item>{Constants.NewLine}");
+                        case false:
+                            msg = $"%BGT%{pName} says something in {session.Player.SpokenLanguage} which you don't understand!%PT%{Constants.NewLine}";
                             break;
                     }
-                }
-                else
-                {
-                    desc.Send($"Usage: vault <<check> | <store | withdraw> <item>{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no vault here...{Constants.NewLine}");
-            }
-        }
-
-        private static void PlayerBanking(ref Descriptor desc, ref string input)
-        {
-            // bank balance
-            // bank <deposit | withdraw> <amount>
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Banker))
-            {
-                var verb = GetVerb(ref input);
-                var line = input.Remove(0, verb.Length).Trim();
-                var tokens = TokeniseInput(ref line);
-                if (tokens.Length >= 1)
-                {
-                    switch (tokens[0].ToLower().Trim())
-                    {
-                        case "b":
-                        case "balance":
-                            desc.Send($"The bank teller files through some papers. \"Your current balance is {desc.Player.BankBalance:N0} gold coins.\"{Constants.NewLine}");
-                            break;
-
-                        case "d":
-                        case "deposit":
-                            if (tokens.Length == 2)
-                            {
-                                if (uint.TryParse(tokens[1].Trim(), out uint depositAmount))
-                                {
-                                    if (depositAmount > 0 && depositAmount <= desc.Player.Gold)
-                                    {
-                                        desc.Player.Gold -= depositAmount;
-                                        desc.Player.BankBalance += depositAmount;
-                                        desc.Send($"You have successfully deposited {depositAmount} gold in your account!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The bank teller looks confused. \"You must deposit at least 1 gold, and you can't depsoit more gold than you have!\"{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"The bank teller looks confused and mutters \"That doesn't seem right...\"{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"Usage: bank balance - view your current bank balance{Constants.NewLine}");
-                                desc.Send($"{Constants.TabStop}bank <deposit | withdraw> <amount> - to deposit or withdraw gold{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "w":
-                        case "withdraw":
-                            if (tokens.Length == 2)
-                            {
-                                if (uint.TryParse(tokens[1].Trim(), out uint withdrawAmount))
-                                {
-                                    if (withdrawAmount > 0 && withdrawAmount <= desc.Player.BankBalance)
-                                    {
-                                        desc.Player.BankBalance -= withdrawAmount;
-                                        desc.Player.Gold += withdrawAmount;
-                                        desc.Send($"You have successfully withdrawn {withdrawAmount} gold from your account!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The bank teller looks confused. \"You must withdraw at least 1 gold, and you can't withdraw more gold than is in your account!\"{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"The bank teller looks confused and mutters \"That doesn't seem right...\"{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"Usage: bank balance - view your current bank balance{Constants.NewLine}");
-                                desc.Send($"{Constants.TabStop}bank <deposit | withdraw> <amount> - to deposit or withdraw gold{Constants.NewLine}");
-                            }
-                            break;
-
-                        default:
-                            desc.Send($"Sorry, I don't understand...{Constants.NewLine}");
-                            break;
-                    }
-                }
-                else
-                {
-                    desc.Send($"Usage: bank balance - view your current bank balance{Constants.NewLine}");
-                    desc.Send($"{Constants.TabStop}bank <deposit | withdraw> <amount> - to deposit or withdraw gold{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no banker here...{Constants.NewLine}");
-            }
-        }
-
-        private static void MovePlayer(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input).Trim().ToLower();
-            string direction = string.Empty;
-            if (verb.Length <= 2)
-            {
-                switch (verb)
-                {
-                    case "s":
-                        direction = "south";
-                        break;
-                    case "n":
-                        direction = "north";
-                        break;
-                    case "w":
-                        direction = "west";
-                        break;
-                    case "e":
-                        direction = "east";
-                        break;
-                    case "ne":
-                        direction = "northeast";
-                        break;
-                    case "se":
-                        direction = "southeast";
-                        break;
-                    case "sw":
-                        direction = "southwest";
-                        break;
-                    case "nw":
-                        direction = "northwest";
-                        break;
-                    case "d":
-                        direction = "down";
-                        break;
-                    case "u":
-                        direction = "up";
-                        break;
-                }
-            }
-            else
-            {
-                direction = verb;
-            }
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection(direction))
-            {
-                if (desc.Player.Position == ActorPosition.Standing)
-                {
-                    var s = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RequiredSkill;
-                    if (s == null || desc.Player.HasSkill(s.Name))
-                    {
-                        var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor;
-                        if (d == null || (d != null && d.IsOpen))
-                        {
-                            desc.Player.Move(desc.Player.CurrentRoom, RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).DestinationRoomID, false);
-                        }
-                        else
-                        {
-                            desc.Send($"A doorway blocks your path in that direction!{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You need the {s.Name} skill to go that way!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You are {desc.Player.Position.ToString().ToLower()}, and don't feel like moving right now...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"You cannot go that way!{Constants.NewLine}");
-            }
-        }
-
-        private static void OpenOrCloseDoor(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input).Trim().ToLower();
-            string direction = input.Remove(0, verb.Length).Trim().ToLower();
-            if (direction.Length <= 2)
-            {
-                switch (direction)
-                {
-                    case "s":
-                        direction = "south";
-                        break;
-                    case "n":
-                        direction = "north";
-                        break;
-                    case "w":
-                        direction = "west";
-                        break;
-                    case "e":
-                        direction = "east";
-                        break;
-                    case "ne":
-                        direction = "northeast";
-                        break;
-                    case "se":
-                        direction = "southeast";
-                        break;
-                    case "sw":
-                        direction = "southwest";
-                        break;
-                    case "nw":
-                        direction = "northwest";
-                        break;
-                    case "d":
-                        direction = "down";
-                        break;
-                    case "u":
-                        direction = "up";
-                        break;
-                }
-            }
-            if (!string.IsNullOrEmpty(direction))
-            {
-                var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-                if (r.HasExitInDirection(direction))
-                {
-                    var d = r.GetRoomExit(direction).RoomDoor;
-                    if (d != null)
-                    {
-                        List<Descriptor> localPlayers;
-                        switch (verb.ToLower())
-                        {
-                            case "open":
-                                if (d.IsLocked)
-                                {
-                                    desc.Send($"The door is locked!{Constants.NewLine}");
-                                }
-                                else
-                                {
-                                    RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = true;
-                                    desc.Send($"You open the door {direction}.{Constants.NewLine}");
-                                    localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                    if (localPlayers != null && localPlayers.Count > 1)
-                                    {
-                                        var pn = desc.Player.Name;
-                                        foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
-                                        {
-                                            if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                            {
-                                                p.Send($"{pn} opens the door {direction}.{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                p.Send($"Something opens the door {direction}.{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                                break;
-
-                            case "close":
-                                RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsOpen = false;
-                                desc.Send($"You close the door {direction}.{Constants.NewLine}");
-                                localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                if (localPlayers != null && localPlayers.Count > 1)
-                                {
-                                    var pn = desc.Player.Name;
-                                    foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
-                                    {
-                                        if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                        {
-                                            p.Send($"{pn} closes the door {direction}.{Constants.NewLine}");
-                                        }
-                                        else
-                                        {
-                                            p.Send($"Something closes the door {direction}.{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"There is no door on the exit {direction}...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"There is no exit {direction}...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-            }
-        }
-
-        private static void LockOrUnlockDoor(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input).Trim().ToLower();
-            string direction = input.Remove(0, verb.Length).Trim().ToLower();
-            if (direction.Length <= 2)
-            {
-                switch (direction)
-                {
-                    case "s":
-                        direction = "south";
-                        break;
-                    case "n":
-                        direction = "north";
-                        break;
-                    case "w":
-                        direction = "west";
-                        break;
-                    case "e":
-                        direction = "east";
-                        break;
-                    case "ne":
-                        direction = "northeast";
-                        break;
-                    case "se":
-                        direction = "southeast";
-                        break;
-                    case "sw":
-                        direction = "southwest";
-                        break;
-                    case "nw":
-                        direction = "northwest";
-                        break;
-                    case "d":
-                        direction = "down";
-                        break;
-                    case "u":
-                        direction = "up";
-                        break;
-                }
-            }
-            if (!string.IsNullOrEmpty(direction))
-            {
-                var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-                if (r.HasExitInDirection(direction))
-                {
-                    var d = r.GetRoomExit(direction).RoomDoor;
-                    if (d != null)
-                    {
-                        switch (verb.ToLower())
-                        {
-                            case "lock":
-                                if (!d.IsOpen)
-                                {
-                                    if (!d.IsLocked)
-                                    {
-                                        if (d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
-                                        {
-                                            RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = true;
-                                            desc.Send($"You lock the door {direction}.{Constants.NewLine}");
-                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                            if (localPlayers != null && localPlayers.Count > 1)
-                                            {
-                                                var pn = desc.Player.Name;
-                                                foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
-                                                {
-                                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                                    {
-                                                        p.Send($"{pn} locks the door {direction}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        p.Send($"Something locks the door {direction}.{Constants.NewLine}");
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"You lack the correct key to lock the door...{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The door is already locked...{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"The door must be shut first...{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "unlock":
-                                if (d.IsOpen)
-                                {
-                                    desc.Send($"The door is already open...{Constants.NewLine}");
-                                }
-                                else
-                                {
-                                    if (!d.IsLocked)
-                                    {
-                                        desc.Send($"The door is already unlocked...{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        if (d.RequiredItemID == 0 || desc.Player.HasItemInInventory(d.RequiredItemID))
-                                        {
-                                            RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit(direction).RoomDoor.IsLocked = false;
-                                            desc.Send($"You unlock the door {direction}.{Constants.NewLine}");
-                                            var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                            if (localPlayers != null && localPlayers.Count > 1)
-                                            {
-                                                var pn = desc.Player.Name;
-                                                foreach (var p in localPlayers.Where(x => x.Player.Name != pn))
-                                                {
-                                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                                    {
-                                                        p.Send($"{pn} unlocks the door {direction}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        p.Send($"Something unlocks the door {direction}.{Constants.NewLine}");
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"You lack the correct key to unlock the door...{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                                break;
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"There is no exit to the {direction}...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-            }
-        }
-
-        private static void PlayerQuests(ref Descriptor desc, ref string input)
-        {
-            // usage quest(s) - show current active quests
-            // quest(s) <list | accept | abandon | return>
-            var verb = GetVerb(ref input).Trim();
-            var line = input.Remove(0, verb.Length).Trim();
-            var elements = TokeniseInput(ref line);
-            var operation = elements.Length >= 1 ? elements[0].ToLower().Trim() : string.Empty;
-            if (!string.IsNullOrEmpty(operation))
-            {
-                var questList = QuestManager.Instance.GetQuestsForZone(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ZoneID);
-                switch (operation)
-                {
-                    case "list":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
-                        {
-                            var completedQuestIds = desc.Player.CompletedQuests;
-                            var zoneQuests = new List<Quest>();
-                            if (questList != null && questList.Count > 0)
-                            {
-                                foreach (var q in questList)
-                                {
-                                    if (!completedQuestIds.Contains(q.QuestGUID))
-                                    {
-                                        zoneQuests.Add(q);
-                                    }
-                                }
-                            }
-                            if (zoneQuests != null && zoneQuests.Count > 0)
-                            {
-                                int i = 0, n = 1;
-                                StringBuilder sb = new StringBuilder();
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                foreach (var q in zoneQuests)
-                                {
-                                    sb.AppendLine($"|| ID: {n}");
-                                    sb.AppendLine($"|| Name: {q.QuestName}{Constants.TabStop}{Constants.TabStop}Quest Type: {q.QuestType}");
-                                    sb.AppendLine($"|| Description:");
-                                    var descLines = q.QuestText.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-                                    foreach (var l in descLines)
-                                    {
-                                        sb.AppendLine($"|| {l}");
-                                    }
-                                    if (q.Monsters != null && q.Monsters.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Kill Monsters:");
-                                        foreach (var m in q.Monsters)
-                                        {
-                                            sb.AppendLine($"|| {m.Value} x {NPCManager.Instance.GetNPCByID(m.Key).Name}");
-                                        }
-                                    }
-                                    if (q.FetchItems != null && q.FetchItems.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Obtain Items:");
-                                        foreach (var item in q.FetchItems)
-                                        {
-                                            sb.AppendLine($"|| {item.Value} x {ItemManager.Instance.GetItemByID(item.Key).Name}");
-                                        }
-                                    }
-                                    sb.AppendLine($"|| Gold: {q.RewardGold}{Constants.TabStop}Exp: {q.RewardExp}");
-                                    if (q.RewardItems != null && q.RewardItems.Count > 0)
-                                    {
-                                        sb.AppendLine($"|| Reward Items:");
-                                        foreach (var ri in q.RewardItems)
-                                        {
-                                            sb.AppendLine($"|| {ri.Name}");
-                                        }
-                                    }
-                                    i++;
-                                    n++;
-                                    if (i < zoneQuests.Count)
-                                    {
-                                        sb.AppendLine($"||{new string('=', 77)}");
-                                    }
-                                }
-                                sb.AppendLine($"  {new string('=', 77)}");
-                                desc.Send(sb.ToString());
-                            }
-                            else
-                            {
-                                desc.Send($"There are no Quests available at the moment.{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"There is no Questmaster here!{Constants.NewLine}");
-                        }
-                        break;
-
-                    case "accept":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
-                        {
-                            var iIndex = elements.Last();
-                            if (int.TryParse(iIndex, out int qID))
-                            {
-                                if (qID > 0 && qID <= questList.Count)
-                                {
-                                    var q = questList[qID - 1];
-                                    if (!desc.Player.ActiveQuests.Any(x => x.QuestGUID == q.QuestGUID))
-                                    {
-                                        desc.Player.ActiveQuests.Add(q);
-                                        desc.Send($"You have accepted the quest!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"You have already accepted that Quest!{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"Sorry, that Quest doesn't seem to exist...{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                            }
-                        }
-                        break;
-
-                    case "return":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
-                        {
-                            var iIndex = elements.Last();
-                            if (int.TryParse(iIndex, out int qID))
-                            {
-                                if (qID > 0 && qID <= desc.Player.ActiveQuests.Count)
-                                {
-                                    var q = desc.Player.ActiveQuests[qID - 1];
-                                    bool isComplete = true;
-                                    if (q.Monsters != null && q.Monsters.Count > 0)
-                                    {
-                                        if (q.Monsters.Values.Any(x => x > 0))
-                                        {
-                                            isComplete = false;
-                                        }
-                                    }
-                                    if (q.FetchItems != null && q.FetchItems.Count > 0)
-                                    {
-                                        foreach (var i in q.FetchItems)
-                                        {
-                                            if (desc.Player.Inventory.Where(x => x.ID == i.Key).Count() < i.Value)
-                                            {
-                                                isComplete = false;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    if (isComplete)
-                                    {
-                                        StringBuilder sb = new StringBuilder();
-                                        desc.Player.CompletedQuests.Add(q.QuestGUID);
-                                        desc.Player.ActiveQuests.Remove(q);
-                                        desc.Player.AddExp(q.RewardExp, true, true);
-                                        desc.Player.AddGold(q.RewardGold, true);
-                                        if (q.FetchItems != null && q.FetchItems.Count > 0)
-                                        {
-                                            foreach (var i in q.FetchItems)
-                                            {
-                                                var item = desc.Player.Inventory.Where(x => x.ID == i.Key).FirstOrDefault();
-                                                for (int n = 0; n < i.Value; n++)
-                                                {
-                                                    desc.Player.Inventory.Remove(item);
-                                                }
-                                            }
-                                        }
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        sb.AppendLine($"|| Quest Completed!");
-                                        sb.AppendLine($"|| Exp: {q.RewardExp}");
-                                        sb.AppendLine($"|| Gold: {q.RewardGold}");
-                                        if (q.RewardItems != null && q.RewardItems.Count > 0)
-                                        {
-                                            sb.AppendLine($"|| You are awarded the following items:");
-                                            foreach (var i in q.RewardItems)
-                                            {
-                                                sb.AppendLine($"|| {i}");
-                                                desc.Player.Inventory.Add(i);
-                                            }
-                                        }
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"You have not met the requirements to complete this Quest!{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"Sorry, you don't seem to have that Quest active...{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                            }
-                        }
-                        break;
-
-                    case "abandon":
-                        var inputIndex = elements.Last();
-                        if (int.TryParse(inputIndex, out int qid))
-                        {
-                            if (qid > 0 && qid <= desc.Player.ActiveQuests.Count)
-                            {
-                                var q = desc.Player.ActiveQuests[qid - 1];
-                                desc.Player.ActiveQuests.Remove(q);
-                                desc.Send($"You have abandonned the Quest!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"Sorry, you don't seem to have that Quest active...{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                        }
-                        break;
-
-                    default:
-                        desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                        break;
-                }
-            }
-            else
-            {
-                // no operation so show list of active quests the player has
-                if (desc.Player.ActiveQuests != null && desc.Player.ActiveQuests.Count > 0)
-                {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    int i = 0, n = 1;
-                    foreach (var q in desc.Player.ActiveQuests)
-                    {
-                        sb.AppendLine($"|| Number: {n}");
-                        sb.AppendLine($"|| Name: {q.QuestName}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(q.QuestZone).ZoneName}");
-                        if (q.Monsters != null && q.Monsters.Count > 0)
-                        {
-                            sb.AppendLine($"|| Kill Monsters:");
-                            foreach (var m in q.Monsters)
-                            {
-                                sb.AppendLine($"|| {m.Value} x {NPCManager.Instance.GetNPCByID(m.Key).Name}");
-                            }
-                        }
-                        if (q.FetchItems != null && q.FetchItems.Count > 0)
-                        {
-                            sb.AppendLine("|| Obtain Items:");
-                            foreach (var item in q.FetchItems)
-                            {
-                                sb.AppendLine($"|| {item.Value} x {ItemManager.Instance.GetItemByID(item.Key).Name}");
-                            }
-                        }
-                        sb.AppendLine($"|| Gold: {q.RewardGold}{Constants.TabStop}Exp: {q.RewardExp}");
-                        if (q.RewardItems != null && q.RewardItems.Count > 0)
-                        {
-                            sb.AppendLine($"|| Items:");
-                            foreach (var item in q.RewardItems)
-                            {
-                                sb.AppendLine($"|| {item.Name}");
-                            }
-                        }
-                        i++;
-                        n++;
-                        if (i < desc.Player.ActiveQuests.Count)
-                        {
-                            sb.AppendLine($"||{new string('=', 77)}");
-                        }
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    desc.Send(sb.ToString());
-                }
-                else
-                {
-                    desc.Send($"You have no active Quests at the moment.{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void PlayerMail(ref Descriptor desc, ref string input)
-        {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.PostBox))
-            {
-                // usage: mail <list | read | write | delete>
-                var elements = TokeniseInput(ref input);
-                string operation = string.Empty;
-                uint id = 0;
-                if (elements.Length > 1)
-                {
-                    operation = elements[1].Trim();
-                }
-                if (elements.Length >= 3)
-                {
-                    if (!uint.TryParse(elements[2].Trim(), out id))
-                    {
-                        desc.Send($"The given ID could not be understood.{Constants.NewLine}");
-                        return;
-                    }
-                }
-                if (string.IsNullOrEmpty(operation))
-                {
-                    desc.Send($"Usage: mail <list | read | write | delete>{Constants.NewLine}");
-                    desc.Send($"mail list - to list all your mails{Constants.NewLine}");
-                    desc.Send($"mail read <id> - to read the specified mail{Constants.NewLine}");
-                    desc.Send($"mail write - to start writing a mail to another player{Constants.NewLine}");
-                    desc.Send($"mail delete <id> - to delete the specified mail{Constants.NewLine}");
-                    return;
-                }
-                switch (operation.ToLower())
-                {
-                    case "list":
-                        var allMails = DatabaseManager.GetAllPlayerMail(ref desc);
-                        if (allMails != null && allMails.Count > 0)
-                        {
-                            StringBuilder sb = new StringBuilder();
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            int index = 0;
-                            foreach (var m in allMails)
-                            {
-                                sb.AppendLine($"|| ID: {m.Key}{Constants.TabStop}{Constants.TabStop}From: {m.Value.MailFrom}{Constants.TabStop}Sent: {m.Value.MailSent}");
-                                sb.AppendLine($"|| Subject: {m.Value.MailSubject}");
-                                sb.AppendLine($"|| Attached Items: {m.Value.AttachedItems != null && m.Value.AttachedItems.Count > 0}{Constants.TabStop}Attached Gold: {m.Value.AttachedGold}");
-                                index++;
-                                if (index < allMails.Count)
-                                {
-                                    sb.AppendLine($"||{new string('=', 77)}");
-                                }
-                            }
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            desc.Send(sb.ToString());
-                        }
-                        else
-                        {
-                            desc.Send($"It doesn't look like you have any mail...{Constants.NewLine}");
-                        }
-                        break;
-
-                    case "read":
-                        allMails = DatabaseManager.GetAllPlayerMail(ref desc);
-                        var mailItem = allMails.ContainsKey(id) ? allMails[id] : null;
-                        if (mailItem != null)
-                        {
-                            if (!mailItem.MailRead)
-                            {
-                                DatabaseManager.MarkMailAsRead(ref desc, mailItem.MailID);
-                                if (mailItem.AttachedGold > 0)
-                                {
-                                    desc.Send($"You take {mailItem.AttachedGold} gold from the mail!{Constants.NewLine}");
-                                    desc.Player.Gold += mailItem.AttachedGold;
-                                }
-                                if (mailItem.AttachedItems != null && mailItem.AttachedItems.Count > 0)
-                                {
-                                    foreach (var i in mailItem.AttachedItems)
-                                    {
-                                        desc.Player.Inventory.Add(i);
-                                        desc.Send($"You take {i.Name} from the mail!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                            StringBuilder sb = new StringBuilder();
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            sb.AppendLine($"|| From: {mailItem.MailFrom}{Constants.TabStop}{Constants.TabStop}Sent: {mailItem.MailSent}");
-                            sb.AppendLine($"|| Subject: {mailItem.MailSubject}");
-                            sb.AppendLine($"|| Message:");
-                            if (!string.IsNullOrEmpty(mailItem.MailBody))
-                            {
-                                var bodyLines = mailItem.MailBody.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-                                foreach (var line in bodyLines)
-                                {
-                                    sb.AppendLine($"||{Constants.TabStop}{line}");
-                                }
-                            }
-                            sb.AppendLine($"  {new string('=', 77)}");
-                            desc.Send(sb.ToString());
-                        }
-                        else
-                        {
-                            desc.Send($"Couldn't find a mail with that ID number.{Constants.NewLine}");
-                        }
-                        break;
-
-                    case "write":
-                        if (desc.Player.Gold < 5)
-                        {
-                            desc.Send($"It costs 5 gold to send a mail!{Constants.NewLine}");
-                            return;
-                        }
-                        var newMail = Mail.Compose(ref desc);
-                        if (newMail != null)
-                        {
-                            bool ok = false;
-                            bool returnItems = false;
-                            while (!ok)
-                            {
-                                desc.Send($"Send this mail (Y/N)?{Constants.NewLine}");
-                                var response = desc.Read().Trim();
-                                if (Helpers.ValidateInput(response))
-                                {
-                                    if (response.ToLower() == "y" || response.ToLower() == "yes")
-                                    {
-                                        // check we have 5 gold and send
-                                        if (desc.Player.Gold >= 5)
-                                        {
-                                            newMail.MailSent = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                                            if (DatabaseManager.SendNewMail(ref desc, ref newMail))
-                                            {
-                                                desc.Player.Gold -= 5;
-                                                desc.Send($"The Winds of Magic swirl around your letter and it vanishes!{Constants.NewLine}");
-                                                ok = true;
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"The Winds of Magic sputter and die, your message was not taken!.{Constants.NewLine}");
-                                                returnItems = true;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"You don't have enough gold to send a mail!{Constants.NewLine}");
-                                            returnItems = true;
-                                        }
-                                    }
-                                    if (response.ToLower() == "n" || response.ToLower() == "no")
-                                    {
-                                        returnItems = true;
-                                    }
-                                    if (returnItems)
-                                    {
-                                        // give the player back any attached items and gold
-                                        if (newMail.AttachedGold > 0)
-                                        {
-                                            desc.Player.Gold += newMail.AttachedGold;
-                                            desc.Send($"{newMail.AttachedGold} gold has been returned to you.{Constants.NewLine}");
-                                        }
-                                        if (newMail.AttachedItems != null && newMail.AttachedItems.Count > 0)
-                                        {
-                                            foreach (var i in newMail.AttachedItems)
-                                            {
-                                                desc.Player.Inventory.Add(i);
-                                                desc.Send($"{i.Name} has been returned to you.{Constants.NewLine}");
-                                            }
-                                        }
-                                        ok = true;
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                                }
-                            }
-                        }
-                        break;
-
-                    case "delete":
-                        allMails = DatabaseManager.GetAllPlayerMail(ref desc);
-                        mailItem = allMails.ContainsKey(id) ? allMails[id] : null;
-                        if (mailItem != null)
-                        {
-                            if (DatabaseManager.DeleteMailByID(ref desc, mailItem.MailID))
-                            {
-                                desc.Send($"The Winds of Magic swirl and swallow the message, it is gone forever!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"The Winds of Magic sputter and die, your message remains!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"No such mail could be found in your mailbox!{Constants.NewLine}");
-                        }
-                        break;
-
-                    default:
-                        desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                        break;
-                }
-            }
-            else
-            {
-                desc.Send($"There is no Mailbox here...{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowOrTogglePVPFlag(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input).Trim();
-            var op = input.Remove(0, verb.Length).Trim();
-            if (!string.IsNullOrEmpty(op))
-            {
-                if (op.ToLower() == "on")
-                {
-                    desc.Player.PVP = true;
-                    desc.Send($"PVP flag set to ON, PVP is enabled.{Constants.NewLine}");
-                }
-                else
-                {
-                    desc.Player.PVP = false;
-                    desc.Send($"PVP flag set to OFF, PVP is disabled.{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                if (desc.Player.PVP)
-                {
-                    desc.Send($"Your PVP flag is currently enabled!{Constants.NewLine}");
-                }
-                else
-                {
-                    desc.Send($"Your PVP flag is currently disabled!{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void ShowFollowerInfo(ref Descriptor desc, ref string input)
-        {
-            StringBuilder sb = new StringBuilder();
-            var n = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-            if (n != null)
-            {
-                var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                var elements = TokeniseInput(ref line);
-                if (elements.Length >= 2)
-                {
-                    if (elements[0].ToLower() == "show" || elements[0].ToLower() == "use" || elements[0].ToLower() == "give" || elements[0].ToLower() == "remove")
-                    {
-                        switch (elements.First().ToLower())
-                        {
-                            case "show":
-                                switch (elements[1].ToLower())
-                                {
-                                    case "stats":
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        sb.AppendLine($"|| Name: {n.Name}");
-                                        sb.AppendLine($"||");
-                                        sb.AppendLine($"|| Stats:");
-                                        sb.AppendLine($"|| Strength: {n.Strength} ({Helpers.CalculateAbilityModifier(n.Strength)}){Constants.TabStop}{Constants.TabStop}Dexterity: {n.Dexterity} ({Helpers.CalculateAbilityModifier(n.Dexterity)})");
-                                        sb.AppendLine($"|| Constitution: {n.Constitution} ({Helpers.CalculateAbilityModifier(n.Constitution)}){Constants.TabStop}{Constants.TabStop}Intelligence: {n.Intelligence} ({Helpers.CalculateAbilityModifier(n.Intelligence)})");
-                                        sb.AppendLine($"|| Wisdom: {n.Wisdom} ({Helpers.CalculateAbilityModifier(n.Wisdom)}){Constants.TabStop} {Constants.TabStop}Charisma: {n.Charisma} ({Helpers.CalculateAbilityModifier(n.Charisma)})");
-                                        sb.AppendLine($"|| HP: {n.NumberOfHitDice}d{n.HitDieSize} ({n.CurrentHP}/{n.MaxHP})");
-                                        sb.AppendLine($"|| MP: {n.NumberOfHitDice}d8 ({n.CurrentMP}/{n.MaxMP})");
-                                        sb.AppendLine($"|| Armour Class: {n.ArmourClass}{Constants.TabStop}{Constants.TabStop}No. Of Attacks: {n.NumberOfAttacks}");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                        break;
-
-                                    case "equip":
-                                    case "eq":
-                                    case "equipment":
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        sb.AppendLine($"|| Head: {n.EquipHead?.Name ?? "Nothing"}");
-                                        sb.AppendLine($"|| Neck: {n.EquipNeck?.Name ?? "Nothing"}");
-                                        sb.AppendLine($"|| Armour: {n.EquipArmour?.Name ?? "Nothing"}");
-                                        sb.AppendLine($"|| Finger (L): {n.EquipLeftFinger?.Name ?? "Nothing"}");
-                                        sb.AppendLine($"|| Finger (R): {n.EquipRightFinger?.Name ?? "Nothing"}");
-                                        sb.AppendLine($"|| Weapon: {n.EquipWeapon?.Name ?? "Nothing"}");
-                                        sb.AppendLine($"|| Held: {n.EquipHeld?.Name ?? "Nothing"}");
-                                        sb.AppendLine($"  {new string('=', 77)}");
-                                        desc.Send(sb.ToString());
-                                        break;
-
-                                    case "inv":
-                                    case "inventory":
-                                        if (n.Inventory != null && n.Inventory.Count > 0)
-                                        {
-                                            sb.AppendLine($"  {new string('=', 77)}");
-                                            sb.AppendLine($"|| {n.Name} is carrying:");
-                                            foreach (var i in n.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
-                                            {
-                                                var cnt = n.Inventory.Where(y => y.ID == i.ID).Count();
-                                                sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription}");
-                                            }
-                                            sb.AppendLine($"  {new string('=', 77)}");
-                                            desc.Send(sb.ToString());
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"Your follower is not carrying any items.{Constants.NewLine}");
-                                        }
-                                        break;
-                                }
-                                break;
-
-                            case "use":
-                                var itemStr = line.Replace("use", string.Empty).Trim();
-                                if (!string.IsNullOrEmpty(itemStr))
-                                {
-                                    var invItem = n.Inventory.Where(x => Regex.Match(x.Name, itemStr, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                                    if (invItem != null)
-                                    {
-                                        if (invItem.Slot != WearSlot.None)
-                                        {
-                                            switch (invItem.Slot)
-                                            {
-                                                case WearSlot.Head:
-                                                    if (n.EquipHead == null)
-                                                    {
-                                                        n.Inventory.Remove(invItem);
-                                                        n.EquipHead = invItem;
-                                                        n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Send($"Your follower is already wearing an item on their head!{Constants.NewLine}");
-                                                    }
-                                                    break;
-
-                                                case WearSlot.Neck:
-                                                    if (n.EquipNeck == null)
-                                                    {
-                                                        n.Inventory.Remove(invItem);
-                                                        n.EquipNeck = invItem;
-                                                        n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Send($"Your follower is already wearing something around their neck!{Constants.NewLine}");
-                                                    }
-                                                    break;
-
-                                                case WearSlot.Weapon:
-                                                    if (n.EquipWeapon == null)
-                                                    {
-                                                        n.Inventory.Remove(invItem);
-                                                        n.EquipWeapon = invItem;
-                                                        n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Send($"Your follower is already using a weapon!{Constants.NewLine}");
-                                                    }
-                                                    break;
-
-                                                case WearSlot.Armour:
-                                                    if (n.EquipArmour == null)
-                                                    {
-                                                        n.Inventory.Remove(invItem);
-                                                        n.EquipArmour = invItem;
-                                                        n.CalculateArmourClass();
-                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Send($"Your follower is already wearing something as their armour!{Constants.NewLine}");
-                                                    }
-                                                    break;
-
-                                                case WearSlot.FingerLeft:
-                                                case WearSlot.FingerRight:
-                                                    if (n.EquipLeftFinger == null)
-                                                    {
-                                                        n.Inventory.Remove(invItem);
-                                                        n.EquipLeftFinger = invItem;
-                                                        n.CalculateArmourClass();
-                                                        RoomManager.Instance.ProcessEnvironmentBuffs(n.CurrentRoom);
-                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        if (n.EquipRightFinger == null)
-                                                        {
-                                                            n.Inventory.Remove(invItem);
-                                                            n.EquipRightFinger = invItem;
-                                                            n.CalculateArmourClass();
-                                                            RoomManager.Instance.ProcessEnvironmentBuffs(n.CurrentRoom);
-                                                            desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
-                                                        }
-                                                        else
-                                                        {
-                                                            desc.Send($"Your follower is already wearing a ring on each hand!{Constants.NewLine}");
-                                                        }
-                                                    }
-                                                    break;
-
-                                                case WearSlot.Held:
-                                                    if (n.EquipHeld == null)
-                                                    {
-                                                        n.Inventory.Remove(invItem);
-                                                        n.EquipHeld = invItem;
-                                                        n.CalculateArmourClass();
-                                                        RoomManager.Instance.ProcessEnvironmentBuffs(n.CurrentRoom);
-                                                        desc.Send($"{n.Name} starts using {invItem.Name}.{Constants.NewLine}");
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Send($"Your follower is already holding something!{Constants.NewLine}");
-                                                    }
-                                                    break;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"Your follower can't use that item!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"Your follower doesn't seem to be carrying that.{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"Usage: follower use <item>{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "give":
-                                itemStr = line.Replace("give", string.Empty).Trim();
-                                if (!string.IsNullOrEmpty(itemStr))
-                                {
-                                    var tradeItem = n.Inventory.Where(x => Regex.Match(x.Name, itemStr, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                                    if (tradeItem != null)
-                                    {
-                                        n.Inventory.Remove(tradeItem);
-                                        desc.Player.Inventory.Add(tradeItem);
-                                        desc.Send($"{n.Name} gives you {tradeItem.Name}.{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"{n.Name} doesn't seem to be carrying that.{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"Usage: follower give <item>{Constants.NewLine}");
-                                }
-                                break;
-
-                            case "remove":
-                                var slot = TokeniseInput(ref line).LastOrDefault();
-                                if (!string.IsNullOrEmpty(slot))
-                                {
-                                    InventoryItem eqItem = null;
-                                    switch (slot.Trim().ToLower())
-                                    {
-                                        case "head":
-                                            eqItem = n.EquipHead;
-                                            if (eqItem != null)
-                                            {
-                                                n.EquipHead = null;
-                                                n.Inventory.Add(eqItem);
-                                                n.CalculateArmourClass();
-                                                desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your follower doesn't have anything on their head!{Constants.NewLine}");
-                                            }
-                                            break;
-
-                                        case "neck":
-                                            eqItem = n.EquipNeck;
-                                            if (eqItem != null)
-                                            {
-                                                n.EquipNeck = null;
-                                                n.Inventory.Add(eqItem);
-                                                n.CalculateArmourClass();
-                                                desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your follower doesn't have anything around their neck!{Constants.NewLine}");
-                                            }
-                                            break;
-
-                                        case "armour":
-                                            eqItem = n.EquipArmour;
-                                            if (eqItem != null)
-                                            {
-                                                n.EquipArmour = null;
-                                                n.Inventory.Add(eqItem);
-                                                n.CalculateArmourClass();
-                                                desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your follower isn't wearing any armour!{Constants.NewLine}");
-                                            }
-                                            break;
-
-                                        case "weapon":
-                                            eqItem = n.EquipWeapon;
-                                            if (eqItem != null)
-                                            {
-                                                n.EquipWeapon = null;
-                                                n.Inventory.Add(eqItem);
-                                                n.CalculateArmourClass();
-                                                desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your follower isn't using a weapon!{Constants.NewLine}");
-                                            }
-                                            break;
-
-                                        case "held":
-                                            eqItem = n.EquipHeld;
-                                            if (eqItem != null)
-                                            {
-                                                n.EquipHeld = null;
-                                                n.Inventory.Add(eqItem);
-                                                n.CalculateArmourClass();
-                                                desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your follower isn't holding anything!{Constants.NewLine}");
-                                            }
-                                            break;
-
-                                        case "fingerleft":
-                                        case "leftfinger":
-                                            eqItem = n.EquipLeftFinger;
-                                            if (eqItem != null)
-                                            {
-                                                n.EquipLeftFinger = null;
-                                                n.Inventory.Add(eqItem);
-                                                n.CalculateArmourClass();
-                                                desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your follower doesn't have anything on their fingers!{Constants.NewLine}");
-                                            }
-                                            break;
-
-                                        case "fingerright":
-                                        case "rightfinger":
-                                            eqItem = n.EquipRightFinger;
-                                            if (eqItem != null)
-                                            {
-                                                n.EquipRightFinger = null;
-                                                n.Inventory.Add(eqItem);
-                                                n.CalculateArmourClass();
-                                                desc.Send($"{n.Name} stops using {eqItem.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your follower doesn't have anything on their fingers!{Constants.NewLine}");
-                                            }
-                                            break;
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"Remove an item from which equipment slot?{Constants.NewLine}");
-                                }
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        sb.Clear();
-                        sb.AppendLine($"Usage: follower <show | use | give | remove> <command specific args>");
-                        sb.AppendLine($"Usage: follower show <stats | equip | inv>: show follower stats, equipment or inventory");
-                        sb.AppendLine($"Usage: follower use <item>: have your follower equip an item in their inventory");
-                        sb.AppendLine($"Usage: follower give <item>: have your follower hand an item from their inventory to you");
-                        sb.AppendLine($"Usage: follower remove <slot>: remove an equipped item back to the inventory");
-                        desc.Send(sb.ToString());
-                    }
-                }
-                else
-                {
-                    sb.Clear();
-                    sb.AppendLine($"Usage: follower <show | use | give> <command specific args>");
-                    sb.AppendLine($"Usage: follower show <stats | equip | inv>: show follower stats, equipment or inventory");
-                    sb.AppendLine($"Usage: follower use <item>: have your follower equip an item in their inventory");
-                    sb.AppendLine($"Usage: follower give <item>: have your follower hand an item from their inventory to you");
-                    desc.Send(sb.ToString());
-                }
-            }
-            else
-            {
-                desc.Send($"You don't have a follower at the moment.{Constants.NewLine}");
-            }
-        }
-
-        private static void MineResourceNode(ref Descriptor desc, ref string input)
-        {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
-            {
-                var nodeName = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeName;
-                if (desc.Player.HasSkill("Mining"))
-                {
-                    var i = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.Mine();
-                    if (i != null)
-                    {
-                        desc.Player.Inventory.Add(i);
-                        RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeDepth--;
-                        desc.Send($"You mine the {nodeName} node and find {i.Name}!{Constants.NewLine}");
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeDepth == 0)
-                        {
-                            RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode = null;
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"You lack the skills to do that!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is nothing to mine here!{Constants.NewLine}");
-            }
-        }
-
-        private static void CraftItem(ref Descriptor desc, ref string input)
-        {
-            var recipeName = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            if (!string.IsNullOrEmpty(recipeName))
-            {
-                var recipe = RecipeManager.Instance.GetRecipe(recipeName);
-                if (recipe != null)
-                {
-                    if (desc.Player.KnowsRecipe(recipe.RecipeName))
-                    {
-                        bool canCraft = false;
-                        switch (recipe.RecipeType)
-                        {
-                            case RecipeType.Jewelcrafting:
-                                canCraft = desc.Player.HasSkill("Jewelcrafting");
-                                break;
-
-                            case RecipeType.Scribing:
-                                canCraft = desc.Player.HasSkill("Scribing");
-                                break;
-
-                            case RecipeType.Blacksmithing:
-                                canCraft = desc.Player.HasSkill("Blacksmithing");
-                                break;
-
-                            case RecipeType.Alchemy:
-                                canCraft = desc.Player.HasSkill("Alchemy");
-                                break;
-                        }
-                        if (canCraft)
-                        {
-                            bool hasMats = true;
-                            foreach (var mat in recipe.RequiredMaterials)
-                            {
-                                if (desc.Player.HasItemInInventory(mat.Key))
-                                {
-                                    var cnt = Convert.ToUInt32((from i in desc.Player.Inventory where i.ID == mat.Key select i).Count());
-                                    if (cnt < mat.Value)
-                                    {
-                                        hasMats = false;
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    hasMats = false;
-                                    break;
-                                }
-                            }
-                            if (hasMats)
-                            {
-                                foreach (var mat in recipe.RequiredMaterials)
-                                {
-                                    for (int i = 0; i < mat.Value; i++)
-                                    {
-                                        var remItem = (from invItem in desc.Player.Inventory where invItem.ID == mat.Key select invItem).FirstOrDefault();
-                                        desc.Player.Inventory.Remove(remItem);
-                                    }
-                                }
-                                var item = ItemManager.Instance.GetItemByID(recipe.RecipeResult);
-                                desc.Player.Inventory.Add(item);
-                                desc.Send($"You have successfully crafted {item.Name}!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"You don't have all the materials needed to craft that.{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"You don't have the skill to craft that!{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You don't know the recipe for that!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"That Recipe doesn't seem to exist.{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-            }
-        }
-
-        private static void HireFollower(ref Descriptor desc, ref string input)
-        {
-            var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            if (string.IsNullOrEmpty(target))
-            {
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Mercenary))
-                {
-                    if (desc.Player.FollowerID == Guid.Empty)
-                    {
-                        StringBuilder sb = new StringBuilder();
-                        sb.AppendLine("The Mercenary Commander grins. 'You want hired muscle? Sure...'");
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        sb.AppendLine($"|| Price{Constants.TabStop}|| Mercenary");
-                        sb.AppendLine($"||==============||{new string('=', 61)}");
-                        var p = Helpers.GetNewPurchasePrice(ref desc, desc.Player.Level * 1000);
-                        if (p.ToString().Length > 4)
-                        {
-                            sb.AppendLine($"|| {p}{Constants.TabStop}|| Mercenary Fighter");
-                            sb.AppendLine($"|| {p}{Constants.TabStop}|| Mercenary Thief");
-                            sb.AppendLine($"|| {p}{Constants.TabStop}|| Mercenary Mage");
-                            sb.AppendLine($"|| {p}{Constants.TabStop}|| Mercenary Priest");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| Mercenary Fighter");
-                            sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| Mercenary Thief");
-                            sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| Mercenary Mage");
-                            sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| Mercenary Priest");
-                        }
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        desc.Send($"You already have a follower, you can't hire more than one!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"There is no Mercenary Commander to hire from!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Mercenary))
-                {
-                    if (desc.Player.FollowerID == Guid.Empty)
-                    {
-                        var p = Helpers.GetNewPurchasePrice(ref desc, desc.Player.Level * 1000);
-                        if (desc.Player.Gold >= p)
-                        {
-                            NPC hireling = null;
-                            if (Regex.Match(target, "fighter", RegexOptions.IgnoreCase).Success)
-                            {
-                                hireling = NPCManager.Instance.GetHirelingNPC(ref desc, "fighter");
-                            }
-                            if (Regex.Match(target, "thief", RegexOptions.IgnoreCase).Success)
-                            {
-                                hireling = NPCManager.Instance.GetHirelingNPC(ref desc, "thief");
-                            }
-                            if (Regex.Match(target, "mage", RegexOptions.IgnoreCase).Success)
-                            {
-                                hireling = NPCManager.Instance.GetHirelingNPC(ref desc, "mage");
-                            }
-                            if (Regex.Match(target, "priest", RegexOptions.IgnoreCase).Success)
-                            {
-                                hireling = NPCManager.Instance.GetHirelingNPC(ref desc, "priest");
-                            }
-                            if (hireling != null)
-                            {
-                                desc.Player.Gold -= p;
-                                NPCManager.Instance.AddNPCToWorld(hireling, desc.Player.CurrentRoom);
-                                desc.Player.FollowerID = hireling.NPCGuid;
-                                desc.Send($"You have hired {hireling.Title} {hireling.Name} as your follower!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"Something went wrong hiring a follower, please check with an Imm!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"The Mercenary Commander laughs. 'No gold! You must have gold!'{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You already have a follower, you can't hire more than one!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    var n = GetTargetNPC(ref desc, target);
-                    if (n != null)
-                    {
-                        if (desc.Player.FollowerID == Guid.Empty)
-                        {
-                            if (n.BehaviourFlags.HasFlag(NPCFlags.Mercenary))
-                            {
-                                var baseCost = n.NumberOfHitDice * 1000;
-                                var modCost = Helpers.GetNewPurchasePrice(ref desc, baseCost);
-                                if (desc.Player.Gold >= modCost)
-                                {
-                                    desc.Player.Gold -= modCost;
-                                    desc.Player.FollowerID = n.NPCGuid;
-                                    NPCManager.Instance.SetNPCFollowing(ref desc, true);
-                                    desc.Send($"You hand over {modCost} gold and hire {n.Name} as your follower!{Constants.NewLine}");
-                                }
-                                else
-                                {
-                                    desc.Send($"You can't afford to hire {n.Name} as your follower!{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"{n.Name} isn't interested in being your follower!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"You already have a follower, you can't hire more than one!{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That doesn't seem to be here...{Constants.NewLine}");
-                    }
-                }
-            }
-        }
-
-        private static void DismissFollower(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.FollowerID != Guid.Empty)
-            {
-                var n = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                desc.Send($"You dismiss {n.Name} from your service.{Constants.NewLine}");
-                NPCManager.Instance.RemoveNPCFromWorld(desc.Player.FollowerID);
-                desc.Player.FollowerID = Guid.Empty;
-                desc.Send($"{n.Name} is swallowed by the Winds of Magic!{Constants.NewLine}");
-            }
-            else
-            {
-                desc.Send($"You don't have a follower to dismiss right now.{Constants.NewLine}");
-            }
-        }
-
-        private static void ChangeCharacterTitle(ref Descriptor desc, ref string input)
-        {
-            desc.Send($"Your current Title is: {desc.Player.Title}{Constants.NewLine}");
-            bool titleOK = false;
-            while (!titleOK)
-            {
-                desc.Send($"Enter new Title (exit to abort): ");
-                var newTitle = desc.Read().Trim();
-                if (ValidateInput(newTitle))
-                {
-                    if (newTitle.ToLower() == "exit")
-                    {
-                        titleOK = true;
-                    }
-                    else
-                    {
-                        if (newTitle.Length <= 15)
-                        {
-                            desc.Player.Title = newTitle;
-                            titleOK = true;
-                        }
-                        else
-                        {
-                            desc.Send($"That is too long to be a title. Titles must be 15 characters or less.{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void ChangePlayerPassword(ref Descriptor desc, ref string input)
-        {
-            bool pwOK = false;
-            while (!pwOK)
-            {
-                desc.Send($"Enter current password: ");
-                var curPW = desc.Read().Trim();
-                if (ValidateInput(curPW))
-                {
-                    if (DatabaseManager.ValidatePlayerPassword(desc.Player.Name, curPW))
-                    {
-                        desc.Send($"Enter new password: ");
-                        var newPW = desc.Read().Trim();
-                        if (ValidateInput(newPW))
-                        {
-                            if (DatabaseManager.UpdatePlayerPassword(ref desc, newPW))
-                            {
-                                desc.Send($"Your password has been updated successfully.{Constants.NewLine}");
-                                Game.LogMessage($"INFO: Player {desc.Player} has successfully changed their password", LogLevel.Info, true);
-                                pwOK = true;
-                            }
-                            else
-                            {
-                                desc.Send($"Failed to updated your password. Please see an Imm for advice.{Constants.NewLine}");
-                                Game.LogMessage($"WARN: Failed to update password for {desc.Player}", LogLevel.Warning, true);
-                                pwOK = true;
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Validation failed, this has been logged.{Constants.NewLine}");
-                        Game.LogMessage($"WARN: Player {desc.Player} failed password validation while trying to change their password", LogLevel.Warning, true);
-                        pwOK = true;
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void ShowPlayerRecipes(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Recipes != null && desc.Player.Recipes.Count > 0)
-            {
-                var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                if (string.IsNullOrEmpty(target))
-                {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    var sk = (from kr in desc.Player.Recipes select kr.RecipeType.ToString()).Distinct().ToList();
-                    bool first = true;
-                    foreach (var skill in sk)
-                    {
-                        if (first)
-                        {
-                            sb.AppendLine($"|| {Constants.GreenText}{skill}{Constants.PlainText}");
-                            sb.AppendLine($"||{new string('=', 77)}");
-                            foreach (var r in desc.Player.Recipes.Where(x => x.RecipeType.ToString() == skill).ToList())
-                            {
-                                sb.AppendLine($"|| {r.RecipeName}");
-                            }
-                            first = false;
-                        }
-                        else
-                        {
-                            sb.AppendLine($"||{new string('=', 77)}");
-                            sb.AppendLine($"|| {Constants.GreenText}{skill}{Constants.PlainText}");
-                            sb.AppendLine($"||{new string('=', 77)}");
-                            foreach (var r in desc.Player.Recipes.Where(x => x.RecipeType.ToString() == skill).ToList())
-                            {
-                                sb.AppendLine($"|| {r.RecipeName}");
-                            }
-                        }
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    desc.Send(sb.ToString());
-                }
-                else
-                {
-                    var r = (from kr in desc.Player.Recipes where Regex.Match(kr.RecipeName, target, RegexOptions.IgnoreCase).Success select kr).FirstOrDefault();
-                    if (r != null)
-                    {
-                        StringBuilder sb = new StringBuilder();
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        sb.AppendLine($"|| Name: {r.RecipeName}");
-                        sb.AppendLine($"|| Description: {r.RecipeDescription}");
-                        sb.AppendLine($"|| Produces: {ItemManager.Instance.GetItemByID(r.RecipeResult).Name}");
-                        sb.AppendLine($"|| Requires:");
-                        foreach (var req in r.RequiredMaterials)
-                        {
-                            sb.AppendLine($"||{Constants.TabStop}{req.Value} x {ItemManager.Instance.GetItemByID(req.Key).Name}");
-                        }
-                        sb.AppendLine($"  {new string('=', 77)}");
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        desc.Send($"You don't know that recipe!{Constants.NewLine}");
-                    }
-                }
-            }
-            else
-            {
-                desc.Send($"You don't know any recipes!{Constants.NewLine}");
-            }
-        }
-
-        private static void ReadScroll(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.HasSkill("Read"))
-            {
-                var line = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                var target = TokeniseInput(ref input).Last().Trim();
-                var scrollName = line.Replace(target, string.Empty).Trim();
-                var scr = GetTargetItem(ref desc, scrollName, true);
-                if (scr != null && scr.ItemType == ItemType.Scroll)
-                {
-                    if (!string.IsNullOrEmpty(target))
-                    {
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe) || RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
-                        {
-                            desc.Send($"Some mystical force prevents you from reading the scroll...{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            desc.Player.Inventory.Remove(scr);
-                            CastSpell(ref desc, ref input, true);
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Cast the scroll at what?{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You don't have that scroll in your inventory!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"You don't know how to read the magic of the scrolls{Constants.NewLine}");
-            }
-        }
-
-        private static void ChangeCharacterLongDesc(ref Descriptor desc)
-        {
-            desc.Send($"Your current Long Description is:{Constants.NewLine}{desc.Player.LongDescription}");
-            desc.Player.LongDescription = Helpers.GetLongDescription(ref desc);
-        }
-
-        private static void ChangeCharacterShortDesc(ref Descriptor desc)
-        {
-            desc.Send($"Your current Short Description is: {desc.Player.ShortDescription}");
-            desc.Send($"Enter a new short description for your character. This should be");
-            desc.Send($"no longer than 30 characters:");
-            var sDesc = desc.Read().Trim();
-            if (Helpers.ValidateInput(sDesc))
-            {
-                desc.Player.ShortDescription = sDesc;
-            }
-        }
-
-        private static void Backstab(ref Descriptor desc, ref string input)
-        {
-            Skill backstab = SkillManager.Instance.GetSkill("Backstab");
-            if (!desc.Player.HasSkill("Backstab"))
-            {
-                desc.Send($"You lack the skill to do that!{Constants.NewLine}");
-                return;
-            }
-            if (desc.Player.EquipWeapon == null)
-            {
-                desc.Send($"Backstab with what? You don't have a weapon!{Constants.NewLine}");
-                return;
-            }
-            if (desc.Player.EquipWeapon.BaseWeaponType != WeaponType.Dagger || desc.Player.EquipWeapon.BaseWeaponType != WeaponType.Sword)
-            {
-                desc.Send($"You can't backstab someone with that weapon!{Constants.NewLine}");
-                return;
-            }
-            if (desc.Player.Visible || desc.Player.Position != ActorPosition.Standing)
-            {
-                desc.Send($"You're not in a position to do that right now!{Constants.NewLine}");
-                return;
-            }
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
-            {
-                desc.Send($"Some mystical force prevents you from doing that!{Constants.NewLine}");
-                return;
-            }
-            var verb = GetVerb(ref input);
-            var target = input.Remove(0, verb.Length).Trim();
-            if (string.IsNullOrEmpty(target))
-            {
-                desc.Send($"Backstab what, exactly?{Constants.NewLine}");
-                return;
-            }
-            var npc = GetTargetNPC(ref desc, target);
-            if (npc != null)
-            {
-                if (desc.Player.CurrentMP < backstab.MPCost)
-                {
-                    desc.Send($"You don't have the energy for that right now!{Constants.NewLine}");
-                    return;
-                }
-                if (npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack) || npc.IsInCombat)
-                {
-                    desc.Send($"Your target isn't available...{Constants.NewLine}");
-                    return;
-                }
-                if (npc.IsFollower && (!SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Player.PVP) || !desc.Player.PVP)
-                {
-                    desc.Send($"Some mysical force prevents you from harming {npc.Name}...{Constants.NewLine}");
-                    return;
-                }
-                desc.Player.AdjustMP((int)backstab.MPCost * -1);
-                desc.Send($"You become visible again...{Constants.NewLine}");
-                desc.Player.Visible = true;
-                bool hits = desc.Player.DoHitRoll(npc, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
-                string wpn = desc.Player.EquipWeapon.Name.ToLower();
-                if (hits)
-                {
-                    var damage = desc.Player.DoDamageRoll(npc);
-                    damage *= 4;
-                    if (isCritical)
-                    {
-                        damage *= 2;
-                    }
-                    var pDmg = (uint)Math.Round((double)damage / npc.CurrentHP * 100, 0);
-                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                    {
-                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): You backstab {npc.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them for {damage} damage!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        desc.Send($"You backstab {npc.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them!{Constants.NewLine}");
-                    }
-                    if (npc.IsFollower)
-                    {
-                        SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player.Name}'s backstab {Helpers.GetDamageString(pDmg)} your follower for {damage} damage!{Constants.NewLine}");
-                    }
-                    npc.AdjustHP((int)damage * -1, out bool isKilled);
-                    if (isKilled)
-                    {
-                        desc.Send($"{npc.Name}'s wounds are many and serious and they give in to death...{Constants.NewLine}");
-                        desc.Send($"You gain {npc.BaseExpAward} Exp and {npc.Gold} gold{Constants.NewLine}");
-                        desc.Player.AddExp(npc.BaseExpAward, false, false);
-                        desc.Player.AddGold(npc.Gold, false);
-                        npc.Kill(true, ref desc);
-                        return;
-                    }
-                    else
-                    {
-                        CombatSession s1 = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
-                        CombatSession s2 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
-                        CombatManager.Instance.AddCombatSession(s1);
-                        CombatManager.Instance.AddCombatSession(s2);
-                        if (desc.Player.FollowerID != Guid.Empty)
-                        {
-                            var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                            CombatSession s3 = new CombatSession(fNPC, npc, fNPC.NPCGuid, npc.NPCGuid);
-                            CombatSession s4 = new CombatSession(npc, fNPC, npc.NPCGuid, fNPC.NPCGuid);
-                            CombatManager.Instance.AddCombatSession(s3);
-                            CombatManager.Instance.AddCombatSession(s4);
-                        }
-                    }
-                    return;
-                }
-                else
-                {
-                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                    {
-                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): Your backstab misses {npc.Name} - prepare to fight!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        desc.Send($"Your backstab missed {npc.Name} - prepare to fight!{Constants.NewLine}");
-                    }
-                    if (npc.IsFollower)
-                    {
-                        SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player.Name}'s backstab attempt missed your follower!{Constants.NewLine}");
-                    }
-                    CombatSession s1 = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
-                    CombatSession s2 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
-                    CombatManager.Instance.AddCombatSession(s1);
-                    CombatManager.Instance.AddCombatSession(s2);
-                    if (desc.Player.FollowerID != Guid.Empty)
-                    {
-                        var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                        CombatSession s3 = new CombatSession(fNPC, npc, fNPC.NPCGuid, npc.NPCGuid);
-                        CombatSession s4 = new CombatSession(npc, fNPC, npc.NPCGuid, fNPC.NPCGuid);
-                        CombatManager.Instance.AddCombatSession(s3);
-                        CombatManager.Instance.AddCombatSession(s4);
-                    }
-                    return;
-                }
-            }
-            var pid = desc.ID;
-            var targetPlayer = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Where(x => Regex.IsMatch(x.Player.Name, target, RegexOptions.IgnoreCase) && x.ID != pid && x.Player.Visible).FirstOrDefault();
-            if (targetPlayer != null)
-            {
-                if (desc.Player.CurrentMP < backstab.MPCost)
-                {
-                    desc.Send($"You don't have the energy for that right now!{Constants.NewLine}");
-                    return;
-                }
-                if (!desc.Player.PVP || !targetPlayer.Player.PVP)
-                {
-                    desc.Send($"Some mystical force prevents you from harming {desc.Player.Name}...{Constants.NewLine}");
-                    return;
-                }
-                desc.Player.AdjustMP((int)backstab.MPCost * -1);
-                desc.Send($"You become visible again...{Constants.NewLine}");
-                desc.Player.Visible = true;
-                bool hits = desc.Player.DoHitRoll(targetPlayer.Player, out uint baseHitRoll, out uint finalHitRoll, out bool isCritical);
-                if (hits)
-                {
-                    string wpn = desc.Player.EquipWeapon.Name.ToLower();
-                    var damage = desc.Player.DoDamageRoll(targetPlayer.Player);
-                    damage *= 4;
-                    if (isCritical)
-                    {
-                        damage *= 2;
-                    }
-                    var pDmg = (uint)Math.Round((double)damage / targetPlayer.Player.CurrentHP * 100, 0);
-                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                    {
-                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): You backstab {targetPlayer.Player.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them for {damage} damage!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        desc.Send($"You backstab {targetPlayer.Player.Name} with your {wpn}, {Helpers.GetDamageString(pDmg)} them!{Constants.NewLine}");
-                    }
-                    if (targetPlayer.Player.Level >= Constants.ImmLevel || targetPlayer.Player.ShowDetailedRollInfo)
-                    {
-                        desc.Send($"{desc.Player.Name}'s backstab {Helpers.GetDamageString(pDmg)} you for {damage} damage!{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        desc.Send($"{desc.Player.Name}'s backstab {Helpers.GetDamageString(pDmg)} you!{Constants.NewLine}");
-                    }
-                    targetPlayer.Player.AdjustHP((int)damage * -1, out bool isKilled);
-                    if (isKilled)
-                    {
-                        desc.Send($"Your strike has dealt lethal damage to {targetPlayer.Player.Name} and they are taken by Death!{Constants.NewLine}");
-                        targetPlayer.Send($"{desc.Player.Name} has dealt lethal damage and you feel the icy hand of Death upon you...{Constants.NewLine}");
-                        targetPlayer.Player.Kill();
-                        return;
-                    }
-                    else
-                    {
-                        CombatSession s1 = new CombatSession(desc, targetPlayer, desc.ID, targetPlayer.ID);
-                        CombatSession s2 = new CombatSession(targetPlayer, desc, targetPlayer.ID, desc.ID);
-                        CombatManager.Instance.AddCombatSession(s1);
-                        CombatManager.Instance.AddCombatSession(s2);
-                        if (desc.Player.FollowerID != Guid.Empty)
-                        {
-                            var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                            CombatSession s3 = new CombatSession(fNPC, targetPlayer, fNPC.NPCGuid, targetPlayer.ID);
-                            CombatSession s4 = new CombatSession(targetPlayer, fNPC, targetPlayer.ID, fNPC.NPCGuid);
-                            CombatManager.Instance.AddCombatSession(s3);
-                            CombatManager.Instance.AddCombatSession(s4);
-                        }
-                        if (targetPlayer.Player.FollowerID != Guid.Empty)
-                        {
-                            var tfNPC = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
-                            CombatSession s5 = new CombatSession(tfNPC, desc, tfNPC.NPCGuid, desc.ID);
-                            CombatSession s6 = new CombatSession(desc, tfNPC, desc.ID, tfNPC.NPCGuid);
-                            CombatManager.Instance.AddCombatSession(s5);
-                            CombatManager.Instance.AddCombatSession(s6);
-                        }
-                        return;
-                    }
-                }
-                else
-                {
-                    if (desc.Player.Level >= Constants.ImmLevel || desc.Player.ShowDetailedRollInfo)
-                    {
-                        desc.Send($"ROLL: {baseHitRoll} ({finalHitRoll}): Your backstab misses {targetPlayer.Player.Name} - prepare to fight!{Constants.NewLine}");
-                    }
-                    targetPlayer.Send($"{desc.Player.Name}'s backstab attempt on you missed!{Constants.NewLine}");
-                    CombatSession s1 = new CombatSession(desc, targetPlayer, desc.ID, targetPlayer.ID);
-                    CombatSession s2 = new CombatSession(targetPlayer, desc, targetPlayer.ID, desc.ID);
-                    CombatManager.Instance.AddCombatSession(s1);
-                    CombatManager.Instance.AddCombatSession(s2);
-                    if (desc.Player.FollowerID != Guid.Empty)
-                    {
-                        var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                        CombatSession s3 = new CombatSession(fNPC, targetPlayer, fNPC.NPCGuid, targetPlayer.ID);
-                        CombatSession s4 = new CombatSession(targetPlayer, fNPC, targetPlayer.ID, fNPC.NPCGuid);
-                        CombatManager.Instance.AddCombatSession(s3);
-                        CombatManager.Instance.AddCombatSession(s4);
-                    }
-                    if (targetPlayer.Player.FollowerID != Guid.Empty)
-                    {
-                        var tfNPC = NPCManager.Instance.GetNPCByGUID(targetPlayer.Player.FollowerID);
-                        CombatSession s5 = new CombatSession(tfNPC, desc, tfNPC.NPCGuid, desc.ID);
-                        CombatSession s6 = new CombatSession(desc, tfNPC, desc.ID, tfNPC.NPCGuid);
-                        CombatManager.Instance.AddCombatSession(s5);
-                        CombatManager.Instance.AddCombatSession(s6);
-                    }
-                    return;
-                }
-            }
-            else
-            {
-                desc.Send($"Backstab who, exactly?{Constants.NewLine}");
-                return;
-            }
-        }
-
-        private static void Pickpocket(ref Descriptor desc, ref string input)
-        {
-            Skill pickpocket = SkillManager.Instance.GetSkill("Pickpocket");
-            if (!desc.Player.HasSkill(pickpocket.Name))
-            {
-                desc.Send($"You lack the skill to do that!{Constants.NewLine}");
-                return;
-            }
-            if (desc.Player.Position != ActorPosition.Standing)
-            {
-                desc.Send($"You're not in a position to do that right now!{Constants.NewLine}");
-                return;
-            }
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
-            {
-                desc.Send($"Some mystical force prevents you from doing that...{Constants.NewLine}");
-                return;
-            }
-            if (desc.Player.CurrentMP < pickpocket.MPCost)
-            {
-                desc.Send($"You don't have the energy to do that right now!{Constants.NewLine}");
-                return;
-            }
-            var verb = GetVerb(ref input);
-            var target = input.Remove(0, verb.Length).Trim();
-            if (string.IsNullOrEmpty(target))
-            {
-                desc.Send($"Pickpocket who, exactly?{Constants.NewLine}");
-                return;
-            }
-            var targetNPC = GetTargetNPC(ref desc, target);
-            if (targetNPC == null)
-            {
-                desc.Send($"You can't pickpocket something that isn't here!{Constants.NewLine}");
-                return;
-            }
-            if (targetNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack) || targetNPC.IsFollower)
-            {
-                desc.Send($"Some mystical force prevents you from doing that to {targetNPC.Name}...{Constants.NewLine}");
-                return;
-            }
-            if (targetNPC.Gold == 0 || targetNPC.Inventory == null || targetNPC.Inventory.Count == 0)
-            {
-                desc.Send($"{targetNPC.Name} doesn't have anything to steal!{Constants.NewLine}");
-                return;
-            }
-            desc.Player.AdjustMP((int)pickpocket.MPCost * -1);
-            int playerSkillRoll = (int)Helpers.RollDice(1, 20);
-            playerSkillRoll += Helpers.CalculateAbilityModifier(desc.Player.Dexterity);
-            if (!desc.Player.Visible)
-            {
-                playerSkillRoll += 4;
-            }
-            int npcSkillRoll = (int)Helpers.RollDice(1, 20);
-            npcSkillRoll += Helpers.CalculateAbilityModifier(targetNPC.Dexterity);
-            if (playerSkillRoll >= npcSkillRoll)
-            {
-                if (targetNPC.Gold > 0)
-                {
-                    var stolenGold = Helpers.RollDice(1, (uint)targetNPC.Gold);
-                    desc.Player.AddGold(stolenGold, true);
-                    targetNPC.Gold -= stolenGold;
-                    desc.Send($"You have stolen {stolenGold:N0} gold from {targetNPC.Name}!{Constants.NewLine}");
-                    return;
-                }
-                if (targetNPC.Inventory != null && targetNPC.Inventory.Count > 0)
-                {
-                    var item = targetNPC.Inventory[new Random(DateTime.UtcNow.GetHashCode()).Next(targetNPC.Inventory.Count)];
-                    desc.Player.Inventory.Add(item);
-                    targetNPC.Inventory.Remove(item);
-                    var article = Helpers.IsCharAVowel(item.Name[0]) ? "an" : "a";
-                    desc.Send($"You have stolen {article} {item.Name.ToLower()} from {targetNPC.Name}!{Constants.NewLine}");
-                    return;
-                }
-            }
-            else
-            {
-                desc.Send($"You have failed to steal anything from {targetNPC.Name}!{Constants.NewLine}");
-                if (playerSkillRoll <= 1)
-                {
-                    desc.Send($"{targetNPC.Name} has spotted you trying to steal from them!{Constants.NewLine}");
-                    CombatSession s1 = new CombatSession(targetNPC, desc, targetNPC.NPCGuid, desc.ID);
-                    CombatSession s2 = new CombatSession(desc, targetNPC, desc.ID, targetNPC.NPCGuid);
-                    CombatManager.Instance.AddCombatSession(s1);
-                    CombatManager.Instance.AddCombatSession(s2);
-                }
-            }
-        }
-
-        private static void TrainPlayerStat(ref Descriptor desc, ref string input)
-        {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.StatTrainer))
-            {
-                var stat = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                StringBuilder sb = new StringBuilder();
-                if (!string.IsNullOrEmpty(stat))
-                {
-                    uint cost = 0;
-                    switch (stat.ToLower())
-                    {
-                        case "str":
-                        case "strength":
-                            cost = Convert.ToUInt32((desc.Player.Strength + 1) * 1000);
-                            break;
-
-                        case "dex":
-                        case "dexterity":
-                            cost = Convert.ToUInt32((desc.Player.Dexterity + 1) * 1000);
-                            break;
-
-                        case "int":
-                        case "intelligence":
-                            cost = Convert.ToUInt32((desc.Player.Intelligence + 1) * 1000);
-                            break;
-
-                        case "wisdom":
-                        case "wis":
-                            cost = Convert.ToUInt32((desc.Player.Wisdom + 1) * 1000);
-                            break;
-
-                        case "constitution":
-                        case "con":
-                            cost = Convert.ToUInt32((desc.Player.Constitution + 1) * 1000);
-                            break;
-
-                        case "charisma":
-                        case "cha":
-                            cost = Convert.ToUInt32((desc.Player.Charisma + 1) * 1000);
-                            break;
-
-                        case "hp":
-                        case "mp":
-                        case "health":
-                        case "mana":
-                        case "stamina":
-                        case "sp":
-                            cost = 20000;
-                            break;
-
-                        default:
-                            desc.Send($"'I can't help you train that,' the gym master says.{Constants.NewLine}");
-                            return;
-                    }
-                    if (desc.Player.Gold >= cost)
-                    {
-                        desc.Send($"The gym master smiles. 'Certainly! Follow me...'{Constants.NewLine}");
-                        desc.Player.Gold -= cost;
-                        switch (stat.ToLower())
-                        {
-                            case "str":
-                            case "strength":
-                                desc.Player.Strength++;
-                                desc.Send($"Your Strength increases to {desc.Player.Strength}{Constants.NewLine}");
-                                break;
-
-                            case "dex":
-                            case "dexterity":
-                                desc.Player.Dexterity++;
-                                desc.Send($"Your Dexterity increases to {desc.Player.Dexterity}{Constants.NewLine}");
-                                break;
-
-                            case "int":
-                            case "intelligence":
-                                desc.Player.Intelligence++;
-                                desc.Send($"Your Intelligence increases to {desc.Player.Intelligence}{Constants.NewLine}");
-                                break;
-
-                            case "wisdom":
-                            case "wis":
-                                desc.Player.Wisdom++;
-                                desc.Send($"Your Wisdom increases to {desc.Player.Wisdom}{Constants.NewLine}");
-                                break;
-
-                            case "constitution":
-                            case "con":
-                                desc.Player.Constitution++;
-                                desc.Send($"Your Constitution increases to {desc.Player.Constitution}{Constants.NewLine}");
-                                break;
-
-                            case "charisma":
-                            case "cha":
-                                desc.Player.Charisma++;
-                                desc.Send($"Your Charisma increases to {desc.Player.Charisma}{Constants.NewLine}");
-                                break;
-
-                            case "hp":
-                            case "health":
-                                switch (desc.Player.Class)
-                                {
-                                    case ActorClass.Wizard:
-                                        var hpInc = Helpers.RollDice(1, 4) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
-                                        hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.CurrentHP += (int)hpInc;
-                                        desc.Player.MaxHP += (int)hpInc;
-                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                        break;
-
-                                    case ActorClass.Cleric:
-                                        hpInc = Helpers.RollDice(1, 8) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
-                                        hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.CurrentHP += (int)hpInc;
-                                        desc.Player.MaxHP += (int)hpInc;
-                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                        break;
-
-                                    case ActorClass.Thief:
-                                        hpInc = Helpers.RollDice(1, 6) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
-                                        hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.CurrentHP += (int)hpInc;
-                                        desc.Player.MaxHP += (int)hpInc;
-                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                        break;
-
-                                    case ActorClass.Fighter:
-                                        hpInc = Helpers.RollDice(1, 10) + Helpers.CalculateAbilityModifier(desc.Player.Constitution);
-                                        hpInc = hpInc <= 0 ? 1 : hpInc;
-                                        desc.Player.CurrentHP += (int)hpInc;
-                                        desc.Player.MaxHP += (int)hpInc;
-                                        desc.Send($"Your health increases by {hpInc}!{Constants.NewLine}");
-                                        break;
-                                }
-                                break;
-
-                            case "mp":
-                            case "mana":
-                                switch (desc.Player.Class)
-                                {
-                                    case ActorClass.Wizard:
-                                        var mpInc = Helpers.RollDice(1, 10) + Helpers.CalculateAbilityModifier(desc.Player.Intelligence);
-                                        mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.CurrentMP += (int)mpInc;
-                                        desc.Player.MaxMP += (int)mpInc;
-                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                        break;
-
-                                    case ActorClass.Cleric:
-                                        mpInc = Helpers.RollDice(1, 8) + Helpers.CalculateAbilityModifier(desc.Player.Wisdom);
-                                        mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.CurrentMP += (int)mpInc;
-                                        desc.Player.MaxMP += (int)mpInc;
-                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                        break;
-
-                                    case ActorClass.Thief:
-                                        mpInc = Helpers.RollDice(1, 6) + Helpers.CalculateAbilityModifier(desc.Player.Intelligence);
-                                        mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.CurrentMP += (int)mpInc;
-                                        desc.Player.MaxMP += (int)mpInc;
-                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                        break;
-
-                                    case ActorClass.Fighter:
-                                        mpInc = Helpers.RollDice(1, 4) + Helpers.CalculateAbilityModifier(desc.Player.Intelligence);
-                                        mpInc = mpInc <= 0 ? 1 : mpInc;
-                                        desc.Player.CurrentMP += (int)mpInc;
-                                        desc.Player.MaxMP += (int)mpInc;
-                                        desc.Send($"Your magic increases by {mpInc}!{Constants.NewLine}");
-                                        break;
-                                }
-                                break;
-
-                            case "sp":
-                            case "stamina":
-                                var spInc = Helpers.RollDice(1, 10);
-                                var mod = Helpers.CalculateAbilityModifier(desc.Player.Constitution);
-                                if (mod > 0)
-                                {
-                                    spInc += (uint)mod;
-                                }
-                                desc.Player.MaxSP += (int)spInc;
-                                desc.Player.CurrentSP += (int)spInc;
-                                desc.Send($"Your stamina increases by {spInc}!{Constants.NewLine}");
-                                break;
-                        }
-                        desc.Player.CalculateArmourClass();
-                    }
-                    else
-                    {
-                        desc.Send($"The gym master frowns. 'Looks like you're short of funds!'{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    // no stat specified so show price for increasing all stats
-                    sb.AppendLine($"The gym master flexes. 'Sure I can help you improve, but it will cost you...'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Stat");
-                    var strIncPrice = (desc.Player.Strength + 1) * 1000;
-                    var dexIncPrice = (desc.Player.Dexterity + 1) * 1000;
-                    var intIncPrice = (desc.Player.Intelligence + 1) * 1000;
-                    var wisIncPrice = (desc.Player.Wisdom + 1) * 1000;
-                    var conIncPrice = (desc.Player.Constitution + 1) * 1000;
-                    var chaIncPrice = (desc.Player.Charisma + 1) * 1000;
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    if (strIncPrice.ToString().Length > 4)
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Strength + 1) * 1000}{Constants.TabStop}|| Strength");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Strength + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Strength");
-                    }
-                    if (dexIncPrice.ToString().Length > 4)
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Dexterity + 1) * 1000}{Constants.TabStop}|| Dexterity");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Dexterity + 1) * 1000}{Constants.TabStop}{Constants.NewLine}|| Dexterity");
-                    }
-                    if (intIncPrice.ToString().Length > 4)
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Intelligence + 1) * 1000}{Constants.TabStop}|| Intelligence");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Intelligence + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Intelligence");
-                    }
-                    if (wisIncPrice.ToString().Length > 4)
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Wisdom + 1) * 1000}{Constants.TabStop}|| Wisdom");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Wisdom + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Wisdom");
-                    }
-                    if (conIncPrice.ToString().Length > 4)
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Constitution + 1) * 1000}{Constants.TabStop}|| Constitution");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Constitution + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Constitution");
-                    }
-                    if (chaIncPrice.ToString().Length > 4)
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Charisma + 1) * 1000}{Constants.TabStop}|| Charisma");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"|| {(desc.Player.Charisma + 1) * 1000}{Constants.TabStop}{Constants.TabStop}|| Charisma");
-                    }
-                    sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra HP");
-                    sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra MP");
-                    sb.AppendLine($"|| 20000{Constants.TabStop}|| Extra SP");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    desc.Send(sb.ToString());
-                }
-            }
-            else
-            {
-                desc.Send($"There is no one here to train you!{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowPlayerSkills(ref Descriptor desc)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"  {new string('=', 77)}");
-            if (desc.Player.Skills.Count > 0)
-            {
-                sb.AppendLine($"|| Skill {Constants.TabStop}{Constants.TabStop}|| MP{Constants.TabStop}|| Description");
-                sb.AppendLine($"||{new string('=', 77)}");
-                foreach (var s in desc.Player.Skills)
-                {
-                    if (s.Name.Length <= 4)
-                    {
-                        sb.AppendLine($"|| {s.Name}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
-                    }
-                    else
-                    {
-                        if (s.Name.Length < 13)
-                        {
-                            sb.AppendLine($"|| {s.Name}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"|| {s.Name}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
-                        }
-                    }
-                }
-            }
-            else
-            {
-                sb.AppendLine("|| No skills known");
-            }
-            sb.AppendLine($"  {new string('=', 77)}");
-            desc.Send(sb.ToString());
-        }
-
-        private static void ShowPlayerSpells(ref Descriptor desc)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"  {new string('=', 77)}");
-            if (desc.Player.Spells.Count > 0)
-            {
-                sb.AppendLine($"|| Spell {Constants.TabStop}{Constants.TabStop}|| MP{Constants.TabStop}|| Description");
-                sb.AppendLine($"||{new string('=', 77)}");
-                foreach (var s in desc.Player.Spells)
-                {
-                    if (s.SpellName.Length <= 4)
-                    {
-                        sb.AppendLine($"|| {s.SpellName}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
-                    }
-                    else
-                    {
-                        if (s.SpellName.Length < 13)
-                        {
-                            sb.AppendLine($"|| {s.SpellName}{Constants.TabStop}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"|| {s.SpellName}{Constants.TabStop}|| {s.MPCost}{Constants.TabStop}|| {s.Description}");
-                        }
-                    }
-                }
-            }
-            else
-            {
-                sb.AppendLine("|| No spells known");
-            }
-            sb.AppendLine($"  {new string('=', 77)}");
-            desc.Send(sb.ToString());
-        }
-
-        private static void ShowBuffs(ref Descriptor desc, ref string input)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"  {new string('=', 77)}");
-            if (desc.Player.Buffs != null && desc.Player.Buffs.Count > 0)
-            {
-                foreach (var b in desc.Player.Buffs)
-                {
-                    if (b.Value == -1)
-                    {
-                        sb.AppendLine($"|| {b.Key}: Permanent");
-                    }
-                    else
-                    {
-                        var line = b.Value > 1 ? $"|| {b.Key}: {b.Value} ticks remaining" : $"|| {b.Key}: {b.Value} tick remaining";
-                        sb.AppendLine(line);
-                    }
-                }
-            }
-            else
-            {
-                sb.AppendLine("|| No buffs active");
-            }
-            sb.AppendLine($"  {new string('=', 77)}");
-            desc.Send(sb.ToString());
-        }
-
-        private static void CastSpell(ref Descriptor desc, ref string input, bool overrideSkillCheck = false)
-        {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
-            {
-                desc.Send($"Some mystical force prevents the use of magic here...{Constants.NewLine}");
-                return;
-            }
-            if (desc.Player.HasBuff("Silence"))
-            {
-                desc.Send($"You have been silenced and cannot use magic right now!{Constants.NewLine}");
-                return;
-            }
-            var verb = GetVerb(ref input);
-            var line = input.Remove(0, verb.Length);
-            var lineElements = TokeniseInput(ref line);
-            var spellName = GetSkillOrSpellName(ref line);
-            spellName = string.IsNullOrEmpty(spellName) ? lineElements[0].Trim() : spellName;
-            if (!string.IsNullOrEmpty(spellName))
-            {
-                var spell = SpellManager.Instance.GetSpell(spellName);
-                if (spell == null)
-                {
-                    desc.Send($"No such spell exists in the Realms!{Constants.NewLine}");
-                    return;
-                }
-                if (!desc.Player.HasSpell(spell.SpellName))
-                {
-                    desc.Send($"You don't know that spell!{Constants.NewLine}");
-                    return;
-                }
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe) && (spell.SpellType == SpellType.Debuff || spell.SpellType == SpellType.Damage))
-                {
-                    desc.Send($"Some mystical force prevents you from casting that here...{Constants.NewLine}");
-                    return;
-                }
-                if (desc.Player.CurrentMP < spell.MPCost)
-                {
-                    desc.Send($"You don't have the MP required to cast that spell!{Constants.NewLine}");
-                    return;
-                }
-                var target = line.Replace(spellName, string.Empty).Replace("\"", string.Empty).Replace("'", string.Empty).Trim();
-                if (string.IsNullOrEmpty(target) && !spell.AOESpell)
-                {
-                    desc.Send($"Cast that spell on what, exactly?{Constants.NewLine}");
-                    return;
-                }
-                dynamic targetActor = null;
-                bool targetIsSelf = false;
-                if (target.ToLower() == "self" || target.ToLower() == desc.Player.Name.ToLower())
-                {
-                    targetActor = desc;
-                    targetIsSelf = true;
-                }
-                if ((spell.SpellType == SpellType.Debuff || spell.SpellType == SpellType.Damage) && targetActor != null && targetIsSelf)
-                {
-                    desc.Send($"You can't cast damaging spells on yourself!{Constants.NewLine}");
-                    return;
-                }
-                if (!spell.AOESpell && targetActor == null)
-                {
-                    // try to find a target NPC first
-                    targetActor = GetTargetNPC(ref desc, target);
-                }
-                if (!spell.AOESpell && targetActor == null)
-                {
-                    // didn't get a target NPC so try a target player instead
-                    var tp = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Where(x => Regex.IsMatch(x.Player.Name, target, RegexOptions.IgnoreCase) && x.Player.Visible).FirstOrDefault();
-                    if (tp != null)
-                    {
-                        targetActor = tp;
-                    }
-                }
-                if (!spell.AOESpell && targetActor == null)
-                {
-                    desc.Send($"The target of your magic cannot be found...{Constants.NewLine}");
-                    return;
-                }
-                switch (spell.SpellType)
-                {
-                    case SpellType.Healing:
-                        if (!spell.AOESpell)
-                        {
-                            int hpMod = 0;
-                            bool hitsTarget = true;
-                            desc.Player.AdjustMP((int)spell.MPCost * -1);
-                            if (targetActor is Descriptor)
-                            {
-                                Descriptor tDesc = (Descriptor)targetActor;
-                                hpMod = spell.CalculateSpellHPEffect(desc.Player, tDesc.Player, out hitsTarget);
-                                if (!targetIsSelf)
-                                {
-                                    desc.Send($"Calling on the power of {spell}, you heal {tDesc.Player.Name} for {hpMod} damage!{Constants.NewLine}");
-                                    tDesc.Send($"Calling on the power of {spell}, {desc.Player.Name} heals you for {hpMod} damage!{Constants.NewLine}");
-                                    tDesc.Player.AdjustHP(hpMod, out _);
-                                }
-                                else
-                                {
-                                    desc.Send($"Calling on the power of {spell} you heal yourself for {hpMod} damage!{Constants.NewLine}");
-                                    desc.Player.AdjustHP(hpMod, out _);
-                                }
-                            }
-                            else
-                            {
-                                NPC tNPC = (NPC)targetActor;
-                                hpMod = spell.CalculateSpellHPEffect(desc.Player, tNPC, out hitsTarget);
-                                desc.Send($"Calling on the power of {spell} you heal {tNPC.Name} for {hpMod} damage!{Constants.NewLine}");
-                                if (tNPC.IsFollower && tNPC.FollowingPlayer != desc.ID)
-                                {
-                                    SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"Calling on the power of {spell}, {desc.Player.Name} heals your follower for {hpMod} damage!{Constants.NewLine}");
-                                }
-                                tNPC.AdjustHP(hpMod, out _);
-                            }
-                        }
-                        else
-                        {
-                            var targetNPCs = RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom);
-                            var targetPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                            desc.Player.AdjustMP((int)spell.MPCost * -1);
-                            if (targetNPCs != null && targetNPCs.Count > 0)
-                            {
-                                foreach (var n in targetNPCs)
-                                {
-                                    var hpMod = spell.CalculateSpellHPEffect(desc.Player, n, out bool hits);
-                                    if (hits)
-                                    {
-                                        n.AdjustHP(hpMod, out _);
-                                    }
-                                }
-                            }
-                            if (targetPlayers != null && targetPlayers.Count > 0)
-                            {
-                                foreach(var p in targetPlayers)
-                                {
-                                    var hpMod = spell.CalculateSpellHPEffect(desc.Player, p.Player, out bool hits);
-                                    if (hits)
-                                    {
-                                        p.Player.AdjustHP(hpMod, out _);
-                                        if (p.Player.Name != desc.Player.Name)
-                                        {
-                                            p.Send($"{desc.Player.Name} bathes the area in holy light and your wounds are healed!{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                            }
-                            desc.Send($"You bathe the area in holy light, healing everyone's wounds!{Constants.NewLine}");
-                        }
-                        break;
-
-                    case SpellType.Damage:
-                        if (!spell.AOESpell)
-                        {
-                            if (targetActor != null && targetActor is NPC)
-                            {
-                                var tNPC = NPCManager.Instance.GetNPCByGUID(((NPC)targetActor).NPCGuid);
-                                if (tNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
-                                {
-                                    desc.Send($"Some mystical force prevents you from harming {tNPC.Name}...{Constants.NewLine}");
-                                    return;
-                                }
-                                if (tNPC.IsFollower)
-                                {
-                                    if (!desc.Player.PVP || !SessionManager.Instance.GetPlayerByGUID(tNPC.NPCGuid).Player.PVP)
-                                    {
-                                        desc.Send($"Some mysitcal force prevents that from happening!{Constants.NewLine}");
-                                        return;
-                                    }
-                                    var hpEffect = spell.CalculateSpellHPEffect(desc.Player, tNPC, out bool hits);
-                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
-                                    if (hits)
-                                    {
-                                        tNPC.AdjustHP(hpEffect * -1, out bool isKilled);
-                                        if (hpEffect <= 0)
-                                        {
-                                            desc.Send($"{tNPC.Name} has absorbed the magic of your spell!{Constants.NewLine}");
-                                        }
-                                        if (isKilled)
-                                        {
-                                            desc.Send($"Your {spell} spell strikes {tNPC.Name} for lethal damage, killing them!{Constants.NewLine}");
-                                            SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell has slain your follower!{Constants.NewLine}");
-                                            tNPC.Kill();
-                                            return;
-                                        }
-                                        else
-                                        {
-                                            if (hpEffect >= 1)
-                                            {
-                                                desc.Send($"Your {spell} spell strikes {tNPC.Name} causing {hpEffect} damage!{Constants.NewLine}");
-                                                SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell strikes your follower for {hpEffect} damage!{Constants.NewLine}");
-                                            }
-                                            var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
-                                            if (existingSessions == null || existingSessions.Count == 0)
-                                            {
-                                                CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
-                                                CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
-                                                CombatManager.Instance.AddCombatSession(c1);
-                                                CombatManager.Instance.AddCombatSession(c2);
-                                                if (desc.Player.FollowerID != Guid.Empty)
-                                                {
-                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                    CombatSession c3 = new CombatSession(follower, tNPC, follower.NPCGuid, tNPC.NPCGuid);
-                                                    CombatSession c4 = new CombatSession(tNPC, follower, tNPC.NPCGuid, follower.NPCGuid);
-                                                    CombatManager.Instance.AddCombatSession(c3);
-                                                    CombatManager.Instance.AddCombatSession(c4);
-                                                }
-                                                return;
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    var hpEffect = spell.CalculateSpellHPEffect(desc.Player, tNPC, out bool hits);
-                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
-                                    if (hits)
-                                    {
-                                        tNPC.AdjustHP(hpEffect * -1, out bool isKilled);
-                                        if (hpEffect <= 0)
-                                        {
-                                            desc.Send($"{tNPC.Name} has absorbed the magic of your spell!{Constants.NewLine}");
-                                        }
-                                        if (isKilled)
-                                        {
-                                            desc.Send($"The power of your {spell} spell is too much for {tNPC.Name} and they give in to death!{Constants.NewLine}");
-                                            desc.Send($"You have gained {tNPC.BaseExpAward} Exp and {tNPC.Gold} gold!{Constants.NewLine}");
-                                            desc.Player.AddExp(tNPC.BaseExpAward, false, false);
-                                            desc.Player.AddGold(tNPC.Gold, false);
-                                            tNPC.Kill(true, ref desc);
-                                        }
-                                        else
-                                        {
-                                            if (hpEffect >= 1)
-                                            {
-                                                desc.Send($"The magic of your {spell} spell blasts {tNPC.Name} causing {hpEffect} damage!{Constants.NewLine}");
-                                            }
-                                            var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
-                                            if (existingSessions == null || existingSessions.Count == 0)
-                                            {
-                                                CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
-                                                CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
-                                                CombatManager.Instance.AddCombatSession(c1);
-                                                CombatManager.Instance.AddCombatSession(c2);
-                                                if (desc.Player.FollowerID != Guid.Empty)
-                                                {
-                                                    var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                    CombatSession c3 = new CombatSession(follower, tNPC, follower.NPCGuid, tNPC.NPCGuid);
-                                                    CombatSession c4 = new CombatSession(tNPC, follower, tNPC.NPCGuid, follower.NPCGuid);
-                                                    CombatManager.Instance.AddCombatSession(c3);
-                                                    CombatManager.Instance.AddCombatSession(c4);
-                                                }
-                                            }
-                                        }
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
-                                        return;
-                                    }
-                                }
-                            }
-                            if (targetActor != null && targetActor is Descriptor)
-                            {
-                                var tPlayer = (Descriptor)targetActor;
-                                var hpEffect = spell.CalculateSpellHPEffect(desc.Player, tPlayer.Player, out bool hits);
-                                desc.Player.AdjustMP((int)spell.MPCost * -1);
-                                if (hits)
-                                {
-                                    tPlayer.Player.AdjustHP(hpEffect * -1, out bool isKilled);
-                                    if (hpEffect <= 0)
-                                    {
-                                        desc.Send($"{tPlayer.Player.Name} has absorbed the magic of your spell!{Constants.NewLine}");
-                                    }
-                                    if (isKilled)
-                                    {
-                                        desc.Send($"The power of your {spell} spell slams into {tPlayer.Player.Name}, killing them instantly!{Constants.NewLine}");
-                                        tPlayer.Send($"{desc.Player.Name}'s {spell} spell slams into you with lethal force, killing you instantly!{Constants.NewLine}");
-                                        tPlayer.Player.Kill();
-                                    }
-                                    else
-                                    {
-                                        if (hpEffect >= 1)
-                                        {
-                                            desc.Send($"Your {spell} spell strikes {tPlayer.Player.Name} causing {hpEffect} damage!{Constants.NewLine}");
-                                            tPlayer.Send($"{desc.Player.Name}'s {spell} spell strikes you for {hpEffect} damage!{Constants.NewLine}");
-                                        }
-                                        var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tPlayer.ID);
-                                        if (existingSessions == null || existingSessions.Count == 0)
-                                        {
-                                            CombatSession c1 = new CombatSession(desc, tPlayer, desc.ID, tPlayer.ID);
-                                            CombatSession c2 = new CombatSession(tPlayer, desc, tPlayer.ID, desc.ID);
-                                            CombatManager.Instance.AddCombatSession(c1);
-                                            CombatManager.Instance.AddCombatSession(c2);
-                                            if (desc.Player.FollowerID != Guid.Empty)
-                                            {
-                                                var fnpc = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                CombatSession c3 = new CombatSession(fnpc, tPlayer, fnpc.NPCGuid, tPlayer.ID);
-                                                CombatSession c4 = new CombatSession(tPlayer, fnpc, tPlayer.ID, fnpc.NPCGuid);
-                                                CombatManager.Instance.AddCombatSession(c3);
-                                                CombatManager.Instance.AddCombatSession(c4);
-                                            }
-                                            if (tPlayer.Player.FollowerID != Guid.Empty)
-                                            {
-                                                var fnpc = NPCManager.Instance.GetNPCByGUID(tPlayer.Player.FollowerID);
-                                                CombatSession c5 = new CombatSession(fnpc, desc, fnpc.NPCGuid, desc.ID);
-                                                CombatSession c6 = new CombatSession(desc, fnpc, desc.ID, fnpc.NPCGuid);
-                                                CombatManager.Instance.AddCombatSession(c5);
-                                                CombatManager.Instance.AddCombatSession(c6);
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
-                                    tPlayer.Send($"{desc.Player.Name} tries to fire a spell at you but their magic fails!{Constants.NewLine}");
-                                }
-                            }
-                        }
-                        else
-                        {
-                            var targetNPCs = RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom);
-                            var targetPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                            desc.Player.AdjustMP((int)spell.MPCost * -1);
-                            if (targetNPCs != null && targetNPCs.Count > 0)
-                            {
-                                foreach(var npc in targetNPCs)
-                                {
-                                    if (npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
-                                    {
-                                        desc.Send($"Some mystical force prevents your magic from harming {npc.Name}...{Constants.NewLine}");
-                                        continue;
-                                    }
-                                    if (npc.FollowingPlayer == Guid.Empty || (SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Player.PVP && desc.Player.PVP))
-                                    {
-                                        var hpEffect = spell.CalculateSpellHPEffect(desc.Player, npc, out bool hits);
-                                        if (hits)
-                                        {
-                                            if (hpEffect <= 0)
-                                            {
-                                                desc.Send($"{npc.Name} has absorbed the magic of your spell!{Constants.NewLine}");
-                                            }
-                                            npc.AdjustHP(hpEffect * -1, out bool isKilled);
-                                            if (isKilled)
-                                            {
-                                                desc.Send($"Your magic deals lethal damage to {npc.Name}! You gain {npc.BaseExpAward} Exp and {npc.Gold} gold!{Constants.NewLine}");
-                                                desc.Player.AddExp(npc.BaseExpAward, false, false);
-                                                desc.Player.AddGold(npc.Gold, false);
-                                                npc.Kill(true, ref desc);
-                                            }
-                                            else
-                                            {
-                                                if (hpEffect >= 1)
-                                                {
-                                                    desc.Send($"The magic of your {spell} spell deals {hpEffect} damage to {npc.Name}!{Constants.NewLine}");
-                                                }
-                                                if (npc.FollowingPlayer != Guid.Empty)
-                                                {
-                                                    SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player}'s {spell} deals {hpEffect} damage to {npc.Name}!{Constants.NewLine}");
-                                                }
-                                                var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, npc.NPCGuid);
-                                                if (existingSessions == null || existingSessions.Count == 0)
-                                                {
-                                                    CombatSession s = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
-                                                    CombatSession s1 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
-                                                    CombatManager.Instance.AddCombatSession(s);
-                                                    CombatManager.Instance.AddCombatSession(s1);
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"Somehow the magic of your {spell} misses {npc.Name}!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"Some mystical force prevents your magic from harming {npc.Name}...{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                            foreach(var p in targetPlayers)
-                            {
-                                if (!desc.Player.PVP || !p.Player.PVP)
-                                {
-                                    if (desc.ID != p.ID)
-                                    {
-                                        desc.Send($"Some mystical force prevents your magic from harming {p.Player.Name}...{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    if (desc.ID != p.ID)
-                                    {
-                                        var hpEffect = spell.CalculateSpellHPEffect(desc.Player, p.Player, out bool hits);
-                                        if (hits)
-                                        {
-                                            p.Player.AdjustHP(hpEffect * -1, out bool isKilled);
-                                            if (hpEffect <= 0)
-                                            {
-                                                desc.Send($"{p.Player.Name} has absorbed the magic of your spell!{Constants.NewLine}");
-                                            }
-                                            if (isKilled)
-                                            {
-                                                desc.Send($"The power of your magic overcomes {p.Player.Name}!{Constants.NewLine}");
-                                                p.Send($"The power of {desc.Player.Name}'s magic overcomes you and you give in to your wounds!{Constants.NewLine}");
-                                                p.Player.Kill();
-                                            }
-                                            else
-                                            {
-                                                if (hpEffect >= 1)
-                                                {
-                                                    desc.Send($"The magic of your {spell} spell causes {hpEffect} damage to {p.Player.Name}!{Constants.NewLine}");
-                                                    p.Send($"The magic of {desc.Player.Name}'s {spell} spell causes {hpEffect} damage to you!{Constants.NewLine}");
-                                                }
-                                                var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, p.ID);
-                                                if (existingSessions == null || existingSessions.Count == 0)
-                                                {
-                                                    CombatSession a = new CombatSession(desc, p, desc.ID, p.ID);
-                                                    CombatSession b = new CombatSession(p, desc, p.ID, desc.ID);
-                                                    CombatManager.Instance.AddCombatSession(a);
-                                                    CombatManager.Instance.AddCombatSession(b);
-                                                    if (desc.Player.FollowerID != Guid.Empty)
-                                                    {
-                                                        var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                        CombatSession c = new CombatSession(f, p, f.NPCGuid, p.ID);
-                                                        CombatSession d = new CombatSession(p, f, p.ID, f.NPCGuid);
-                                                        CombatManager.Instance.AddCombatSession(c);
-                                                        CombatManager.Instance.AddCombatSession(d);
-                                                    }
-                                                    if (p.Player.FollowerID != Guid.Empty)
-                                                    {
-                                                        var f = NPCManager.Instance.GetNPCByGUID(p.Player.FollowerID);
-                                                        CombatSession e = new CombatSession(f, desc, f.NPCGuid, desc.ID);
-                                                        CombatSession g = new CombatSession(desc, f, desc.ID, f.NPCGuid);
-                                                        CombatManager.Instance.AddCombatSession(e);
-                                                        CombatManager.Instance.AddCombatSession(g);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"The magic of your {spell} spell somehow misses {p.Player.Name}!{Constants.NewLine}");
-                                            p.Send($"The magic of {desc.Player.Name}'s spell somehow misses you!{Constants.NewLine}");
-                                        }
-                                    }
-                                }    
-                            }
-                        }
-                        break;
-
-                    case SpellType.Buff:
-                        if (!spell.AOESpell)
-                        {
-                            int hpMod = 0;
-                            bool hitsTarget = true;
-                            desc.Player.AdjustMP((int)spell.MPCost * -1);
-                            if (targetActor is Descriptor)
-                            {
-                                Descriptor tDesc = (Descriptor)targetActor;
-                                spell.ApplyBuffSpell(desc.Player, tDesc.Player, out hitsTarget, out hpMod);
-                                if (hitsTarget)
-                                {
-                                    desc.Send($"You bless {tDesc.Player.Name} with the power of {spell}!{Constants.NewLine}");
-                                    tDesc.Send($"{desc.Player.Name} blesses you with the power of {spell}!{Constants.NewLine}");
-                                    if (hpMod > 0)
-                                    {
-                                        tDesc.Player.AdjustHP(hpMod, out _);
-                                        tDesc.Send($"{desc.Player.Name}'s {spell} spell heals you for {hpMod} damage!{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"You try to cast {spell} on {tDesc.Player.Name} but your magic fails and nothing happens!{Constants.NewLine}");
-                                    tDesc.Send($"{desc.Player.Name} tries to cast a spell on you, but their magic fails and nothing happnes!{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                NPC tNPC = (NPC)targetActor;
-                                spell.ApplyBuffSpell(desc.Player, tNPC, out hitsTarget, out hpMod);
-                                if (hitsTarget)
-                                {
-                                    desc.Send($"You bless {tNPC.Name} with the power of {spell}!{Constants.NewLine}");
-                                    if (tNPC.IsFollower)
-                                    {
-                                        Descriptor owner = SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer);
-                                        owner.Send($"{desc.Player.Name} has blessed your follower with the power of {spell}!{Constants.NewLine}");
-                                        if (hpMod > 0)
-                                        {
-                                            owner.Send($"The magic of {desc.Player.Name}'s {spell} spell has healed your follower for {hpMod} damage!{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"You try to cast {spell} on {tNPC.Name} but your magic fails and nothing happens!{Constants.NewLine}");
-                                }
-                            }
-                        }
-                        else
-                        {
-                            int hpMod = 0;
-                            bool hitsTarget = true;
-                            desc.Player.AdjustMP((int)spell.MPCost * -1);
-                            var targetNPCs = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).NPCsInRoom;
-                            var targetPlayers = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
-                            desc.Player.AdjustMP((int)spell.MPCost * -1);
-                            if (targetNPCs != null && targetNPCs.Count > 0)
-                            {
-                                foreach (var npc in targetNPCs)
-                                {
-                                    spell.ApplyBuffSpell(desc.Player, npc, out hitsTarget, out hpMod);
-                                    if (hitsTarget)
-                                    {
-                                        desc.Send($"You bless {npc.Name} with the power of {spell}!{Constants.NewLine}");
-                                        if (hpMod > 0)
-                                        {
-                                            npc.AdjustHP(hpMod, out _);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"Somehow your {spell} spell misses {npc.Name}!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                            if (targetPlayers != null && targetPlayers.Count > 0)
-                            {
-                                foreach (var p in targetPlayers)
-                                {
-                                    spell.ApplyBuffSpell(desc.Player, p.Player, out hitsTarget, out hpMod);
-                                    if (hitsTarget)
-                                    {
-                                        desc.Send($"You bless {p.Player.Name} with the power of {spell}!{Constants.NewLine}");
-                                        p.Send($"{desc.Player.Name} blesses you with the power of {spell}!{Constants.NewLine}");
-                                        if (hpMod > 0)
-                                        {
-                                            p.Send($"The magic of {desc.Player.Name}'s {spell} spell heals you for {hpMod} damage!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"Somehow your {spell} spell misses {p.Player.Name}!{Constants.NewLine}");
-                                        p.Send($"Somehow the magic of {desc.Player.Name}'s {spell} spell misses you!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                        break;
-
-                    case SpellType.Debuff:
-                        if (!spell.AOESpell)
-                        {
-                            int hpMod = 0;
-                            bool hitsTarget = true;
-                            if (targetActor is Descriptor)
-                            {
-                                Descriptor tDesc = (Descriptor)targetActor;
-                                desc.Player.AdjustMP((int)spell.MPCost * -1);
-                                spell.ApplyBuffSpell(desc.Player, tDesc.Player, out hitsTarget, out hpMod);
-                                if (hitsTarget)
-                                {
-                                    desc.Send($"You have cursed {tDesc.Player.Name} with the power of {spell}!{Constants.NewLine}");
-                                    tDesc.Send($"{desc.Player.Name} has cursed you with the power of {spell}!{Constants.NewLine}");
-                                    if (hpMod != 0)
-                                    {
-                                        tDesc.Player.AdjustHP(hpMod * -1, out bool isKilled);
-                                        if (hpMod <= 0)
-                                        {
-                                            desc.Send($"{tDesc.Player.Name} has absorbed the power of your spell!{Constants.NewLine}");
-                                            tDesc.Send($"{desc.Player.Name} hurls a spell at you, but you have absorbed its effect!{Constants.NewLine}");
-                                        }
-                                        else
-                                        {
-                                            if (isKilled)
-                                            {
-                                                desc.Send($"The power of your magic overcomes {tDesc.Player.Name} and they surrender to death!{Constants.NewLine}");
-                                                tDesc.Send($"The power of {desc.Player.Name}'s {spell} spell overcomes you and you give in to death!{Constants.NewLine}");
-                                                tDesc.Player.Kill();
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your {spell} spell strikes {tDesc.Player.Name} causing {hpMod} damage!{Constants.NewLine}");
-                                                tDesc.Send($"{desc.Player.Name}'s {spell} spell hits you for {hpMod} damage!{Constants.NewLine}");
-                                            }
-                                        }
-                                        CombatSession s1 = new CombatSession(desc, tDesc, desc.ID, tDesc.ID);
-                                        CombatSession s2 = new CombatSession(tDesc, desc, tDesc.ID, desc.ID);
-                                        CombatManager.Instance.AddCombatSession(s1);
-                                        CombatManager.Instance.AddCombatSession(s2);
-                                        if (desc.Player.FollowerID != Guid.Empty)
-                                        {
-                                            NPC fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                            CombatSession s3 = new CombatSession(fNPC, tDesc, fNPC.NPCGuid, tDesc.ID);
-                                            CombatSession s4 = new CombatSession(tDesc, fNPC, tDesc.ID, fNPC.NPCGuid);
-                                            CombatManager.Instance.AddCombatSession(s3);
-                                            CombatManager.Instance.AddCombatSession(s4);
-                                        }
-                                        if (tDesc.Player.FollowerID != Guid.Empty)
-                                        {
-                                            NPC tDescFNPC = NPCManager.Instance.GetNPCByGUID(tDesc.Player.FollowerID);
-                                            CombatSession s5 = new CombatSession(desc, tDescFNPC, desc.ID, tDescFNPC.NPCGuid);
-                                            CombatSession s6 = new CombatSession(tDescFNPC, desc, tDescFNPC.NPCGuid, desc.ID);
-                                            CombatManager.Instance.AddCombatSession(s5);
-                                            CombatManager.Instance.AddCombatSession(s6);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"The Winds of Magic abandon you and your spell fails!{Constants.NewLine}");
-                                    tDesc.Send($"{desc.Player.Name} seems to be trying to prepare a spell, but the Winds of Magic abandon them and the spell fails!{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                NPC tNPC = (NPC)targetActor;
-                                if (tNPC.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
-                                {
-                                    desc.Send($"Some mystical force prevents you from harming {tNPC.Name}...{Constants.NewLine}");
-                                    return;
-                                }
-                                if (tNPC.IsFollower)
-                                {
-                                    if (!desc.Player.PVP || !SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Player.PVP)
-                                    {
-                                        desc.Send($"Some mystical force prevents that from happening!{Constants.NewLine}");
-                                        return;
-                                    }
-                                    spell.ApplyBuffSpell(desc.Player, tNPC, out hitsTarget, out hpMod);
-                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
-                                    if (hitsTarget)
-                                    {
-                                        tNPC.AdjustHP(hpMod * -1, out bool isKilled);
-                                        if (hpMod <= 0)
-                                        {
-                                            desc.Send($"{tNPC.Name} absorbs the power of your spell!{Constants.NewLine}");
-                                        }
-                                        else
-                                        {
-                                            if (isKilled)
-                                            {
-                                                desc.Send($"The power of your {spell} spell is too much for {tNPC.Name} and they die instantly!{Constants.NewLine}");
-                                                SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell kills your follower stone dead!{Constants.NewLine}");
-                                                tNPC.Kill();
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your {spell} spell strikes {tNPC.Name} causing {hpMod} damage!{Constants.NewLine}");
-                                                SessionManager.Instance.GetPlayerByGUID(tNPC.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell strikes your follower causing {hpMod} damage!{Constants.NewLine}");
-                                            }
-                                        }
-                                        var existingSession = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
-                                        if (existingSession == null || existingSession.Count == 0)
-                                        {
-                                            CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
-                                            CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
-                                            CombatManager.Instance.AddCombatSession(c1);
-                                            CombatManager.Instance.AddCombatSession(c2);
-                                            if (desc.Player.FollowerID != Guid.Empty)
-                                            {
-                                                var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                CombatSession c3 = new CombatSession(fNPC, tNPC, fNPC.NPCGuid, tNPC.NPCGuid);
-                                                CombatSession c4 = new CombatSession(tNPC, fNPC, tNPC.NPCGuid, fNPC.NPCGuid);
-                                                CombatManager.Instance.AddCombatSession(c3);
-                                                CombatManager.Instance.AddCombatSession(c4);
-                                            }
-                                        }
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    spell.ApplyBuffSpell(desc.Player, tNPC, out hitsTarget, out hpMod);
-                                    desc.Player.AdjustMP((int)spell.MPCost * -1);
-                                    if (hitsTarget)
-                                    {
-                                        tNPC.AdjustHP(hpMod * -1, out bool isKilled);
-                                        if (hpMod <= 0)
-                                        {
-                                            desc.Send($"{tNPC.Name} absorbs the power of your spell!{Constants.NewLine}");
-                                        }
-                                        else
-                                        {
-                                            if (isKilled)
-                                            {
-                                                desc.Send($"The power of your {spell} spell is too much for {tNPC.Name} and they die instantly!{Constants.NewLine}");
-                                                desc.Send($"You gain {tNPC.BaseExpAward} Exp and {tNPC.Gold} gold!{Constants.NewLine}");
-                                                tNPC.Kill(true, ref desc);
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Your {spell} spell strikes {tNPC.Name} causing {hpMod} damage!{Constants.NewLine}");
-                                            }
-                                        }
-                                        var existingSession = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, tNPC.NPCGuid);
-                                        if (existingSession == null || existingSession.Count == 0)
-                                        {
-                                            CombatSession c1 = new CombatSession(desc, tNPC, desc.ID, tNPC.NPCGuid);
-                                            CombatSession c2 = new CombatSession(tNPC, desc, tNPC.NPCGuid, desc.ID);
-                                            CombatManager.Instance.AddCombatSession(c1);
-                                            CombatManager.Instance.AddCombatSession(c2);
-                                            if (desc.Player.FollowerID != Guid.Empty)
-                                            {
-                                                var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                CombatSession c3 = new CombatSession(fNPC, tNPC, fNPC.NPCGuid, tNPC.NPCGuid);
-                                                CombatSession c4 = new CombatSession(tNPC, fNPC, tNPC.NPCGuid, fNPC.NPCGuid);
-                                                CombatManager.Instance.AddCombatSession(c3);
-                                                CombatManager.Instance.AddCombatSession(c4);
-                                            }
-                                        }
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The magic of your {spell} spell fizzles and fails!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            desc.Player.AdjustMP((int)spell.MPCost * -1);
-                            int hpMod = 0;
-                            bool hitsTarget = true;
-                            var targetNPCs = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).NPCsInRoom;
-                            var targetPlayers = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
-                            if (targetNPCs != null && targetNPCs.Count > 0)
-                            {
-                                foreach(var npc in targetNPCs)
-                                {
-                                    if (npc.BehaviourFlags.HasFlag(NPCFlags.NoAttack))
-                                    {
-                                        desc.Send($"Some mystical force prevents you from harming {npc.Name}...{Constants.NewLine}");
-                                        continue;
-                                    }
-                                    if (!npc.IsFollower || (SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Player.PVP && desc.Player.PVP))
-                                    {
-                                        spell.ApplyBuffSpell(desc.Player, npc, out hitsTarget, out hpMod);
-                                        if (hitsTarget)
-                                        {
-                                            npc.AdjustHP(hpMod * -1, out bool isKilled);
-                                            if (hpMod <= 0)
-                                            {
-                                                desc.Send($"{npc.Name} has absorbed the magic of your spell!{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                if (isKilled)
-                                                {
-                                                    desc.Send($"Your {spell} spell deals lethal damage to {npc.Name}! You gain {npc.BaseExpAward} Exp and {npc.Gold} gold!{Constants.NewLine}");
-                                                    desc.Player.AddExp(npc.BaseExpAward, false, false);
-                                                    desc.Player.AddGold(npc.Gold, false);
-                                                    npc.Kill(true, ref desc);
-                                                }
-                                                else
-                                                {
-                                                    desc.Send($"The magic of your {spell} spell deals {hpMod} damage to {npc.Name}!{Constants.NewLine}");
-                                                    if (npc.FollowingPlayer != Guid.Empty)
-                                                    {
-                                                        SessionManager.Instance.GetPlayerByGUID(npc.FollowingPlayer).Send($"{desc.Player.Name}'s {spell} spell deals {hpMod} damage to {npc.Name}!{Constants.NewLine}");
-                                                    }
-                                                    var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, npc.NPCGuid);
-                                                    if (existingSessions == null || existingSessions.Count == 0)
-                                                    {
-                                                        CombatSession s1 = new CombatSession(desc, npc, desc.ID, npc.NPCGuid);
-                                                        CombatSession s2 = new CombatSession(npc, desc, npc.NPCGuid, desc.ID);
-                                                        CombatManager.Instance.AddCombatSession(s1);
-                                                        CombatManager.Instance.AddCombatSession(s2);
-                                                        if (desc.Player.FollowerID != Guid.Empty)
-                                                        {
-                                                            var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                            CombatSession s3 = new CombatSession(fNPC, npc, fNPC.NPCGuid, npc.NPCGuid);
-                                                            CombatSession s4 = new CombatSession(npc, fNPC, npc.NPCGuid, fNPC.NPCGuid);
-                                                            CombatManager.Instance.AddCombatSession(s3);
-                                                            CombatManager.Instance.AddCombatSession(s4);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"Somehow the magic of your {spell} spell misses {npc.Name}!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"Some mystical force prevents your magic from harming {npc.Name}!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                            if (targetPlayers != null && targetPlayers.Count > 0)
-                            {
-                                foreach(var p in targetPlayers)
-                                {
-                                    if (!desc.Player.PVP || !p.Player.PVP)
-                                    {
-                                        if (desc.ID != p.ID)
-                                        {
-                                            desc.Send($"Some mystical force prevents your magic from harming {p.Player.Name}...{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (desc.ID != p.ID)
-                                        {
-                                            spell.ApplyBuffSpell(desc.Player, p.Player, out hitsTarget, out hpMod);
-                                            if (hitsTarget)
-                                            {
-                                                p.Player.AdjustHP(hpMod * -1, out bool isKilled);
-                                                if (hpMod <= 0)
-                                                {
-                                                    desc.Send($"{p.Player.Name} has absorbed the power of your {spell} spell!{Constants.NewLine}");
-                                                    p.Send($"You have absorbed the magic of {desc.Player.Name}'s {spell} spell!{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    if (isKilled)
-                                                    {
-                                                        desc.Send($"Your {spell} spell deals lethal damage to {p.Player.Name}, killing them instantly!{Constants.NewLine}");
-                                                        p.Send($"{desc.Player.Name}'s {spell} spell deals lethal damage to you, killing you instantly!{Constants.NewLine}");
-                                                        p.Player.Kill();
-                                                    }
-                                                    else
-                                                    {
-                                                        desc.Send($"The magic of your {spell} spell strikes {p.Player.Name} for {hpMod} damage!{Constants.NewLine}");
-                                                        p.Send($"The magic of {desc.Player.Name}'s {spell} spell strikes you for {hpMod} damage!{Constants.NewLine}");
-                                                        var existingSessions = CombatManager.Instance.GetCombatSessionsForCombatantPairing(desc.ID, p.ID);
-                                                        if (existingSessions == null || existingSessions.Count == 0)
-                                                        {
-                                                            CombatSession s1 = new CombatSession(desc, p, desc.ID, p.ID);
-                                                            CombatSession s2 = new CombatSession(p, desc, p.ID, desc.ID);
-                                                            CombatManager.Instance.AddCombatSession(s1);
-                                                            CombatManager.Instance.AddCombatSession(s2);
-                                                            if (desc.Player.FollowerID != Guid.Empty)
-                                                            {
-                                                                var fNPC = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                                                CombatSession s3 = new CombatSession(fNPC, p, fNPC.NPCGuid, p.ID);
-                                                                CombatSession s4 = new CombatSession(p, fNPC, p.ID, fNPC.NPCGuid);
-                                                                CombatManager.Instance.AddCombatSession(s3);
-                                                                CombatManager.Instance.AddCombatSession(s4);
-                                                            }
-                                                            if (p.Player.FollowerID != Guid.Empty)
-                                                            {
-                                                                var tfNPC = NPCManager.Instance.GetNPCByGUID(p.Player.FollowerID);
-                                                                CombatSession s5 = new CombatSession(tfNPC, desc, tfNPC.NPCGuid, desc.ID);
-                                                                CombatSession s6 = new CombatSession(desc, tfNPC, desc.ID, tfNPC.NPCGuid);
-                                                                CombatManager.Instance.AddCombatSession(s5);
-                                                                CombatManager.Instance.AddCombatSession(s6);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                desc.Send($"Somehow your magic misses {p.Player.Name}!{Constants.NewLine}");
-                                                p.Send($"Somehow the magic of {desc.Player.Name}'s {spell} spell misses you!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                }
-            }
-            else
-            {
-                desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-            }
-        }
-
-        private static void FleeCombat(ref Descriptor desc)
-        {
-            if (desc.Player.IsInCombat)
-            {
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).RoomExits.Count > 0)
-                {
-                    var sessions = CombatManager.Instance.GetCombatSessionsForCombatant(desc.ID);
-                    if (sessions != null && sessions.Count > 0)
-                    {
-                        foreach (var s in sessions)
-                        {
-                            CombatManager.Instance.RemoveCombatSession(s);
-                        }
-                    }
-                    desc.Player.Position = ActorPosition.Standing;
-                    var rndExit = Helpers.GetRandomExit(desc.Player.CurrentRoom);
-                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                    desc.Player.Move(desc.Player.CurrentRoom, rndExit.DestinationRoomID, false);
-                    desc.Send($"The fight is too much and you flee towards the {rndExit.ExitDirection}...{Constants.NewLine}");
-                    if (localPlayers != null && localPlayers.Count > 1)
-                    {
-                        foreach (var p in localPlayers)
-                        {
-                            if (!Regex.Match(desc.Player.Name, p.Player.Name, RegexOptions.IgnoreCase).Success)
-                            {
-                                var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"The fight is too much for {desc.Player.Name}, and they flee towards the {rndExit.ExitDirection}{Constants.NewLine}"
-                                : $"The fight is too much for something and it flees towards the {rndExit.ExitDirection} like a chicken!{Constants.NewLine}";
-                                p.Send(msg);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"There is nowhere to flee to, you must keep fighting!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Flee from what? You're not fighting!{Constants.NewLine}");
-            }
-        }
-
-        private static void StartPVPCombat(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.PVP)
-            {
-                if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
-                {
-                    var verb = GetVerb(ref input);
-                    var target = input.Remove(0, verb.Length).Trim();
-                    var tPlayer = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                    if (tPlayer != null)
-                    {
-                        if (tPlayer.Player.PVP)
-                        {
-                            var mySession = new CombatSession(desc, tPlayer, desc.ID, tPlayer.ID);
-                            var tpSession = new CombatSession(tPlayer, desc, tPlayer.ID, desc.ID);
-                            CombatManager.Instance.AddCombatSession(mySession);
-                            CombatManager.Instance.AddCombatSession(tpSession);
-                            desc.Player.Position = ActorPosition.Fighting;
-                            tPlayer.Player.Position = ActorPosition.Fighting;
-                            if (desc.Player.FollowerID != Guid.Empty)
-                            {
-                                var follower = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                var fSession = new CombatSession(follower, tPlayer, follower.NPCGuid, tPlayer.ID);
-                                var pfSession = new CombatSession(tPlayer, follower, tPlayer.ID, follower.NPCGuid);
-                                CombatManager.Instance.AddCombatSession(fSession);
-                                CombatManager.Instance.AddCombatSession(pfSession);
-                            }
-                            if (tPlayer.Player.FollowerID != Guid.Empty)
-                            {
-                                var tpFollower = NPCManager.Instance.GetNPCByGUID(tPlayer.Player.FollowerID);
-                                var tpfSession = new CombatSession(tpFollower, desc, tpFollower.NPCGuid, desc.ID);
-                                var mtpfSession = new CombatSession(desc, tpFollower, desc.ID, tpFollower.NPCGuid);
-                                CombatManager.Instance.AddCombatSession(tpfSession);
-                                CombatManager.Instance.AddCombatSession(mtpfSession);
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That person doesn't want to fight you right now...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That person doesn't seem to be here...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"Some mystical force prevents fighting here...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Please enable your PVP flag to start PVP combat.{Constants.NewLine}");
-            }
-        }
-
-        private static void StartCombat(ref Descriptor desc, ref string input)
-        {
-            if (desc.Player.Position == ActorPosition.Standing)
-            {
-                if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
-                {
-                    var verb = GetVerb(ref input).Trim();
-                    var target = input.Remove(0, verb.Length).Trim();
-                    if (!string.IsNullOrEmpty(target))
-                    {
-                        var t = GetTargetNPC(ref desc, target);
-                        if (t != null && t.FollowingPlayer == Guid.Empty)
-                        {
-                            if (!t.BehaviourFlags.HasFlag(NPCFlags.NoAttack) && t.Position != ActorPosition.Fighting)
-                            {
-                                if (!desc.Player.Visible)
-                                {
-                                    desc.Player.Visible = true;
-                                    desc.Send($"You shimmer and become visible again.{Constants.NewLine}");
-                                }
-                                var pSession = new CombatSession(desc, t, desc.ID, t.NPCGuid);
-                                var mSession = new CombatSession(t, desc, t.NPCGuid, desc.ID);
-                                CombatManager.Instance.AddCombatSession(pSession);
-                                CombatManager.Instance.AddCombatSession(mSession);
-                                if (desc.Player.FollowerID != Guid.Empty)
-                                {
-                                    var f = NPCManager.Instance.GetNPCByGUID(desc.Player.FollowerID);
-                                    var fSession = new CombatSession(f, t, f.NPCGuid, t.NPCGuid);
-                                    var mfSession = new CombatSession(t, f, t.NPCGuid, f.NPCGuid);
-                                    CombatManager.Instance.AddCombatSession(fSession);
-                                    CombatManager.Instance.AddCombatSession(mfSession);
-                                }
-                                desc.Player.Position = ActorPosition.Fighting;
-                            }
-                            else
-                            {
-                                desc.Send($"Some otherworldly force prevents you from attacking {t.Name}...{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            if (t == null)
-                            {
-                                desc.Send($"That doesn't seem to be here...{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"You cannot attack someone's follower!{Constants.NewLine}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Start a fight with what, exactly?{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"A feeling of peace comes over you... It would be impossible to fight here!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"You're not in a position to do that right now.{Constants.NewLine}");
-            }
-        }
-
-        private static void DescribeSkill(ref Descriptor desc, ref string input)
-        {
-            var skillName = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            if (SkillManager.Instance.SkillExists(skillName))
-            {
-                var s = SkillManager.Instance.GetSkill(skillName);
-                desc.Send($"{s.Name} {s.Description.ToLower()}{Constants.NewLine}");
-            }
-            else
-            {
-                if (SpellManager.Instance.SpellExists(skillName))
-                {
-                    var s = SpellManager.Instance.GetSpell(skillName);
-                    desc.Send($"{s.SpellName} {s.Description.ToLower()}{Constants.NewLine}");
-                }
-                else
-                {
-                    var r = RecipeManager.Instance.GetRecipe(skillName);
-                    if (r != null)
-                    {
-                        StringBuilder sb = new StringBuilder();
-                        sb.AppendLine($"Name: {r.RecipeName}");
-                        sb.AppendLine($"Description: {r.RecipeDescription}");
-                        sb.AppendLine($"Produces: {ItemManager.Instance.GetItemByID(r.RecipeResult).Name}");
-                        sb.AppendLine("Requires:");
-                        foreach (var m in r.RequiredMaterials)
-                        {
-                            sb.AppendLine($"{Constants.TabStop}{m.Value} x {ItemManager.Instance.GetItemByID(m.Key).Name}");
-                        }
-                        desc.Send(sb.ToString());
-                    }
-                    else
-                    {
-                        desc.Send($"No such skill, spell or recipe could be found.{Constants.NewLine}");
-                    }
-                }
-            }
-        }
-
-        private static void DoDiceGamble(ref Descriptor desc, ref string input)
-        {
-            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Gambler))
-            {
-                var amount = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                if (!string.IsNullOrEmpty(amount))
-                {
-                    if (uint.TryParse(amount, out uint gpBet))
-                    {
-                        if (gpBet > desc.Player.Gold)
-                        {
-                            desc.Send($"You can't wager more gold than you have!{Constants.NewLine}");
-                        }
-                        else
-                        {
-                            var playerRoll1 = Helpers.RollDice(1, 100);
-                            var playerRoll2 = Helpers.RollDice(1, 100);
-                            var dicerRoll = Helpers.RollDice(1, 100);
-                            uint playerFinalRoll = 0;
-                            if (desc.Player.HasSkill("Gambling"))
-                            {
-                                playerFinalRoll = playerRoll1 <= playerRoll2 ? playerRoll2 : playerRoll1;
-                            }
-                            else
-                            {
-                                playerFinalRoll = playerRoll1;
-                            }
-                            if (playerFinalRoll > dicerRoll)
-                            {
-                                var winnings = Convert.ToUInt32(Math.Round((double)gpBet / 2, 0));
-                                desc.Player.Gold += winnings;
-                                desc.Send($"You rolled {playerFinalRoll}, the Dicer rolled {dicerRoll}! You win {winnings} gold!{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Player.Gold -= gpBet;
-                                desc.Send($"You rolled {playerFinalRoll}, the Dicer rolled {dicerRoll}! You lose your wager of {gpBet} gold!{Constants.NewLine}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You can't bet that, whole numbers of GP only!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You must place a wager to win anything!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no one here to wager with!{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowAllEmotes(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input);
-            var line = input.Remove(0, verb.Length).Trim();
-            if (string.IsNullOrEmpty(line))
-            {
-                // No input so show the list of configured emotes
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"  {new string('=', 77)}");
-                var emotes = EmoteManager.Instance.GetAllEmotes(string.Empty).OrderBy(x => x.EmoteName).ToList();
-                if (emotes != null && emotes.Count > 0)
-                {
-                    int i = 0;
-                    string l = "|| ";
-                    for (int t = 0; t < emotes.Count; t++)
-                    {
-                        l = $"{l}{emotes[t].EmoteName}{Constants.TabStop}{Constants.TabStop}";
-                        i++;
-                        if (i >= 5 && t < emotes.Count)
-                        {
-                            i = 0;
-                            sb.AppendLine(l.Trim());
-                            l = "|| ";
-                        }
-                        if (i == emotes.Count)
-                        {
-                            sb.AppendLine(l.Trim());
-                        }
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    desc.Send(sb.ToString());
-                }
-                else
-                {
-                    desc.Send($"No Emotes are currently in the game{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"You {line}{Constants.NewLine}");
-                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                var pName = desc.Player.Name;
-                foreach (var lp in localPlayers.Where(x => !Regex.IsMatch(x.Player.Name, pName)))
-                {
-                    var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel ? $"{pName} {line}{Constants.NewLine}" : $"Something {line}{Constants.NewLine}";
                     lp.Send(msg);
                 }
             }
         }
 
-        private static void DoEmote(ref Descriptor desc, ref string input, Emote e)
+        public static void PlayerLanguages(Session session, string arg)
         {
-            var verb = GetVerb(ref input);
-            var targetString = input.Remove(0, verb.Length).Trim();
-            e.ShowEmoteMessage(ref desc, targetString);
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BGT%You are currently speaking {session.Player.SpokenLanguage}.%PT%{Constants.NewLine}");
+                session.Send($"%BGT%You know the following lanuages: {string.Join(", ", session.Player.KnownLanguages.Keys)}%PT%{Constants.NewLine}");
+                return;
+            }
+            var lang = Constants.Languages.FirstOrDefault(x => x.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0) ?? string.Empty;
+            if (string.IsNullOrEmpty(lang))
+            {
+                session.Send($"%BRT%No such language exists within the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!session.Player.KnowsLanguage(lang))
+            {
+                session.Send($"%BRT%You don't know {lang}!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.SpokenLanguage = lang;
+            session.Send($"%BGT%You're now speaking {lang}!%PT%{Constants.NewLine}");
+        }
+        #endregion
+
+        #region Misc
+        public static void PlayerListEmotes(Session session, string arg)
+        {
+            var matchingEmotes = string.IsNullOrEmpty(arg) ? EmoteManager.Instance.GetEmote().OrderBy(x => x.Name).ToList() : EmoteManager.Instance.GetEmote().Where(x => x.Name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0).OrderBy(x => x.Name).ToList();
+            if (matchingEmotes == null || matchingEmotes.Count == 0)
+            {
+                session.Send($"%BRT%No matching Emotes found!%PT%{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            string l = "%BYT%||%PT% ";
+            int c = 0;
+            for (int i = 0; i < matchingEmotes.Count; i++)
+            {
+                l = $"{l}{matchingEmotes[i].Name}{Constants.TabStop}{Constants.TabStop}";
+                c++;
+                if (c >= 5 && i < matchingEmotes.Count)
+                {
+                    c = 0;
+                    sb.AppendLine(l.Trim());
+                    l = "%BYT%||%PT% ";
+                }
+                if (c == matchingEmotes.Count)
+                {
+                    sb.AppendLine(l.Trim());
+                }
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
         }
 
-        private static void DoRecall(ref Descriptor desc)
+        public static void PlayerEmote(Session session, string verb, string arg)
         {
-            var r = RoomManager.Instance.GetRoom(Constants.PlayerStartRoom());
-            if (r != null && !r.Flags.HasFlag(RoomFlags.NoTeleport))
+            if (verb.ToLower() == "emote")
             {
-                var cr = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-                if (!cr.Flags.HasFlag(RoomFlags.NoTeleport) && desc.Player.CurrentSP >= 5)
+                if (string.IsNullOrEmpty(arg))
                 {
-                    if (cr.PlayersInRoom != null && cr.PlayersInRoom.Count > 0)
-                    {
-                        foreach (var p in cr.PlayersInRoom)
-                        {
-                            if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
-                            {
-                                var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} offers a prayer to the Gods and vanishes!{Constants.NewLine}"
-                                    : $"The Winds of Magic swirl and something is taken away!{Constants.NewLine}";
-                                p.Send(msg);
-                            }
-                        }
-                    }
-                    desc.Player.Move(desc.Player.CurrentRoom, Constants.PlayerStartRoom(), true);
-                    desc.Player.CurrentSP -= 5;
-                    if (r.PlayersInRoom != null && r.PlayersInRoom.Count > 1)
-                    {
-                        foreach (var p in r.PlayersInRoom)
-                        {
-                            if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
-                            {
-                                var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} appears in a flash of magic!{Constants.NewLine}"
-                                    : $"There is a flash of magic as something arrives!{Constants.NewLine}";
-                                p.Send(msg);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"The gods refuse to answer your prayers... You're on your own!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"The gods refuse to answer your prayers... You're on your own!{Constants.NewLine}");
-            }
-        }
-
-        private static void DonateItem(ref Descriptor desc, ref string input)
-        {
-            var target = input.Replace(GetVerb(ref input), string.Empty).Trim();
-            var i = GetTargetItem(ref desc, target, true);
-            var donRoom = RoomManager.Instance.GetRoom(Game.GetDonationRoomRID());
-            if (donRoom != null)
-            {
-                if (i != null)
-                {
-                    desc.Player.Inventory.Remove(i);
-                    RoomManager.Instance.AddItemToRoomInventory(donRoom.RoomID, ref i);
-                    Game.LogMessage($"INFO: Player {desc.Player.Name} donated item {i.Name} ({i.ID})", LogLevel.Info, true);
-                    desc.Send($"You offer up {i.ShortDescription} to the Winds of Magic!{Constants.NewLine}");
-                    var donRoomPlayers = donRoom.PlayersInRoom;
-                    var localPlayers = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
-                    if (localPlayers != null && localPlayers.Count > 1)
-                    {
-                        foreach (var p in localPlayers)
-                        {
-                            if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
-                            {
-                                var msg = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} offers {i.ShortDescription} to the Winds of Magic!{Constants.NewLine}"
-                                    : $"Something offers {i.ShortDescription} to the Winds of Magic!";
-                                p.Send(msg);
-                            }
-                        }
-                    }
-                    if (donRoomPlayers != null && donRoomPlayers.Count > 0)
-                    {
-                        foreach (var p in donRoomPlayers)
-                        {
-                            p.Send($"The Winds of Magic swirl, depositing {i.ShortDescription} on the ground!{Constants.NewLine}");
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"You don't seem to be carrying that!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no donation room in the world!{Constants.NewLine}");
-                Game.LogMessage($"WARN: Player {desc.Player.Name} tried to donate an item, but there is no Donation Room in the game", LogLevel.Warning, true);
-            }
-        }
-
-        private static void AppraiseItemForSale(ref Descriptor desc, ref string input)
-        {
-            var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
-            {
-                var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                if (s != null)
-                {
-                    var criteria = input.Replace(GetVerb(ref input), string.Empty).Trim();
-                    if (!string.IsNullOrWhiteSpace(criteria))
-                    {
-                        var i = GetTargetItem(ref desc, criteria, true);
-                        if (i != null)
-                        {
-                            s.AppraiseItemForSale(ref desc, i);
-                        }
-                        else
-                        {
-                            desc.Send($"You don't seem to be carrying anything like that...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Appraise what, exactly?{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"The store appears broken - check with an Imm!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no shop here...{Constants.NewLine}");
-            }
-        }
-
-        private static void ListShopWares(ref Descriptor desc, ref string input)
-        {
-            var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
-            {
-                var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
-                var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                if (s != null)
-                {
-                    s.ListShopInventory(ref desc, criteria);
-                }
-                else
-                {
-                    desc.Send($"The store appears broken - check with an Imm!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no shop here...{Constants.NewLine}");
-            }
-        }
-
-        private static void SellItemToShop(ref Descriptor desc, ref string input)
-        {
-            var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
-            {
-                var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                if (s != null)
-                {
-                    var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
-                    if (!string.IsNullOrEmpty(criteria))
-                    {
-                        var i = GetTargetItem(ref desc, criteria, true);
-                        if (i != null)
-                        {
-                            s.SellItem(ref desc, i);
-                        }
-                        else
-                        {
-                            desc.Send($"You don't seem to be carrying anything like that...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Sell what, exactly?{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"This shop appears to be broken, please tell an Imm!{Constants.NewLine}");
-                    Game.LogMessage($"ERROR: Player {desc.Player.Name} tried to sell an item in Room {desc.Player.CurrentRoom} but ShopManager returned null", LogLevel.Error, true);
-                }
-            }
-        }
-
-        private static void BuyItemFromShop(ref Descriptor desc, ref string input)
-        {
-            var r = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom);
-            if (r.Flags.HasFlag(RoomFlags.Shop) && r.ShopID.HasValue)
-            {
-                var s = ShopManager.Instance.GetShop(r.ShopID.Value);
-                var criteria = input.Remove(0, GetVerb(ref input).Length).Trim();
-                if (s != null)
-                {
-                    if (!string.IsNullOrEmpty(criteria))
-                    {
-                        s.BuyItem(ref desc, criteria);
-                    }
-                    else
-                    {
-                        desc.Send($"Buy what, exactly?{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"The store appears broken - check with an Imm!{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"There is no shop here...{Constants.NewLine}");
-            }
-        }
-
-        private static void LearnSkillOrSpell(ref Descriptor desc, ref string input)
-        {
-            // learn <skill | spell | recipe | language> <name>
-            // TODO: Add support for learning languages (other than Common) if the player doesn't know
-            var elements = TokeniseInput(ref input);
-            if (elements.Length == 1)
-            {
-                // no criteria specified so show what we can learn here, if anything
-                if (!RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasTrainer)
-                {
-                    desc.Send($"There is no one here to teach you!{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: emote <emote string> - perform a custom emote%PT%{Constants.NewLine}");
                     return;
                 }
-                StringBuilder sb = new StringBuilder();
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.SkillTrainer))
+                foreach(var lp in RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID))
                 {
-                    sb.AppendLine("The trainer smiles and says: 'I can teach you... For a price!'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Skill");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    uint skillsAvailable = 0;
-                    foreach (var s in SkillManager.Instance.GetAllSkills().OrderBy(x => x.Name).ToList())
-                    {
-                        if (!desc.Player.HasSkill(s.Name) || (s.Name == "Extra Attack" && desc.Player.NumberOfAttacks + 1 <= 5))
-                        {
-                            skillsAvailable++;
-                            var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                            if (p.ToString().Length > 4)
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {s.Name}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {s.Name}");
-                            }
-                        }
-                    }
-                    if (skillsAvailable == 0)
-                    {
-                        sb.AppendLine("|| No skills available");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine();
+                    var pName = session.Player.CanBeSeenBy(lp.Player) ? lp.Player.Name : "Someone";
+                    lp.Send($"{pName} {arg}{Constants.NewLine}");
                 }
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.MagicTrainer))
-                {
-                    sb.AppendLine("The sorceror smiles. 'Magic? I can teach you... For a price!'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Spell");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    uint spellsAvailable = 0;
-                    foreach (var s in SpellManager.Instance.GetAllSpells().OrderBy(x => x.SpellName).ToList())
-                    {
-                        if (!desc.Player.HasSpell(s.SpellName))
-                        {
-                            spellsAvailable++;
-                            var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                            if (p.ToString().Length > 4)
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {s.SpellName}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {s.SpellName}");
-                            }
-                        }
-                    }
-                    if (spellsAvailable == 0)
-                    {
-                        sb.AppendLine("|| No spells available");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                }
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Scribe))
-                {
-                    // show scribe recipes
-                    sb.AppendLine("The scribe flashes a toothy grin. 'Certainly! Sit! Learn!'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Recipe");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    uint recipesAvailable = 0;
-                    var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Scribing).ToList();
-                    foreach (var recipe in r)
-                    {
-                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
-                        {
-                            recipesAvailable++;
-                            var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
-                            if (p.ToString().Length > 4)
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                        }
-                    }
-                    if (recipesAvailable == 0)
-                    {
-                        sb.AppendLine("|| No Scribe recipes available");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                }
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Alchemist))
-                {
-                    // show alchemy recipes
-                    sb.AppendLine("The alchemist gives you a sickly grin. 'Certainly! Sit! Learn!'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Recipe");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    uint recipesAvailable = 0;
-                    var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Alchemy).ToList();
-                    foreach (var recipe in r)
-                    {
-                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
-                        {
-                            recipesAvailable++;
-                            var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
-                            if (p.ToString().Length > 4)
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                        }
-                    }
-                    if (recipesAvailable == 0)
-                    {
-                        sb.AppendLine("|| No Alchemy recipes available");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                }
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Blacksmith))
-                {
-                    // show blacksmith recipes
-                    sb.AppendLine("The blacksmith flexes his mighty arms. 'The secrets of the Forge can be yours...'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Recipe");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    uint recipesAvailable = 0;
-                    var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Blacksmithing).ToList();
-                    foreach (var recipe in r)
-                    {
-                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
-                        {
-                            recipesAvailable++;
-                            var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
-                            if (p.ToString().Length > 4)
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                        }
-                    }
-                    if (recipesAvailable == 0)
-                    {
-                        sb.AppendLine("|| No Blacksmithing recipes available");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                }
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Jeweler))
-                {
-                    sb.AppendLine("The jeweler smiles broadly. 'Certainly! Sit! Learn!'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Recipe");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    uint recipesAvailable = 0;
-                    var r = RecipeManager.Instance.GetAllCraftingRecipes(string.Empty).Where(x => x.RecipeType == RecipeType.Jewelcrafting).ToList();
-                    foreach (var recipe in r)
-                    {
-                        if (!desc.Player.KnowsRecipe(recipe.RecipeName))
-                        {
-                            recipesAvailable++;
-                            var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
-                            if (p.ToString().Length > 4)
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {recipe.RecipeName}");
-                            }
-                        }
-                    }
-                    if (recipesAvailable == 0)
-                    {
-                        sb.AppendLine("|| No Jewelcrafting recipes available");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                }
-                if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.LanguageTrainer))
-                {
-                    sb.AppendLine("The old diplomat gives you a smile. 'If you want to learn, I can teach!'");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Recipe");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    uint langsAvailable = 0;
-                    foreach (Languages lang in Enum.GetValues(typeof(Languages)))
-                    {
-                        if (!desc.Player.KnownLanguages.HasFlag(lang))
-                        {
-                            langsAvailable++;
-                            var p = Helpers.GetNewPurchasePrice(ref desc, 5000);
-                            if (p.ToString().Length > 4)
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}|| {lang}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p}{Constants.TabStop}{Constants.TabStop}|| {lang}");
-                            }
-                        }
-                    }
-                    if (langsAvailable == 0)
-                    {
-                        sb.AppendLine("|| No languages available");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                }
-                desc.Send(sb.ToString());
             }
             else
             {
-                if (elements.Length >= 2)
+                var emote = EmoteManager.Instance.GetEmote(verb);
+                if (emote == null)
                 {
-                    // we are learning a skill or a spell
-                    var t = elements[1];
-                    var toLearn = input.Replace(elements[0], string.Empty).Replace(elements[1], string.Empty).Trim();
-                    switch (t.ToLower())
-                    {
-                        case "skill":
-                            if (SkillManager.Instance.SkillExists(toLearn))
-                            {
-                                if (!desc.Player.HasSkill(toLearn) || (toLearn.ToLower() == "extra attack" && desc.Player.NumberOfAttacks + 1 <= 5))
-                                {
-                                    var s = SkillManager.Instance.GetSkill(toLearn);
-                                    var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                                    if (desc.Player.Gold >= p)
-                                    {
-                                        // skill exists, player does not know it and has enough gold to buy it
-                                        desc.Send($"The trainer smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
-                                        desc.Player.Gold -= p;
-                                        if (s.Name == "Extra Attack")
-                                        {
-                                            desc.Player.NumberOfAttacks++;
-                                        }
-                                        else
-                                        {
-                                            desc.Player.AddSkill(s.Name);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // skill exists, player does not know it but does not have enough gold to buy it
-                                        desc.Send($"The trainer laughs, 'You're a little short of gold, my friend!'{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    // skill exists but the player already knows it
-                                    desc.Send($"'You already know all that I can teach about that,' the trainer says.{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                // skill does not exist
-                                desc.Send($"The trainer shakes their head. 'I don't think I can teach you that.'{Constants.NewLine}");
-                            }
-                            break;
+                    session.Send($"%BRT%You can't do that, no such Emote exists!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+                emote.Perform(session.Player, target, !string.IsNullOrEmpty(arg));
+            }
+        }
 
-                        case "spell":
-                            if (SpellManager.Instance.SpellExists(toLearn))
-                            {
-                                if (!desc.Player.HasSpell(toLearn))
-                                {
-                                    var s = SpellManager.Instance.GetSpell(toLearn);
-                                    var p = Helpers.GetNewPurchasePrice(ref desc, s.GoldToLearn);
-                                    if (desc.Player.Gold >= p)
-                                    {
-                                        desc.Send($"The sorceror smiles. 'Certainly I can teach you that!'{Constants.NewLine}");
-                                        desc.Player.Gold -= p;
-                                        desc.Player.AddSpell(s.SpellName);
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The sorceror smiles. 'Come back with more gold.'{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"'You already know all I can teach about that spell,' the sorceror says.{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"The sorceror shakes his head. 'I don't think I can teach you that.'{Constants.NewLine}");
-                            }
-                            break;
+        public static void PlayerChangeShortDesc(Session session)
+        {
+            session.Send($"%BYT%Your current short description is:%PT%{Constants.NewLine}");
+            session.Send($"%BYT%{session.Player.ShortDescription}%PT%{Constants.NewLine}");
+            session.Send($"%BYT%Enter new Short Description (max. 50 Characters):%PT%");
+            var input = session.Read();
+            if (string.IsNullOrEmpty(input))
+            {
+                session.Send($"%BRT%Aborting description change.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (input.Trim().Length <= 50)
+            {
+                session.Player.ShortDescription = input.Trim();
+            }
+            else
+            {
+                session.Send($"%BRT%That is too long to be a Short Description!%PT%{Constants.NewLine}");
+            }
+        }
 
-                        case "recipe":
-                            var r = RecipeManager.Instance.GetRecipe(toLearn);
-                            if (r != null)
-                            {
-                                if (!desc.Player.KnowsRecipe(r.RecipeName))
-                                {
-                                    bool canLearn = false;
-                                    switch (r.RecipeType)
-                                    {
-                                        case RecipeType.Scribing:
-                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Scribe) && desc.Player.HasSkill("Scribing"))
-                                            {
-                                                canLearn = true;
-                                            }
-                                            break;
+        public static void PlayerChangeLongDesc(Session session)
+        {
+            var lDesc = Helpers.GetLongDescription(session);
+            session.Player.LongDescription = lDesc;
+            session.Send($"%BGT%Your Long Description has been updated successfully.%PT%{Constants.NewLine}");
+        }
 
-                                        case RecipeType.Jewelcrafting:
-                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Jeweler) && desc.Player.HasSkill("Jewelcrafting"))
-                                            {
-                                                canLearn = true;
-                                            }
-                                            break;
+        public static void PlayerChangeTitle(Session session)
+        {
+            session.Send($"%BYT%Your current title is:%PT%{Constants.NewLine}");
+            session.Send($"%BYT%{session.Player.Title}%PT%{Constants.NewLine}");
+            session.Send($"%BYT%Enter new Title:%PT%");
+            var input = session.Read();
+            if (string.IsNullOrEmpty(input))
+            {
+                session.Send($"%BRT%Aborting title change.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (input.Trim().Length <= 50)
+            {
+                session.Player.Title = input.Trim();
+            }
+            else
+            {
+                session.Send($"%BRT%That is too long to be a Title!%PT%{Constants.NewLine}");
+            }
+        }
 
-                                        case RecipeType.Blacksmithing:
-                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Blacksmith) && desc.Player.HasSkill("Blacksmithing"))
-                                            {
-                                                canLearn = true;
-                                            }
-                                            break;
-
-                                        case RecipeType.Alchemy:
-                                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Alchemist) && desc.Player.HasSkill("Alchemy"))
-                                            {
-                                                canLearn = true;
-                                            }
-                                            break;
-                                    }
-                                    if (canLearn)
-                                    {
-                                        var p = Helpers.GetNewPurchasePrice(ref desc, 2000);
-                                        if (desc.Player.Gold >= p)
-                                        {
-                                            desc.Player.Gold -= p;
-                                            desc.Player.Recipes.Add(r);
-                                            desc.Send($"You gain knowledge of crafting {r.RecipeName}{Constants.NewLine}");
-                                        }
-                                        else
-                                        {
-                                            desc.Send($"You don't have enough gold!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"You cannot learn that recipe right now.{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"You already know that recipe!{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"That recipe doesn't exist!{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "language":
-                            if (Enum.TryParse<Languages>(toLearn, true, out Languages lang))
-                            {
-                                if (!desc.Player.KnownLanguages.HasFlag(lang))
-                                {
-                                    var p = Helpers.GetNewPurchasePrice(ref desc, 5000);
-                                    if (desc.Player.Gold >= p)
-                                    {
-                                        desc.Player.Gold -= p;
-                                        desc.Player.KnownLanguages |= lang;
-                                        desc.Send($"The old diplomat smiles and passes long his knowledge of the {lang} language.{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"The old diplomat chuckles. 'You need more gold to learn that!'{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"The old diplomat shakes his head. 'You already know all I can teach about that language.'{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"That language doesn't exist!{Constants.NewLine}");
-                            }
-                            break;
-
-                        default:
-                            desc.Send($"Usage: learn <skill | spell | recipe | language> <name>{Constants.NewLine}");
-                            break;
-                    }
+        public static void PlayerChangePassword(Session session)
+        {
+            Game.LogMessage($"INFO: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} has started the password change process", LogLevel.Info, true);
+            while (true)
+            {
+                session.Send($"%BRT%*** PASSWORD CHANGE IN PROGRESS ***%PT%{Constants.NewLine}");
+                session.Send($"%BRT%*** Type ***END*** to abort the process%PT%{Constants.NewLine}");
+                session.Send($"Enter your current password: ");
+                var curPwd = session.Read();
+                if (string.IsNullOrEmpty(curPwd))
+                {
+                    continue;
+                }
+                if (curPwd.Trim() == "***END***")
+                {
+                    session.Send($"%BYT%Aborting password change process.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (!DatabaseManager.ValidatePlayerPassword(session.Player.Name, curPwd.Trim()))
+                {
+                    session.Send($"%BRT%Invalid password, reset process cannot continue. This has been logged.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"WARN: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} provided an invalid password ({curPwd.Trim()}) during the password reset process", LogLevel.Warning, true);
+                    return;
+                }
+                session.Send($"%BRT%Enter new password: ");
+                var newPwd = session.Read();
+                if (string.IsNullOrEmpty(newPwd))
+                {
+                    continue;
+                }
+                if (newPwd.Trim() == "***END***")
+                {
+                    session.Send($"%BYT%Aborting password change process.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (DatabaseManager.ChangePlayerPassword(session.Player.Name, newPwd.Trim()))
+                {
+                    Game.LogMessage($"INFO: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} has changed their password", LogLevel.Info, true);
+                    session.Send($"%BGT%Your password has been changed!%PT%{Constants.NewLine}");
+                    return;
+                }
+                else
+                {
+                    session.Send($"%BRT%Failed to change password. Please retry or see an Imm!%PT%{Constants.NewLine}");
+                    return;
                 }
             }
         }
 
-        private static void ConsumeItem(ref Descriptor desc, ref string input)
+        public static void PlayerCraftItem(Session session, string arg)
         {
-            var verb = GetVerb(ref input);
-            var itemName = input.Remove(0, verb.Length).Trim();
-            var i = GetTargetItem(ref desc, itemName, true);
-            if (i != null)
+            if (string.IsNullOrEmpty(arg))
             {
-                if (i.ItemType == ItemType.Consumable)
+                session.Send($"%BRT%Craft what, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            CraftingRecipe r = null;
+            if (int.TryParse(arg.Trim(), out int recipeID))
+            {
+                r = RecipeManager.Instance.GetRecipe(recipeID);
+            }
+            else
+            {
+                r = RecipeManager.Instance.GetRecipe(arg).FirstOrDefault();
+            }
+            if (r == null)
+            {
+                session.Send($"%BRT%No such Crafting Recipe exists in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            r.Craft(session);
+        }
+
+        public static void PlayerMineNode(Session session)
+        {
+            var r = RoomManager.Instance.GetRoom(session.Player.CurrentRoom);
+            if (r.RSSNode == null || r.RSSNode.Depth == 0)
+            {
+                session.Send($"%BRT%There is nothing here you can mine!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!session.Player.HasSkill("Mining"))
+            {
+                session.Send($"%BRT%You don't know how to mine for resources!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.GetInventoryItem("Mining Tools") == null)
+            {
+                session.Send($"%BRT%You don't have the right tools to do that!%PT%{Constants.NewLine}");
+                return;
+            }
+            var itemID = r.RSSNode.Mine(out bool depleted);
+            var item = (InventoryItem)ItemManager.Instance.GetItem(itemID);
+            session.Player.AddItemToInventory(itemID);
+            session.Send($"%BGT%You mine the resource node and discover {item.ShortDescription}!%PT%{Constants.NewLine}");
+            if (depleted)
+            {
+                RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode = null;
+            }
+        }
+
+        public static void PlayerPickPocket(Session session, string arg)
+        {
+            if (!session.Player.HasSkill("Pickpocket"))
+            {
+                session.Send($"%BRT%You don't know how to do that!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+            {
+                session.Send($"%BYT%Some mystical force prevents you from doing that!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Pickpocket who, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your thievery isn't here right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.ActorType == ActorType.Player)
+            {
+                session.Send($"%BYT%Some mysical force prevents you from stealing from {target.Name}!%PT%{Constants.NewLine}");
+                return;
+            }
+            var tNPC = (NPC)target;
+            if (tNPC.Flags.HasFlag(NPCFlags.NoPickpocket) || tNPC.Flags.HasFlag(NPCFlags.NoAttack))
+            {
+                session.Send($"%BYT%Some mystical force prevents you from stealing from {target.Name}!%PT%{Constants.NewLine}");
+                return;
+            }
+            var pRoll = Math.Max(1, Helpers.RollDice<int>(1, 20) + Helpers.CalculateAbilityModifier(session.Player.Dexterity));
+            var tRoll = Math.Max(1, Helpers.RollDice<int>(1, 20) + Helpers.CalculateAbilityModifier(tNPC.Intelligence));
+            if (pRoll >= tRoll)
+            {
+                if (tNPC.Gold == 0 && (tNPC.Inventory == null || tNPC.Inventory.Count == 0))
                 {
-                    var pn = desc.Player.Name;
-                    desc.Send($"You greedily consume the {i.Name}!{Constants.NewLine}");
-                    desc.Player.Inventory.Remove(i);
-                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => x.Player.Name != pn).ToList();
+                    session.Send($"BGT%{tNPC.Name} doesn't have anything to steal!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (tNPC.Gold > 0)
+                {
+                    var stealGold = Helpers.RollDice<ulong>(1, Convert.ToInt32(tNPC.Gold));
+                    tNPC.Gold -= stealGold;
+                    session.Player.AdjustGold((long)stealGold, true, false);
+                    session.Send($"%BGT%You manage to swipe {stealGold:N0} gold from {tNPC.Name}!%PT%{Constants.NewLine}");
+                }
+                if (tNPC.Inventory != null && tNPC.Inventory.Count > 0)
+                {
+                    var itemID = tNPC.Inventory.GetRandomElement();
+                    tNPC.Inventory.TryGetValue(itemID, out var item);
+                    if (item != null)
+                    {
+                        tNPC.RemoveItemFromInventory(item);
+                        session.Player.AddItemToInventory(item);
+                        session.Send($"%BGT%You have stolen {item.ShortDescription} from {tNPC.Name}!%PT%{Constants.NewLine}");
+                    }
+                }
+            }
+            else
+            {
+                session.Send($"%BRT%{tNPC.Name} notices you trying to steal from them and makes ready to fight!%PT%{Constants.NewLine}");
+                tNPC.TargetQueue.TryAdd(session.ID, true);
+                session.Player.TargetQueue.TryAdd(tNPC.ID, true);
+            }
+        }
+
+        public static void PlayerHide(Session session)
+        {
+            if (!session.Player.HasSkill("Hide"))
+            {
+                session.Send($"%BRT%You don't know how to do that!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.Visible)
+            {
+                session.Send($"%BGT%You shroud yourself and hide from view!%PT%{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+                if (localPlayers.Count > 0)
+                {
+                    foreach (var player in localPlayers)
+                    {
+                        player.Send($"%BGT%{session.Player.Name} shrouds themselves from view.%PT%{Constants.NewLine}");
+                    }
+                }
+                session.Player.Visible = false;
+            }
+            else
+            {
+                session.Send($"%BGT%Your shroud falls away and you become visible again!%PT%{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+                if (localPlayers.Count > 0)
+                {
+                    foreach(var player in localPlayers)
+                    {
+                        player.Send($"%BGT%{session.Player.Name} shimmers and becomes visible again!%PT%{Constants.NewLine}");
+                    }
+                }
+                session.Player.Visible = true;
+            }
+        }
+
+        public static void LearnSkill(Session session, string arg)
+        {
+            var r = RoomManager.Instance.GetRoom(session.Player.CurrentRoom);
+            if (!r.HasTrainer)
+            {
+                session.Send($"%BRT%There is no one here to teach you!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                StringBuilder sb = new StringBuilder();
+                int matchingSkills = 0;
+                int matchingRecipes = 0;
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                if (r.Flags.HasFlag(RoomFlags.SkillTrainer))
+                {
+                    var knownSkills = from skillName in session.Player.Skills.Keys select SkillManager.Instance.GetSkill(skillName);
+                    var availableSkills = SkillManager.Instance.GetSkill().Except(knownSkills);
+                    matchingSkills = availableSkills.Count();
+                    if (matchingSkills > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Available Skills:%PT%");
+                        foreach(var sk in availableSkills)
+                        {
+                            sb.AppendLine($"%BYT%|| {sk.Name} - {Helpers.GetPurchasePrice(session, sk.LearnCost):N0} gold%PT%");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%|| No Skills available%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                if (r.Flags.HasFlag(RoomFlags.Alchemist))
+                {
+                    var knownRecipes = from recipeID in session.Player.Recipes.Keys select RecipeManager.Instance.GetRecipe(recipeID);
+                    var availableRecipes = RecipeManager.Instance.GetRecipe(RecipeType.Alchemy).Except(knownRecipes);
+                    matchingRecipes += availableRecipes.Count();
+                    if (availableRecipes.Count() > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Available Alchemy Recipes%PT%");
+                        foreach(var recipe in availableRecipes)
+                        {
+                            sb.AppendLine($"%BYT%|| {recipe.Name} - {Helpers.GetPurchasePrice(session, recipe.LearnCost):N0} gold%PT%");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%|| No Alchemy recipes available%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                if (r.Flags.HasFlag(RoomFlags.Blacksmith))
+                {
+                    var knownRecipes = from recipeID in session.Player.Recipes.Keys select RecipeManager.Instance.GetRecipe(recipeID);
+                    var availableRecipes = RecipeManager.Instance.GetRecipe(RecipeType.Blacksmith).Except(knownRecipes);
+                    matchingRecipes += availableRecipes.Count();
+                    if (availableRecipes.Count() > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Available Blacksmith Recipes%PT%");
+                        foreach(var recipe in availableRecipes)
+                        {
+                            sb.AppendLine($"%BYT%|| {recipe.Name} - {Helpers.GetPurchasePrice(session, recipe.LearnCost):N0} gold%PT%");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%|| No Blacksmith recipes available%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                if (r.Flags.HasFlag(RoomFlags.Chef))
+                {
+                    var knownRecipes = from recipeID in session.Player.Recipes.Keys select RecipeManager.Instance.GetRecipe(recipeID);
+                    var availableRecipes = RecipeManager.Instance.GetRecipe(RecipeType.Cooking).Except(knownRecipes);
+                    matchingRecipes += availableRecipes.Count();
+                    if (availableRecipes.Count() > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Available Cooking Recipes%PT%");
+                        foreach (var recipe in availableRecipes)
+                        {
+                            sb.AppendLine($"%BYT%|| {recipe.Name} - {Helpers.GetPurchasePrice(session, recipe.LearnCost):N0} gold%PT%");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%|| No Cooking recipes available%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                if (r.Flags.HasFlag(RoomFlags.Jeweler))
+                {
+                    var knownRecipes = from recipeID in session.Player.Recipes.Keys select RecipeManager.Instance.GetRecipe(recipeID);
+                    var availableRecipes = RecipeManager.Instance.GetRecipe(RecipeType.Jewelcraft).Except(knownRecipes);
+                    matchingRecipes += availableRecipes.Count();
+                    if (availableRecipes.Count() > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Available Jewelcraft Recipes%PT%");
+                        foreach (var recipe in availableRecipes)
+                        {
+                            sb.AppendLine($"%BYT%|| {recipe.Name} - {Helpers.GetPurchasePrice(session, recipe.LearnCost):N0} gold%PT%");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%|| No Jewelcraft recipes available%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                if (r.Flags.HasFlag(RoomFlags.Scribe))
+                {
+                    var knownRecipes = from recipeID in session.Player.Recipes.Keys select RecipeManager.Instance.GetRecipe(recipeID);
+                    var availableRecipes = RecipeManager.Instance.GetRecipe(RecipeType.Scribe).Except(knownRecipes);
+                    matchingRecipes += availableRecipes.Count();
+                    if (availableRecipes.Count() > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Available Scribe Recipes%PT%");
+                        foreach (var recipe in availableRecipes)
+                        {
+                            sb.AppendLine($"%BYT%|| {recipe.Name} - {Helpers.GetPurchasePrice(session, recipe.LearnCost):N0} gold%PT%");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%|| No Scribe recipes available%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                if (r.Flags.HasFlag(RoomFlags.LanguageTrainer))
+                {
+                    bool newLangs = false;
+                    foreach(var lang in Constants.Languages)
+                    {
+                        if (!session.Player.KnowsLanguage(lang))
+                        {
+                            sb.AppendLine($"%BYT%|| {lang} - {Helpers.GetPurchasePrice(session, 5000):N0} gold%PT%");
+                            newLangs = true;
+                        }
+                    }
+                    if (!newLangs)
+                    {
+                        sb.AppendLine($"%BTYT%|| No Languages available%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                sb.AppendLine($"%BRT%Usage: learn <skill | recipe | language> <name>%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: learn <skill | recipe | language> <name>%PT%{Constants.NewLine}");
+                return;
+            }
+            var skName = arg.Remove(0, args[0].Length).Trim();
+            if (string.IsNullOrEmpty(skName))
+            {
+                session.Send($"%BRT%Usage: learn <skill | recipe | language> <name>%PT%{Constants.NewLine}");
+                return;
+            }
+            if (args[0].Trim().ToLower() == "skill")
+            {
+                var skill = SkillManager.Instance.GetSkill(skName);
+                if (skill == null)
+                {
+                    session.Send($"%BRT%No such Skill exists in the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (session.Player.HasSkill(skill.Name))
+                {
+                    session.Send($"%BRT%You already know that skill!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var pPrice = Helpers.GetPurchasePrice(session, skill.LearnCost);
+                if (session.Player.Gold < (ulong)pPrice)
+                {
+                    session.Send($"%BRT%You don't have enough gold to learn that Skill!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (skill.Name != "Extra Attack")
+                {
+                    session.Player.AddSkill(skill.Name);
+                }
+                else
+                {
+                    if ((session.Player.Class == ActorClass.Fighter && session.Player.NumberOfAttacks == 5) || (session.Player.Class != ActorClass.Fighter && session.Player.NumberOfAttacks == 2))
+                    {
+                        session.Send($"%BRT%You have reached the maximum number of times you can learn that skill!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.NumberOfAttacks++;
+                    session.Player.AdjustGold(pPrice * -1, true, false);
+                    session.Send($"%BGT%You hand over {pPrice:N0} gold and feel your combat prowess increase!%PT%{Constants.NewLine}");
+                }
+                session.Player.AdjustGold(pPrice * -1, true, false);
+                session.Send($"%BGT%You hand over {pPrice:N0} gold and are blessed with knowledge granting you the {skill.Name} Skill!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (args[0].Trim().ToLower() == "recipe")
+            {
+                var recipe = RecipeManager.Instance.GetRecipe(skName).FirstOrDefault();
+                if (recipe == null)
+                {
+                    session.Send($"%BRT%No such Recipe exists within the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var pPrice = Helpers.GetPurchasePrice(session, recipe.LearnCost);
+                if (session.Player.Gold < (ulong)pPrice)
+                {
+                    session.Send($"%BRT%You don't have enough gold to learn that Recipe!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (session.Player.KnowsRecipe(recipe.ID))
+                {
+                    session.Send($"%BRT%You already know that recipe!%PT%{Constants.NewLine}");
+                    return;
+                }
+                switch(recipe.RecipeType)
+                {
+                    case RecipeType.Alchemy:
+                        if (!session.Player.HasSkill("Alchemist"))
+                        {
+                            session.Send($"%BRT%You need a basic knowledge of Alchemy to learn that Recipe!%PT%{Constants.NewLine}");
+                            return;
+                        }
+                        break;
+
+                    case RecipeType.Blacksmith:
+                        if (!session.Player.HasSkill("Blacksmithing"))
+                        {
+                            session.Send($"%BRT%You need a basic knowledge of Blacksmithing to learn that Recipe!%PT%{Constants.NewLine}");
+                            return;
+                        }
+                        break;
+
+                    case RecipeType.Cooking:
+                        if (!session.Player.HasSkill("Cooking"))
+                        {
+                            session.Send($"%BRT%You need a basic knowledge of Cooking to learn that Recipe!%PT%{Constants.NewLine}");
+                            return;
+                        }
+                        break;
+
+                    case RecipeType.Jewelcraft:
+                        if (!session.Player.HasSkill("Jewelcrafting"))
+                        {
+                            session.Send($"%BRT%You need a basic knowledge of Jewelcrafting to learn that Recipe!%PT%{Constants.NewLine}");
+                            return;
+                        }
+                        break;
+
+                    case RecipeType.Scribe:
+                        if (!session.Player.HasSkill("Scribe"))
+                        {
+                            session.Send($"%BRT%You need a basic knowledge of Scribing to learn that Recipe!%PT%{Constants.NewLine}");
+                            return;
+                        }
+                        break;
+                }
+                session.Player.AddRecipe(recipe.ID);
+                session.Player.AdjustGold(pPrice * -1, true, false);
+                session.Send($"%BGT%You hand over {pPrice:N0} gold and are granted the knowledge of the {recipe.Name} Recipe!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (args[0].Trim().ToLower() == "language")
+            {
+                var lang = Constants.Languages.FirstOrDefault(x => x.IndexOf(skName, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (string.IsNullOrEmpty(lang))
+                {
+                    session.Send($"%BRT%No such language exists within the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (session.Player.KnowsLanguage(lang))
+                {
+                    session.Send($"%BRT%You already know the {lang} language!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var pPrice = Helpers.GetPurchasePrice(session, 5000);
+                if (session.Player.Gold < (ulong)pPrice)
+                {
+                    session.Send($"%BRT%You don't have enough gold to learn that language!%PT%{Constants.NewLine}");
+                    return;
+                }
+                session.Player.AddLanguage(lang);
+                session.Player.AdjustGold(pPrice * -1, true, false);
+                session.Send($"%BGT%You hand over {pPrice:N0} gold and are filled with knowledge of the {lang} language!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Send($"%BRT%Usage: learn <skill | recipe | language> <name>%PT%{Constants.NewLine}");
+        }
+
+        public static void TrainStat(Session session, string arg)
+        {
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).HasTrainer || !RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.StatTrainer))
+            {
+                session.Send($"%BRT%There is no one here to teach you!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                sb.AppendLine($"%BYT%|| The trainer looks you up and down. \"Self-improvement is an investment...\"%PT%");
+                sb.AppendLine($"%BYT%|| Strength:{Constants.TabStop}{Constants.TabStop}{Helpers.GetPurchasePrice(session, (session.Player.Strength + 1) * 1000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Dexterity:{Constants.TabStop}{Constants.TabStop}{Helpers.GetPurchasePrice(session, (session.Player.Dexterity + 1) * 1000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Constitution:{Constants.TabStop}{Helpers.GetPurchasePrice(session, (session.Player.Constitution + 1) * 1000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Intelligence:{Constants.TabStop}{Helpers.GetPurchasePrice(session, (session.Player.Intelligence + 1) * 1000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Wisdom:{Constants.TabStop}{Constants.TabStop}{Helpers.GetPurchasePrice(session, (session.Player.Wisdom + 1) * 1000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Charisma:{Constants.TabStop}{Constants.TabStop}{Helpers.GetPurchasePrice(session, (session.Player.Charisma + 1) * 1000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Max HP:{Constants.TabStop}{Constants.TabStop}{Helpers.GetPurchasePrice(session, 10000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Max MP:{Constants.TabStop}{Constants.TabStop}{Helpers.GetPurchasePrice(session, 10000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%|| Max SP:{Constants.TabStop}{Constants.TabStop}{Helpers.GetPurchasePrice(session, 10000):N0} gold%PT%");
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            switch(arg.ToLower())
+            {
+                case "strength":
+                case "str":
+                    if (session.Player.Strength == 25)
+                    {
+                        session.Send($"%BRT%\"I've improved your Strength as much as I can,\" the trainer says.%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    int pPrice = Helpers.GetPurchasePrice(session, (session.Player.Strength + 1) * 1000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.Strength++;
+                    session.Send($"%BGT%Your Strength has improved!%PT%{Constants.NewLine}");
+                    break;
+
+                case "dexterity":
+                case "dex":
+                    if (session.Player.Dexterity == 25)
+                    {
+                        session.Send($"%BRT%\"I've improved your Dexterity as much as I can,\" the trainer says.%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    pPrice = Helpers.GetPurchasePrice(session, (session.Player.Dexterity + 1) * 1000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.Dexterity++;
+                    session.Send($"%BGT%Your Dexterity has improved!%PT%{Constants.NewLine}");
+                    break;
+
+                case "constitution":
+                case "con":
+                    if (session.Player.Constitution == 25)
+                    {
+                        session.Send($"%BRT%\"I've improved your Constitution as much as I can,\" the trainer says.%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    pPrice = Helpers.GetPurchasePrice(session, (session.Player.Constitution + 1) * 1000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.Constitution++;
+                    session.Send($"%BGT%Your Constitution has improved!%PT%{Constants.NewLine}");
+                    break;
+
+                case "intelligence":
+                case "int":
+                    if (session.Player.Intelligence == 25)
+                    {
+                        session.Send($"%BRT%\"I've improved your Intelligence as much as I can,\" the trainer says.%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    pPrice = Helpers.GetPurchasePrice(session, (session.Player.Intelligence + 1) * 1000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.Intelligence++;
+                    session.Send($"%BGT%Your Intelligence has improved!%PT%{Constants.NewLine}");
+                    break;
+
+                case "wisdom":
+                case "wis":
+                    if (session.Player.Wisdom == 25)
+                    {
+                        session.Send($"%BRT%\"I've improved your Wisdom as much as I can,\" the trainer says.%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    pPrice = Helpers.GetPurchasePrice(session, (session.Player.Wisdom + 1) * 1000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.Wisdom++;
+                    session.Send($"%BGT%Your Wisdom has improved!%PT%{Constants.NewLine}");
+                    break;
+
+                case "charisma":
+                case "cha":
+                    if (session.Player.Charisma == 25)
+                    {
+                        session.Send($"%BRT%\"I've improved your Charisma as much as I can,\" the trainer says.%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    pPrice = Helpers.GetPurchasePrice(session, (session.Player.Charisma + 1) * 1000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.Charisma++;
+                    session.Send($"%BGT%Your Charisma has improved!%PT%{Constants.NewLine}");
+                    break;
+
+                case "maxhp":
+                case "hp":
+                    pPrice = Helpers.GetPurchasePrice(session, 10000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    int hpBonus = Math.Max(0, Helpers.CalculateAbilityModifier(session.Player.Constitution));
+                    switch (session.Player.Class)
+                    {
+                        case ActorClass.Wizard:
+                            hpBonus += Helpers.RollDice<int>(1, 4);
+                            break;
+
+                        case ActorClass.Thief:
+                            hpBonus += Helpers.RollDice<int>(1, 6);
+                            break;
+
+                        case ActorClass.Cleric:
+                            hpBonus += Helpers.RollDice<int>(1, 8);
+                            break;
+
+                        case ActorClass.Fighter:
+                            hpBonus += Helpers.RollDice<int>(1, 10);
+                            break;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.AdjustMaxHP(hpBonus);
+                    session.Send($"%BGT%You hand {pPrice:N0} gold to the trainer and your HP increases by {hpBonus}!%PT%{Constants.NewLine}");
+                    break;
+
+                case "maxmp":
+                case "mp":
+                    pPrice = Helpers.GetPurchasePrice(session, 10000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    int mpBonus = session.Player.Class == ActorClass.Cleric ? Math.Max(0, Helpers.CalculateAbilityModifier(session.Player.Wisdom)) : Math.Max(0, Helpers.CalculateAbilityModifier(session.Player.Intelligence));
+                    switch(session.Player.Class)
+                    {
+                        case ActorClass.Wizard:
+                            mpBonus += Helpers.RollDice<int>(1, 10);
+                            break;
+
+                        case ActorClass.Thief:
+                            mpBonus += Helpers.RollDice<int>(1, 6);
+                            break;
+
+                        case ActorClass.Cleric:
+                            mpBonus += Helpers.RollDice<int>(1, 8);
+                            break;
+
+                        case ActorClass.Fighter:
+                            mpBonus += Helpers.RollDice<int>(1, 4);
+                            break;
+                    }
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.AdjustMaxMP(mpBonus);
+                    session.Send($"%BGT%You hand the trainer {pPrice:N0} gold and your MP increases by {mpBonus}!%PT%{Constants.NewLine}");
+                    break;
+
+                case "maxsp":
+                case "sp":
+                    pPrice = Helpers.GetPurchasePrice(session, 10000);
+                    if (session.Player.Gold < (ulong)pPrice)
+                    {
+                        session.Send($"%BRT%The trainer tuts. \"Looks like you're short on coin, my friend!\"%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    int spBonus = Math.Max(0, Helpers.CalculateAbilityModifier(session.Player.Constitution));
+                    spBonus += Helpers.RollDice<int>(1, 10);
+                    session.Player.AdjustGold((long)pPrice * -1, true, false);
+                    session.Player.AdjustMaxSP(spBonus);
+                    session.Send($"%BGT%You hand over {pPrice:N0} gold and your SP increases by {spBonus}!%PT%{Constants.NewLine}");
+                    break;
+
+                default:
+                    session.Send($"%BRT%\"I don't think I'm the right person to help you with that,\" the trainer states.%PT%{Constants.NewLine}");
+                    break;
+            }
+        }
+
+        public static void StudyMagic(Session session, string arg)
+        {
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.MagicTrainer))
+            {
+                session.Send($"%BRT%There is no one here to teach you!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                StringBuilder sb = new StringBuilder();
+                int matchingSpells = 0;
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                var knownSpells = (from spellName in session.Player.Spells.Keys select SpellManager.Instance.GetSpell(spellName)).Where(x => x.AvailableToClass.HasFlag(session.Player.Class));
+                var availableSpells = SpellManager.Instance.GetSpell().Except(knownSpells);
+                matchingSpells = availableSpells.Count();
+                if (matchingSpells > 0)
+                {
+                    sb.AppendLine($"%BYT%||%PT% Available Spells:");
+                    foreach(var spell in availableSpells)
+                    {
+                        sb.AppendLine($"%BYT%||%PT% Name: {spell.Name}{Constants.TabStop}Type: {spell.SpellType}");
+                        sb.AppendLine($"%BYT%||%PT% Description: {spell.Description}");
+                        sb.AppendLine($"%BYT%||%PT% MP: {spell.MPCost(session.Player)}");
+                        if (!string.IsNullOrEmpty(spell.DamageExpression))
+                        {
+                            sb.AppendLine($"%BYT%||%PT% Damage: {spell.DamageExpression}");
+                        }
+                        sb.AppendLine($"%BYT%||%PT% Cost: {Helpers.GetPurchasePrice(session, spell.LearnCost):N0} gold");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"%BYT%||%PT% No Spells available");
+                }
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            else
+            {
+                var s = SpellManager.Instance.GetSpell(arg);
+                if (s == null)
+                {
+                    session.Send($"%BRT%No such Spell exists within the Realms!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (!s.AvailableToClass.HasFlag(session.Player.Class))
+                {
+                    session.Send($"%BRT%You lack the spiritual connection required to learn that Spell!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (session.Player.KnowsSpell(s.Name))
+                {
+                    session.Send($"%BRT%You already know that Spell!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var purchasePrice = Helpers.GetPurchasePrice(session, s.LearnCost);
+                if (session.Player.Gold < (ulong)purchasePrice)
+                {
+                    session.Send($"%BRT%You don't have enough gold to learn that Spell!%PT%{Constants.NewLine}");
+                    return;
+                }
+                session.Player.AdjustGold((long)purchasePrice * -1, true, false);
+                session.Player.AddSpell(s.ID);
+                session.Send($"%BGT%The Winds of Magic fill you with knowledge of the {s.Name} Spell!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void DeleteCharacter(Session session)
+        {
+            StringBuilder sb = new StringBuilder();
+            while (true)
+            {
+                sb.Clear();
+                sb.AppendLine("%BRT%This is a permanent change!%PT%");
+                sb.AppendLine("%BRT%If you delete your character you will be disconnected and will need%PT%");
+                sb.AppendLine("%BRT%to create a new character to play again.%PT%");
+                sb.AppendLine("%BYT%Enter%PT%%BRT% ***DELETE***%BYT% to confirm or %BGT%***END***%BYT% to abort:%PT%");
+                session.Send(sb.ToString());
+                var input = session.Read();
+                if (string.IsNullOrEmpty(input))
+                {
+                    continue;
+                }
+                if (input.Trim() == "***END***")
+                {
+                    return;
+                }
+                if (input.Trim() == "***DELETE***")
+                {
+                    if (DatabaseManager.DeleteCharacter(session.Player.Name))
+                    {
+                        Game.LogMessage($"INFO: Player {session.Player.Name} has deleted their character from the database", LogLevel.Info, true);
+                        session.Send($"%BRT%Character deleted successfully. Goodbye!%PT%{Constants.NewLine}");
+                        session.Disconnect();
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%Failed to delete character. Please contact an Immortal.%PT%{Constants.NewLine}");
+                        Game.LogMessage($"ERROR: Player {session.Player.Name} failed to delete their character", LogLevel.Error, true);
+                        return;
+                    }
+                }
+                continue;
+            }
+        }
+
+        public static void PlayDice(Session session, string arg)
+        {
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Gambler))
+            {
+                session.Send($"%BRT%There is no gambler here!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to say how much you want to bet!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!ulong.TryParse(arg, out ulong betAmount))
+            {
+                session.Send($"%BRT%That isn't a valid amount to bet.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.Gold < betAmount)
+            {
+                session.Send($"%BRT%You don't have that much gold!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.AdjustGold((long)betAmount * -1, true, false);
+            int playerRoll = Helpers.RollDice<int>(1, 100);
+            int npcRoll = Helpers.RollDice<int>(1, 100);
+            int bonusRoll = Helpers.RollDice<int>(1, 100);
+            int finalRoll = session.Player.HasSkill("Gambling") ? Math.Max(playerRoll, bonusRoll) : playerRoll;
+            session.Send($"%BGT%You rolled {finalRoll} and the dicer rolled {npcRoll}...%PT%{Constants.NewLine}");
+            if (finalRoll >= npcRoll)
+            {
+                var winAmount = betAmount + (betAmount / 2);
+                session.Send($"%BGT%You won the roll and pocket {winAmount:N0} gold!%PT%{Constants.NewLine}");
+                session.Player.AdjustGold((long)winAmount, true, false);
+            }
+            else
+            {
+                session.Send($"%BRT%You lost! Better luck next time!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void ManagePlayerAliases(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                if (session.Player.CommandAliases != null && session.Player.CommandAliases.Count > 0)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    sb.AppendLine($"%BYT%|| Alias{Constants.TabStop}{Constants.TabStop}Command%PT%");
+                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                    foreach(var alias in session.Player.CommandAliases)
+                    {
+                        sb.AppendLine($"%BYT%||%PT%%BGT%{alias.Key}{Constants.TabStop}{Constants.TabStop}{alias.Value}%PT%");
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    session.Send(sb.ToString());
+                }
+                else
+                {
+                    session.Send($"%BRT%You don't have any aliases defined.%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: alias - list your current aliases%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: alias create <alias> <command> - create a new alias%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: alias remove <alias> - delete an alias%PT%{Constants.NewLine}");
+                return;
+            }
+            var operation = args[0].ToLower().Trim();
+            var cmdAlias = args[1].ToLower().Trim();
+            var command = arg.Remove(0, operation.Length).Trim().Remove(0, cmdAlias.Length).Trim();
+            if (operation == "remove" || operation == "delete")
+            {
+                if (session.Player.CommandAliases.TryRemove(cmdAlias, out _))
+                {
+                    session.Send($"%BGT%The Alias was successfully removed.%PT%{Constants.NewLine}");
+                }
+                else
+                {
+                    session.Send($"%BRT%The Alias could not be removed.%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            if (string.IsNullOrEmpty(command))
+            {
+                session.Send($"%BRT%Usage: alias - list your current aliases%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: alias create <alias> <command> - create a new alias%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: alias remove <alias> - delete an alias%PT%{Constants.NewLine}");
+                return;
+            }
+            if (operation == "add" || operation == "create")
+            {
+                session.Player.CommandAliases.AddOrUpdate(cmdAlias, command, (k, v) => command);
+                session.Send($"%BGT%The Alias was created or updated successfully.%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Send($"%BRT%Usage: alias - list your current aliases%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: alias create <alias> <command> - create a new alias%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: alias remove <alias> - delete an alias%PT%{Constants.NewLine}");
+            return;
+        }
+
+        public static void SaveCharacter(Session session)
+        {
+            if (DatabaseManager.SavePlayer(session, false))
+            {
+                session.Send($"%BGT%Character successfully saved.%PT%{Constants.NewLine}");
+            }
+            else
+            {
+                session.Send($"%BGT%Failed to save character, please let an Immortal know!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void QuitGame(Session session)
+        {
+            session.Send($"Good bye! We hope to see you again soon!{Constants.NewLine}");
+            SessionManager.Instance.Close(session);
+        }
+
+        public static void ChangePrompt(Session session)
+        {
+            session.Player.PromptStyle = session.Player.PromptStyle == PlayerPrompt.Normal ? PlayerPrompt.Percentage : PlayerPrompt.Normal;
+        }
+
+        public static void ShowCharSheet(Session session)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            sb.AppendLine($"%BYT%||%PT% Name: {session.Player.Name}{Constants.TabStop}Level: {session.Player.Level}{Constants.TabStop}Race: {session.Player.Race}");
+            sb.AppendLine($"%BYT%||%PT% Alignment: {session.Player.Alignment}{Constants.TabStop}Class: {session.Player.Class}");
+            sb.AppendLine($"%BYT%||%PT% STR: {session.Player.Strength} ({Helpers.CalculateAbilityModifier(session.Player.Strength)}){Constants.TabStop}DEX: {session.Player.Dexterity} ({Helpers.CalculateAbilityModifier(session.Player.Dexterity)}){Constants.TabStop}CON: {session.Player.Constitution} ({Helpers.CalculateAbilityModifier(session.Player.Constitution)})");
+            sb.AppendLine($"%BYT%||%PT% INT: {session.Player.Intelligence} ({Helpers.CalculateAbilityModifier(session.Player.Intelligence)}){Constants.TabStop}WIS: {session.Player.Wisdom} ({Helpers.CalculateAbilityModifier(session.Player.Wisdom)}){Constants.TabStop}CHA: {session.Player.Charisma} ({Helpers.CalculateAbilityModifier(session.Player.Charisma)})");
+            sb.AppendLine($"%BYT%||%PT% HP: %BRT%{session.Player.CurrentHP:N0}%PT% / %BRT%{session.Player.MaxHP:N0}%PT%{Constants.TabStop}MP: %BGT%{session.Player.CurrentMP:N0}%PT% / %BGT%{session.Player.MaxMP:N0}%PT%{Constants.TabStop}SP: %BYT%{session.Player.CurrentSP:N0}%PT% / %BYT%{session.Player.MaxSP:N0}%PT%");
+            sb.AppendLine($"%BYT%||%PT% Armour Class: {session.Player.ArmourClass}{Constants.TabStop}Attacks: {session.Player.NumberOfAttacks}");
+            sb.AppendLine($"%BYT%||%PT% Languages: {string.Join(", ", session.Player.KnownLanguages.Keys)}");
+            sb.AppendLine($"%BYT%||%PT% Exp: {session.Player.Exp:N0}{Constants.TabStop}Next: {LevelTable.ExpForNextLevel(session.Player.Level, session.Player.Exp)}");
+            sb.AppendLine($"%BYT%||%PT% Gold: %YT%{session.Player.Gold:N0}%PT%");
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        public static void ShowQuests(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: quest <show | list | accept | abandon | return>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest show - show your current Quests%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest list - show available Quests%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest completed - show completed Quests%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest accpet <id> - accept the specified Quest%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest abandon <id> - abandon the specified Quest%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest return <id> - turn in a completed Quest%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 1)
+            {
+                session.Send($"%BRT%Usage: quest <show | list | accept | abandon | return>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest show - show your current Quests%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest list - show available Quests%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest completed - show completed Quests%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest accpet <id> - accept the specified Quest%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest abandon <id> - abandon the specified Quest%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest return <id> - turn in a completed Quest%PT%{Constants.NewLine}");
+                return;
+            }
+            var operation = args[0].Trim().ToLower();
+            StringBuilder sb = new StringBuilder();
+            if (operation == "completed")
+            {
+                if (session.Player.CompletedQuests.Count == 0)
+                {
+                    session.Send($"BRT%You haven't completed any Quests yet!%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                sb.AppendLine($"%BYT%|| You have completed the following Quetss:%PT%");
+                foreach(var kvp in session.Player.CompletedQuests)
+                {
+                    var quest = QuestManager.Instance.GetQuest(kvp.Key);
+                    if (quest != null)
+                    {
+                        sb.AppendLine($"%BYT%|| {quest.Name} in {ZoneManager.Instance.GetZone(quest.Zone).ZoneName}%PT%");
+                    }
+                }
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (operation == "show")
+            {
+                if (session.Player.ActiveQuests.Count == 0)
+                {
+                    session.Send($"%BGT%You don't have any Quests right now.%PT%{Constants.NewLine}");
+                }
+                else
+                {
+                    int i = 0;
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    foreach(var qGuid in session.Player.ActiveQuests.Keys)
+                    {
+                        i++;
+                        var q = QuestManager.Instance.GetQuest(qGuid);
+                        sb.AppendLine($"%BYT%|| ID: {i}{Constants.TabStop}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(q.Zone).ZoneName}%PT%");
+                        sb.AppendLine($"%BYT%|| Name: {q.Name}%PT%");
+                        if (q.RequiredMonsters != null && q.RequiredMonsters.Count > 0)
+                        {
+                            sb.AppendLine($"%BYT%|| Required Monsters:");
+                            foreach(var mid in q.RequiredMonsters)
+                            {
+                                var monster = NPCManager.Instance.GetNPC(mid.Key);
+                                string monsterName = monster != null ? monster.Name : "Unknown Monster";
+                                sb.AppendLine($"%BYT%||{Constants.TabStop}{mid.Value} x {monsterName}");
+                            }
+                        }
+                        if (q.RequiredItems != null && q.RequiredItems.Count > 0)
+                        {
+                            sb.AppendLine($"%BYT%|| Required Items:");
+                            foreach(var iid in q.RequiredItems)
+                            {
+                                InventoryItem item = ItemManager.Instance.GetItem(iid.Key);
+                                string itemName = item != null ? item.Name : "Unknown Item";
+                                sb.AppendLine($"%BYT%||{Constants.TabStop}{iid.Value} x {itemName}");
+                            }
+                        }
+                        if (q.RewardItems != null && q.RewardItems.Count > 0)
+                        {
+                            sb.AppendLine($"%BYT%|| Reward Items:");
+                            foreach(var iid in q.RewardItems)
+                            {
+                                InventoryItem item = ItemManager.Instance.GetItem(iid.Key);
+                                string itemName = item != null ? item.Name : "Unknown Item";
+                                sb.AppendLine($"%BYT%||{Constants.TabStop}{iid.Value} x {itemName}");
+                            }
+                        }
+                        sb.AppendLine($"%BYT%|| Reward Gold: {q.RewardGold:N0}{Constants.TabStop}Exp: {q.RewardExp:N0}");
+                        sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                    }
+                    sb.AppendLine($"%BYT%|| {i} Active Quest(s)%PT%");
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    session.Send(sb.ToString());
+                }
+                return;
+            }
+            if (operation == "abandon")
+            {
+                if (args.Length < 2 || string.IsNullOrEmpty(args[1]) || !int.TryParse(args[1], out int id))
+                {
+                    session.Send($"%BRT%Usage: quest abandon <id>%PT%{Constants.NewLine}");
+                    return;
+                }
+                int qid = id - 1;
+                if (qid < 0 || qid > session.Player.ActiveQuests.Count)
+                {
+                    session.Send($"%BRT%That ID isn't valid!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var questToAbandon = QuestManager.Instance.GetQuest(session.Player.ActiveQuests.Keys.ToList()[qid]);
+                if (questToAbandon == null)
+                {
+                    session.Send($"%BRT%Couldn't find a Quest with that ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                while (true)
+                {
+                    sb.Clear();
+                    sb.AppendLine($"%BRT%Abandon Quest: {questToAbandon.Name}");
+                    sb.AppendLine($"1. Yes{Constants.TabStop}{Constants.TabStop}2. No");
+                    sb.AppendLine("Choice: ");
+                    session.Send(sb.ToString());
+                    var abChoice = session.Read();
+                    if (string.IsNullOrEmpty(abChoice) || !int.TryParse(abChoice, out int option))
+                    {
+                        continue;
+                    }
+                    switch(option)
+                    {
+                        case 1:
+                            if (session.Player.ActiveQuests.TryRemove(questToAbandon.QuestGUID, out _))
+                            {
+                                session.Send($"%BGT%You have abandoned the Quest!%PT%{Constants.NewLine}");
+                                return;
+                            }
+                            session.Send($"%BRT%Failed to abandon the Quest, please see an Imm!%PT%{Constants.NewLine}");
+                            return;
+
+                        case 2:
+                            return;
+
+                        default:
+                            session.Send($"%BRT%That does not look like a valid option.%PT%{Constants.NewLine}");
+                            continue;
+                    }
+                }
+            }
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
+            {
+                session.Send($"%BRT%There is no Quest Master here!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (operation == "list")
+            {
+                sb.Clear();
+                int qid = -1;
+                if (args.Length == 2 && !int.TryParse(args[1].Trim(), out qid))
+                {
+                    session.Send($"%BRT%Usage: quest list - list all available quests%PT%{Constants.NewLine}");
+                    session.Send($"%BRT%Usage: quest list <id> - show more info on a specific quest%PT%{Constants.NewLine}");
+                    return;
+                }
+                var currentZone = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom).ZoneID;
+                var availableQuests = QuestManager.Instance.GetQuestsForZone(currentZone)
+                    .Where(x => !session.Player.CompletedQuests.ContainsKey(x.QuestGUID) && !session.Player.ActiveQuests.ContainsKey(x.QuestGUID)).ToList();
+                if (availableQuests == null || availableQuests.Count == 0)
+                {
+                    session.Send($"%BGT%There are no Quests available at the moment!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (args.Length == 2 && qid < 0 || qid > availableQuests.Count)
+                {
+                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (args.Length == 2)
+                {
+                    qid = Math.Min(0, qid--);
+                    var selectedQuest = availableQuests[qid];
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    sb.AppendLine($"%BYT%|| Name: {selectedQuest.Name}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(selectedQuest.Zone).ZoneName}%PT%");
+                    sb.AppendLine($"%BYT%|| Type: {selectedQuest.QuestType}{Constants.TabStop}Exp: {selectedQuest.RewardExp}{Constants.TabStop}Gold: {selectedQuest.RewardGold:N0}%PT%");
+                    if (selectedQuest.RequiredItems != null && selectedQuest.RequiredItems.Count > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Reward Items:");
+                        foreach(var kvp in selectedQuest.RewardItems)
+                        {
+                            InventoryItem item = ItemManager.Instance.GetItem(kvp.Key);
+                            var itemName = item != null ? item.Name : "Unknown Item";
+                            sb.AppendLine($"%BYT%||   {kvp.Value} x {itemName}");
+                        }
+                    }
+                    sb.AppendLine($"%BYT%|| Quest Info:%PT%");
+                    foreach (var l in selectedQuest.FlavourText.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                    {
+                        sb.AppendLine($"%BYT%||  {l}%PT%");
+                    }
+                    if (selectedQuest.RequiredMonsters != null && selectedQuest.RequiredMonsters.Count > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Required Monsters:");
+                        foreach (var kvp in selectedQuest.RequiredMonsters)
+                        {
+                            var monster = NPCManager.Instance.GetNPC(kvp.Key);
+                            var monsterName = monster != null ? monster.Name : "Unknown Monster";
+                            sb.AppendLine($"%BYT%||    {kvp.Value} x {monsterName}");
+                        }
+                    }
+                    if (selectedQuest.RequiredItems != null && selectedQuest.RequiredItems.Count > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Required Items:");
+                        foreach (var kvp in selectedQuest.RequiredItems)
+                        {
+                            InventoryItem item = ItemManager.Instance.GetItem(kvp.Key);
+                            var itemName = item != null ? item.Name : "Unknown Item";
+                            sb.AppendLine($"%BYT%||    {kvp.Value} x {itemName}");
+                        }
+                    }
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    session.Send(sb.ToString());
+                    return;
+                }
+                int qCount = 0;
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                foreach(var quest in availableQuests)
+                {
+                    qCount++;
+                    sb.AppendLine($"%BYT%|| ID: {qCount}{Constants.TabStop}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(quest.Zone).ZoneName}%PT%");
+                    sb.AppendLine($"%BYT%|| Name: {quest.Name}%PT%");
+                    sb.AppendLine($"%BYT%|| Type: {quest.QuestType}%PT%");
+                    sb.AppendLine($"%BYT%|| Quest Info:%PT%");
+                    sb.AppendLine($"%BYT%|| Exp: {quest.RewardExp}{Constants.TabStop}Gold: {quest.RewardGold:N0}{Constants.TabStop}Items: {(quest.RewardItems.Count > 0 ? "Yes" : "No")}");
+                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                }
+                sb.AppendLine($"%BYT%|| {qCount} Quest(s) available here%PT%");
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (operation == "accept")
+            {
+                if (args.Length < 2)
+                {
+                    session.Send($"%BRT%Usage: quest accept <id>%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (!int.TryParse(args[1].Trim(), out int qid))
+                {
+                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var currentZone = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom).ZoneID;
+                var availableQuests = QuestManager.Instance.GetQuestsForZone(currentZone)
+                    .Where(x => !session.Player.CompletedQuests.ContainsKey(x.QuestGUID) && !session.Player.ActiveQuests.ContainsKey(x.QuestGUID)).ToList();
+                if (availableQuests == null || availableQuests.Count == 0)
+                {
+                    session.Send($"%BGT%There are no Quests available right now!%PT%{Constants.NewLine}");
+                    return;
+                }
+                qid = Math.Min(0, qid--);
+                if (qid > availableQuests.Count)
+                {
+                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var quest = availableQuests[qid];
+                if (session.Player.ActiveQuests.TryAdd(quest.QuestGUID, true))
+                {
+                    session.Send($"%BGT%Quest accepted!%PT%{Constants.NewLine}");
+                }
+                else
+                {
+                    session.Send($"%BRT%Dark forces prevent you from accepting the Quest! See an Imm!%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            if (operation == "return")
+            {
+                if (session.Player.ActiveQuests.Count == 0)
+                {
+                    session.Send($"%BGT%You don't have any active Quests right now!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (args.Length < 2)
+                {
+                    session.Send($"%BRT%Usage: quest return <id>%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (!int.TryParse(args[1].Trim(), out int qid))
+                {
+                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                qid = Math.Min(0, qid--);
+                if (qid > session.Player.ActiveQuests.Count)
+                {
+                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var quest = QuestManager.Instance.GetQuest(session.Player.ActiveQuests.Keys.ToList()[qid]);
+                if (quest == null)
+                {
+                    session.Send($"%BRT%Couldn't find an active Quest with that ID.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (quest.IsComplete(session))
+                {
+                    session.Player.ActiveQuests.TryRemove(quest.QuestGUID, out _);
+                    session.Player.CompletedQuests.TryAdd(quest.QuestGUID, true);
+                    session.Player.AdjustExp((int)quest.RewardExp, true, true);
+                    session.Player.AdjustGold((long)quest.RewardGold, true, true);
+                    foreach(var kvp in quest.RequiredItems)
+                    {
+                        for (int n = 0; n < kvp.Value; n++)
+                        {
+                            session.Player.RemoveItemFromInventory(kvp.Key);
+                        }
+                    }
+                    if (quest.RewardItems != null && quest.RewardItems.Count > 0)
+                    {
+                        foreach(var kvp in quest.RewardItems)
+                        {
+                            for (int n = 0; n < kvp.Value; n++)
+                            {
+                                var item = ItemManager.Instance.GetItem(kvp.Key);
+                                if (item != null)
+                                {
+                                    session.Player.AddItemToInventory(kvp.Key);
+                                    session.Send($"%BGT%The Quest Master smiles and hands you {item.ShortDescription}.%PT%{Constants.NewLine}");
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    session.Send($"%BYT%\"I'm sorry,\" the Quest Master says, \"you haven't met the requirements of that Quest yet.\"%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            session.Send($"%BRT%Usage: quest <show | list | accept | abandon | return>%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: quest show - show your current Quests%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: quest list - show available Quests%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: quest completed - show completed Quests%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: quest accpet <id> - accept the specified Quest%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: quest abandon <id> - abandon the specified Quest%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: quest return <id> - turn in a completed Quest%PT%{Constants.NewLine}");
+        }
+
+        public static void ShowSkills(Session session)
+        {
+            if (session.Player.Skills.Count == 0)
+            {
+                session.Send($"You don't know any Skills!{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            foreach (var skill in session.Player.Skills)
+            {
+                var s = SkillManager.Instance.GetSkill(skill.Key);
+                if (s != null)
+                {
+                    sb.AppendLine($"%BYT%||%PT% Name: {s.Name}");
+                    sb.AppendLine($"%BYT%||%PT% Description: {s.Description}");
+                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                }
+                else
+                {
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Skill '{skill.Key}' which is not in Skill Manager", LogLevel.Debug, true);
+                }
+            }
+            sb.AppendLine($"%BYT%||%PT% You know {session.Player.Skills.Count} Skill(s)");
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        public static void ShowSpells(Session session)
+        {
+            if (session.Player.Spells.Count == 0)
+            {
+                session.Send($"You don't know any Spells!{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            foreach (var spell in session.Player.Spells)
+            {
+                var s = SpellManager.Instance.GetSpell(spell.Key);
+                if (s != null)
+                {
+                    sb.AppendLine($"%BYT%||%PT% Name: {s.Name}{Constants.TabStop}MP: {s.MPCost(session.Player)}");
+                    sb.AppendLine($"%BYT%||%PT% Type: {s.SpellType}");
+                    sb.AppendLine($"%BYT%||%PT% Description: {s.Description}");
+                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                }
+                else
+                {
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Spell '{spell.Key}' which is not in Spell Manager", LogLevel.Debug, true);
+                }
+            }
+            sb.AppendLine($"%BYT%||%PT% You know {session.Player.Spells.Count} Spell(s)");
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        public static void ShowRecipes(Session session)
+        {
+            if (session.Player.Recipes.Count == 0)
+            {
+                session.Send($"You don't know any Recipes!{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            foreach(var recipe in session.Player.Recipes)
+            {
+                var r = RecipeManager.Instance.GetRecipe(recipe.Key);
+                if (r != null)
+                {
+                    var result = (InventoryItem)ItemManager.Instance.GetItem(r.RecipeResult);
+                    sb.AppendLine($"%BYT%||%PT% Name: {r.Name}");
+                    sb.AppendLine($"%BYT%||%PT% Type: {r.RecipeType}");
+                    sb.AppendLine($"%BYT%||%PT% Description: {r.Description}");
+                    if (result != null)
+                    {
+                        sb.AppendLine($"%BYT%||%PT% Produces: {result.Name}");
+                    }
+                    else
+                    {
+                        Game.LogMessage($"DEBUG: Player {session.Player.Name} has Recipe '{recipe.Key}' which produces {r.RecipeResult} but no such Item exists in Item Manager", LogLevel.Debug, true);
+                    }
+                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                }
+                else
+                {
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Recipe '{recipe.Key}' which is not in Recipe Manager", LogLevel.Debug, true);
+                }
+            }
+            sb.AppendLine($"%BYT%||%PT% You know {session.Player.Recipes.Count} Crafting Recipe(s)");
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        public static void ShowBuffs(Session session)
+        {
+            if (session.Player.Buffs.Count == 0)
+            {
+                session.Send($"You don't have any Buffs!{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            foreach (var buff in session.Player.Buffs)
+            {
+                var b = BuffManager.Instance.GetBuff(buff.Key);
+                if (b != null)
+                {
+                    sb.AppendLine($"%BYT%||%PT% Name: {b.Name}{Constants.TabStop}Duration: {buff.Value}");
+                    sb.AppendLine($"%BYT%||%PT% Description: {b.Description}");
+                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                }
+                else
+                {
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Buff '{buff.Key}' which is not in Buff Manager", LogLevel.Debug, true);
+                }
+            }
+            sb.AppendLine($"%BYT%||%PT% You have {session.Player.Buffs.Count} Buffs");
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        public static void ShowWho(Session session, string target)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+            var players = string.IsNullOrEmpty(target) ? SessionManager.Instance.ActivePlayers :
+                SessionManager.Instance.ActivePlayers.Where(x => x.Player.Name.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+            if (players != null && players.Count > 0)
+            {
+                sb.AppendLine($"%BYT%||%PT% You sense the following beings in the Realms:");
+                foreach (var p in players)
+                {
+                    if (p.Player.Visible)
+                    {
+                        if (session.Player.IsImmortal)
+                        {
+                            sb.AppendLine($"%BYT%||%PT% {p.Player.Title} {p.Player.Name}, the level {p.Player.Level} {p.Player.Class} in Room {p.Player.CurrentRoom}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"%BYT%||%PT% {p.Player.Title} {p.Player.Name}, the {p.Player.Class} in {ZoneManager.Instance.GetZoneForRID(p.Player.CurrentRoom).ZoneName}");
+                        }
+                    }
+                    else
+                    {
+                        if (session.Player.IsImmortal)
+                        {
+                            sb.AppendLine($"%BYT%||%PT% {p.Player.Title} {p.Player.Name}, the level {p.Player.Level} {p.Player.Class} in Room {p.Player.CurrentRoom} %BBT%(Invisible)%PT%");
+                        }
+                        else
+                        {
+                            if (p.Player.CanBeSeenBy(session.Player))
+                            {
+                                sb.AppendLine($"%BYT%||%PT% {p.Player.Title} {p.Player.Name}, the {p.Player.Class} in {ZoneManager.Instance.GetZoneForRID(p.Player.CurrentRoom).ZoneName} %BBT%(Invisible)%PT%");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                sb.AppendLine($"%BYT%||%PT% You sense no one in the Realms right now!");
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        public static void Look(Session session, string target)
+        {
+            if (string.IsNullOrEmpty(target))
+            {
+                RoomManager.Instance.GetRoom(session.Player.CurrentRoom).DescribeRoom(session);
+                return;
+            }
+            if (target.ToLower() == "node")
+            {
+                var n = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode;
+                if (n != null)
+                {
+                    switch(n.Depth)
+                    {
+                        case 0:
+                            session.Send($"%BYT%The {n.Name} looks depleted!%PT%{Constants.NewLine}");
+                            return;
+
+                        case 1:
+                            session.Send($"%BYT%The {n.Name} looks almost used up!%PT%{Constants.NewLine}");
+                            return;
+
+                        case 2:
+                            session.Send($"%BYT%The {n.Name} has a bit of value left in it!%PT%{Constants.NewLine}");
+                            return;
+
+                        case 3:
+                            session.Send($"%BYT%The {n.Name} has plenty of value left in it!%PT%{Constants.NewLine}");
+                            return;
+
+                        case 4:
+                            session.Send($"%BYT%The {n.Name} looks full of riches!%PT%{Constants.NewLine}");
+                            return;
+
+                        default:
+                            Game.LogMessage($"ERROR: Node {n.ID} in Room {session.Player.CurrentRoom} returned unsupported Depth property: {n.Depth}", LogLevel.Error, true);
+                            session.Send($"%BRT%Something is wrong with this Node! Tell an Imm!%PT%{Constants.NewLine}");
+                            return;
+                    }
+                }
+                session.Send($"%BRT%There is no resource node here!%PT%{Constants.NewLine}");
+                return;
+            }
+            var targetActor = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(target, session.Player);
+            if (targetActor != null)
+            {
+                if (targetActor.CanBeSeenBy(session.Player))
+                {
+                    session.Send(targetActor.LongDescription);
+                    if (targetActor.ActorType == ActorType.Player)
+                    {
+                        string msg = session.Player.CanBeSeenBy(targetActor) ? $"{session.Player.Name} gives you a studious look.{Constants.NewLine}" :
+                            $"You feel a shiver as something gives you a studious look.{Constants.NewLine}";
+                        ((Player)targetActor).Send(msg);
+                    }
+                    var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID && x.ID != targetActor.ID).ToList();
                     if (localPlayers != null && localPlayers.Count > 0)
                     {
                         foreach (var lp in localPlayers)
                         {
-                            var msg = desc.Player.Visible || lp.Player.Level >= Constants.ImmLevel
-                                ? $"{pn} greedily consume the {i.Name} they were carrying!{Constants.NewLine}"
-                                : $"There is a strange noise as something greedily consumes something!{Constants.NewLine}";
+                            string msg = string.Empty;
+                            if (targetActor.CanBeSeenBy(lp.Player) && session.Player.CanBeSeenBy(lp.Player))
+                            {
+                                msg = $"{session.Player.Name} gives {targetActor.Name} a studious look.{Constants.NewLine}";
+                            }
+                            if (!targetActor.CanBeSeenBy(lp.Player) && session.Player.CanBeSeenBy(lp.Player))
+                            {
+                                msg = $"{session.Player.Name} gives something a long and studious look.{Constants.NewLine}";
+                            }
+                            if (!targetActor.CanBeSeenBy(lp.Player) && !session.Player.CanBeSeenBy(lp.Player))
+                            {
+                                msg = $"The air shifts as something gives something else a studious look.{Constants.NewLine}";
+                            }
+                            if (targetActor.CanBeSeenBy(lp.Player) && !session.Player.CanBeSeenBy(lp.Player))
+                            {
+                                msg = $"Something gives {targetActor.Name} a studious look.{Constants.NewLine}";
+                            }
                             lp.Send(msg);
                         }
                     }
-                    if (i.NumberOfDamageDice > 0)
-                    {
-                        int modAmount = (int)Helpers.RollDice(i.NumberOfDamageDice, i.SizeOfDamageDice);
-                        foreach (ConsumableEffect flag in Helpers.GetPotionFlags(i.ConsumableEffect))
-                        {
-                            switch (i.ConsumableEffect)
-                            {
-                                case ConsumableEffect.SPHealing:
-                                    desc.Player.AdjustSP(modAmount);
-                                    desc.Send($"You feel invigorated!{Constants.NewLine}");
-                                    break;
-
-                                case ConsumableEffect.Healing:
-                                    desc.Player.AdjustHP(modAmount, out _);
-                                    desc.Send($"You feel your wounds fading to memory...{Constants.NewLine}");
-                                    break;
-
-                                case ConsumableEffect.MPHealing:
-                                    desc.Player.AdjustMP(modAmount);
-                                    desc.Send($"You as though your spiritial force has been renewed!{Constants.NewLine}");
-                                    break;
-
-                                case ConsumableEffect.Death:
-                                    desc.Send($"You feel the spectral hand of Death upon you...{Constants.NewLine}");
-                                    desc.Player.Kill();
-                                    break;
-
-                                case ConsumableEffect.Poison:
-                                    desc.Send($"The {i.Name} tastes foul as you swallow it...{Constants.NewLine}");
-                                    desc.Player.AdjustHP(modAmount * -1, out bool isKilled);
-                                    if (isKilled)
-                                    {
-                                        desc.Player.Kill();
-                                    }
-                                    break;
-
-                                case ConsumableEffect.DrainSP:
-                                    desc.Send($"You begin to feel your stamina drain away...{Constants.NewLine}");
-                                    desc.Player.AdjustSP(modAmount * -1);
-                                    break;
-
-                                case ConsumableEffect.DrainMP:
-                                    desc.Send($"You feel as though something was sapping your very spirit...{Constants.NewLine}");
-                                    desc.Player.AdjustMP(modAmount * -1);
-                                    break;
-
-                                case ConsumableEffect.Restoration:
-                                    desc.Send($"You feel holy power filling you, restoring you...{Constants.NewLine}");
-                                    desc.Player.CurrentMP = desc.Player.MaxMP;
-                                    desc.Player.CurrentHP = desc.Player.MaxHP;
-                                    desc.Player.CurrentSP = desc.Player.MaxSP;
-                                    break;
-                            }
-                        }
-                    }
-                    if (i.AppliesBuff)
-                    {
-                        desc.Send($"You feel the magic in the {i.Name} coursing through you!{Constants.NewLine}");
-                        foreach (var b in i.AppliedBuffs)
-                        {
-                            var buff = BuffManager.Instance.GetBuff(b);
-                            if (buff != null)
-                            {
-                                desc.Player.AddBuff(buff.BuffName, 0, false);
-                            }
-                        }
-                    }
                 }
                 else
                 {
-                    desc.Send($"You can't consume that!{Constants.NewLine}");
+                    session.Send($"You look about but you can't see anything like that!{Constants.NewLine}");
                 }
-            }
-            else
-            {
-                desc.Send($"You don't seem to be carrying that...{Constants.NewLine}");
-            }
-        }
-
-        private static void GiveItemToTarget(ref Descriptor desc, ref string input)
-        {
-            // give bob chain shirt
-            // give bob gold 400
-            var line = input.Remove(0, GetVerb(ref input).Length).Trim();
-            var targetPlayer = TokeniseInput(ref line).First().Trim();
-            var obj = line.Remove(0, targetPlayer.Length).Trim();
-            var objTokens = TokeniseInput(ref obj);
-            if (objTokens.Length >= 1)
-            {
-                if (objTokens.First() != null && objTokens.First().ToLower() == "gold")
-                {
-                    if (objTokens.Length == 2)
-                    {
-                        if (uint.TryParse(objTokens.Last().Trim(), out uint gpToGive))
-                        {
-                            if (gpToGive <= desc.Player.Gold)
-                            {
-                                var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, targetPlayer, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                                if (p != null)
-                                {
-                                    p.Player.Gold += gpToGive;
-                                    desc.Player.Gold -= gpToGive;
-                                    desc.Send($"You hand over {gpToGive} gold coins to {p.Player.Name}, how generous!{Constants.NewLine}");
-                                    var msgToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} hands you {gpToGive} gold coins!{Constants.NewLine}"
-                                        : $"Something hands you {gpToGive} gold coins, how odd!{Constants.NewLine}";
-                                    p.Send(msgToTarget);
-                                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                    if (localPlayers != null && localPlayers.Count > 0)
-                                    {
-                                        foreach (var lp in localPlayers)
-                                        {
-                                            if (lp.Player.Name != desc.Player.Name && lp.Player.Name != p.Player.Name)
-                                            {
-                                                if (lp.Player.Level >= Constants.ImmLevel)
-                                                {
-                                                    lp.Send($"{desc.Player.Name} hands {gpToGive} gold coins to {p.Player.Name}. Very generous!{Constants.NewLine}");
-                                                }
-                                                else
-                                                {
-                                                    string gn = desc.Player.Visible ? desc.Player.Name : "Something";
-                                                    string rn = p.Player.Visible ? p.Player.Name : "Something";
-                                                    lp.Send($"{gn} hands {gpToGive} gold coins to {rn}. Very generous!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    desc.Send($"That person doesn't seem to be here right now...{Constants.NewLine}");
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"You don't have that much gold to give!{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"That doesn't seem like a valid amount of gold to give...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Usage: Give <player> gold <amount>{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    var i = GetTargetItem(ref desc, obj, true);
-                    if (i != null)
-                    {
-                        var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, targetPlayer, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                        if (p != null)
-                        {
-                            if (desc.Player.Level >= Constants.ImmLevel || p.Player.Visible)
-                            {
-                                desc.Player.Inventory.Remove(i);
-                                p.Player.Inventory.Add(i);
-                                desc.Send($"You give {i.Name} to {p.Player.Name}{Constants.NewLine}");
-                                string msgToSendToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} has given you {i.Name}! How kind!{Constants.NewLine}"
-                                    : $"Something has given you {i.Name}. How strange!{Constants.NewLine}";
-                                p.Send(msgToSendToTarget);
-                                var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                if (localPlayers != null && localPlayers.Count - 2 >= 1)
-                                {
-                                    foreach (var lp in localPlayers)
-                                    {
-                                        if (lp.Player.Name != desc.Player.Name && lp.Player.Name != p.Player.Name)
-                                        {
-                                            if (lp.Player.Level >= Constants.ImmLevel)
-                                            {
-                                                lp.Send($"{desc.Player.Name} hands {i.Name} to {p.Player.Name}{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                var g = desc.Player.Visible ? desc.Player.Name : "Something";
-                                                var r = p.Player.Visible ? p.Player.Name : "something";
-                                                lp.Send($"{g} hands {i.Name} to {r}{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"That person isn't around right now...{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            var n = GetTargetNPC(ref desc, targetPlayer);
-                            if (n != null)
-                            {
-                                desc.Send($"You hand over {i.Name} to {n.Name}!{Constants.NewLine}");
-                                n.Inventory.Add(i);
-                                desc.Player.Inventory.Remove(i);
-                            }
-                            else
-                            {
-                                desc.Send($"That person isn't around right now...{Constants.NewLine}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You don't seem to be carrying that...{Constants.NewLine}");
-                    }
-                }
-            }
-        }
-
-        private static void RemoveEquippedItem(ref Descriptor desc, ref string input)
-        {
-            try
-            {
-                if (Enum.TryParse(TokeniseInput(ref input).Last(), true, out WearSlot targetSlot))
-                {
-                    string msgToSendToPlayer = string.Empty;
-                    string[] msgToSendToOthers = { string.Empty, string.Empty };
-                    switch (targetSlot)
-                    {
-                        case WearSlot.Head:
-                            if (desc.Player.EquipHead != null)
-                            {
-                                var i = desc.Player.EquipHead;
-                                desc.Player.EquipHead = null;
-                                desc.Player.Inventory.Add(i);
-                                msgToSendToPlayer = $"You remove {i.Name} from your head{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from their head{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if (i.AppliesBuff)
-                                {
-                                    foreach (var b in i.AppliedBuffs)
-                                    {
-                                        desc.Player.RemoveBuff(b);
-                                    }
-                                    RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                }
-                                desc.Player.CalculateArmourClass();
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"You aren't wearing anything on your head!{Constants.NewLine}";
-                            }
-                            break;
-
-                        case WearSlot.Neck:
-                            if (desc.Player.EquipNeck != null)
-                            {
-                                var i = desc.Player.EquipNeck;
-                                desc.Player.EquipNeck = null;
-                                desc.Player.Inventory.Add(i);
-                                msgToSendToPlayer = $"You remove {i.Name} from around your neck{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from around their neck{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if (i.AppliesBuff)
-                                {
-                                    foreach (var b in i.AppliedBuffs)
-                                    {
-                                        desc.Player.RemoveBuff(b);
-                                    }
-                                    RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                }
-                                desc.Player.CalculateArmourClass();
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"You aren't wearing anything around your neck!{Constants.NewLine}";
-                            }
-                            break;
-
-                        case WearSlot.Armour:
-                            if (desc.Player.EquipArmour != null)
-                            {
-                                var i = desc.Player.EquipArmour;
-                                desc.Player.EquipArmour = null;
-                                desc.Player.Inventory.Add(i);
-                                msgToSendToPlayer = $"You stop wearing {i.Name} as your armour{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} stops wearing {i.Name} as their armour{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if (i.AppliesBuff)
-                                {
-                                    foreach (var b in i.AppliedBuffs)
-                                    {
-                                        desc.Player.RemoveBuff(b);
-                                    }
-                                    RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                }
-                                desc.Player.CalculateArmourClass();
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"You aren't wearing any armour!{Constants.NewLine}";
-                            }
-                            break;
-
-                        case WearSlot.FingerLeft:
-                            if (desc.Player.EquipLeftFinger != null)
-                            {
-                                var i = desc.Player.EquipLeftFinger;
-                                desc.Player.EquipLeftFinger = null;
-                                desc.Player.Inventory.Add(i);
-                                msgToSendToPlayer = $"You remove {i.Name} from a finger on your left hand{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from a finger on their left hand{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if (i.AppliesBuff)
-                                {
-                                    foreach (var b in i.AppliedBuffs)
-                                    {
-                                        desc.Player.RemoveBuff(b);
-                                    }
-                                    RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                }
-                                desc.Player.CalculateArmourClass();
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"You aren't wearing anything on the fingers of your left hand!{Constants.NewLine}";
-                            }
-                            break;
-
-                        case WearSlot.FingerRight:
-                            if (desc.Player.EquipRightFinger != null)
-                            {
-                                var i = desc.Player.EquipRightFinger;
-                                desc.Player.EquipRightFinger = null;
-                                desc.Player.Inventory.Add(i);
-                                msgToSendToPlayer = $"You remove {i.Name} from a finger on your right hand{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} removes {i.Name} from a finger on the right hand{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if (i.AppliesBuff)
-                                {
-                                    foreach (var b in i.AppliedBuffs)
-                                    {
-                                        desc.Player.RemoveBuff(b);
-                                    }
-                                    RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                }
-                                desc.Player.CalculateArmourClass();
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"You aren't wearing anything on the fingers of your right hand!{Constants.NewLine}";
-                            }
-                            break;
-
-                        case WearSlot.Weapon:
-                            if (desc.Player.EquipWeapon != null)
-                            {
-                                var i = desc.Player.EquipWeapon;
-                                desc.Player.EquipWeapon = null;
-                                desc.Player.Inventory.Add(i);
-                                msgToSendToPlayer = $"You stop wielding {i.Name} as your weapon{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} stops using {i.Name} as their weapon{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if (i.AppliesBuff)
-                                {
-                                    foreach (var b in i.AppliedBuffs)
-                                    {
-                                        desc.Player.RemoveBuff(b);
-                                    }
-                                    RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                }
-                                desc.Player.CalculateArmourClass();
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"You aren't using anything as a weapon!{Constants.NewLine}";
-                            }
-                            break;
-
-                        case WearSlot.Held:
-                            if (desc.Player.EquipHeld != null)
-                            {
-                                var i = desc.Player.EquipHeld;
-                                desc.Player.EquipHeld = null;
-                                desc.Player.Inventory.Add(i);
-                                msgToSendToPlayer = $"You stop holding {i.Name}{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} stops holding {i.Name}{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                if (i.AppliesBuff)
-                                {
-                                    foreach (var b in i.AppliedBuffs)
-                                    {
-                                        desc.Player.RemoveBuff(b);
-                                    }
-                                    RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                }
-                                desc.Player.CalculateArmourClass();
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"You aren't holding anything!{Constants.NewLine}";
-                            }
-                            break;
-
-                        default:
-                            msgToSendToPlayer = $"Sorry, I didn't understand that{Constants.NewLine}";
-                            break;
-                    }
-                    desc.Send(msgToSendToPlayer);
-                    var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                    if (localPlayers != null && localPlayers.Count - 1 >= 1)
-                    {
-                        foreach (var p in localPlayers)
-                        {
-                            if (p != desc)
-                            {
-                                if (desc.Player.Visible)
-                                {
-                                    p.Send(msgToSendToOthers[0]);
-                                }
-                                else
-                                {
-                                    if (p.Player.Level >= Constants.ImmLevel)
-                                    {
-                                        p.Send(msgToSendToOthers[0]);
-                                    }
-                                    else
-                                    {
-                                        p.Send(msgToSendToOthers[1]);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"Remove that from where, exactly?{Constants.NewLine}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"Player {desc.Player.Name} had an error removing an item: {ex.Message}", LogLevel.Error, true);
-                desc.Send($"That didn't work!{Constants.NewLine}");
-            }
-        }
-
-        private static void EquipItem(ref Descriptor desc, ref string input)
-        {
-            try
-            {
-                if (Enum.TryParse(TokeniseInput(ref input).Last(), true, out WearSlot targetSlot))
-                {
-                    var itemName = input.Replace(GetVerb(ref input), string.Empty).Replace(targetSlot.ToString().ToLower(), string.Empty).Trim();
-                    var item = desc.Player.Inventory.Where(x => Regex.Match(x.Name, itemName, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                    string msgToSendToPlayer = string.Empty;
-                    string[] msgToSendToOthers = { string.Empty, string.Empty };
-                    if (item != null && (item.ItemType == ItemType.Armour || item.ItemType == ItemType.Weapon || item.ItemType == ItemType.Ring))
-                    {
-                        switch (targetSlot)
-                        {
-                            case WearSlot.Head:
-                                if (item.CanPlayerEquip(ref desc, WearSlot.Head, out string reply))
-                                {
-                                    desc.Player.EquipHead = item;
-                                    desc.Player.Inventory.Remove(item);
-                                    msgToSendToPlayer = $"You put {item.Name} on your head{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} on their head{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                    if (item.AppliesBuff)
-                                    {
-                                        foreach (var b in item.AppliedBuffs)
-                                        {
-                                            desc.Player.AddBuff(b, 0, true);
-                                        }
-                                        RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                    }
-                                    desc.Player.CalculateArmourClass();
-                                }
-                                else
-                                {
-                                    desc.Send(reply);
-                                }
-                                break;
-
-                            case WearSlot.Neck:
-                                if (item.CanPlayerEquip(ref desc, WearSlot.Neck, out reply))
-                                {
-                                    desc.Player.EquipNeck = item;
-                                    desc.Player.Inventory.Remove(item);
-                                    msgToSendToPlayer = $"You put {item.Name} around your neck{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} around their neck{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                    if (item.AppliesBuff)
-                                    {
-                                        foreach (var b in item.AppliedBuffs)
-                                        {
-                                            desc.Player.AddBuff(b, 0, true);
-                                        }
-                                        RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                    }
-                                    desc.Player.CalculateArmourClass();
-                                }
-                                else
-                                {
-                                    desc.Send(reply);
-                                }
-                                break;
-
-                            case WearSlot.Armour:
-                                if (item.CanPlayerEquip(ref desc, WearSlot.Armour, out reply))
-                                {
-                                    desc.Player.EquipArmour = item;
-                                    desc.Player.Inventory.Remove(item);
-                                    msgToSendToPlayer = $"You don {item.Name} as your armour{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} dons {item.Name} as their armour{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                    if (item.AppliesBuff)
-                                    {
-                                        foreach (var b in item.AppliedBuffs)
-                                        {
-                                            desc.Player.AddBuff(b, 0, true);
-                                        }
-                                        RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                    }
-                                    desc.Player.CalculateArmourClass();
-                                }
-                                else
-                                {
-                                    desc.Send(reply);
-                                }
-                                break;
-
-                            case WearSlot.FingerLeft:
-                                if (item.CanPlayerEquip(ref desc, WearSlot.FingerLeft, out reply))
-                                {
-                                    desc.Player.EquipLeftFinger = item;
-                                    desc.Player.Inventory.Remove(item);
-                                    msgToSendToPlayer = $"You put {item.Name} on a finger on your left hand{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} on a finger on their left hand{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                    if (item.AppliesBuff)
-                                    {
-                                        foreach (var b in item.AppliedBuffs)
-                                        {
-                                            desc.Player.AddBuff(b, 0, true);
-                                        }
-                                        RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                    }
-                                    desc.Player.CalculateArmourClass();
-                                }
-                                else
-                                {
-                                    desc.Send(reply);
-                                }
-                                break;
-
-                            case WearSlot.FingerRight:
-                                if (item.CanPlayerEquip(ref desc, WearSlot.FingerRight, out reply))
-                                {
-                                    desc.Player.EquipRightFinger = item;
-                                    desc.Player.Inventory.Remove(item);
-                                    msgToSendToPlayer = $"You put {item.Name} on a finger on your right hand{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} puts {item.Name} on a finger on their right hand{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                    if (item.AppliesBuff)
-                                    {
-                                        foreach (var b in item.AppliedBuffs)
-                                        {
-                                            desc.Player.AddBuff(b, 0, true);
-                                        }
-                                        RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                    }
-                                    desc.Player.CalculateArmourClass();
-                                }
-                                else
-                                {
-                                    desc.Send(reply);
-                                }
-                                break;
-
-                            case WearSlot.Weapon:
-                                if (item.CanPlayerEquip(ref desc, WearSlot.Weapon, out reply))
-                                {
-                                    desc.Player.EquipWeapon = item;
-                                    desc.Player.Inventory.Remove(item);
-                                    msgToSendToPlayer = $"You wield {(item).Name} as your weapon{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} wields {(item).Name} as their weapon{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                    if (item.AppliesBuff)
-                                    {
-                                        foreach (var b in item.AppliedBuffs)
-                                        {
-                                            desc.Player.AddBuff(b, 0, true);
-                                        }
-                                        RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                    }
-                                    desc.Player.CalculateArmourClass();
-                                }
-                                else
-                                {
-                                    desc.Send(reply);
-                                }
-                                break;
-
-                            case WearSlot.Held:
-                                if (item.CanPlayerEquip(ref desc, WearSlot.Held, out reply))
-                                {
-                                    desc.Player.EquipHeld = item;
-                                    desc.Player.Inventory.Remove(item);
-                                    msgToSendToPlayer = $"You hold {(item).Name} in your off-hand{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} holds {(item).Name} in their off-hand{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"There is a slight shimmer as something moves{Constants.NewLine}";
-                                    if (item.AppliesBuff)
-                                    {
-                                        foreach (var b in item.AppliedBuffs)
-                                        {
-                                            desc.Player.AddBuff(b, 0, true);
-                                        }
-                                        RoomManager.Instance.ProcessEnvironmentBuffs(desc.Player.CurrentRoom);
-                                    }
-                                    desc.Player.CalculateArmourClass();
-                                }
-                                else
-                                {
-                                    desc.Send(reply);
-                                }
-                                break;
-
-                            default:
-                                desc.Send($"That doesn't seem to work...{Constants.NewLine}");
-                                break;
-                        }
-                        desc.Send(msgToSendToPlayer);
-                        var localPlayers = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        if (localPlayers != null && localPlayers.Count - 1 >= 1)
-                        {
-                            foreach (var p in localPlayers)
-                            {
-                                if (p != desc)
-                                {
-                                    if (desc.Player.Visible)
-                                    {
-                                        p.Send(msgToSendToOthers[0]);
-                                    }
-                                    else
-                                    {
-                                        if (p.Player.Level >= Constants.ImmLevel)
-                                        {
-                                            p.Send(msgToSendToOthers[0]);
-                                        }
-                                        else
-                                        {
-                                            p.Send(msgToSendToOthers[1]);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"Try as you might, you can't seem to make that work...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"Equip that where, exactly?{Constants.NewLine}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"Player {desc.Player.Name} encountered an error equipping an item: {ex.Message}", LogLevel.Error, true);
-                desc.Send($"Sorry, I didn't understand that{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowEquippedItems(ref Descriptor desc)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"  {new string('=', 77)}");
-            sb.AppendLine("|| You are wearing the following equipment:");
-            sb.AppendLine($"|| Head:{Constants.TabStop}{desc.Player.EquipHead?.Name ?? "Nothing"}");
-            sb.AppendLine($"|| Neck:{Constants.TabStop}{desc.Player.EquipNeck?.Name ?? "Nothing"}");
-            sb.AppendLine($"|| Armour:{Constants.TabStop}{desc.Player.EquipArmour?.Name ?? "Nothing"}");
-            sb.AppendLine($"|| Finger (L):{Constants.TabStop}{desc.Player.EquipLeftFinger?.Name ?? "Nothing"}");
-            sb.AppendLine($"|| Finger (R):{Constants.TabStop}{desc.Player.EquipRightFinger?.Name ?? "Nothing"}");
-            sb.AppendLine($"|| Weapon:{Constants.TabStop}{desc.Player.EquipWeapon?.Name ?? "Nothing"}");
-            sb.AppendLine($"|| Held:{Constants.TabStop}{desc.Player.EquipHeld?.Name ?? "Nothing"}");
-            sb.AppendLine($"  {new string('=', 77)}");
-            desc.Send(sb.ToString());
-        }
-
-        private static void DeleteCharacter(ref Descriptor desc)
-        {
-            bool delChar = false;
-            bool validInput = false;
-            Game.LogMessage($"{desc.Player.Name} has requested character deletion", LogLevel.Info, true);
-            while (!validInput)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("This will delete your character from the game and disconnect your session.");
-                sb.AppendLine("This cannot be undone and deleted characters cannot be restored.");
-                sb.Append("Do you wish to continue (yes/no): ");
-                desc.Send(sb.ToString());
-                var input = desc.Read().Trim();
-                if (ValidateInput(input))
-                {
-                    validInput = input.ToLower() == "yes" || input.ToLower() == "no";
-                    delChar = validInput && input.ToLower() == "yes";
-                }
-            }
-            if (delChar)
-            {
-                Game.LogMessage($"{desc.Player.Name} has confirmed requested deletion of character data.", LogLevel.Info, true);
-                if (DatabaseManager.DeleteCharacter(ref desc))
-                {
-                    SessionManager.Instance.Close(desc);
-                }
-                else
-                {
-                    desc.Send($"There was an error deleting your character.{Constants.NewLine}");
-                    desc.Send($"Please contact an Immortal for assistance.{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void GetItemFromRoom(ref Descriptor desc, ref string input)
-        {
-            var obj = input.Remove(0, GetVerb(ref input).Length).Trim();
-            if (!string.IsNullOrEmpty(obj))
-            {
-                if (obj.ToLower().StartsWith("gold"))
-                {
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom > 0)
-                    {
-                        var tokens = TokeniseInput(ref obj);
-                        ulong gpToGet;
-                        if (tokens.Length > 1)
-                        {
-                            // player has specified an amount of gold to take
-                            if (ulong.TryParse(tokens.Last().Trim(), out gpToGet))
-                            {
-                                if (gpToGet > RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom)
-                                {
-                                    desc.Send($"There isn't that much gold here!{Constants.NewLine}");
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"That doesn't seem right...{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            gpToGet = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GoldInRoom;
-                        }
-                        desc.Player.Gold += gpToGet;
-                        RoomManager.Instance.RemoveGoldFromRoom(desc.Player.CurrentRoom, gpToGet);
-                        desc.Send($"You greedily snatch up the {gpToGet} gold coins!{Constants.NewLine}");
-                        var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        if (playersToNotify != null && playersToNotify.Count > 1)
-                        {
-                            foreach (var p in playersToNotify)
-                            {
-                                if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                {
-                                    if (p.Player.Name != desc.Player.Name)
-                                    {
-                                        p.Send($"{desc.Player.Name} greedily snatches up {gpToGet} gold coins! So much for charity!{Constants.NewLine}");
-                                    }
-                                }
-                                else
-                                {
-                                    p.Send($"Something snatches up {gpToGet} gold coins...{Constants.NewLine}");
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"There isn't any gold here to take...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom != null && RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ItemsInRoom.Count > 0)
-                    {
-                        if (!string.IsNullOrEmpty(obj))
-                        {
-                            var i = GetTargetItem(ref desc, obj, false);
-                            if (i != null)
-                            {
-                                RoomManager.Instance.RemoveItemFromRoomInventory(desc.Player.CurrentRoom, ref i);
-                                desc.Player.Inventory.Add(i);
-                                desc.Send($"You pick up {i.ShortDescription}{Constants.NewLine}");
-                                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                                if (playersToNotify != null && playersToNotify.Count > 1)
-                                {
-                                    foreach (var p in playersToNotify)
-                                    {
-                                        if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                        {
-                                            if (p.Player.Name != desc.Player.Name)
-                                            {
-                                                p.Send($"{desc.Player.Name} takes {i.ShortDescription}... Hope no one needed that!{Constants.NewLine}");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            p.Send($"Something takes {i.ShortDescription}...{Constants.NewLine}");
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                desc.Send($"That item doesn't seem to be here...{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That item doesn't seem to be here...{Constants.NewLine}");
-                    }
-                }
-            }
-        }
-
-        private static void DropCharacterItem(ref Descriptor desc, ref string input)
-        {
-            // TODO: Needs to deal with dropping gold into the room
-            // drop short sword
-            // drop chain shirt
-            // drop gold 500
-            var line = input.Remove(0, GetVerb(ref input).Length).Trim();
-            var tokens = TokeniseInput(ref line);
-            if (tokens.First().ToLower() == "gold")
-            {
-                var amount = tokens.Last() ?? string.Empty;
-                if (!string.IsNullOrEmpty(amount))
-                {
-                    if (uint.TryParse(amount, out uint gpToDrop))
-                    {
-                        if (gpToDrop <= desc.Player.Gold)
-                        {
-                            desc.Player.Gold -= gpToDrop;
-                            RoomManager.Instance.AddGoldToRoom(desc.Player.CurrentRoom, gpToDrop);
-                            desc.Send($"You drop {gpToDrop} gold to the floor!{Constants.NewLine}");
-                            var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                            if (playersToNotify.Count > 1)
-                            {
-                                foreach (var p in playersToNotify)
-                                {
-                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                    {
-                                        if (p.Player.Name != desc.Player.Name)
-                                        {
-                                            p.Send($"{desc.Player.Name} drops {gpToDrop} gold coins to the floor. What a litterbug!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        p.Send($"Something drops {gpToDrop} gold coins to the floor... How strange!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"You don't have that much gold to drop!{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"That doesn't seem like a valid amount of coins to drop...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You need to say how much gold you're dropping...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                if (desc.Player.Inventory != null && desc.Player.Inventory.Count > 0)
-                {
-                    string obj = line;
-                    if (!string.IsNullOrEmpty(obj))
-                    {
-                        var i = GetTargetItem(ref desc, obj, true);
-                        if (i != null)
-                        {
-                            // we have an object from the inventory to drop, remove from player and add to room
-                            desc.Player.Inventory.Remove(i);
-                            RoomManager.Instance.AddItemToRoomInventory(desc.Player.CurrentRoom, ref i);
-                            desc.Send($"You drop {i.Name} on the floor{Constants.NewLine}");
-                            var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                            if (playersToNotify.Count > 1)
-                            {
-                                foreach (var p in playersToNotify)
-                                {
-                                    if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                                    {
-                                        if (p.Player.Name != desc.Player.Name)
-                                        {
-                                            p.Send($"{desc.Player.Name} drops {i.ShortDescription} to the floor. What a litterbug!{Constants.NewLine}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        p.Send($"Something drops {i.ShortDescription} to the floor... How strange!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // couldn't find a matching item in the player's inventory to drop
-                            desc.Send($"You don't seem to be carrying that with you...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        // not able to determine the object to drop based off player input
-                        desc.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You aren't carrying anything to drop...{Constants.NewLine}");
-                }
-            }
-        }
-
-        private static void DoHideSkill(ref Descriptor desc)
-        {
-            if (desc.Player.Position == ActorPosition.Standing && desc.Player.HasSkill("Hide") && !desc.Player.IsInCombat)
-            {
-                var pname = desc.Player.Name;
-                if (desc.Player.Visible)
-                {
-                    if (desc.Player.CurrentMP > SkillManager.Instance.GetSkill("Hide").MPCost)
-                    {
-                        desc.Player.Visible = false;
-                        desc.Player.CurrentMP -= (int)SkillManager.Instance.GetSkill("Hide").MPCost;
-                        desc.Send($"With cunning and skill you hide yourself from view!{Constants.NewLine}");
-                        var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                        if (playersToNotify != null && playersToNotify.Count > 1)
-                        {
-                            foreach (var p in playersToNotify.Where(x => x.Player.Name != pname))
-                            {
-                                p.Send($"{pname} hides and becomes impossible to see!{Constants.NewLine}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"You don't have the energy to do that!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Player.Visible = true;
-                    desc.Send($"You stop hiding and become visible again!{Constants.NewLine}");
-                    var playersToNotify = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                    if (playersToNotify != null && playersToNotify.Count > 1)
-                    {
-                        foreach (var p in playersToNotify.Where(x => x.Player.Name != pname))
-                        {
-                            p.Send($"{pname} stops hiding and becomes visible again!{Constants.NewLine}");
-                        }
-                    }
-                }
-            }
-            else
-            {
-                desc.Send($"You cannot use that skill right now.{Constants.NewLine}");
-            }
-        }
-
-        private static void ShowCharInventory(ref Descriptor desc)
-        {
-            if (desc.Player.Inventory != null && desc.Player.Inventory.Count > 0)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine($"  {new string('=', 77)}");
-                sb.AppendLine($"|| You are carrying:");
-                foreach (var i in desc.Player.Inventory.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(j => j.Name))
-                {
-                    var cnt = desc.Player.Inventory.Where(y => y.ID == i.ID).Count();
-                    sb.AppendLine($"|| {cnt} x {i.Name}, {i.ShortDescription}");
-                }
-                sb.AppendLine($"  {new string('=', 77)}");
-                desc.Send(sb.ToString());
-            }
-            else
-            {
-                desc.Send($"You are not carrying anything{Constants.NewLine}");
-            }
-        }
-
-        private static void Who(ref Descriptor desc)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"  {new string('=', 77)}");
-            sb.AppendLine($"|| The world currently contains the following beings:");
-            var allPlayers = SessionManager.Instance.GetAllPlayers();
-            bool isImm = desc.Player.Level >= Constants.ImmLevel;
-            if (allPlayers != null && allPlayers.Count > 0)
-            {
-                foreach (var p in SessionManager.Instance.GetAllPlayers().OrderByDescending(x => x.Player.Level).ToList())
-                {
-                    switch (isImm)
-                    {
-                        case true:
-                            if (p.Player.Visible)
-                            {
-                                sb.AppendLine($"|| {p.Player.Name}, the level {p.Player.Level} {p.Player.Class} in room {p.Player.CurrentRoom}");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"|| {p.Player.Name}, the level {p.Player.Level} {p.Player.Class} in room {p.Player.CurrentRoom} (Invisible)");
-                            }
-                            break;
-
-                        case false:
-                            if (p.Player.Name == desc.Player.Name || p.Player.Visible)
-                            {
-                                var playerZone = ZoneManager.Instance.GetZoneForRID(p.Player.CurrentRoom).ZoneName;
-                                if (p.Player.Name == desc.Player.Name && !p.Player.Visible)
-                                {
-                                    // player doing who is not an Imm and is invisible
-                                    sb.AppendLine($"|| {p.Player.Name}, the {p.Player.Class} (Invisible) in {playerZone}");
-                                }
-                                else
-                                {
-                                    sb.AppendLine($"|| {p.Player.Name}, the {p.Player.Class} in {playerZone}");
-                                }
-                            }
-                            break;
-                    }
-                }
-            }
-            sb.AppendLine($"  {new string('=', 77)}{Constants.NewLine}");
-            desc.Send(sb.ToString());
-        }
-
-        internal static void PushTarget(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input).Trim();
-            var line = input.Remove(0, verb.Length).ToLower().Trim();
-            string target = string.Empty;
-            string direction = string.Empty;
-            if (line.IndexOf('\"') > -1)
-            {
-                target = GetSkillOrSpellName(ref line);
-                direction = line.Replace(target, string.Empty).Replace("\"", string.Empty).Trim();
-            }
-            else
-            {
-                var elements = TokeniseInput(ref line);
-                if (elements != null)
-                {
-                    try
-                    {
-                        target = elements[0];
-                        direction = elements[elements.Length - 1];
-                    }
-                    catch
-                    {
-                        desc.Send($"Usage: Push <target> <direction>{Constants.NewLine}");
-                    }
-                }
-            }
-            if (!string.IsNullOrEmpty(target) && !string.IsNullOrEmpty(direction))
-            {
-                // get a reference to the target player or NPC
-                object objTgt = null;
-                var playersInRoom = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-                var npcsInRoom = RoomManager.Instance.GetNPCsInRoom(desc.Player.CurrentRoom);
-                int targetRID = -1;
-                string roomDirection = string.Empty;
-                if (playersInRoom != null && playersInRoom.Count > 1)
-                {
-                    var p = playersInRoom.Where(x => Regex.Match(target, x.Player.Name, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                    if (p != null && (p.Player.Visible || desc.Player.Level >= Constants.ImmLevel))
-                    {
-                        objTgt = p;
-                    }
-                }
-                if (objTgt == null)
-                {
-                    objTgt = GetTargetNPC(ref desc, target);
-                }
-                if (objTgt != null)
-                {
-                    // check to see if we have an exit in the specified direction
-                    switch (direction)
-                    {
-                        case "u":
-                        case "up":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("up"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "d":
-                        case "down":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("down"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "n":
-                        case "north":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("north"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "nw":
-                        case "northwest":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northwest"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "w":
-                        case "west":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("west"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "sw":
-                        case "southwest":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southwest"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "s":
-                        case "south":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("south"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "se":
-                        case "southeast":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southeast"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "e":
-                        case "east":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("east"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        case "ne":
-                        case "northeast":
-                            if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northeast"))
-                            {
-                                var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").RoomDoor;
-                                if (d == null || (d != null && d.IsOpen))
-                                {
-                                    targetRID = Convert.ToInt32(RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID);
-                                    roomDirection = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").ExitDirection;
-                                }
-                            }
-                            break;
-
-                        default:
-                            desc.Send($"You can't push something in that direction!{Constants.NewLine}");
-                            return;
-
-                    }
-                    if (targetRID > -1)
-                    {
-                        uint newRID = Convert.ToUInt32(targetRID);
-                        if (RoomManager.Instance.RoomExists(newRID))
-                        {
-                            bool destRoomIsNoMob = RoomManager.Instance.GetRoom(newRID).Flags.HasFlag(RoomFlags.NoMobs);
-                            var playerRoll = Helpers.RollDice(1, 20);
-                            int playerFinalRoll = Convert.ToInt32(playerRoll);
-                            var playerStrModifier = Helpers.CalculateAbilityModifier(desc.Player.Strength);
-                            playerFinalRoll += Convert.ToInt32(playerStrModifier);
-                            playerFinalRoll = playerFinalRoll < 1 ? 1 : playerFinalRoll;
-                            var targetRoll = Helpers.RollDice(1, 20);
-                            int targetFinalRoll = Convert.ToInt32(targetRoll);
-                            bool okToPush = false;
-                            bool targetIsPlayer = objTgt.GetType() == typeof(Descriptor);
-                            string targetName = string.Empty;
-                            if (playerRoll > 1 && playerRoll < 20)
-                            {
-                                // player rolled between 2 and 19 inclusive so compare STR rolls to see who wins
-                                if (targetIsPlayer)
-                                {
-                                    // target is a player
-                                    targetName = (objTgt as Descriptor).Player.Name;
-                                    var targetStrModifier = Helpers.CalculateAbilityModifier((objTgt as Descriptor).Player.Strength);
-                                    targetFinalRoll += targetStrModifier;
-                                    targetFinalRoll = targetFinalRoll < 1 ? 1 : targetFinalRoll;
-                                    okToPush = playerFinalRoll > targetFinalRoll;
-                                }
-                                else
-                                {
-                                    // target is an npc
-                                    targetName = (objTgt as NPC).Name;
-                                    if (!(objTgt as NPC).BehaviourFlags.HasFlag(NPCFlags.NoPush))
-                                    {
-                                        var targetStrModifier = Helpers.CalculateAbilityModifier((objTgt as NPC).Strength);
-                                        targetFinalRoll += targetStrModifier;
-                                        targetFinalRoll = targetFinalRoll < 1 ? 1 : targetFinalRoll;
-                                        okToPush = playerFinalRoll > targetFinalRoll;
-                                    }
-                                    else
-                                    {
-                                        desc.Send($"Some mystical force prevents you from doing that!{Constants.NewLine}");
-                                    }
-                                }
-                            }
-                            if (playerRoll == 20)
-                            {
-                                // player rolled a nautral 20 so automatically wins
-                                okToPush = true;
-                            }
-                            if (okToPush && targetIsPlayer || (okToPush && !destRoomIsNoMob))
-                            {
-                                // push the target in the specified direction
-                                desc.Send($"With a mighty effort you push {targetName} {roomDirection.ToLower()}!{Constants.NewLine}");
-                                if (targetIsPlayer)
-                                {
-                                    // notify the target player
-                                    if (desc.Player.Visible || ((objTgt as Descriptor).Player.Level >= Constants.ImmLevel))
-                                    {
-                                        (objTgt as Descriptor).Send($"{desc.Player.Name} pushes you {roomDirection.ToLower()}!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        (objTgt as Descriptor).Send($"Something pushes you {roomDirection.ToLower()}!{Constants.NewLine}");
-                                    }
-                                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Count > 2)
-                                    {
-                                        foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
-                                        {
-                                            if (p.Player.Name != desc.Player.Name && p.Player.Name != (objTgt as Descriptor).Player.Name)
-                                            {
-                                                if (!desc.Player.Visible && !(objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"Something pushes something else {roomDirection.ToLower()}!{Constants.NewLine}");
-                                                }
-                                                if (!desc.Player.Visible && (objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"Something pushes {targetName} {roomDirection.ToLower()}!{Constants.NewLine}");
-                                                }
-                                                if (desc.Player.Visible && !(objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"{desc.Player.Name} pushes something {roomDirection.ToLower()}!{Constants.NewLine}");
-                                                }
-                                                if (desc.Player.Visible && (objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"{desc.Player.Name} pushes {targetName} {roomDirection.ToLower()}!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // target is an NPC so just notify any other players in the room
-                                    foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
-                                    {
-                                        if (p.Player.Name != desc.Player.Name)
-                                        {
-                                            if (desc.Player.Visible)
-                                            {
-                                                p.Send($"{desc.Player.Name} pushes {targetName} {roomDirection.ToLower()}!{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                p.Send($"Something pushes {targetName} {roomDirection.ToLower()}!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                                if (targetIsPlayer)
-                                {
-                                    var p = SessionManager.Instance.GetPlayer((objTgt as Descriptor).Player.Name);
-                                    p.Player.Move(p.Player.CurrentRoom, newRID, false);
-                                }
-                                else
-                                {
-                                    var n = NPCManager.Instance.GetNPCByGUID((objTgt as NPC).NPCGuid);
-                                    n.Move(ref n, desc.Player.CurrentRoom, newRID, false);
-                                }
-                            }
-                            else
-                            {
-                                // we failed
-                                if (!targetIsPlayer && destRoomIsNoMob)
-                                {
-                                    desc.Send($"Some mysterious force prevents you from doing that!{Constants.NewLine}");
-                                }
-                                else
-                                {
-                                    desc.Send($"Try as you might, you just can't summon the strength to do that!{Constants.NewLine}");
-                                }
-                                if (targetIsPlayer)
-                                {
-                                    // notify the target player
-                                    if (desc.Player.Visible || ((objTgt as Descriptor).Player.Level >= Constants.ImmLevel))
-                                    {
-                                        (objTgt as Descriptor).Send($"{desc.Player.Name} tries to push you {roomDirection.ToLower()} but isn't strong enough!{Constants.NewLine}");
-                                    }
-                                    else
-                                    {
-                                        (objTgt as Descriptor).Send($"Something tries to push you {roomDirection.ToLower()} but isn't strong enough!{Constants.NewLine}");
-                                    }
-                                    if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom.Count > 2)
-                                    {
-                                        // if we have more than the player and the target here, notify them of what happened
-                                        foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
-                                        {
-                                            if (p.Player.Name != desc.Player.Name && p.Player.Name != (objTgt as Descriptor).Player.Name)
-                                            {
-                                                if (!desc.Player.Visible && !(objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"Something tries to push something else {roomDirection.ToLower()}, but isn't strong enough!{Constants.NewLine}");
-                                                }
-                                                if (!desc.Player.Visible && (objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"Something tries to push {targetName} {roomDirection.ToLower()}, but isn't strong enough!{Constants.NewLine}");
-                                                }
-                                                if (desc.Player.Visible && !(objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"{desc.Player.Name} tries to push something {roomDirection.ToLower()}, but isn't strong enough!{Constants.NewLine}");
-                                                }
-                                                if (desc.Player.Visible && (objTgt as Descriptor).Player.Visible)
-                                                {
-                                                    p.Send($"{desc.Player.Name} tries to push {targetName} {roomDirection.ToLower()}, but isn't strong enough!{Constants.NewLine}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // target is an NPC so just notify any other players in the room
-                                    foreach (var p in RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom)
-                                    {
-                                        if (p.Player.Name != desc.Player.Name)
-                                        {
-                                            if (desc.Player.Visible)
-                                            {
-                                                p.Send($"{desc.Player.Name} tries to push {targetName} {roomDirection.ToLower()}, but isn't strong enough!{Constants.NewLine}");
-                                            }
-                                            else
-                                            {
-                                                p.Send($"Something tries to push {targetName} {roomDirection.ToLower()}, but isn't strong enough!{Constants.NewLine}");
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"Some mysterious force prevents you from pushing {target} that way...{Constants.NewLine}");
-                        }
-                    }
-                    else
-                    {
-                        desc.Send($"There is no way to push {target} that way!{Constants.NewLine}");
-                    }
-                }
-                else
-                {
-                    desc.Send($"You don't see {target} here...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                desc.Send($"Usage: Push <target> <direction>{Constants.NewLine}");
-            }
-        }
-
-        internal static void ChangePlayerPosition(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input).ToLower();
-            if (desc.Player.Position == ActorPosition.Fighting)
-            {
-                desc.Send($"You're in combat and can't do that right now!{Constants.NewLine}");
                 return;
             }
-            switch (verb)
+            var tItem = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetItem(target);
+            if (tItem != null)
             {
-                case "sit":
-                    desc.Player.Position = ActorPosition.Sitting;
-                    desc.Send($"You sit down to take the load off your feet for a while.{Constants.NewLine}");
+                session.Send(tItem.LongDescription);
+                if (tItem.IsMagical)
+                {
+                    session.Send($"%BYT%The item seems somehow mystical!%PT%{Constants.NewLine}");
+                }
+                if (tItem.IsCursed)
+                {
+                    session.Send($"%BRT%The item exudes an aura of menace!%PT%{Constants.NewLine}");
+                }
+                foreach(var lp in RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.Player.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} gives {tItem.ShortDescription} a studious look.%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts about as something gives {tItem.ShortDescription} a studious look.%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+                return;
+            }
+            string direction = Helpers.GetFullDirectionString(target);
+            var rExit = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetRoomExit(direction);
+            if (rExit == null)
+            {
+                session.Send($"You gaze wistfully off into the distance...{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+                if (localPlayers != null && localPlayers.Count > 0)
+                {
+                    foreach (var lp in localPlayers)
+                    {
+                        string msg = session.Player.CanBeSeenBy(lp.Player) ? $"{session.Player.Name} gazes wistfully off into the distance...{Constants.NewLine}" :
+                            $"Something gazes wistfully off into the distance...{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var tRoom = RoomManager.Instance.GetRoom(rExit.DestinationRoomID);
+            if (tRoom == null)
+            {
+                session.Send($"That way lies only the void...{Constants.NewLine}");
+                return;
+            }
+            RoomManager.Instance.GetRoom(rExit.DestinationRoomID).DescribeRoom(session);
+        }
+        #endregion
+
+        #region Inventory
+        public static void PlayerConsumeItem(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Consume what, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            var item = session.Player.GetInventoryItem(arg);
+            if (item == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (item.ItemType != ItemType.Consumable)
+            {
+                session.Send($"%BRT%You can't consume that!%PT%{Constants.NewLine}");
+                return;
+            }
+            var potion = (Consumable)item;
+            potion.Consume(session.Player);
+        }
+
+        public static void PlayerReadScrolls(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: read '<scroll name>' <target>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: read 'scroll of lightning bolt' orc warboss%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!session.Player.HasSkill("Read Scroll"))
+            {
+                session.Send($"%BYT%The symbols on the scroll appear to swim before your eyes. Nothing makes sense!%PT%{Constants.NewLine}");
+                return;
+            }
+            var scrollName = Helpers.GetQuotedString(arg);
+            if (string.IsNullOrEmpty(scrollName))
+            {
+                session.Send($"%BRT%Usage: read '<scroll name>' <target>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: read 'scroll of lightning bolt' orc warboss%PT%{Constants.NewLine}");
+                return;
+            }
+            var targetName = arg.Remove(0, scrollName.Length + 2).Trim();
+            if (string.IsNullOrEmpty(targetName))
+            {
+                session.Send($"%BRT%Usage: read '<scroll name>' <target>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: read 'scroll of lightning bolt' orc warboss%PT%{Constants.NewLine}");
+                return;
+            }
+            var invItem = session.Player.GetInventoryItem(scrollName);
+            if (invItem == null)
+            {
+                session.Send($"%BRT%You don't seem to be carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoMagic))
+            {
+                session.Send($"%BRT%Some mystic force prevents you from reading the scroll!%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(targetName, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%No one like that is here...%PT%{Constants.NewLine}");
+                return;
+            }
+            var scroll = (Scroll)invItem;
+            var spell = SpellManager.Instance.GetSpell(scroll.CastsSpell);
+            if (spell == null)
+            {
+                session.Send($"%BRT%This scroll seems to be defective! Check with an Imm!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (spell.SpellType == SpellType.Damage || spell.SpellType == SpellType.Debuff)
+            {
+                if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe | RoomFlags.NoMagic))
+                {
+                    session.Send($"%BRT%Some mystical force prevents that from happening...%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (target.ActorType == ActorType.Player)
+                {
+                    session.Send($"%BRT%Some power protects {target.Name}, that would be impossible.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (((NPC)target).Flags.HasFlag(NPCFlags.NoAttack))
+                {
+                    session.Send($"%BRT%Some mystical force prevents that from happneing. You cannot harm {target.Name}!%PT%{Constants.NewLine}");
+                    return;
+                }
+            }
+            spell.Cast(session.Player, target);
+        }
+
+        public static void DoBankingAction(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: bank <balance> - show your current balance%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: bank <deposit | withdraw> <amount> - deposit or withdraw the amount of gold%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            var operation = args.FirstOrDefault() ?? string.Empty;
+            if (string.IsNullOrEmpty(operation))
+            {
+                session.Send($"%BRT%Usage: bank <balance> - show your current balance%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: bank <deposit | withdraw> <amount> - deposit or withdraw the amount of gold%PT%{Constants.NewLine}");
+                return;
+            }
+            switch(operation.ToLower().Trim())
+            {
+                case "balance":
+                    session.Send($"%BYT%The bank clerk checks some paperwork. \"Your current balance is {session.Player.VaultGold:N0} gold.\"%PT%{Constants.NewLine}");
                     break;
 
-                case "rest":
-                    desc.Player.Position = ActorPosition.Resting;
-                    desc.Send($"You stop and take a nice rest.{Constants.NewLine}");
+                case "deposit":
+                    var strAmount = arg.Remove(0, operation.Length).Trim();
+                    if (string.IsNullOrEmpty(strAmount))
+                    {
+                        session.Send($"%BRT%Usage: bank deposit <amount>%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    if (!ulong.TryParse(strAmount, out var amount))
+                    {
+                        session.Send($"%BRT%That isn't a valid amount!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    if (amount > session.Player.Gold)
+                    {
+                        session.Send($"%BRT%You can't deposit more gold than you have!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AddGoldToVault(amount);
+                    session.Send($"%BYT%\"Certainly,\" the clerk says, \"your new balance is {session.Player.VaultGold:N0} gold.\"%PT%{Constants.NewLine}");
+                    break;
+
+                case "withdraw":
+                    strAmount = arg.Remove(0, operation.Length).Trim();
+                    if (string.IsNullOrEmpty(strAmount))
+                    {
+                        session.Send($"%BRT%Usage: bank withdraw <amount>%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    if (!ulong.TryParse(strAmount, out amount))
+                    {
+                        session.Send($"%BRT%That isn't a valid amount!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    if (amount > session.Player.VaultGold)
+                    {
+                        session.Send($"%BRT%You can't withdraw more than your balance!%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.RemoveGoldFromVault(amount);
+                    session.Send($"%BYT%\"Certainly,\" the clerk says, \"here are your coins, and your new balance is {session.Player.VaultGold:N0} gold.\"%PT%{Constants.NewLine}");
+                    break;
+            }
+        }
+
+        public static void DoVaultAction(Session session, string arg)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Vault))
+            {
+                session.Send($"%BRT%There is no Vault here!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                sb.AppendLine($"%BRT%Usage: vault <check | browse> - show stored items%PT%");
+                sb.AppendLine($"%BRT%Usage: vault <deposit | store> <item> - store an item from your inventory%PT%");
+                sb.AppendLine($"%BRT%Usage: vault <withdraw | take> <item> - transfer an item from your vault to your inventory%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            var args = arg.Split(' ');
+            var operation = args[0].ToLower().Trim();
+            var itemName = arg.Remove(0, operation.Length).Trim();
+            switch (operation)
+            {
+                case "check":
+                case "browse":
+                    if (session.Player.VaultItems.Count > 0)
+                    {
+                        sb.AppendLine($"%BYT%The warden checks his papers. \"This is what you have in storage,\" he says, showing a list:%PT%");
+                        sb.AppendLine($"%BYT%  {new string('=', 77)}");
+                        foreach (var i in session.Player.VaultItems.Values.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(x => x.ID))
+                        {
+                            var cnt = session.Player.VaultItems.Values.Where(x => x.ID == i.ID).Count();
+                            sb.AppendLine($"%BYT%|| {cnt} x {i.Name}, {i.ShortDescription}%PT%");
+                        }
+                        sb.AppendLine($"%BYT%  {new string('=', 77)}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"%BYT%The warden checks through his papers. \"You don't have anything in storage right now,\" he says.%PT%");
+                    }
+                    session.Send(sb.ToString());
+                    break;
+
+                case "deposit":
+                case "store":
+                    if (string.IsNullOrEmpty(itemName))
+                    {
+                        session.Send($"%BRT%Store what, exactly?%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    var item = session.Player.GetInventoryItem(itemName);
+                    if (item == null)
+                    {
+                        session.Send($"%BRT%Store what, exactly?%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    session.Player.AddItemToVault(item);
+                    session.Send($"%BYT%\"Certainly,\" the vault warden says. \"We'll keep this safe for you.\"%PT%{Constants.NewLine}");
+                    break;
+
+                case "withdraw":
+                case "take":
+                    if (string.IsNullOrEmpty(itemName))
+                    {
+                        session.Send($"%BRT%Withdraw what, exactly?%PT%{Constants.NewLine}");
+                        return;
+                    }
+                    else
+                    {
+                        item = session.Player.GetVaultItem(itemName);
+                        if (item == null)
+                        {
+                            session.Send($"%BRT%The warden tuts. \"You don't have anything like that in your vault,\" he says.%PT%{Constants.NewLine}");
+                            return;
+                        }
+                        session.Player.RemoveItemFromVault(item);
+                        session.Send($"%BYT%\"Certainly,\" the warden says, \"I'll get that for you now.\"%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                default:
+                    session.Send($"%BRT%That doesn't look like something you can do in the vault!%PT%{Constants.NewLine}");
+                    return;
+            }
+        }
+
+        public static void ShowEquipment(Session session)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            sb.AppendLine($"%BYT%||%PT% You are using:");
+            sb.AppendLine($"%BYT%||%PT% Head: {session.Player.HeadEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%||%PT% Neck: {session.Player.NeckEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%||%PT% Armour: {session.Player.ArmourEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%||%PT% Weapon: {session.Player.WeaponEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%||%PT% Held: {session.Player.HeldEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%||%PT% Feet: {session.Player.FeetEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%||%PT% Right Finger: {session.Player.RightFingerEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%||%PT% Left Finger: {session.Player.LeftFingerEquip?.Name ?? "Nothing"}");
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+        }
+
+        public static void RemoveEquipment(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: remove <slot>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: remove weapon%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Valid Slots: {string.Join(", ", Enum.GetNames(typeof(WearSlot)).Where(name => name != "None"))}%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!Enum.TryParse(arg, true, out WearSlot slot))
+            {
+                session.Send($"%BRT%That isn't a valid equipment slot!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.RemoveEquipment(slot, out dynamic i))
+            {
+                var msg = slot == WearSlot.Weapon ? $"%BGT%You stop using {i.ShortDescription} as your {slot}!%PT%{Constants.NewLine}" :
+                    $"%BGT%You stop using {i.ShortDescription} on your {slot}!%PT%{Constants.NewLine}";
+                session.Send(msg);
+            }
+            else
+            {
+                session.Send($"%BRT%You cannot remove equipment from your {slot}!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void EquipItem(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: equip <item> <slot>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: equip helmet head%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: equip ring of protection leftfinger%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Valid Slots: {string.Join(", ", Enum.GetNames(typeof(WearSlot)).Where(name => name != "None"))}%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            var slot = args.Last() ?? string.Empty;
+            if (string.IsNullOrEmpty(slot))
+            {
+                session.Send($"%BRT%You need to specify where to equip the item.%PT%{Constants.NewLine}");
+                return;
+            }
+            var itemName = arg.Remove(arg.Length - slot.Length, slot.Length).Trim();
+            if (string.IsNullOrEmpty(itemName))
+            {
+                session.Send($"%BRT%You need to specify an item to equip.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!Enum.TryParse(slot, true, out WearSlot slotResult))
+            {
+                session.Send($"%BRT%That doesn't look like a valid equipment slot!%PT%{Constants.NewLine}");
+                return;
+            }
+            var item = session.Player.GetInventoryItem(itemName);
+            if (item == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.CanEquip(item, slotResult, out string result))
+            {
+                session.Player.EquipItem(item, slotResult);
+                var msg = slotResult == WearSlot.Weapon ? $"%BGT%You start using {item.ShortDescription} as your {slotResult}!%PT%{Constants.NewLine}" :
+                    $"%BGT%You start using {item.ShortDescription} on your {slotResult}!%PT%{Constants.NewLine}";
+                session.Send(msg);
+            }
+            else
+            {
+                session.Send($"%BRT%You cannot equip that: {result}%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void SacrificeItem(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to specify an item to do that!%PT%{Constants.NewLine}");
+                return;
+            }
+            var item = session.Player.GetInventoryItem(arg);
+            if (item == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (item.BaseValue == 0)
+            {
+                session.Send($"%BRT%The Gods are not interested in such worthless trinkets.%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.RemoveItemFromInventory(item);
+            var chance = item.BaseValue / 100;
+            var result = Helpers.RollDice<int>(1, 100);
+            if (result > chance)
+            {
+                session.Send($"%BRT%You offer {item.ShortDescription} to the Gods, but they do not respond.%PT%{Constants.NewLine}");
+                var lPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+                if (lPlayers != null && lPlayers.Count > 1)
+                {
+                    foreach(var lp in lPlayers.Where(x => x.ID != session.ID))
+                    {
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BRT%{session.Player.Name} offers {item.ShortDescription} as a sacrifice to the Gods, but they do not respond.%PT%{Constants.NewLine}" :
+                            $"Something offers {item.ShortDescription} as a sacrifice to the Gods, but they do not respond.%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            session.Send($"%BYT%You offer {item.ShortDescription} to the Gods and their power bathes you in holy light!%PT%{Constants.NewLine}");
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+            if (localPlayers != null && localPlayers.Count > 1)
+            {
+                foreach (var lp in localPlayers.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} is bathed in holy light after offering {item.ShortDescription} as a sacrifice to the Gods!%PT%" :
+                        $"%BYT%Something is bathed in holy light after offering {item.ShortDescription} as a sacrifice to the Gods!%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+            if (item.BaseValue >= 1000)
+            {
+                var s = SpellManager.Instance.GetSpell(SpellType.Buff).GetRandomElement();
+                foreach(var b in s.AppliedBuffs.Keys)
+                {
+                    var buff = BuffManager.Instance.GetBuff(b);
+                    if (buff != null)
+                    {
+                        session.Player.ApplyBuff(buff.Name, buff.Duration);
+                        session.Send($"%BYT%The Gods accept your sacrifice and the Winds of Magic bless you with {buff.Name}!%PT%{Constants.NewLine}");
+                    }
+                }
+            }
+            else
+            {
+                var gpAmount = Helpers.RollDice<long>(1, item.BaseValue);
+                session.Player.AdjustGold(gpAmount, true, true);
+                session.Send($"%BYT%The Gods accept your sacrifice and reward you with {gpAmount:N0} gold!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void DonateItem(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to specify and item to do this...%PT%{Constants.NewLine}");
+                return;
+            }
+            var item = session.Player.GetInventoryItem(arg);
+            if (item == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!RoomManager.Instance.RoomExists(Game.DonationRoomID))
+            {
+                session.Send($"%BRT%The Gods refuse to answer...%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.RemoveItemFromInventory(item);
+            RoomManager.Instance.AddItemToRoomInventory(Game.DonationRoomID, item);
+            Game.LogMessage($"INFO: Player {session.Player.Name} donated {item.Name} ({item.ID})", LogLevel.Info, true);
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+            if (localPlayers != null && localPlayers.Count > 1)
+            {
+                foreach(var lp in localPlayers.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} offers {item.ShortDescription} to the Gods and it vanishes in a flash of light!%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts as {item.ShortDescription} is swallowed by the Winds of Magic!%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+            var donRoomPlayers = RoomManager.Instance.GetRoom(Game.DonationRoomID).PlayersInRoom;
+            if (donRoomPlayers != null && donRoomPlayers.Count > 0)
+            {
+                foreach(var lp in donRoomPlayers)
+                {
+                    lp.Send($"%BYT%There is a bright flash of light as {item.ShortDescription} clatters to the floor!%PT%{Constants.NewLine}");
+                }
+            }
+        }
+
+        public static void TradeItem(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: give <target> <item>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: give <target> <amount>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: give fred chain shirt%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: give fred 500%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: give <target> <item>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: give fred chain shirt%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(args[0], session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%You can't give something to someone that isn't here!%PT%{Constants.NewLine}");
+                return;
+            }
+            var itemName = arg.Remove(0, args[0].Length).Trim();
+            if (ulong.TryParse(itemName, out ulong gp))
+            {
+                if (session.Player.Gold < gp)
+                {
+                    session.Send($"%BRT%You don't have that much gold!%PT%{Constants.NewLine}");
+                    return;
+                }
+                session.Player.AdjustGold((long)gp * -1, true, false);
+                target.Gold += gp;
+                session.Send($"%BYT%You hand over {gp:N0} gold to {target.Name}!%PT%{Constants.NewLine}");
+                if (target.ActorType == ActorType.Player)
+                {
+                    var tMsg = session.Player.CanBeSeenBy(target) ? $"%BYT%{session.Player.Name} hands you the sum of {gp:N0} gold!%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts as something hands you {gp:N0} gold!%PT%{Constants.NewLine}";
+                    ((Player)target).Send(tMsg);
+                }
+                var lPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+                if (lPlayers != null && lPlayers.Count > 1)
+                {
+                    foreach(var lp in lPlayers.Where(x => x.ID != session.ID && x.ID != target.ID))
+                    {
+                        var tName = target.CanBeSeenBy(lp.Player) ? target.Name : "something";
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} hands {tName} the sum of {gp:N0} gold!%PT%{Constants.NewLine}" :
+                            $"The air shifts as something hands {gp:N0} gold to {tName}.%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var item = session.Player.GetInventoryItem(itemName);
+            if (item == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.RemoveItemFromInventory(item);
+            target.AddItemToInventory(item);
+            session.Send($"%BYT%You hand {item.ShortDescription} to {target.Name}. Hope they like it!%PT%{Constants.NewLine}");
+            if (target.ActorType == ActorType.Player)
+            {
+                var msgToTarget = session.Player.CanBeSeenBy(target) ? $"%BYT%{session.Player.Name} hands you {item.ShortDescription}.%PT%{Constants.NewLine}" :
+                    $"%BYT%The air around you shifts as something hands you {item.ShortDescription}.%PT%{Constants.NewLine}";
+                ((Player)target).Send(msgToTarget);
+            }
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
+            if (localPlayers != null && localPlayers.Count > 1)
+            {
+                foreach(var lp in localPlayers.Where(x => x.ID != session.ID && x.ID != target.ID))
+                {
+                    var tName = target.CanBeSeenBy(lp.Player) ? target.Name : "something";
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} hands {item.ShortDescription} to {tName}.%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts as something hands {item.ShortDescription} to {tName}.%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+        }
+
+        public static void DropItem(Session session, string arg)
+        {
+            var r = RoomManager.Instance.GetRoom(session.Player.CurrentRoom);
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: drop <amount> gold%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: drop <item>%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (ulong.TryParse(args[0], out ulong gp))
+            {
+                if (session.Player.Gold == 0)
+                {
+                    session.Send($"%BRT%You don't have any gold to drop!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var amount = Math.Min(gp, session.Player.Gold);
+                session.Player.AdjustGold((long)amount * -1, true, false);
+                RoomManager.Instance.AddGoldToRoom(r.ID, amount);
+                session.Send($"%BYT%You drop {amount:N0} gold to the floor! Litter-bug!%PT%{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetRoom(r.ID).PlayersInRoom;
+                if (localPlayers != null && localPlayers.Count > 1)
+                {
+                    foreach(var lp in localPlayers.Where(x => x.ID != session.ID))
+                    {
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} drops {amount:N0} gold to the floor!%PT%{Constants.NewLine}" :
+                            $"%BYT%The air shifts and suddenly {amount:N0} gold coins fall to the floor!%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var item = session.Player.Inventory.Values.FirstOrDefault(x => x.Name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (item == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.RemoveItemFromInventory(item);
+            RoomManager.Instance.AddItemToRoomInventory(r.ID, item);
+            session.Send($"%BYT%You drop {item.ShortDescription} onto the floor.%PT%{Constants.NewLine}");
+            var players = RoomManager.Instance.GetRoom(r.ID).PlayersInRoom;
+            if (players != null && players.Count > 1)
+            {
+                foreach(var lp in players.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} drops {item.ShortDescription} to the floor.%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts as something drops {item.ShortDescription} onto the floor.%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+        }
+
+        public static void GetItem(Session session, string arg)
+        {
+            var r = RoomManager.Instance.GetRoom(session.Player.CurrentRoom);
+            if (r.ItemsInRoom.Count == 0 && r.GoldInRoom == 0)
+            {
+                session.Send($"%BRT%There is nothing here to take!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to specify something to take!%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: get long sword%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: get 500 gold%PT%{Constants.NewLine}");
+            }
+            var args = arg.Split(' ');
+            if (ulong.TryParse(args[0].Trim(), out ulong gp))
+            {
+                if (r.GoldInRoom == 0)
+                {
+                    session.Send($"%BRT%There isn't any gold here!%PT%{Constants.NewLine}");
+                    return;
+                }
+                var amount = Math.Min(r.GoldInRoom, gp);
+                RoomManager.Instance.RemoveGoldFromRoom(r.ID, amount);
+                session.Player.AdjustGold((int)amount, true, true);
+                session.Send($"%BYT%You swipe {amount:N0} gold and stuff it in your pockets!%PT%{Constants.NewLine}");
+                var localPlayers = RoomManager.Instance.GetRoom(r.ID).PlayersInRoom;
+                if (localPlayers != null && localPlayers.Count > 1)
+                {
+                    foreach(var lp in localPlayers.Where(x => x.ID != session.ID))
+                    {
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} greedily snatches up {amount:N0} gold coins!%PT%{Constants.NewLine}" :
+                            $"%BYT%The air shifts and {amount:N0} gold coins vanish into something's pockets!%PT%{Constants.NewLine}";
+                        lp.Send(msg);
+                    }
+                }
+                return;
+            }
+            var item = r.GetItem(arg);
+            if (item == null)
+            {
+                session.Send($"%BRT%There is nothing like that to take!%PT%{Constants.NewLine}");
+                return;
+            }
+            RoomManager.Instance.RemoveItemFromRoomInventory(r.ID, item);
+            session.Player.AddItemToInventory(item);
+            session.Send($"%BYT%You take {item.ShortDescription}, hope no one needed that!%PT%{Constants.NewLine}");
+            var players = RoomManager.Instance.GetRoom(r.ID).PlayersInRoom;
+            if (players != null && players.Count > 1)
+            {
+                foreach(var lp in players.Where(x => x.ID != session.ID))
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} takes {item.ShortDescription} off the floor.%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shifts as something snatches up {item.ShortDescription}!%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+        }
+
+        public static void ShowInventory(Session session, string verb, string criteria)
+        {
+            if (session.Player.Inventory.Count == 0)
+            {
+                session.Send($"You aren't carrying anything right now.{Constants.NewLine}");
+            }
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+                sb.AppendLine($"%BYT%||%PT% You are carrying:");
+                foreach (var i in session.Player.Inventory.Values.Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(x => x.ID))
+                {
+                    var cnt = session.Player.Inventory.Values.Where(x => x.ID == i.ID).Count();
+                    sb.AppendLine($"%BYT%||%PT% {cnt} x {i.Name}, {i.ShortDescription}");
+                }
+                sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            // show filtered inventory
+            var matchingItems = session.Player.Inventory.Values.Where(x => x.Name.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0)
+                .Select(x => new { x.ID, x.Name, x.ShortDescription }).Distinct().OrderBy(x => x.ID).ToList();
+            if (matchingItems != null && matchingItems.Count > 0)
+            {
+                sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+                sb.AppendLine($"%BYT%||%PT% You are carrying:");
+                foreach (var item in matchingItems)
+                {
+                    var cnt = session.Player.Inventory.Values.Where(x => x.ID == item.ID).Count();
+                    sb.AppendLine($"%BYT%||%PT% {cnt} x {item.Name}, {item.ShortDescription}");
+                }
+                sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            else
+            {
+                session.Send($"You aren't carrying anything like that...{Constants.NewLine}");
+            }
+        }
+        #endregion
+
+        #region Movement
+        public static void PlayerPushTarget(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Push what, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: push '<target>' <direction>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: push 'orc warrior' north%PT%{Constants.NewLine}");
+                return;
+            }
+            var targetName = Helpers.GetQuotedString(arg);
+            if (string.IsNullOrEmpty(targetName))
+            {
+                session.Send($"%BRT%Usage: push '<target>' <direction>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: push 'orc warrior' north%PT%{Constants.NewLine}");
+                return;
+            }
+            var dir = args.Last();
+            var fullDirString = Helpers.GetFullDirectionString(dir);
+            if (string.IsNullOrEmpty(fullDirString))
+            {
+                session.Send($"%BRT%That doesn't seem to be a valid direction!%PT%{Constants.NewLine}");
+                return;
+            }
+            var exit = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetRoomExit(fullDirString);
+            if (exit == null)
+            {
+                session.Send($"%BRT%It doesn't look like you can push anything in that direction!%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(targetName, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%You can't push someone that isn't here!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.ActorType == ActorType.Player)
+            {
+                session.Send($"%BRT%Some mystic force prevents you from pushing {target.Name}!%PT%{Constants.NewLine}");
+                return;
+            }
+            var nTarget = (NPC)target;
+            if (nTarget.Flags.HasFlag(NPCFlags.NoPush))
+            {
+                session.Send($"%BYT%Some mystical force prevents that from happening, you cannot push {nTarget.Name}!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!nTarget.CanMove())
+            {
+                session.Send($"%BRT%You can't force {nTarget.Name} to move right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(exit.DestinationRoomID).ZoneID != nTarget.ZoneID)
+            {
+                session.Send($"%BYT%Some mystical force prevents that from happening.%PT%{Constants.NewLine}");
+                return;
+            }
+            var pRoll = Helpers.RollDice<int>(1, 20);
+            var nRoll = Helpers.RollDice<int>(1, 20);
+            var pFinal = Math.Max(1, pRoll + Helpers.CalculateAbilityModifier(session.Player.Strength));
+            var nFinal = Math.Max(1, nRoll + Helpers.CalculateAbilityModifier(nTarget.Strength));
+            if (pFinal > nFinal)
+            {
+                session.Send($"%BGT%With great strength, you push {nTarget.Name} {fullDirString}!%PT%{Constants.NewLine}");
+                nTarget.Move(exit.DestinationRoomID, false);
+            }
+            else
+            {
+                session.Send($"%BRT%Try as you might, can't push {nTarget.Name} {fullDirString}!%PT%{Constants.NewLine}");
+                return;
+            }
+        }
+
+        public static void PlayerRecall(Session session)
+        {
+            if (!session.Player.CanMove())
+            {
+                session.Send($"%BRT%You are not able to do that right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!RoomManager.Instance.RoomExists(Game.PlayerStartRoom))
+            {
+                session.Send($"%BRT%The Gods will not answer your prayers! You are on your own!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.NoTeleport))
+            {
+                session.Send($"%BRT%The Gods refuse your prayers. You must make your own way.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.CurrentSP < 5)
+            {
+                session.Send($"%BRT%The Gods find you lacking and will not offer you their help!%PT%{Constants.NewLine}");
+                return;
+            }
+            var localPlayers = SessionManager.Instance.GetPlayersInRoom(session.Player.CurrentRoom).Where(x => x.ID != session.ID).ToList();
+            if (localPlayers != null && localPlayers.Count > 0)
+            {
+                foreach(var lp in localPlayers)
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} offers a prayer to the Gods...%PT%{Constants.NewLine}" :
+                        $"%BYT%The air shimmers as something offers a prayer to the Gods...%PT%{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+            }
+            session.Player.Move(Game.PlayerStartRoom, true);
+        }
+
+        public static void ChangePosition(Session session, string newPos)
+        {
+            if (session.Player.InCombat)
+            {
+                session.Send($"You're too busy fighting to do that right now!{Constants.NewLine}");
+                return;
+            }
+            string msgToRoom = string.Empty;
+            switch(newPos)
+            {
+                case "sit":
+                    session.Player.Position = ActorPosition.Sitting;
+                    session.Send($"You sit down and take the load off.{Constants.NewLine}");
+                    msgToRoom = $"%N% sits down and takes the load off.{Constants.NewLine}";
                     break;
 
                 case "stand":
-                    SessionManager.Instance.GetPlayerByGUID(desc.ID).Player.Position = ActorPosition.Standing;
-                    desc.Send($"You stand up, ready to go!{Constants.NewLine}");
+                    session.Player.Position = ActorPosition.Standing;
+                    session.Send($"You stand up, ready to continue your adventures!{Constants.NewLine}");
+                    msgToRoom = $"%N% stands up, ready to continue adventuring!{Constants.NewLine}";
                     break;
+
+                case "sleep":
+                    session.Player.Position = ActorPosition.Sleeping;
+                    session.Send($"You curl up and have a nap. ZZZZZZZZZZ.{Constants.NewLine}");
+                    msgToRoom = $"%N% curls up and catches some sleep!{Constants.NewLine}";
+                    break;
+
+                case "rest":
+                    session.Player.Position = ActorPosition.Resting;
+                    session.Send($"You decide to take it easy for a while.{Constants.NewLine}");
+                    msgToRoom = $"%N% decides to take things easy for a while and has a rest.{Constants.NewLine}";
+                    break;
+
+                default:
+                    session.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
+                    return;
             }
-        }
-
-        private static void Look(ref Descriptor desc, ref string input)
-        {
-            string verb = GetVerb(ref input).ToLower().Trim();
-            string target = input.Remove(0, verb.Length).Trim().ToLower();
-            string msgToSendToPlayer = string.Empty;
-            string msgToSendToTarget = string.Empty;
-            string[] msgToSendToOthers = new string[] { string.Empty, string.Empty };
-            if (!string.IsNullOrEmpty(target))
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+            if (localPlayers != null && localPlayers.Count > 0)
             {
-                switch (target.ToLower())
+                foreach(var lp in localPlayers)
                 {
-                    case "up":
-                    case "u":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("up"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("up").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look up...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view up...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes upwards{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes upwards...{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "down":
-                    case "d":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("down"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("down").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as your look down...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view down...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes towards the ground{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes towards the ground...{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "west":
-                    case "w":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("west"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("west").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look towards the west...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view west...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the west{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the west{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "east":
-                    case "e":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("east"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("east").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look towards the east...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view east...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the east{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the east{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "north":
-                    case "n":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("north"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("north").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look north...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view north...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the north{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the north{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "south":
-                    case "s":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("south"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("south").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look south...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view south...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the south{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the south{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "northwest":
-                    case "nw":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northwest"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northwest").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look northwest...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view northwest...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northwest{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northwest{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "northeast":
-                    case "ne":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("northeast"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("northeast").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look northeast...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view northeast...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the northeast{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the northeast{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "southeast":
-                    case "se":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southeast"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southeast").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look southeast...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view southeast...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southeast{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southeast{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "southwest":
-                    case "sw":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).HasExitInDirection("southwest"))
-                        {
-                            var d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").RoomDoor;
-                            if (d == null || (d != null && d.IsOpen))
-                            {
-                                var rid = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).GetRoomExit("southwest").DestinationRoomID;
-                                var targetRoom = RoomManager.Instance.GetRoom(rid);
-                                if (targetRoom != null)
-                                {
-                                    if (targetRoom.Flags.HasFlag(RoomFlags.Dark))
-                                    {
-                                        if (targetRoom.HasLightSource)
-                                        {
-                                            msgToSendToPlayer = targetRoom.LongDescription;
-                                            msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                            msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
-                                        }
-                                        else
-                                        {
-                                            if (desc.Player.Level >= Constants.ImmLevel || desc.Player.HasSkill("Darkvision"))
-                                            {
-                                                msgToSendToPlayer = targetRoom.LongDescription;
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
-                                            }
-                                            else
-                                            {
-                                                msgToSendToPlayer = $"You see only darkness as you look southwest...{Constants.NewLine}";
-                                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                                msgToSendToOthers[1] = $"Something shifts in the darkness...{Constants.NewLine}";
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        msgToSendToPlayer = targetRoom.LongDescription;
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
-                                    }
-                                }
-                                else
-                                {
-                                    msgToSendToPlayer = "That way lies only the void...";
-                                }
-                            }
-                            else
-                            {
-                                msgToSendToPlayer = $"A doorway blocks your view southwest...{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gazes off towards the southwest{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"There is a shift in the air as something gazes off towards the southwest{Constants.NewLine}";
-                            }
-                        }
-                        break;
-
-                    case "node":
-                        if (RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode != null)
-                        {
-                            string amount = string.Empty;
-                            uint d = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode.NodeDepth;
-                            switch (d)
-                            {
-                                case 1:
-                                    amount = "almost no";
-                                    break;
-
-                                case 2:
-                                    amount = "a little bit of";
-                                    break;
-
-                                case 3:
-                                    amount = "quite a bit of";
-                                    break;
-
-                                default:
-                                    amount = "a lot of";
-                                    break;
-                            }
-                            if (desc.Player.Level >= Constants.ImmLevel)
-                            {
-                                desc.Send($"The {RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode} node can be mined {d} more times.{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"The {RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).ResourceNode} node has {amount} resources left{Constants.NewLine}");
-                            }
-                        }
-                        else
-                        {
-                            desc.Send($"There is no resource node here!{Constants.NewLine}");
-                        }
-                        break;
-
-                    default:
-                        // we aren't looking in a direction so try looking at other things, first players, then NPCs then items
-                        var p = desc.Player.Level >= Constants.ImmLevel ?
-                            RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault() :
-                            RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => x.Player.Visible && Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-                        if (p != null)
-                        {
-                            if (Regex.IsMatch(desc.Player.Name, target, RegexOptions.IgnoreCase))
-                            {
-                                msgToSendToPlayer = $"You look yourself up and down. Vain, much?{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} looks themselves up and down. How vain.{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"Something looks at itself... Very creepy...{Constants.NewLine}";
-                            }
-                            else
-                            {
-                                var targetHP = (double)p.Player.CurrentHP / p.Player.MaxHP * 100;
-                                string stateMsg = Helpers.GetActorStateMessage(p.Player.Name, targetHP);
-                                string pAlignString = p.Player.Alignment == Alignment.Evil ? $"{Constants.NewLine}{p.Player} gives off a dark aura.{Constants.NewLine}"
-                                    : p.Player.Alignment == Alignment.Good ? $"{Constants.NewLine}{p.Player} radiates a holy glow.{Constants.NewLine}" : string.Empty;
-                                msgToSendToPlayer = $"{p.Player.LongDescription}{pAlignString}{stateMsg}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}{p.Player.Name} is using:{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Head: {p.Player.EquipHead?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {p.Player.EquipNeck?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {p.Player.EquipArmour?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {p.Player.EquipLeftFinger?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {p.Player.EquipRightFinger?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {p.Player.EquipWeapon?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Held: {p.Player.EquipHeld?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} looks {p.Player.Name} up and down...{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"Something looks {p.Player.Name} up and down...{Constants.NewLine}";
-                                msgToSendToTarget = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} gives you a studious look. Strange person.{Constants.NewLine}" : $"You feel a chill as though something was looking at you...{Constants.NewLine}";
-                                p.Send(msgToSendToTarget);
-                            }
-                        }
-                        else
-                        {
-                            // p was null so the target string doesn't match a player in the room, try finding a matching NPC
-                            var n = GetTargetNPC(ref desc, target);
-                            if (n != null)
-                            {
-                                var targetHP = (double)n.CurrentHP / n.MaxHP * 100;
-                                string stateMsg = Helpers.GetActorStateMessage(n.Name, targetHP);
-                                string pAlignString = n.Alignment == Alignment.Evil ? $"{Constants.NewLine}{n.Name} gives off a dark aura.{Constants.NewLine}"
-                                    : n.Alignment == Alignment.Good ? $"{Constants.NewLine}{n.Name} radiates a holy glow.{Constants.NewLine}" : string.Empty;
-                                msgToSendToPlayer = $"{n.LongDescription}{pAlignString}{stateMsg}{Constants.NewLine}";
-                                msgToSendToOthers[0] = $"{desc.Player.Name} gives {n.Name} a studious look{Constants.NewLine}";
-                                msgToSendToOthers[1] = $"Something gives {n.Name} a studious look{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}{n.Name} is using:{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Head: {n.EquipHead?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Neck: {n.EquipHead?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Armour: {n.EquipArmour?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Left Finger: {n.EquipLeftFinger?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Right Finger: {n.EquipRightFinger?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Weapon: {n.EquipWeapon?.Name ?? "Nothing"}{Constants.NewLine}";
-                                msgToSendToPlayer = $"{msgToSendToPlayer}Held: {n.EquipHeld?.Name ?? "Nothing"}{Constants.NewLine}";
-                            }
-                            else
-                            {
-                                // n was null, try looking for an item in the room
-                                var i = GetTargetItem(ref desc, target, false);
-                                if (i != null)
-                                {
-                                    string modMsg = i.LongDescription;
-                                    if (i.IsMagical)
-                                    {
-                                        modMsg = $"{modMsg}{Constants.NewLine}This item appears magical...";
-                                        if (i.IsCursed)
-                                        {
-                                            modMsg = $"{modMsg}And possibly cursed!";
-                                        }
-                                    }
-                                    msgToSendToPlayer = $"{modMsg}{Constants.NewLine}";
-                                    msgToSendToOthers[0] = $"{desc.Player.Name} looks longingly at {i.Name}{Constants.NewLine}";
-                                    msgToSendToOthers[1] = $"Something looks longingly at {i.Name}";
-                                }
-                                else
-                                {
-                                    // no matching item in the room, so look in player inventory instead
-                                    var ii = GetTargetItem(ref desc, target, true);
-                                    if (ii != null)
-                                    {
-                                        string modMsg = ii.LongDescription;
-                                        if (ii.IsMagical)
-                                        {
-                                            modMsg = $"{modMsg}{Constants.NewLine}This item appears magical...";
-                                            if (ii.IsCursed)
-                                            {
-                                                modMsg = $"{modMsg}And possibly cursed!";
-                                            }
-                                        }
-                                        msgToSendToPlayer = $"{modMsg}{Constants.NewLine}";
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} looks longling at {ii.Name} that they're holding{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"Something looks longingly at something else... Very strange{Constants.NewLine}";
-                                    }
-                                    else
-                                    {
-                                        // no matching player, npc, room or inventory item...
-                                        msgToSendToPlayer = $"You look about, but you can't find anything like that!{Constants.NewLine}";
-                                        msgToSendToOthers[0] = $"{desc.Player.Name} looks about, searching for something they can't seem to find...{Constants.NewLine}";
-                                        msgToSendToOthers[1] = $"The air shifts as something looks around, searching...{Constants.NewLine}";
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                }
-                if (!string.IsNullOrEmpty(msgToSendToPlayer))
-                {
-                    desc.Send(msgToSendToPlayer);
-                }
-                var playersInRoom = RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).PlayersInRoom;
-                if (playersInRoom != null && playersInRoom.Count > 1)
-                {
-                    foreach (var p in playersInRoom)
-                    {
-                        if (!Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success && !Regex.Match(p.Player.Name, target, RegexOptions.IgnoreCase).Success)
-                        {
-                            if (desc.Player.Visible || p.Player.Level >= Constants.ImmLevel)
-                            {
-                                p.Send(msgToSendToOthers[0]);
-                            }
-                            else
-                            {
-                                p.Send(msgToSendToOthers[1]);
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                RoomManager.Instance.GetRoom(desc.Player.CurrentRoom).DescribeRoom(ref desc, true);
-            }
-        }
-
-        private static void DoPlayerAlias(ref Descriptor desc, ref string input)
-        {
-            var verb = GetVerb(ref input);
-            var line = input.Remove(0, verb.Length).Trim();
-            if (string.IsNullOrEmpty(line))
-            {
-                // show configured aliases
-                StringBuilder sb = new StringBuilder();
-                if (desc.Player.CommandAliases != null && desc.Player.CommandAliases.Count > 0)
-                {
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Alias{Constants.TabStop}{Constants.TabStop}|| Command");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    foreach (var alias in desc.Player.CommandAliases)
-                    {
-                        if (alias.Key.Length < 7)
-                        {
-                            sb.AppendLine($"|| {alias.Key}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}|| {alias.Value}");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"|| {alias.Key}{Constants.TabStop}{Constants.TabStop}|| {alias.Value}");
-                        }
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    desc.Send(sb.ToString());
-                }
-                else
-                {
-                    desc.Send($"You haven't configured any aliases yet...{Constants.NewLine}");
-                }
-            }
-            else
-            {
-                var tokens = TokeniseInput(ref line);
-                if (tokens.Length > 1)
-                {
-                    var operation = tokens[0].Trim().ToLower();
-                    switch (operation)
-                    {
-                        case "add":
-                        case "create":
-                            var alias = tokens[1].Trim().ToLower();
-                            var command = line.Remove(0, operation.Length).Trim().Remove(0, alias.Length).ToLower().Trim();
-                            if (!desc.Player.CommandAliases.ContainsKey(alias))
-                            {
-                                desc.Player.CommandAliases.Add(alias, command);
-                                desc.Send($"A new alias for '{alias}' has been created.{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"You already have an alias configured for '{alias}', please remove this before adding a new one.{Constants.NewLine}");
-                            }
-                            break;
-
-                        case "remove":
-                        case "delete":
-                            alias = tokens[1].Trim().ToLower();
-                            if (desc.Player.CommandAliases.ContainsKey(alias))
-                            {
-                                desc.Player.CommandAliases.Remove(alias);
-                                desc.Send($"The alias '{alias}' has been successfully removed.{Constants.NewLine}");
-                            }
-                            else
-                            {
-                                desc.Send($"No alias matching '{alias}' could be found to remove.{Constants.NewLine}");
-                            }
-                            break;
-
-                        default:
-                            desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                            break;
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
+                    msgToRoom = session.Player.CanBeSeenBy(lp.Player) ? msgToRoom.Replace("%N%", session.Player.Name) : msgToRoom.Replace("%N%", "Something");
+                    lp.Send(msgToRoom);
                 }
             }
         }
 
-        private static void ShowCharSheet(ref Descriptor desc)
+        public static void Move(Session session, string direction)
         {
-            StringBuilder sb = new StringBuilder();
-            string dmg = desc.Player.EquipWeapon != null ? $"{desc.Player.EquipWeapon.NumberOfDamageDice}D{desc.Player.EquipWeapon.SizeOfDamageDice}" : "1D2";
-            sb.AppendLine($"  {new string('=', 77)}");
-            sb.AppendLine($"|| Name: {desc.Player.Name}{Constants.TabStop}{Constants.TabStop}Gender: {desc.Player.Gender}{Constants.TabStop}Class: {desc.Player.Class}{Constants.TabStop}Race: {desc.Player.Race}");
-            sb.AppendLine($"|| Level: {desc.Player.Level}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}Exp: {desc.Player.Exp:N0} / {LevelTable.GetExpForNextLevel(desc.Player.Level, desc.Player.Exp):N0}");
-            sb.AppendLine($"|| Alignment: {desc.Player.Alignment}{Constants.TabStop}{Constants.TabStop}Gold: {desc.Player.Gold:N0}");
-            sb.AppendLine($"|| Position: {desc.Player.Position}{Constants.TabStop}{Constants.TabStop}Base Armour Class: {desc.Player.BaseArmourClass}{Constants.TabStop}Armour Class: {desc.Player.ArmourClass}");
-            sb.AppendLine($"||");
-            sb.AppendLine($"|| Stats:");
-            sb.AppendLine($"|| STR: {desc.Player.Strength} ({Helpers.CalculateAbilityModifier(desc.Player.Strength)}){Constants.TabStop}{Constants.TabStop}DEX: {desc.Player.Dexterity} ({Helpers.CalculateAbilityModifier(desc.Player.Dexterity)}){Constants.TabStop}{Constants.TabStop}CON: {desc.Player.Constitution} ({Helpers.CalculateAbilityModifier(desc.Player.Constitution)})");
-            sb.AppendLine($"|| INT: {desc.Player.Intelligence} ({Helpers.CalculateAbilityModifier(desc.Player.Intelligence)}){Constants.TabStop}{Constants.TabStop}WIS: {desc.Player.Wisdom} ({Helpers.CalculateAbilityModifier(desc.Player.Wisdom)}){Constants.TabStop} {Constants.TabStop}CHA: {desc.Player.Charisma} ({Helpers.CalculateAbilityModifier(desc.Player.Charisma)})");
-            sb.AppendLine($"|| ");
-            sb.AppendLine($"|| Health  : {desc.Player.CurrentHP} / {desc.Player.MaxHP}{Constants.TabStop}Mana: {desc.Player.CurrentMP} / {desc.Player.MaxMP}");
-            sb.AppendLine($"|| Stamina : {desc.Player.CurrentSP} / {desc.Player.MaxSP}{Constants.TabStop}Attacks: {desc.Player.NumberOfAttacks}{Constants.TabStop}Damage: {dmg}");
-            sb.AppendLine($"|| Languages: {desc.Player.KnownLanguages}");
-            sb.AppendLine($"  {new string('=', 77)}");
-            desc.Send(sb.ToString());
-        }
-
-        private static void SayToRoom(ref Descriptor desc, ref string line)
-        {
-            var verb = GetVerb(ref line).Trim();
-            var msg = line.Remove(0, verb.Length).Trim();
-            foreach (var p in RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom))
+            if (!session.Player.CanMove())
             {
-                if (Regex.Match(p.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
-                {
-                    if (desc.Player.SpokenLanguage == Languages.Common)
-                    {
-                        p.Send($"You say \"{msg}\"{Constants.NewLine}");
-                    }
-                    else
-                    {
-                        p.Send($"In {desc.Player.SpokenLanguage}, you say \"{msg}\"{Constants.NewLine}");
-                    }
-
-                }
-                else
-                {
-                    if (desc.Player.SpokenLanguage == Languages.Common)
-                    {
-                        string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} says, \"{msg}\"{Constants.NewLine}"
-                            : $"Something says, \"{msg}\"{Constants.NewLine}";
-                        p.Send(msgToSend);
-                    }
-                    else
-                    {
-                        if (p.Player.KnownLanguages.HasFlag(desc.Player.SpokenLanguage))
-                        {
-                            string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"In {desc.Player.SpokenLanguage}, {desc.Player.Name} says, \"{msg}\"{Constants.NewLine}"
-                                : $"In {desc.Player.SpokenLanguage}, Something says, \"{msg}\"{Constants.NewLine}";
-                            p.Send(msgToSend);
-                        }
-                        else
-                        {
-                            string msgToSend = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} says something in {desc.Player.SpokenLanguage} but you don't understand.{Constants.NewLine}"
-                                : $"Something says something in {desc.Player.SpokenLanguage}, but you don't understand.{Constants.NewLine}";
-                            p.Send(msgToSend);
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void SayToCharacter(ref Descriptor desc, ref string line)
-        {
-            var inputElements = TokeniseInput(ref line);
-            string target = inputElements.Length > 1 ? inputElements[1].Trim() : string.Empty;
-            var playersInRoom = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom);
-            if (Regex.Match(desc.Player.Name, target, RegexOptions.IgnoreCase).Success)
-            {
-                desc.Send($"You mumble incoherently to yourself. Strange person.{Constants.NewLine}");
-                if (playersInRoom.Count - 1 > 1)
-                {
-                    foreach (var pd in playersInRoom)
-                    {
-                        if (!Regex.Match(pd.Player.Name, desc.Player.Name, RegexOptions.IgnorePatternWhitespace).Success)
-                        {
-                            var msgToSend = desc.Player.Visible || pd.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} mumbles to themselves like a weirdo.{Constants.NewLine}"
-                                : $"Something mumbles to itself incoherently. Strange.{Constants.NewLine}";
-                            pd.Send(msgToSend);
-                        }
-                    }
-                }
+                session.Send($"You're not in a position to move right now!{Constants.NewLine}");
                 return;
             }
-            var verb = GetVerb(ref line);
-            var toSend = line.Remove(0, verb.Length).Trim().Remove(0, target.Length).Trim();
-            var p = RoomManager.Instance.GetPlayersInRoom(desc.Player.CurrentRoom).Where(x => Regex.Match(x.Player.Name, target, RegexOptions.IgnoreCase).Success).FirstOrDefault();
-            if (p != null)
+            var exitDir = Helpers.GetFullDirectionString(direction);
+            var exitObj = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetRoomExit(exitDir);
+            if (exitObj == null)
             {
-                if (desc.Player.SpokenLanguage == Languages.Common)
+                session.Send($"You cannot go that way!{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(exitObj.DestinationRoomID) == null)
+            {
+                session.Send($"That way lies only the void! You cannot go that way.{Constants.NewLine}");
+                return;
+            }
+            if (!string.IsNullOrEmpty(exitObj.RequiredSkill) && !session.Player.HasSkill(exitObj.RequiredSkill))
+            {
+                session.Send($"You lack the skill to go that way!{Constants.NewLine}");
+                return;
+            }
+            int spCost = 1;
+            bool landWalker = session.Player.HasSkill("Land Walker") || session.Player.HasBuff("Land Walker");
+            if (!landWalker && RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.HardTerrain))
+            {
+                spCost += 2;
+            }
+            if (!landWalker && RoomManager.Instance.GetRoom(exitObj.DestinationRoomID).Flags.HasFlag(RoomFlags.HardTerrain))
+            {
+                spCost += 2;
+            }
+            if (session.Player.CurrentSP < spCost)
+            {
+                session.Send($"You lack the stamina to move that far. Maybe you should rest a while?{Constants.NewLine}");
+                return;
+            }
+            session.Player.AdjustSP(spCost * -1);
+            session.Player.Move(exitObj.DestinationRoomID, false);
+        }
+        #endregion
+
+        #region Shopping
+        public static void EnterShop(Session session, string arg)
+        {
+            if (session.Player.ShopContext != null)
+            {
+                session.Send($"%BRT%You are already a customer of {session.Player.ShopContext.ShopName}!%PT%{Constants.NewLine}");
+                return;
+            }
+            var r = RoomManager.Instance.GetRoom(session.Player.CurrentRoom);
+            var shopNPCs = NPCManager.Instance.GetShopNPCsInRoom(r.ID);
+            if (shopNPCs == null || shopNPCs.Count == 0)
+            {
+                session.Send($"%BRT%There are no shops here...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to specify which shop you want to do business with!%PT%{Constants.NewLine}");
+                return;
+            }
+            var shops = from npc in shopNPCs select ShopManager.Instance.GetShop(npc.ShopID);
+            var tShop = shops.FirstOrDefault(x => x.ShopName.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (tShop != null)
+            {
+                session.Player.ShopContext = tShop;
+                session.Send($"%BGT%You are now a customer of {tShop.ShopName}%PT%{Constants.NewLine}");
+            }
+            else
+            {
+                session.Send($"%BRT%Something went wrong with the Shopping system - tell an Imm!%PT%{Constants.NewLine}");
+            }
+        }
+
+        public static void LeaveShop(Session session)
+        {
+            if (session.Player.ShopContext == null)
+            {
+                session.Send($"%BRT%You're not doing business with any shop!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Send($"%BGT%You stop doing business with {session.Player.ShopContext.ShopName}!%PT%{Constants.NewLine}");
+            session.Player.ShopContext = null;
+        }
+
+        public static void ShowShopInventory(Session session, string arg)
+        {
+            if (session.Player.ShopContext == null)
+            {
+                session.Send($"%BRT%You're not doing business with any shop...%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.ShopContext.ShowInventory(session, arg);
+        }
+
+        public static void ShopAppraiseItem(Session session, string arg)
+        {
+            if (session.Player.ShopContext == null)
+            {
+                session.Send($"%BRT%You're not doing busiess with any shop...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Appraise what, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            var i = session.Player.GetInventoryItem(arg);
+            if (i == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.ShopContext.AppraiseItem(session, i);
+        }
+
+        public static void PurchaseItem(Session session, string arg)
+        {
+            if (session.Player.ShopContext == null)
+            {
+                session.Send($"%BRT%You're not doing business with any shop...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Purchase what, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.ShopContext.PlayerBuyItem(session, arg);
+        }
+
+        public static void SellItem(Session session, string arg)
+        {
+            if (session.Player.ShopContext == null)
+            {
+                session.Send($"%BRT%You're not doing business with any shop...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Sell what, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            var i = session.Player.GetInventoryItem(arg);
+            if (i == null)
+            {
+                session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.RemoveItemFromInventory(i);
+            session.Player.ShopContext.PlayerSellItem(session, i);
+        }
+        #endregion
+
+        #region Combat
+        public static void PlayerBackstab(Session session, string arg)
+        {
+            // usual room checks, no hostile checks, no backstab checks. Do hit roll and deal 4* damage if successfull, start combat if the target (NPC only) isn't killed
+            // also ensure player is hidden and has backstab skill
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+            {
+                session.Send($"%BYT%Some mystical force prevents your hostility...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!session.Player.HasSkill("Backstab"))
+            {
+                session.Send($"%BRT%You don't know how to do that!%PT%{Constants.NewLine}");
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Backstabbing requires a target...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.WeaponEquip == null)
+            {
+                session.Send($"%BRT%Executing a backstab requires a weapon...%PT%{Constants.NewLine}");
+                return;
+            }
+            else
+            {
+                Weapon w = (Weapon)session.Player.WeaponEquip;
+                if (w.WeaponType != WeaponType.Dagger && w.WeaponType != WeaponType.Sword)
                 {
-                    var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} whispers \"{toSend}\"{Constants.NewLine}"
-                        : $"Something whispers \"{toSend}\"{Constants.NewLine}";
-                    p.Send(msgToPlayer);
+                    session.Send($"%BRT%You need to be using a sword or a dagger to execute a backstab!%PT%{Constants.NewLine}");
+                    return;
+                }
+            }
+            if (session.Player.Visible)
+            {
+                session.Send($"%BRT%You need to be hidden to do that!%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your wrath isn't here!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.ActorType != ActorType.NonPlayer)
+            {
+                session.Send($"%BYT%Some mystical force prevents your hostility towards {target.Name}!%PT%{Constants.NewLine}");
+                return;
+            }
+            var npcTarget = (NPC)target;
+            if (session.Player.CanBeSeenBy(npcTarget))
+            {
+                session.Send($"%BRT%Despite your best efforts, {npcTarget.Name} can still see you... A backstab would be impossible!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (npcTarget.Flags.HasFlag(NPCFlags.NoBackstab) || npcTarget.Flags.HasFlag(NPCFlags.NoAttack))
+            {
+                session.Send($"%BYT%Some mystical force prevents your hostility towards {target.Name}!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.HitsTarget(npcTarget, out bool isCrit, out int baseHit, out int modHit))
+            {
+                var baseDmg = session.Player.CalculateHitDamage(npcTarget, isCrit);
+                var modDmg = baseDmg * 4;
+                npcTarget.AdjustHP((modDmg * -1), out bool isKilled);
+                if (isKilled)
+                {
+                    session.Send($"%BYT%You become visible as your backstab strikes {npcTarget.Name} for {modDmg} damage, killing them instantly!%PT%{Constants.NewLine}");
+                    session.Player.Visible = true;
+                    npcTarget.Kill(session.Player, true);
+                    Game.LogMessage($"COMBAT: Player {session.Player.Name} has killed {npcTarget.Name} in Room {session.Player.CurrentRoom} with a backstab", LogLevel.Combat, true);
                 }
                 else
                 {
-                    if (p.Player.KnownLanguages.HasFlag(desc.Player.SpokenLanguage))
-                    {
-                        var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"In {desc.Player.SpokenLanguage}, {desc.Player.Name} whispers \"{toSend}\"{Constants.NewLine}"
-                            : $"In {desc.Player.SpokenLanguage}, something whispers \"{toSend}\"{Constants.NewLine}";
-                        p.Send(msgToPlayer);
-                    }
-                    else
-                    {
-                        var msgToPlayer = desc.Player.Visible || p.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} whispers something in {desc.Player.SpokenLanguage} but you can't understand.{Constants.NewLine}"
-                            : $"Something whispers something in {desc.Player.SpokenLanguage}, but you can't understand.{Constants.NewLine}";
-                        p.Send(msgToPlayer);
-                    }
-                }
-                if (playersInRoom.Count > 2)
-                {
-                    foreach (var player in playersInRoom)
-                    {
-                        string msgToOthers = desc.Player.Visible || player.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} whispers something to "
-                            : $"Something whispers something to ";
-                        msgToOthers = p.Player.Visible || player.Player.Level >= Constants.ImmLevel ? $"{msgToOthers}{p.Player.Name}.{Constants.NewLine}"
-                            : $"{msgToOthers}something else.{Constants.NewLine}";
-                        if (!Regex.Match(player.Player.Name, p.Player.Name, RegexOptions.IgnoreCase).Success && !Regex.Match(desc.Player.Name, player.Player.Name, RegexOptions.IgnoreCase).Success)
-                        {
-                            player.Send(msgToOthers);
-                        }
-                    }
+                    session.Send($"%BYT%You become visible as your backstab strikes {npcTarget.Name} for {modDmg} damage!%PT%{Constants.NewLine}");
+                    session.Player.Visible = true;
+                    npcTarget.TargetQueue.TryAdd(session.ID, true);
+                    session.Player.TargetQueue.TryAdd(npcTarget.ID, true);
                 }
             }
             else
             {
-                desc.Send($"That person isn't here...{Constants.NewLine}");
-                if (playersInRoom.Count - 1 > 1)
-                {
-                    foreach (var player in playersInRoom)
-                    {
-                        if (!Regex.Match(player.Player.Name, desc.Player.Name, RegexOptions.IgnoreCase).Success)
-                        {
-                            var msg = desc.Player.Visible || player.Player.Level >= Constants.ImmLevel ? $"{desc.Player.Name} mumbles something to themselves... What a strange person.{Constants.NewLine}"
-                                : $"Something mumbles to itself. How strange.{Constants.NewLine}";
-                        }
-                    }
-                }
+                session.Player.Visible = true;
+                session.Send($"%BYT%You become visible as your backstab misses!%PT%{Constants.NewLine}");
+                npcTarget.TargetQueue.TryAdd(session.ID, true);
+                session.Player.TargetQueue.TryAdd(npcTarget.ID, true);
             }
         }
+
+        public static void ToggleRollInfo(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                if (session.Player.ShowDetailedRollInfo)
+                {
+                    session.Send($"%BGT%Detailed roll information is currently on!%PT%{Constants.NewLine}");
+                }
+                else
+                {
+                    session.Send($"%BGT%Detailed roll information is currently off!%PT%{Constants.NewLine}");
+                }
+                session.Send($"%BRT%Usage: rollinfo - show your current setting%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: rollinfo <on | off> - turn detailed roll info on or off%PT%{Constants.NewLine}");
+                return;
+            }
+            if (arg.ToLower() == "on")
+            {
+                session.Player.ShowDetailedRollInfo = true;
+                session.Send($"%BGT%Detailed roll info is now ON!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (arg.ToLower() == "off")
+            {
+                session.Player.ShowDetailedRollInfo = false;
+                session.Send($"%BGT%Detailed roll info is now OFF!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Send($"%BRT%Usage: rollinfo - show your current setting%PT%{Constants.NewLine}");
+            session.Send($"%BRT%Usage: rollinfo <on | off> - turn detailed roll info on or off%PT%{Constants.NewLine}");
+        }
+
+        public static void StartCombat(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Kill what, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Safe))
+            {
+                session.Send($"%BYT%Some mystical force prevents your hostility...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.Position != ActorPosition.Standing)
+            {
+                session.Send($"%BRT%You're not in a position to do that right now.%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your wrath cannot be found!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.ActorType == ActorType.Player)
+            {
+                session.Send($"%BYT%The Gods forbid this action!%PT%{Constants.NewLine}");
+                return;
+            }
+            var tNPC = (NPC)target;
+            if (tNPC.Flags.HasFlag(NPCFlags.NoAttack))
+            {
+                session.Send($"%BYT%Some mystical force prevents you from harming {tNPC.Name}...%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.TargetQueue.TryAdd(tNPC.ID, true);
+            tNPC.TargetQueue.TryAdd(session.ID, true);
+        }
+
+        public static void PlayerFleeCombat(Session session)
+        {
+            if (!session.Player.InCombat)
+            {
+                session.Send($"%BRT%Flee from what? You aren't fighting right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (Helpers.FleeCombat(session.Player, out int rid))
+            {
+                session.Send($"%BYT%Sometimes it is better to live and fight another day! You flee...%PT%{Constants.NewLine}");
+                session.Player.Move(rid, false);
+            }
+            else
+            {
+                session.Send($"%BRT%Try as you might, you cannot flee!%PT%{Constants.NewLine}");
+            }
+        }
+        #endregion
+
+        #region Magic
+        public static void PlayerCastSpell(Session session, string arg)
+        {
+            // cast <spell name> target
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: cast '<spell name>' <target>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: cast 'magic missile' orc warrior%PT%{Constants.NewLine}");
+                return;
+            }
+            var spellName = Helpers.GetQuotedString(arg);
+            if (string.IsNullOrEmpty(spellName))
+            {
+                session.Send($"%BRT%Usage: cast '<spell name>' <target>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: cast 'magic missile' orc warrior%PT%{Constants.NewLine}");
+                return;
+            }
+            var spell = SpellManager.Instance.GetSpell(spellName);
+            if (spell == null)
+            {
+                session.Send($"%BRT%No such Spell exists within the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!session.Player.KnowsSpell(spell.Name))
+            {
+                session.Send($"%BRT%You don't know how to cast that spell!%PT%{Constants.NewLine}");
+                return;
+            }
+            var strTarget = arg.Remove(0, spellName.Length + 2).Trim();
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(strTarget, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your magic cannot be found!%PT%{Constants.NewLine}");
+                return;
+            }
+            spell.Cast(session.Player, target);
+        }
+        #endregion
     }
 }

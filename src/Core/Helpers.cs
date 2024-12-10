@@ -1,289 +1,302 @@
-﻿using Etrea2.Entities;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+using Etrea3.Objects;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal static class Helpers
+    public static class Helpers
     {
-        private static Random rnd = new Random();
+        private static Random rnd = new Random(DateTime.UtcNow.GetHashCode());
         private static int VowelMask = (1 << 1) | (1 << 5) | (1 << 9) | (1 << 15) | (1 << 21);
 
-        #region JsonSerialise
-        internal static string SerialiseSpell(Spell spell)
+        public static string ParseColourCodes(string line)
         {
-            return JsonConvert.SerializeObject(spell);
+            string parsedLine = line.Replace("%B%", Constants.BoldText)
+                .Replace("%PT%", Constants.PlainText)
+                .Replace("%RT%", Constants.RedText)
+                .Replace("%BT%", Constants.BlueText)
+                .Replace("%YT%", Constants.YellowText)
+                .Replace("%GT%", Constants.GreenText)
+                .Replace("%WT%", Constants.WhiteText)
+                .Replace("%BWT%", Constants.BrightWhiteText)
+                .Replace("%BYT%", Constants.BrightYellowText)
+                .Replace("%BGT%", Constants.BrightGreenText)
+                .Replace("%BBT%", Constants.BrightBlueText)
+                .Replace("%BRT%", Constants.BrightRedText);
+            return parsedLine;
         }
 
-        internal static string SerialiseQuest(Quest q)
+        public static bool FleeCombat(Actor fleeing, out int destRID)
         {
-            return JsonConvert.SerializeObject(q);
-        }
-
-        internal static string SerialiseCraftingRecipe(Recipe r)
-        {
-            return JsonConvert.SerializeObject(r);
-        }
-
-        internal static string SerialiseEmoteObject(Emote e)
-        {
-            return JsonConvert.SerializeObject(e);
-        }
-
-        internal static string SerialisePlayerObject(Player p)
-        {
-            return JsonConvert.SerializeObject(p);
-        }
-
-        internal static string SerialiseNPC(NPC npc)
-        {
-            return JsonConvert.SerializeObject(npc);
-        }
-
-        internal static string SerialiseRoomObject(Room room)
-        {
-            return JsonConvert.SerializeObject(room);
-        }
-
-        internal static string SerialiseItemObject(InventoryItem i)
-        {
-            return JsonConvert.SerializeObject(i);
-        }
-
-        internal static string SerialiseShopObject(Shop shop)
-        {
-            return JsonConvert.SerializeObject(shop);
-        }
-
-        internal static string SerialiseResourceNode(ResourceNode node)
-        {
-            return JsonConvert.SerializeObject(node);
-        }
-
-        internal static string SerialiseMail(Mail mail)
-        {
-            return JsonConvert.SerializeObject(mail);
-        }
-        #endregion
-
-        #region JsonDeSerialise
-        internal static Spell DeserialiseSpellObject(string s)
-        {
-            return JsonConvert.DeserializeObject<Spell>(s);
-        }
-
-        internal static Quest DeserialiseQuest(string q)
-        {
-            return JsonConvert.DeserializeObject<Quest>(q);
-        }
-
-        internal static Mail DeserialiseMail(string mail)
-        {
-            return JsonConvert.DeserializeObject<Mail>(mail);
-        }
-
-        internal static Recipe DeserialiseRecipe(string r)
-        {
-            return JsonConvert.DeserializeObject<Recipe>(r);
-        }
-
-        internal static ResourceNode DeserialiseResourceNode(string n)
-        {
-            return JsonConvert.DeserializeObject<ResourceNode>(n);
-        }
-
-        internal static Shop DeserialiseShopObject(string shop)
-        {
-            return JsonConvert.DeserializeObject<Shop>(shop);
-        }
-
-        internal static NPC DeserialiseNPC(string npc)
-        {
-            return JsonConvert.DeserializeObject<NPC>(npc);
-        }
-
-        internal static Room DeserialiseRoomObject(string room)
-        {
-            return JsonConvert.DeserializeObject<Room>(room);
-        }
-
-        internal static Player DeserialisePlayerObject(string p)
-        {
-            return JsonConvert.DeserializeObject<Player>(p);
-        }
-
-        internal static InventoryItem DeserialiseItemObject(string p)
-        {
-            return JsonConvert.DeserializeObject<InventoryItem>(p);
-        }
-
-        internal static Emote DeserialiseEmoteObject(string p)
-        {
-            return JsonConvert.DeserializeObject<Emote>(p);
-        }
-
-        internal static List<Exit> DeserialiseRoomExits(string exits)
-        {
-            return JsonConvert.DeserializeObject<List<Exit>>(exits);
-        }
-
-        internal static Shop DeserialiseRoomShop(string shop)
-        {
-            return JsonConvert.DeserializeObject<Shop>(shop);
-        }
-
-        internal static RoomFlags DeserialiseRoomFlags(string flags)
-        {
-            return JsonConvert.DeserializeObject<RoomFlags>(flags);
-        }
-        #endregion
-
-        internal static uint RollDice(uint numOfDice, uint sizeOfDice)
-        {
-            var maxRoll = numOfDice * sizeOfDice;
-            var retval = rnd.Next(Convert.ToInt32(numOfDice), Convert.ToInt32(maxRoll));
-            return Convert.ToUInt32(retval);
-        }
-
-        internal static int CalculateAbilityModifier(uint abilityScore)
-        {
-            return ((int)abilityScore - 10) / 2;
-        }
-
-        internal static string GetActorStateMessage(string actorName, double hp)
-        {
-            if (hp <= 100 && hp >= 90)
+            destRID = -1;
+            int fleeDC = 15 - fleeing.Level;
+            var fleeRoll = RollDice<int>(1, 20);
+            var modFleeRoll = Math.Max(1, fleeRoll + CalculateAbilityModifier(fleeing.Dexterity));
+            if (modFleeRoll > fleeDC)
             {
-                return $"{actorName} appears in perfect health, showing no sign of injury";
+                fleeing.TargetQueue.Clear();
+                var allExits = RoomManager.Instance.GetRoom(fleeing.CurrentRoom).RoomExits.Values;
+                if (fleeing.ActorType == ActorType.NonPlayer)
+                {
+                    var n = (NPC)fleeing;
+                    var availExits = allExits.Where(x => ZoneManager.Instance.GetZoneForRID(x.DestinationRoomID).ZoneID == n.ZoneID).ToList();
+                    if (availExits.Count() > 0)
+                    {
+                        var chosenExit = availExits.GetRandomElement();
+                        destRID = chosenExit.DestinationRoomID;
+                        return true;
+                    }
+                }
+                else
+                {
+                    var chosenExit = allExits.ToList().GetRandomElement();
+                    destRID = chosenExit.DestinationRoomID;
+                    return true;
+                }
             }
-            if (hp < 90 && hp >= 80)
-            {
-                return $"{actorName} looks healthy and energetic with no visible sign of injury";
-            }
-            if (hp < 80 && hp >= 70)
-            {
-                return $"{actorName} has a few scratches and bruises, but is in otherwise good condition";
-            }
-            if (hp < 70 && hp >= 60)
-            {
-                return $"{actorName} has several noticable cuts and bruises";
-            }
-            if (hp < 60 && hp >= 50)
-            {
-                return $"{actorName} is visibly injured, the stress of battle clear to see";
-            }
-            if (hp < 50 && hp >= 40)
-            {
-                return $"{actorName} is covered in cuts and wounds";
-            }
-            if (hp < 40 && hp >= 30)
-            {
-                return $"{actorName} is badly wounded";
-            }
-            if (hp < 30 && hp >= 20)
-            {
-                return $"{actorName} is in critical condition";
-            }
-            if (hp < 20 && hp >= 10)
-            {
-                return $"{actorName} is carrying critical wounds and near to bleeding out";
-            }
-            return $"{actorName} is on the brink of death";
+            return false;
         }
 
-        internal static bool IsCharAVowel(char c)
+        public static string GetMOTD(Session session)
+        {
+            int row = 1;
+            StringBuilder sb = new StringBuilder();
+            bool validInput = false;
+            session.Send($"Enter the new Message of the Day.");
+            session.Send($"Enter END on a new line to finish.{Constants.NewLine}");
+            while (!validInput)
+            {
+                session.Send($"[{row}] ");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && input.Trim().Length <= 80)
+                {
+                    if (input.Trim().ToUpper() == "END")
+                    {
+                        validInput = true;
+                    }
+                    else
+                    {
+                        sb.AppendLine(input.Trim());
+                        row++;
+                        if (row > 30)
+                        {
+                            validInput = true;
+                        }
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        public static string GetLongDescription(Session session)
+        {
+            int row = 1;
+            StringBuilder sb = new StringBuilder();
+            bool validInput = false;
+            session.Send($"Enter the long description. This should be 30 lines or less");
+            session.Send($"and each line should be 80 characters or less.");
+            session.Send($"Descriptions can be changed later if you want.");
+            session.Send($"Enter END on a new line to finish.{Constants.NewLine}");
+            while (!validInput)
+            {
+                session.Send($"[{row}] ");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input) && input.Trim().Length <= 80)
+                {
+                    if (input.Trim().ToUpper() == "END")
+                    {
+                        validInput = true;
+                    }
+                    else
+                    {
+                        sb.AppendLine(input.Trim());
+                        row++;
+                        if (row > 30)
+                        {
+                            validInput = true;
+                        }
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        public static string GetFullDirectionString(string dir)
+        {
+            string direction = string.Empty;
+            if (dir.Length == 1 || dir.Length == 2)
+            {
+                switch (dir)
+                {
+                    case "u":
+                        direction = "up";
+                        break;
+
+                    case "d":
+                        direction = "down";
+                        break;
+
+                    case "n":
+                        direction = "north";
+                        break;
+
+                    case "s":
+                        direction = "south";
+                        break;
+
+                    case "e":
+                        direction = "east";
+                        break;
+
+                    case "w":
+                        direction = "west";
+                        break;
+
+                    case "nw":
+                        direction = "northwest";
+                        break;
+
+                    case "ne":
+                        direction = "northeast";
+                        break;
+
+                    case "sw":
+                        direction = "southwest";
+                        break;
+
+                    case "se":
+                        direction = "southeast";
+                        break;
+                }
+            }
+            else
+            {
+                direction = dir;
+            }
+            return direction;
+        }
+
+        public static string GetVerb(ref string input)
+        {
+            string[] elements = input.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+            return elements.Length > 0 ? elements[0].Trim() : string.Empty;
+        }
+
+        public static string SerialiseEtreaObject<T>(object etreaObject)
+        {
+            var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
+            return JsonConvert.SerializeObject((T)etreaObject, settings);
+        }
+
+        public static T DeserialiseEtreaObject<T>(string etreaObject)
+        {
+            var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
+            return JsonConvert.DeserializeObject<T>(etreaObject, settings);
+        }
+
+        public static T Clone<T>(T src)
+        {
+            if (!typeof(T).IsSerializable)
+            {
+                Game.LogMessage($"ERROR: Cannot clone {src.GetType().Name}, it is not serialisable", LogLevel.Error, true);
+                return default(T);
+            }
+            return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(src));
+        }
+
+        public static T RollDice<T>(int numDice, int sides) where T : struct, IConvertible
+        {
+            if (!typeof(T).IsPrimitive || typeof(T) == typeof(bool) || typeof(T) == typeof(char))
+            {
+                Game.LogMessage($"ERROR: Error in Helpers.RollDice<T>(): T was not numeric ({typeof(T)})", LogLevel.Error, true);
+                return default(T);
+            }
+            int result = 0;
+            for (int i = 0; i < numDice; i++)
+            {
+                result += rnd.Next(1, sides + 1);
+            }
+            return (T)Convert.ChangeType(result, typeof(T));
+        }
+
+        public static bool IsCharAVowel(char c)
         {
             return (c > 64) && ((VowelMask & (1 << ((c | 0x20) % 32))) != 0);
         }
 
-        internal static Exit GetRandomExit(uint rid)
+        public static int CalculateAbilityModifier(int abilityScore)
         {
-            var exitList = RoomManager.Instance.GetRoom(rid).RoomExits;
-            var n = rnd.Next(exitList.Count);
-            return exitList[n];
+            return (abilityScore - 10) / 2;
         }
 
-        internal static IEnumerable<ConsumableEffect> GetPotionFlags(ConsumableEffect potionFlags)
+        public static int GetPurchasePrice(Session session, int basePrice)
         {
-            foreach (ConsumableEffect pEffect in Enum.GetValues(typeof(ConsumableEffect)))
+            var chaModifier = CalculateAbilityModifier(session.Player.Charisma);
+            int modPrice = basePrice;
+            if (session.Player.HasSkill("Salesman"))
             {
-                if (potionFlags.HasFlag(pEffect) && potionFlags != ConsumableEffect.None)
-                {
-                    yield return pEffect;
-                }
+                chaModifier += 2;
             }
-        }
-
-        internal static uint GetNewSalePrice(ref Descriptor desc, uint basePrice)
-        {
-            var charismaModifier = CalculateAbilityModifier(desc.Player.Charisma);
-            if (desc.Player.HasSkill("Mercenary"))
+            if (chaModifier < 0)
             {
-                charismaModifier += 2;
-            }
-            int modPrice = Convert.ToInt32(basePrice);
-            if (charismaModifier < 0)
-            {
-                // decrease offer due to low charisma
-                int posMod = charismaModifier * -1;     // convert negative modifier to positive for calculations
+                // increase purchase price based on low CHA modifier
+                int posMod = chaModifier * -1; // convert negative CHA modifier to positive for calculations
                 for (int i = 0; i < posMod; i++)
                 {
-                    modPrice -= Convert.ToInt32(Math.Round(modPrice * 0.025, 0));
+                    modPrice += Convert.ToInt32(Math.Round(basePrice * 0.025, 0));
                 }
-                modPrice = modPrice < 0 ? 0 : modPrice;
-                return Convert.ToUInt32(modPrice);
+                modPrice = Math.Max(1, modPrice); // ensure the minimum price is always 1
             }
-            if (charismaModifier > 0)
+            if (chaModifier > 0)
             {
-                // increase offer due to high charisma
-                for (int i = 0; i < charismaModifier; i++)
+                // decrease price based on high CHA modifier
+                for (int i = 0; i < chaModifier; i++)
                 {
-                    modPrice += Convert.ToInt32(Math.Round(modPrice * 0.025, 0));
+                    modPrice -= Convert.ToInt32(Math.Round(basePrice * 0.025, 0));
                 }
-                modPrice = modPrice < 0 ? 0 : modPrice;
-                var purchasePrice = GetNewPurchasePrice(ref desc, basePrice);
-                modPrice = modPrice > purchasePrice ? Convert.ToInt32(purchasePrice) : modPrice;
-                return Convert.ToUInt32(modPrice);
+                modPrice = Math.Max(1, modPrice); // ensure the minimum price is always 1
             }
-            return basePrice;
+            return modPrice;
         }
 
-        internal static uint GetNewPurchasePrice(ref Descriptor desc, uint basePrice)
+        public static int GetSalePrice(Session session, int basePrice)
         {
-            var charismaModifier = Helpers.CalculateAbilityModifier(desc.Player.Charisma);
-            if (desc.Player.HasSkill("Mercenary"))
+            var chaModifier = CalculateAbilityModifier(session.Player.Charisma);
+            int modPrice = basePrice;
+            if (session.Player.HasSkill("Salesman"))
             {
-                charismaModifier += 2;
+                chaModifier += 2;
             }
-            int modPrice = Convert.ToInt32(basePrice);
-            if (charismaModifier < 0)
+            if (chaModifier < 0)
             {
-                // increase price due to low charisma
-                int posMod = charismaModifier * -1;     // convert negative modifier to positive for calculations
+                // decrease price for low CHA modifier
+                int posMod = chaModifier * -1; // convert negative CHA modifier to positive for calculations
                 for (int i = 0; i < posMod; i++)
                 {
-                    modPrice += Convert.ToInt32(Math.Round(modPrice * 0.025, 0));
+                    modPrice -= Convert.ToInt32(Math.Round(basePrice * 0.025, 0));
                 }
-                modPrice = modPrice < 0 ? 0 : modPrice;
-                return Convert.ToUInt32(modPrice);
+                modPrice = Math.Max(1, modPrice); // ensure the minimum price is always 1
             }
-            if (charismaModifier > 0)
+            if (chaModifier > 0)
             {
-                // drop price due to high charisma
-                for (int i = 0; i < charismaModifier; i++)
+                // increase price for high CHA modifier
+                for (int i = 0; i < chaModifier; i++)
                 {
-                    modPrice -= Convert.ToInt32(Math.Round(modPrice * 0.025, 0));
+                    modPrice += Convert.ToInt32(Math.Round(basePrice * 0.025, 0));
                 }
-                modPrice = modPrice < 0 ? 0 : modPrice;
-                return Convert.ToUInt32(modPrice);
+                modPrice = Math.Max(1, modPrice); // ensure the minimum price is always 1
             }
-            return basePrice;
+            var purchasePrice = GetPurchasePrice(session, basePrice);
+            modPrice = Math.Min(purchasePrice, modPrice); // ensure our sale price can never exceed the purcase price to avoid expoits :)
+            return modPrice;
         }
 
-        internal static string GetDamageString(uint percDmg)
+        public static string GetDamageString(int dmg, int maxHP)
         {
+            var percDmg = dmg / maxHP * 100;
             if (percDmg > 90)
             {
                 return "destroys";
@@ -311,197 +324,15 @@ namespace Etrea2.Core
             return "grazes";
         }
 
-        internal static bool ValidateInput(string input)
+        public static string GetQuotedString(string input)
         {
-            return !string.IsNullOrEmpty(input) && Encoding.UTF8.GetByteCount(input) == input.Length;
-        }
-
-        internal static string GetMailBody(ref Descriptor desc)
-        {
-            uint row = 1;
-            StringBuilder body = new StringBuilder();
-            desc.Send($"Enter the message you would like to send. This should be no more than 30 lines{Constants.NewLine}");
-            desc.Send($"long and no more than 80 characters per line. Enter END on a new line to finish.{Constants.NewLine}");
-            desc.Send($"{new string('=', 80)}{Constants.NewLine}");
-            bool valid = false;
-            while (!valid)
+            Regex pattern = new Regex(@"(['""])(.*?)\1");
+            var match = pattern.Match(input);
+            if (match.Success)
             {
-                desc.Send($"[{row}] ");
-                var input = desc.Read().Trim();
-                if (ValidateInput(input) && input.Length <= 80)
-                {
-                    if (input.ToUpper() == "END")
-                    {
-                        valid = true;
-                    }
-                    else
-                    {
-                        body.AppendLine(input);
-                        row++;
-                        if (row > 30)
-                        {
-                            valid = true;
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                }
+                return match.Groups[2].Value;
             }
-            body.RemoveEmptyLines();
-            return body.ToString();
-        }
-
-        internal static string EditLongDescription(ref Descriptor desc, string longDesc)
-        {
-            var lines = longDesc.Split(Constants.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-            int l = 1;
-            foreach(var line in lines)
-            {
-                desc.Send($"[{l}] {line}{Constants.NewLine}");
-                l++;
-            }
-            desc.Send("Edit which line? ");
-            var input = desc.Read().Trim();
-            if (ValidateInput(input) && int.TryParse(input, out int editLine))
-            {
-                editLine--;
-                if (editLine >= 0 && editLine < lines.Length)
-                {
-                    desc.Send($"Original:{Constants.NewLine}{lines[editLine]}{Constants.NewLine}");
-                    desc.Send($"Enter replacement line:");
-                    input = desc.Read().Trim();
-                    if (ValidateInput(input))
-                    {
-                        lines[editLine] = input.Trim();
-                    }
-                }
-            }
-            StringBuilder sb = new StringBuilder();
-            foreach(var line in lines)
-            {
-                sb.AppendLine(line.Trim());
-            }
-            sb.RemoveEmptyLines();
-            return sb.ToString();
-        }
-
-        internal static string GetNewMOTD(ref Descriptor desc)
-        {
-            uint row = 1;
-            StringBuilder longDesc = new StringBuilder();
-            bool valid = false;
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Enter a Message Of The Day (MOTD). This should be no more than 30 lines long and each");
-            sb.AppendLine("line should be no longer than 80 characters.");
-            sb.AppendLine("Enter END on a new line to finish editing.");
-            sb.AppendLine($"{new string('=', 80)}");
-            desc.Send(sb.ToString());
-            while (!valid)
-            {
-                desc.Send($"[{row}] ");
-                var input = desc.Read().Trim();
-                if (ValidateInput(input) && input.Length <= 80)
-                {
-                    if (input.ToUpper() == "END" && row >= 2)
-                    {
-                        valid = true;
-                    }
-                    else
-                    {
-                        longDesc.AppendLine(input);
-                        row++;
-                        if (row > 30)
-                        {
-                            valid = true;
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                }
-            }
-            longDesc.RemoveEmptyLines();
-            return longDesc.ToString();
-        }
-
-        internal static string GetLongDescription(ref Descriptor desc)
-        {
-            uint row = 1;
-            StringBuilder longDesc = new StringBuilder();
-            bool valid = false;
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Enter a long description. This should be no more than 30 lines long and each");
-            sb.AppendLine("line should be no longer than 80 characters.");
-            sb.AppendLine("Descriptions may be changed later in the OLC.");
-            sb.AppendLine("Enter END on a new line to finish editing.");
-            sb.AppendLine($"{new string('=', 80)}");
-            desc.Send(sb.ToString());
-            while (!valid)
-            {
-                desc.Send($"[{row}] ");
-                var input = desc.Read().Trim();
-                if (ValidateInput(input) && input.Length <= 80)
-                {
-                    if (input.ToUpper() == "END" && row >= 2)
-                    {
-                        valid = true;
-                    }
-                    else
-                    {
-                        longDesc.AppendLine(input);
-                        row++;
-                        if (row > 30)
-                        {
-                            valid = true;
-                        }
-                    }
-                }
-                else
-                {
-                    desc.Send($"{Constants.DidntUnderstand}{Constants.NewLine}");
-                }
-            }
-            longDesc.RemoveEmptyLines();
-            return longDesc.ToString();
-        }
-
-        internal static string CapitaliseFirstLetter(string src)
-        {
-            if (string.IsNullOrEmpty(src))
-            {
-                return string.Empty;
-            }
-            char[] letters = src.ToCharArray();
-            char[] retval = new char[letters.Length];
-            for (int i = 0; i < letters.Length; i++)
-            {
-                if (i == 0)
-                {
-                    retval[i] = char.ToUpper(letters[i]);
-                }
-                else
-                {
-                    retval[i] = char.ToLower(letters[i]);
-                }
-            }
-            return new string(retval);
-        }
-    }
-
-    internal static class StringBuilderExtensions
-    {
-        internal static void RemoveEmptyLines(this StringBuilder sb)
-        {
-            int length = sb.Length;
-            int i = length - 1;
-            while (i >= 0 && char.IsWhiteSpace(sb[i]))
-            {
-                i--;
-            }
-            sb.Length = i + 1;
+            return null;
         }
     }
 }

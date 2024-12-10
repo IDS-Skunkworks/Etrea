@@ -1,183 +1,194 @@
-﻿using System;
+﻿using Etrea3.Objects;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using Etrea2.Entities;
 using System.Linq;
-using System.Text.RegularExpressions;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class ItemManager
+    public class ItemManager
     {
-        private static ItemManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<uint, InventoryItem> _items { get; set; }
+        private static ItemManager instance = null;
+        private ConcurrentDictionary<int, InventoryItem> Items { get; set; }
+        public int Count => Instance.Items.Count;
 
-        private ItemManager()
+        public ItemManager()
         {
-            _items = new Dictionary<uint, InventoryItem>();
+            Items = new ConcurrentDictionary<int, InventoryItem>();
         }
 
-        internal static ItemManager Instance
+        public static ItemManager Instance
         {
             get
             {
-                lock (_lock)
+                if (instance == null)
                 {
-                    if (_instance == null)
-                    {
-                        _instance = new ItemManager();
-                    }
-                    return _instance;
+                    instance = new ItemManager();
                 }
+                return instance;
             }
         }
 
-        internal InventoryItem GetItemByID(uint id)
+        public void SetItemLockState(int id, bool locked, Session session)
         {
-            lock (_lock)
+            if (Instance.Items.ContainsKey(id))
             {
-                if (Instance._items.ContainsKey(id))
+                Instance.Items[id].OLCLocked = locked;
+                Instance.Items[id].LockHolder = locked ? session.ID : Guid.Empty;
+            }
+        }
+
+        public bool GetItemLockState(int id, out Guid lockHolder)
+        {
+            lockHolder = Guid.Empty;
+            if (Instance.Items.ContainsKey(id))
+            {
+                lockHolder = Instance.Items[id].LockHolder;
+                return Instance.Items[id].OLCLocked;
+            }
+            return false;
+        }
+
+        public dynamic GetItem(int id)
+        {
+            if (Instance.Items.ContainsKey(id))
+            {
+                var i = Instance.Items[id];
+                switch (i.ItemType)
                 {
-                    return Instance._items[id];
+                    case ItemType.Misc:
+                        return i;
+
+                    case ItemType.Weapon:
+                        return (Weapon)i;
+
+                    case ItemType.Ring:
+                        return (Ring)i;
+
+                    case ItemType.Armour:
+                        return (Armour)i;
+
+                    case ItemType.Scroll:
+                        return (Scroll)i;
+
+                    case ItemType.Consumable:
+                        return (Consumable)i;
                 }
             }
             return null;
         }
 
-        internal List<InventoryItem> GetItemByIDRange(uint start, uint end)
+        public dynamic GetItem(string criteria)
         {
-            lock (_lock)
+            var matches = GetItems(criteria);
+            if (matches == null || matches.Count == 0)
             {
-                return Instance._items.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
-            }
-        }
-
-        internal InventoryItem GetItemByName(string name)
-        {
-            try
-            {
-                lock ( _lock)
-                {
-                    var retval = (from InventoryItem i in Instance._items.Values where Regex.IsMatch(i.Name, name, RegexOptions.IgnoreCase) select i).FirstOrDefault();
-                    return retval;
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error in ItemManager.GetItemByName(): {ex.Message}", LogLevel.Error, true);
                 return null;
             }
+            var i = matches.First();
+            switch (i.ItemType)
+            {
+                case ItemType.Misc:
+                    return i;
+
+                case ItemType.Weapon:
+                    return (Weapon)i;
+
+                case ItemType.Ring:
+                    return (Ring)i;
+
+                case ItemType.Armour:
+                    return (Armour)i;
+
+                case ItemType.Scroll:
+                    return (Scroll)i;
+
+                case ItemType.Consumable:
+                    return (Consumable)i;
+            }
+            return null;
         }
 
-        internal List<InventoryItem> GetItemByNameOrDescription(string input)
+        public List<InventoryItem> GetItems(string criteria)
+        {
+            return string.IsNullOrEmpty(criteria) ? null : Instance.Items.Values.Where(x => x.Name.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0
+            || x.ShortDescription.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0 
+            || x.LongDescription.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        }
+
+        public List<InventoryItem> GetItem(int start, int end)
+        {
+            return end <= start ? null : Instance.Items.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
+        }
+
+        public List<InventoryItem> GetItem()
+        {
+            return Instance.Items.Values.ToList();
+        }
+
+        public bool ItemExists(int id)
+        {
+            return Instance.Items.ContainsKey(id);
+        }
+
+        public bool AddOrUpdateItem(InventoryItem item, bool isNew)
         {
             try
             {
-                lock (_lock)
+                if (!DatabaseManager.SaveItemToWorldDatabase(item, isNew))
                 {
-                    var retval = (from InventoryItem i in Instance._items.Values
-                                  where Regex.IsMatch(i.Name, input, RegexOptions.IgnoreCase) ||
-                                  Regex.IsMatch(i.ShortDescription, input, RegexOptions.IgnoreCase) ||
-                                  Regex.IsMatch(i.LongDescription, input, RegexOptions.IgnoreCase) select i).ToList();
-                    return retval;
+                    Game.LogMessage($"ERROR: Failed to save Item {item.Name} ({item.ID}) to World Database", LogLevel.Error, true);
+                    return false;
                 }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error in ItemManager.GetItemByNameOrDescription(): {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal bool AddItem(ref Descriptor desc, InventoryItem i)
-        {
-            try
-            {
-                lock ( _lock)
+                if (isNew)
                 {
-                    Instance._items.Add(i.ID, i);
-                    Game.LogMessage($"OLC: {desc.Player.Name} has added Item {i.Name} ({i.ID}) to ItemManager", LogLevel.OLC, true);
+                    if (!Instance.Items.TryAdd(item.ID, item))
+                    {
+                        Game.LogMessage($"ERROR: Failed to add new Item {item.Name} ({item.ID}) to Item Manager", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!Instance.Items.TryGetValue(item.ID, out InventoryItem existingItem))
+                    {
+                        Game.LogMessage($"ERROR: Item {item.ID} not found in Item Manager for update", LogLevel.Error, true);
+                        return false;
+                    }
+                    if (!Instance.Items.TryUpdate(item.ID, item, existingItem))
+                    {
+                        Game.LogMessage($"ERROR: Failed to update Item {item.ID} in Item Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
+                    }
                 }
                 return true;
             }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: {desc.Player.Name} encountered an error adding Item {i.Name} ({i.ID}) to ItemManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool UpdateItem(uint id, ref Descriptor desc, InventoryItem i)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (Instance._items.ContainsKey(id))
-                    {
-                        Instance._items.Remove(id);
-                        Instance._items.Add(id, i);
-                        Game.LogMessage($"OLC: {desc.Player.Name} updated Item {i.Name} ({i.ID}) in ItemManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: ItemManager does not contain an Item with ID {id} to update, it will be added instead", LogLevel.OLC, true);
-                        bool OK = AddItem(ref desc, i);
-                        return OK;
-                    }
-                }
-            }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Item {i.ID} ({i.Name}) in ItemManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in InventoryManager.AddOrUpdateItem(): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool RemoveItem(ref Descriptor desc, uint id)
+        public bool RemoveItem(int id)
         {
-            try
+            if (Instance.Items.ContainsKey(id))
             {
-                lock (_lock)
+                return Instance.Items.TryRemove(id, out _) && DatabaseManager.RemoveItem(id);
+            }
+            Game.LogMessage($"ERROR: Error removing Item with ID {id}, no such Item in ItemManager", LogLevel.Error, true);
+            return false;
+        }
+
+        public void LoadAllItems(out bool hasErr)
+        {
+            var result = DatabaseManager.LoadAllItems(out hasErr);
+            if (!hasErr && result != null)
+            {
+                foreach(var item in result)
                 {
-                    if (Instance._items.ContainsKey(id))
-                    {
-                        Instance._items.Remove(id);
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} removed Item {id} from ItemManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} was unable to remove Item {id} from ItemManager, the ID does not exist", LogLevel.OLC, true);
-                    return false;
+                    Instance.Items.AddOrUpdate(item.Key, item.Value, (k, v) => item.Value);
                 }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Item {id} from ItemManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool ItemExists(uint id)
-        {
-            return Instance._items.ContainsKey(id);
-        }
-
-        internal void LoadAllItems(out bool hasError)
-        {
-            var result = DatabaseManager.LoadAllItems(out hasError);
-            if (!hasError && result != null)
-            {
-                Instance._items.Clear();
-                Instance._items = result;
-            }
-        }
-
-        internal int GetItemCount()
-        {
-            lock (_lock)
-            {
-                return Instance._items.Count;
             }
         }
     }

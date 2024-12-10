@@ -1,386 +1,193 @@
-﻿using Etrea2.Entities;
+﻿using Etrea3.Objects;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class BuffManager
+    public class BuffManager
     {
-        private List<Buff> Buffs { get; set; }
-        private static BuffManager _instance = null;
-        private static readonly object _lock = new object();
+        private static BuffManager instance = null;
+        private ConcurrentBag<Buff> Buffs;
+        public int Count => Buffs.Count;
 
         private BuffManager()
         {
-            Buffs = new List<Buff>
+            Buffs = new ConcurrentBag<Buff>
             {
                 new Buff
                 {
-                    BuffName = "Bless",
-                    Description = "Provides mystical bonuses",
-                    BuffDuration = 10
+                    Name = "Truesight",
+                    Description = "Allows you to see things as they really are.",
+                    Duration = 10
                 },
                 new Buff
                 {
-                    BuffName = "Mage Armour",
-                    Description = "Provides a bonus to AC in combat",
-                    BuffDuration = 2
+                    Name = "Darkvision",
+                    Description = "Allows you to see normally, even in the blackest of night.",
+                    Duration = 10
                 },
                 new Buff
                 {
-                    BuffName = "Barkskin",
-                    Description = "Provides a small level of damage reduction",
-                    BuffDuration = 4
+                    Name = "Bark Skin",
+                    Description = "Your skill becomes as the toughest bark, only the hardest hits can harm you!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Stoneskin",
-                    Description = "Provides a moderate level of damage reduction",
-                    BuffDuration = 4
+                    Name = "Mage Armour",
+                    Description = "The Winds of Magic protect you from all but the most determined strikes!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Ironskin",
-                    Description = "Provides a good level of damage reduction",
-                    BuffDuration = 4
+                    Name = "Bulls Strength",
+                    Description = "The Winds of Magic grant you the strength of a rampaging bull!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Light",
-                    Description = "Allows you, and those with you, to see in dark places",
-                    BuffDuration = 10
+                    Name = "Cats Grace",
+                    Description = "The Winds of Magic grant you the dexterity of the stealthiest feline!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Truestrike",
-                    Description = "Provides a bonus when striking enemies",
-                    BuffDuration = 2
+                    Name = "Eagles Splendour",
+                    Description = "The Winds of Magic grant you the splendour of the most majestic eagle!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Bulls Strength",
-                    Description = "Provides a bonus to Strength",
-                    BuffDuration = 4
+                    Name = "Owls Wisdom",
+                    Description = "The Winds of Magic grant you the wisdom of the wisest owl!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Cats Grace",
-                    Description = "Provides a bonus to Dexterity",
-                    BuffDuration = 4
+                    Name = "Bears Endurance",
+                    Description = "The Winds of Magic grant you the constitution of the most steadfast ursa!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Bears Endurance",
-                    Description = "Provides a bonus to Constitution",
-                    BuffDuration = 4
+                    Name = "Foxs Cunning",
+                    Description = "The Winds of Magic grant you the intelligence of the most wiley fox!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Owls Wisdom",
-                    Description = "Provides a bonus to Wisdom",
-                    BuffDuration = 4
+                    Name = "Desperate Attack",
+                    Description = "You sacrifice finesse for pure striking power!",
+                    Duration = 4
                 },
                 new Buff
                 {
-                    BuffName = "Foxs Cunning",
-                    Description = "Provides a bonus to Intelligence",
-                    BuffDuration = 4
+                    Name = "Defensive Stance",
+                    Description = "Adopt a defensive posture, relying on stamina to hold an attacker at bay!",
+                    Duration = 4
                 },
                 new Buff
                 {
-                    BuffName = "Eagles Splendour",
-                    Description = "Provides a bonus to Charisma",
-                    BuffDuration = 4
+                    Name = "Shield",
+                    Description = "The Winds of Magic protect you from all but the most determined strikes!",
+                    Duration = 4
                 },
                 new Buff
                 {
-                    BuffName = "Acid Arrow",
-                    Description = "Magic acid deals damage over time",
-                    BuffDuration = 4
+                    Name = "Stunned",
+                    Description = "Staggered, you are unable to take any action!",
+                    Duration = 2
                 },
                 new Buff
                 {
-                    BuffName = "Regen",
-                    Description = "Heals a small amount of damage over time",
-                    BuffDuration = 6
+                    Name = "Esuna",
+                    Description = "The Winds of Magic purge you of all harmful effects!",
+                    Duration = 1
                 },
                 new Buff
                 {
-                    BuffName = "Desperate Attack",
-                    Description = "Provides a damage bonus at the cost of finesse",
-                    BuffDuration = 1
+                    Name = "Antidote",
+                    Description = "The Winds of Magic cure you of all poisons and toxins!",
+                    Duration = 1
                 },
                 new Buff
                 {
-                    BuffName = "Fae Fire",
-                    Description = "Magical energies make the target easier to hit in combat",
-                    BuffDuration = 4
+                    Name = "Restoration",
+                    Description = "The Winds of Magic cure you of all harmful effects and fully restore your health and spirit!",
+                    Duration = 1
                 },
                 new Buff
                 {
-                    BuffName = "Poison",
-                    Description = "Toxins course through your body causing damage over time",
-                    BuffDuration = 6
+                    Name = "Land Walker",
+                    Description = "The Winds of Magic make traversing the world less difficult.",
+                    Duration = 10
                 },
                 new Buff
                 {
-                    BuffName = "Silence",
-                    Description = "Your ability to cast spells is impared",
-                    BuffDuration = 4
+                    Name = "Energy Drain",
+                    Description = "The Winds of Magic sap your stamina.",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Minor Fire Resistance",
-                    Description = "Provides a small resistance to elemental fire",
-                    BuffDuration = 5
+                    Name = "Spirit Drain",
+                    Description = "The Winds of Magic sap your spiritual energy.",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Moderate Fire Resistance",
-                    Description = "Provides a moderate resistance to elemental fire",
-                    BuffDuration = 5
+                    Name = "Spirit Fire",
+                    Description = "The Winds of Magic restore your spiritual energy.",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Greater Fire Resistance",
-                    Description = "Provides excellent resistance to elemental fire",
-                    BuffDuration = 5
+                    Name = "Energy Fire",
+                    Description = "The Winds of Magic restore your stamina.",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Minor Ice Resistance",
-                    Description = "Provides a small resistance to elemental ice",
-                    BuffDuration = 5
+                    Name = "Poison",
+                    Description = "Toxins course through your blood!",
+                    Duration = 5
                 },
                 new Buff
                 {
-                    BuffName = "Moderate Ice Resistance",
-                    Description = "Provides a moderate resistance to elemental ice",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Ice Resistance",
-                    Description = "Provides excellent resistance to elemental ice",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Minor Lightning Resistance",
-                    Description = "Provides a small resistance to elemental lightning",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Lightning Resistance",
-                    Description = "Provides a moderate resistance to elemental lightning",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Lightning Resistance",
-                    Description = "Provides excellent resistance to elemental lightning",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Minor Earth Resistance",
-                    Description = "Provides a small resistance to elemental earth",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Earth Resistance",
-                    Description = "Provides a moderate resistance to elemental earth",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Earth Resistance",
-                    Description = "Provides excellent resistance to elemental earth",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Minor Holy Resistance",
-                    Description = "Provides a small resistance to elemental holy",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Holy Resistance",
-                    Description = "Provides a moderate resistance to elemental holy",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Holy Resistance",
-                    Description = "Provides excellent resistance to elemental holy",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Minor Dark Resistance",
-                    Description = "Provides a small resistance to elemental dark",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Dark Resistance",
-                    Description = "Provides a moderate resistance to elemental dark",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Dark Resistance",
-                    Description = "Provides excellent resistance to elemental dark",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Lesser Fire Weakness",
-                    Description = "Reduces resistance to elemental fire",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Lesser Ice Weakness",
-                    Description = "Reduces resistance to elemental ice",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Lesser Lightning Weakness",
-                    Description = "Reduces resistance to elemental lightning",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Lesser Earth Weakness",
-                    Description = "Reduces resistance to elemental earth",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Lesser Holy Weakness",
-                    Description = "Reducses resistance to elemental holy",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Lesser Dark Weakness",
-                    Description = "Reduces resistance to elemental dark",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Fire Weakness",
-                    Description = "Reduces resistance to elemental fire",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Ice Weakness",
-                    Description = "Reduces resistance to elemental ice",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Lightning Weakness",
-                    Description = "Reduces resistance to elemental lightning",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Earth Weakness",
-                    Description = "Reduces resistance to elemental earth",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Holy Weakness",
-                    Description = "Reducses resistance to elemental holy",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Moderate Dark Weakness",
-                    Description = "Reduces resistance to elemental dark",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Fire Weakness",
-                    Description = "Reduces resistance to elemental fire",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Ice Weakness",
-                    Description = "Reduces resistance to elemental ice",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Lightning Weakness",
-                    Description = "Reduces resistance to elemental lightning",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Earth Weakness",
-                    Description = "Reduces resistance to elemental earth",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Holy Weakness",
-                    Description = "Reducses resistance to elemental holy",
-                    BuffDuration = 5
-                },
-                new Buff
-                {
-                    BuffName = "Greater Dark Weakness",
-                    Description = "Reduces resistance to elemental dark",
-                    BuffDuration = 5
-                },
+                    Name = "Iron Skin",
+                    Description = "The Winds of Magic make your skin as iron, turning aside all but the strongest attack!",
+                    Duration = 5
+                }
             };
         }
 
-        internal static BuffManager Instance
+        public static BuffManager Instance
         {
             get
             {
-                if (_instance == null)
+                if (instance == null)
                 {
-                    _instance = new BuffManager();
+                    instance = new BuffManager();
                 }
-                return _instance;
+                return instance;
             }
         }
 
-        internal bool BuffExists(string buffName)
+        public bool BuffExists(string name)
         {
-            lock (_lock)
-            {
-                return Instance.Buffs.Where(x => x.BuffName.ToLower() == buffName.ToLower()).Any();
-            }
+            return Instance.Buffs.Any(x => x.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
-        internal Buff GetBuff(string buffName)
+        public Buff GetBuff(string name)
         {
-            lock (_lock)
-            {
-                return Instance.Buffs.Where(x => x.BuffName == buffName).FirstOrDefault();
-            }
+            return Instance.Buffs.FirstOrDefault(x => x.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
-        internal List<Buff> GetAllBuffs()
+        public List<Buff> GetBuff()
         {
-            lock (_lock)
-            {
-                return Instance.Buffs;
-            }
+            return Instance.Buffs.ToList();
         }
     }
 }

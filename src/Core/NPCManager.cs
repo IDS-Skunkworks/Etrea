@@ -1,487 +1,532 @@
-﻿using Etrea2.Entities;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Runtime.Serialization;
-using System.Text.RegularExpressions;
+using Etrea3.Objects;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class NPCManager
+    public class NPCManager
     {
-        private static NPCManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<uint, NPC> _NPCTemplates { get; set; }
-        private Dictionary<Guid, NPC> _NPCInstances { get; set; }
+        private static NPCManager instance = null;
+        private ConcurrentDictionary<int, NPC> NPCTemplates { get; set; }
+        private ConcurrentDictionary<Guid, NPC> NPCInstances { get; set; }
+        public int TemplateCount => Instance.NPCTemplates.Count;
+        public int InstanceCount => Instance.NPCInstances.Count;
+        public List<NPC> AllNPCTemplates => Instance.NPCTemplates.Values.ToList();
+        public List<NPC> AllNPCInstances => Instance.NPCInstances.Values.ToList();
 
         private NPCManager()
         {
-            _NPCTemplates = new Dictionary<uint, NPC>();
-            _NPCInstances = new Dictionary<Guid, NPC>();
+            NPCTemplates = new ConcurrentDictionary<int, NPC>();
+            NPCInstances = new ConcurrentDictionary<Guid, NPC>();
         }
 
-        internal static NPCManager Instance
+        public static NPCManager Instance
         {
             get
             {
-                lock (_lock)
+                if (instance == null)
                 {
-                    if (_instance == null)
-                    {
-                        _instance = new NPCManager();
-                    }
-                    return _instance;
+                    instance = new NPCManager();
                 }
+                return instance;
             }
         }
 
-        internal List<NPC> GetNPCsForZone(uint zoneId)
+        public List<NPC> GetNPCsInRoom(int roomId)
+        {
+            return (from n in NPCInstances.Values where n.CurrentRoom == roomId select n).ToList();
+        }
+
+        public List<NPC> GetShopNPCsInRoom(int roomId)
+        {
+            return (from n in NPCInstances.Values where n.CurrentRoom == roomId && n.ShopID != 0 select n).ToList();
+        }
+
+        public void SetNPCLockState(int id, bool locked, Session session)
+        {
+            if (Instance.NPCTemplates.ContainsKey(id))
+            {
+                Instance.NPCTemplates[id].OLCLocked = locked;
+                Instance.NPCTemplates[id].LockHolder = locked ? session.ID : Guid.Empty;
+            }
+        }
+
+        public bool GetNPCLockState(int id, out Guid lockHolder)
+        {
+            lockHolder = Guid.Empty;
+            if (Instance.NPCTemplates.ContainsKey(id))
+            {
+                lockHolder = Instance.NPCTemplates[id].LockHolder;
+                return Instance.NPCTemplates[id].OLCLocked;
+            }
+            return false;
+        }
+
+        public NPC GetNPC(int id)
+        {
+            return Instance.NPCTemplates.ContainsKey(id) ? Instance.NPCTemplates[id] : null;
+        }
+
+        public NPC GetNPC(Guid id)
+        {
+            return Instance.NPCInstances.ContainsKey(id) ? Instance.NPCInstances[id] : null;
+        }
+
+        public List<NPC> GetShopNPCs(int shopID)
+        {
+            return Instance.NPCInstances.Values.Where(x => x.ShopID == shopID).ToList();
+        }
+
+        public List<NPC> GetNPC(string criteria)
+        {
+            return string.IsNullOrEmpty(criteria) ? null : Instance.NPCTemplates.Values.Where(x => x.Name.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0
+            || x.ShortDescription.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0
+            || x.LongDescription.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        }
+
+        public List<NPC> GetNPC(int start, int end)
+        {
+            return end <= start ? null : Instance.NPCTemplates.Values.Where(x => x.TemplateID >= start && x.TemplateID <= end).ToList();
+        }
+
+        public List<NPC> GetNPC()
+        {
+            return Instance.NPCTemplates.Values.ToList();
+        }
+
+        public List<NPC> GetNPCsForZone(int zoneId)
+        {
+            return NPCTemplates.Values.Where(x => x.ZoneID >= zoneId).ToList();
+        }
+
+        public int GetNPCInstanceCount(int id)
+        {
+            return Instance.NPCInstances.Values.Where(x => x.TemplateID == id).Count();
+        }
+
+        public bool NPCTemplateExists(int id)
+        {
+            return Instance.NPCTemplates.ContainsKey(id);
+        }
+
+        public bool NPCInstanceExists(Guid id)
+        {
+            return Instance.NPCInstances.ContainsKey(id);
+        }
+
+        public bool AddOrUpdateNPCTemplate(NPC npc, bool isNew)
         {
             try
             {
-                lock (_lock)
+                if (!DatabaseManager.SaveNPCTemplateToWorldDatabase(npc, isNew))
                 {
-                    return (from x in Instance._NPCTemplates.Values where x.AppearsInZone == zoneId select x).ToList();
+                    Game.LogMessage($"ERROR: Failed to save NPC Template {npc.Name} ({npc.TemplateID}) to the World Database", LogLevel.Error, true);
+                    return false;
                 }
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error looking up NPCs for Zone {zoneId}: {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal List<NPC> GetNPCByNameOrDescription(string name)
-        {
-            lock(_lock)
-            {
-                return Instance._NPCTemplates.Values.Where(x => Regex.IsMatch(x.Name, name, RegexOptions.IgnoreCase)
-                || Regex.IsMatch(x.ShortDescription, name, RegexOptions.IgnoreCase) || Regex.IsMatch(x.LongDescription, name, RegexOptions.IgnoreCase)).ToList();
-            }
-        }
-
-        internal NPC GetNPCByGUID(Guid guid)
-        {
-            try
-            {
-                lock (_lock)
+                if (isNew)
                 {
-                    if (Instance._NPCInstances.ContainsKey(guid))
+                    if (!Instance.NPCTemplates.TryAdd(npc.TemplateID, npc))
                     {
-                        return Instance._NPCInstances[guid];
-                    }
-                }
-                return null;
-            }
-            catch(Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error finding NPC Instance {guid}: {ex.Message}", LogLevel.Error, true);
-                return null;
-            }
-        }
-
-        internal NPC GetNPCByID(uint id)
-        {
-            lock (_lock)
-            {
-                if (Instance._NPCTemplates.ContainsKey(id))
-                {
-                    return Instance._NPCTemplates[id];
-                }
-            }
-            return null;
-        }
-
-        internal List<NPC> GetNPCByIDRange(uint start, uint end)
-        {
-            lock(_lock)
-            {
-                return Instance._NPCTemplates.Values.Where(x => x.NPCID >= start && x.NPCID <= end).ToList();
-            }
-        }
-
-        internal List<NPC> GetNPCsInRoom(uint rid)
-        {
-            lock ( _lock)
-            {
-                return Instance._NPCInstances.Values.Where(x => x.CurrentRoom == rid).ToList();
-            }
-        }
-
-        internal void SetNPCFollowing(ref Descriptor desc, bool isFollowing)
-        {
-            var fid = desc.Player.FollowerID;
-            lock (_lock)
-            {
-                if (Instance._NPCInstances.ContainsKey(fid))
-                {
-                    Instance._NPCInstances[fid].FollowingPlayer = isFollowing ? desc.ID : Guid.Empty;
-                }
-            }
-        }
-
-        internal Dictionary<Guid, NPC> GetAllNPCInstances()
-        {
-            lock(_lock)
-            {
-                return Instance._NPCInstances;
-            }
-        }
-
-        internal void LoadAllNPCs(out bool hasError)
-        {
-            var result = DatabaseManager.LoadAllNPCS(out hasError);
-            if (!hasError && result != null)
-            {
-                Instance._NPCTemplates.Clear();
-                Instance._NPCTemplates = result;
-            }
-        }
-
-        internal int GetCountOfNPCsInWorld(uint npcID)
-        {
-            lock( _lock)
-            {
-                return Instance._NPCInstances.Where(x => x.Value.NPCID == npcID).Count();
-            }
-        }
-
-        internal int GetNPCTemplateCount()
-        {
-            lock (_lock)
-            {
-                return Instance._NPCTemplates.Count;
-            }
-        }
-
-        internal bool NPCExists(uint npcID)
-        {
-            lock (_lock)
-            {
-                return Instance._NPCTemplates.ContainsKey(npcID);
-            }
-        }
-
-        internal bool AddNPC(ref Descriptor desc, NPC n)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    Instance._NPCTemplates.Add(n.NPCID, n);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} has added NPC {n.NPCID} ({n.Name}) to NPCManager", LogLevel.OLC, true);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encounterd an error adding NPC {n.NPCID} ({n.Name}) to NPCManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool UpdateNPC(ref Descriptor desc, NPC n)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (Instance._NPCTemplates.ContainsKey(n.NPCID))
-                    {
-                        Instance._NPCTemplates.Remove(n.NPCID);
-                        Instance._NPCTemplates.Add(n.NPCID, n);
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} has updated NPC {n.NPCID} ({n.Name}) in NPCManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: NPCManager does not contain an NPC with ID {n.NPCID} to update, it will be added instead", LogLevel.OLC, true);
-                        bool OK = AddNPC(ref desc, n);
-                        return OK;
+                        Game.LogMessage($"ERROR: Failed to add new NPC Template {npc.Name} ({npc.TemplateID}) to NPC Manager", LogLevel.Error, true);
+                        return false;
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating NPC {n.NPCID} ({n.Name}) in NPCManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool RemoveNPC(ref Descriptor desc, uint npcID, string npcName)
-        {
-            try
-            {
-                lock (_lock)
+                else
                 {
-                    Instance._NPCTemplates.Remove(npcID);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} remove NPC {npcID} ({npcName}) from NPCManager", LogLevel.OLC, true);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing NPC {npcID} ({npcName}) from NCPManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool RemoveNPCFromWorld(Guid npcGUID)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (Instance._NPCInstances.ContainsKey(npcGUID))
+                    if (!Instance.NPCTemplates.TryGetValue(npc.TemplateID, out NPC existingTemplate))
                     {
-                        Instance._NPCInstances.Remove(npcGUID);
-                        Game.LogMessage($"INFO: NPC Instance {npcGUID} was removed from the world", LogLevel.Info, false);
+                        Game.LogMessage($"ERROR: NPC {npc.TemplateID} not found in NPC Manager for update", LogLevel.Error, true);
+                        return false;
                     }
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error removing NPC Instance {npcGUID} from the world: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool MoveNPCToNewRID(Guid npcID, uint targetRID)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (Instance._NPCInstances.ContainsKey(npcID))
+                    if (!Instance.NPCTemplates.TryUpdate(npc.TemplateID, npc, existingTemplate))
                     {
-                        Instance._NPCInstances[npcID].CurrentRoom = targetRID;
-                    }
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error updating RID of NPC Instance {npcID} to {targetRID}: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal bool AddNPCToWorld(NPC n, uint rid)
-        {
-            try
-            {
-                n.NPCGuid = Guid.NewGuid();
-                var hp = Helpers.RollDice(n.NumberOfHitDice, n.HitDieSize);
-                var mp = Helpers.RollDice(n.NumberOfHitDice, 8);
-                var hpModifier = Helpers.CalculateAbilityModifier(n.Constitution) * n.NumberOfHitDice;
-                var mpModifier = Helpers.CalculateAbilityModifier(n.Intelligence) * n.NumberOfHitDice;
-                var hpFinal = (hpModifier + hp) <= 0 ? 1 : hpModifier += hp;
-                var mpFinal = (mpModifier + mp) <= 0 ? 1 : mpModifier += mp;
-                n.MaxHP = (int)hpFinal;
-                n.CurrentHP = (int)hpFinal;
-                n.MaxMP = (int)mpFinal;
-                n.CurrentMP = (int)mpFinal;
-                n.CurrentRoom = rid;
-                n.CalculateArmourClass();
-                lock (_lock)
-                {
-                    Instance._NPCInstances.Add(n.NPCGuid, n);
-                    Game.LogMessage($"INFO: Added NPC {n.Name} to Room {rid}", LogLevel.Info, true);
-                }
-                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(rid);
-                if (playersToNotify != null && playersToNotify.Count > 0)
-                {
-                    foreach (var p in playersToNotify)
-                    {
-                        var article = Helpers.IsCharAVowel(n.Name[0]) ? "an" : "a";
-                        p.Send($"{Constants.NewLine}The Winds of Magic swirl and give life to {article} {n.Name}!{Constants.NewLine}");
+                        Game.LogMessage($"ERROR: Failed to update NPC Template {npc.TemplateID} in NPC Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
                     }
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error adding NPC {n.Name} to Room {rid}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in NPCManager.AddOrUpdateNPCTemplate(): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool AddNPCToWorld(uint npcID, uint rid)
+        public bool RemoveNPCTemplate(int id)
         {
-            try
+            if (Instance.NPCTemplates.ContainsKey(id))
             {
-                var newNPC = Instance._NPCTemplates[npcID].ShallowCopy();
-                NPC toAdd = null;
-                using (var ms = new MemoryStream())
-                {
-                    IFormatter f = new BinaryFormatter();
-                    f.Serialize(ms, newNPC);
-                    ms.Seek(0, SeekOrigin.Begin);
-                    toAdd = (NPC)f.Deserialize(ms);
-                }
-                toAdd.NPCGuid = Guid.NewGuid();
+                return Instance.NPCTemplates.TryRemove(id, out _) && DatabaseManager.RemoveNPC(id);
+            }
+            Game.LogMessage($"ERROR: Error removing NPC with Template ID {id}, no such NPC Template in NPCManager", LogLevel.Error, true);
+            return false;
+        }
 
-                var hp = Helpers.RollDice(toAdd.NumberOfHitDice, toAdd.HitDieSize);
-                var mp = Helpers.RollDice(toAdd.NumberOfHitDice, 10);
-                var hpModifier = Helpers.CalculateAbilityModifier(toAdd.Constitution) * toAdd.NumberOfHitDice;
-                var mpModifier = Helpers.CalculateAbilityModifier(toAdd.Intelligence) * toAdd.NumberOfHitDice;
-                var hpFinal = (hpModifier + hp) <= 0 ? 1 : hpModifier += hp;
-                var mpFinal = (mpModifier + mp) <= 0 ? 1 : mpModifier += mp;
-                toAdd.MaxHP = (int)hpFinal;
-                toAdd.CurrentHP = (int)hpFinal;
-                toAdd.MaxMP = (int)mpFinal;
-                toAdd.CurrentMP = (int)mpFinal;
-                toAdd.CurrentRoom = rid;
-                toAdd.CalculateArmourClass();
-                lock (_lock)
-                {
-                    Instance._NPCInstances.Add(toAdd.NPCGuid, toAdd);
-                    Game.LogMessage($"INFO: Added NPC {toAdd.Name} to Room {rid}", LogLevel.Info, true);
-                }
-                var playersToNotify = RoomManager.Instance.GetPlayersInRoom(rid);
-                if (playersToNotify != null && playersToNotify.Count > 0)
-                {
-                    var article = Helpers.IsCharAVowel(toAdd.Name[0]) ? "an" : "a";
-                    foreach (var p in playersToNotify)
-                    {
-                        p.Send($"{Constants.NewLine}The Winds of Magic swirl and give life to {article} {toAdd.Name}!{Constants.NewLine}");
-                    }
-                }
+        public bool RemoveNPCInstance(Guid id)
+        {
+            if (Instance.NPCInstances.ContainsKey(id))
+            {
+                Instance.NPCInstances.TryRemove(id, out _);
+                SessionManager.Instance.RemovePlayerCombatTarget(id);
                 return true;
             }
-            catch (Exception ex)
+            Game.LogMessage($"ERROR: Error removing NPC with Instance ID {id}, no such NPC Instance in NPCManager", LogLevel.Error, true);
+            return false;
+        }
+
+        public bool MoveNPCToNewRoom(Guid npcID, int roomID)
+        {
+            if (Instance.NPCInstances.ContainsKey(npcID))
             {
-                Game.LogMessage($"ERROR: Error adding NPC {npcID} to Room {rid}: {ex.Message}", LogLevel.Error, true);
+                Instance.NPCInstances[npcID].CurrentRoom = roomID;
+                return true;
+            }
+            Game.LogMessage($"ERROR: Error updating NPC Instance {npcID}, no such NPC Instance in NPCManager", LogLevel.Error, true);
+            return false;
+        }
+
+        public bool AddNewNPCInstance(int npcID, int roomID)
+        {
+            if (!Instance.NPCTemplates.ContainsKey(npcID) || !RoomManager.Instance.RoomExists(roomID))
+            {
+                Game.LogMessage($"ERROR: Cannot add an Instance of NPC {npcID} to Room {roomID}, either the NPC or the Room does not exist", LogLevel.Error, true);
                 return false;
             }
+            var newNPC = Helpers.Clone(GetNPC(npcID));
+            newNPC.ID = Guid.NewGuid();
+            newNPC.CurrentRoom = roomID;
+            var hpMod = Math.Max(0, Helpers.CalculateAbilityModifier(newNPC.Constitution));
+            var mpMod = Math.Max(0, Math.Max(Helpers.CalculateAbilityModifier(newNPC.Intelligence), Helpers.CalculateAbilityModifier(newNPC.Wisdom)));
+            newNPC.MaxHP = Helpers.RollDice<int>(newNPC.NumberOfHitDice, newNPC.HitDieSize) + hpMod * newNPC.NumberOfHitDice;
+            newNPC.MaxMP = Helpers.RollDice<int>(newNPC.NumberOfHitDice, 10) + mpMod * newNPC.NumberOfHitDice;
+            newNPC.CurrentHP = newNPC.MaxHP;
+            newNPC.CurrentMP = newNPC.MaxMP;
+            Instance.NPCInstances.TryAdd(newNPC.ID, newNPC);
+            Game.LogMessage($"INFO: Spawning NPC {newNPC.ID} ({newNPC.Name}) in Room {roomID}", LogLevel.Info, true);
+            var playersInRoom = RoomManager.Instance.GetRoom(roomID).PlayersInRoom;
+            if (playersInRoom != null && playersInRoom.Count > 0)
+            {
+                foreach (var player in playersInRoom)
+                {
+                    player.Send($"The Winds of Magic swirl and breathe life into {newNPC.Name}!{Constants.NewLine}");
+                }
+            }
+            return true;
         }
 
-        internal NPC GetHirelingNPC(ref Descriptor desc, string npcType)
+        public void RemoveActorFromNPCCombatQueue(Guid id)
         {
-            NPC hireling = new NPC();
-            hireling.NumberOfAttacks = (uint)Math.Round((double)desc.Player.Level / 2, 0) <= 5 ? (uint)Math.Round((double)desc.Player.Level / 2, 0) : 5;
-            if (hireling.NumberOfAttacks < 1)
+            var actorsInCombat = Instance.NPCInstances.Values.Where(x => x.TargetQueue.ContainsKey(id)).ToList();
+            if (actorsInCombat != null && actorsInCombat.Count > 0)
             {
-                // Ensure hireling NPCs always have at least one attack per round
-                hireling.NumberOfAttacks = 1;
+                foreach(var a in actorsInCombat)
+                {
+                    a.TargetQueue.TryRemove(id, out _);
+                }
             }
-            hireling.Skills = new List<Skill>();
-            hireling.Spells = new List<Spell>();
-            hireling.Inventory = new List<InventoryItem>();
-            hireling.FollowingPlayer = desc.ID;
-            hireling.Gold = 100;
-            hireling.ActorType = ActorType.NonPlayer;
-            hireling.Level = desc.Player.Level;
-            hireling.Position = ActorPosition.Standing;
-            hireling.Race = ActorRace.Human;
-            var rnd = new Random(DateTime.Now.GetHashCode());
-            hireling.Name = HirelingNames[rnd.Next(HirelingNames.Count)];
-            hireling.ShortDescription = $"{desc.Player}'s follower";
-            hireling.ArrivalMessage = $"{hireling.Name} arrives, following {desc.Player}";
-            hireling.DepartureMessage = $"{hireling.Name} leaves, following {desc.Player}";
-            if (Regex.IsMatch(npcType, "fighter", RegexOptions.IgnoreCase))
-            {
-                hireling.Title = "Fighter";
-                hireling.HitDieSize = 10;
-                hireling.Strength = Helpers.RollDice(3, 6) + 2;
-                hireling.Dexterity = Helpers.RollDice(3, 6);
-                hireling.Intelligence = Helpers.RollDice(3, 6);
-                hireling.Constitution = Helpers.RollDice(3, 6) + 2;
-                hireling.Wisdom = Helpers.RollDice(3, 6);
-                hireling.Charisma = Helpers.RollDice(3, 6);
-                hireling.Class = ActorClass.Fighter;
-                hireling.AddSkill("Desperate Attack");
-                hireling.AddSkill("Awareness");
-                hireling.AddSkill("Parry");
-                hireling.LongDescription = $"{hireling.Title} {hireling.Name} is {desc.Player}'s follower!";
-                return hireling;
-            }
-            if (Regex.IsMatch(npcType, "mage", RegexOptions.IgnoreCase))
-            {
-                hireling.Title = "Sorceror";
-                hireling.HitDieSize = 4;
-                hireling.Strength = Helpers.RollDice(3, 6);
-                hireling.Dexterity = Helpers.RollDice(3, 6);
-                hireling.Intelligence = Helpers.RollDice(3, 6) + 4;
-                hireling.Constitution = Helpers.RollDice(3, 6);
-                hireling.Wisdom = Helpers.RollDice(3, 6);
-                hireling.Charisma = Helpers.RollDice(3, 6);
-                hireling.Class = ActorClass.Wizard;
-                hireling.AddSpell("Magic Missile");
-                hireling.AddSpell("Truestrike");
-                hireling.AddSpell("Acid Arrow");
-                hireling.AddSpell("Firebolt");
-                hireling.LongDescription = $"{hireling.Title} {hireling.Name} is {desc.Player}'s follower!";
-                return hireling;
-            }
-            if (Regex.IsMatch(npcType, "thief", RegexOptions.IgnoreCase))
-            {
-                hireling.Title = "Thief";
-                hireling.HitDieSize = 6;
-                hireling.Strength = Helpers.RollDice(3, 6);
-                hireling.Dexterity = Helpers.RollDice(3, 6) + 4;
-                hireling.Intelligence = Helpers.RollDice(3, 6);
-                hireling.Constitution = Helpers.RollDice(3, 6);
-                hireling.Wisdom = Helpers.RollDice(3, 6);
-                hireling.Charisma = Helpers.RollDice(3, 6);
-                hireling.Class = ActorClass.Thief;
-                hireling.AddSkill("Awareness");
-                hireling.AddSkill("Parry");
-                hireling.AddSkill("Dodge");
-                hireling.AddSkill("Backstab");
-                hireling.LongDescription = $"{hireling.Title} {hireling.Name} is {desc.Player}'s follower!";
-                return hireling;
-            }
-            if (Regex.IsMatch(npcType, "priest", RegexOptions.IgnoreCase))
-            {
-                hireling.Title = "Cleric";
-                hireling.HitDieSize = 8;
-                hireling.Strength = Helpers.RollDice(3, 6) + 1;
-                hireling.Dexterity = Helpers.RollDice(3, 6) + 1;
-                hireling.Intelligence = Helpers.RollDice(3, 6) + 1;
-                hireling.Constitution = Helpers.RollDice(3, 6);
-                hireling.Wisdom = Helpers.RollDice(3, 6) + 1;
-                hireling.Charisma = Helpers.RollDice(3, 6);
-                hireling.Class = ActorClass.Cleric;
-                hireling.AddSpell("Cure Light Wounds");
-                hireling.AddSpell("Cure Moderate Wounds");
-                hireling.AddSpell("Regen");
-                hireling.AddSpell("Fae Fire");
-                hireling.AddSpell("Firebolt");
-                hireling.LongDescription = $"{hireling.Title} {hireling.Name} is {desc.Player}'s follower!";
-                return hireling;
-            }
-            return null;
         }
 
-        private static List<string> HirelingNames = new List<string>
+        public void LoadAllNPCs(out bool hasErr)
         {
-            "Denholm",
-            "Aluria",
-            "Meriel",
-            "Erykah",
-            "Bronson",
-            "Caetlin",
-            "Bishop",
-            "Gael",
-            "Vincent",
-            "Tammy",
-            "Viktoria",
-            "Kirsty",
-            "Clint",
-            "Huxley",
-            "Rayf",
-            "Clifford",
-            "Tabitha",
-            "Eldred",
-            "Petra",
-            "Stephanie",
-            "Thane",
-            "Felicity",
-            "Bartram"
-        };
+            var result = DatabaseManager.LoadAllNPCTemplates(out hasErr);
+            if (!hasErr && result != null)
+            {
+                foreach(var npc in result)
+                {
+                    Instance.NPCTemplates.AddOrUpdate(npc.Key, npc.Value, (k, v) => npc.Value);
+                }
+            }
+        }
+
+        public void TickAllNPCs(ulong tickCount)
+        {
+            foreach (var npc in Instance.NPCInstances.Values)
+            {
+                foreach(var mp in npc.MobProgs)
+                {
+                    // TODO: MobProgs that trigger on tick
+                }
+                var actionRoll = Helpers.RollDice<int>(1, 12);
+                switch(actionRoll)
+                {
+                    case 1:
+                        // do nothing for this NPC
+                        continue;
+
+                    case 2:
+                    case 3:
+                        // take item/gold from the room
+                        NPCTakeFromRoom(npc);
+                        break;
+
+                    case 4:
+                    case 5:
+                    case 6:
+                    case 7:
+                        // move to another location if we can move
+                        NPCMoveFromRoom(npc);
+                        break;
+
+                    case 8:
+                    case 9:
+                        // start a fight if the npc isn't fighting, there is a player here and the room isn't safe
+                        NPCStartFight(npc);
+                        break;
+
+                    case 10:
+                        // do two things (take and start fight / take and move / drop and start fight / drop and move)
+                        var roll = Helpers.RollDice<int>(1, 4);
+                        switch(roll)
+                        {
+                            case 1:
+                                NPCTakeFromRoom(npc);
+                                NPCStartFight(npc);
+                                break;
+
+                            case 2:
+                                NPCTakeFromRoom(npc);
+                                NPCMoveFromRoom(npc);
+                                break;
+
+                            case 3:
+                                NPCDropInRoom(npc);
+                                NPCStartFight(npc);
+                                break;
+
+                            case 4:
+                                NPCDropInRoom(npc);
+                                NPCMoveFromRoom(npc);
+                                break;
+                        }
+                        break;
+
+                    case 11:
+                    case 12:
+                        // drop an item/gold into the room
+                        NPCDropInRoom(npc);
+                        break;
+                }
+            }
+        }
+
+        private void NPCTakeFromRoom(NPC npc)
+        {
+            string[] msgs = { string.Empty, string.Empty };
+            if (!npc.Flags.HasFlag(NPCFlags.Scavenger))
+            {
+                return;
+            }
+            if (npc.InCombat)
+            {
+                return;
+            }
+            var r = RoomManager.Instance.GetRoom(npc.CurrentRoom);
+            if (r.ItemsInRoom.IsEmpty && r.GoldInRoom == 0)
+            {
+                return;
+            }
+            var roll = Helpers.RollDice<int>(1, 3);
+            switch(roll)
+            {
+                case 1:
+                    // take item
+                    if (r.ItemsInRoom.Count > 0)
+                    {
+                        var itemID = r.ItemsInRoom.GetRandomElement();
+                        var item = r.ItemsInRoom[itemID];
+                        RoomManager.Instance.RemoveItemFromRoomInventory(r.ID, item);
+                        npc.AddItemToInventory(item);
+                        msgs[0] = $"%BYT%%N% snatches up {item.ShortDescription}!%PT%{Constants.NewLine}";
+                    }
+                    break;
+
+                case 2:
+                    // take gold
+                    if (r.GoldInRoom > 0)
+                    {
+                        var g = r.GoldInRoom;
+                        RoomManager.Instance.RemoveGoldFromRoom(r.ID, g);
+                        npc.Gold += g;
+                        msgs[0] = $"%BYT%%N% snatches up a pile of {g:N0} gold coins!%PT%{Constants.NewLine}";
+                    }
+                    break;
+
+                case 3:
+                    // take both
+                    if (r.ItemsInRoom.Count > 0)
+                    {
+                        var itemID = r.ItemsInRoom.GetRandomElement();
+                        var item = r.ItemsInRoom[itemID];
+                        RoomManager.Instance.RemoveItemFromRoomInventory(r.ID, item);
+                        npc.AddItemToInventory(item);
+                        msgs[0] = $"%BYT%%N% snatches up {item.ShortDescription}!%PT%{Constants.NewLine}";
+                    }
+                    if (r.GoldInRoom > 0)
+                    {
+                        var g = r.GoldInRoom;
+                        RoomManager.Instance.RemoveGoldFromRoom(r.ID, g);
+                        npc.Gold += g;
+                        msgs[1] = $"%BYT%%N% snatches up a pile of {g:N0} gold coins!%PT%{Constants.NewLine}";
+                    }
+                    break;
+            }
+            if (!string.IsNullOrEmpty(msgs[0]))
+            {
+                foreach (var (lp, msgToPlayer) in from lp in r.PlayersInRoom
+                                                  let msgToPlayer = npc.CanBeSeenBy(lp.Player) ? msgs[0].Replace("%N%", npc.Name) : msgs[0].Replace("%N%", "Something")
+                                                  select (lp, msgToPlayer))
+                {
+                    lp.Send(msgToPlayer);
+                }
+            }
+            if (!string.IsNullOrEmpty(msgs[1]))
+            {
+                foreach (var (lp, msgToPlayer) in from lp in r.PlayersInRoom
+                                                  let msgToPlayer = npc.CanBeSeenBy(lp.Player) ? msgs[1].Replace("%N%", npc.Name) : msgs[1].Replace("%N%", "Something")
+                                                  select (lp, msgToPlayer))
+                {
+                    lp.Send(msgToPlayer);
+                }
+            }
+        }
+
+        private void NPCMoveFromRoom(NPC npc)
+        {
+            // only move if not in combat, can only move to a room in the same zone as the NPC belongs to
+            if (!npc.CanMove())
+            {
+                return;
+            }
+            var r = RoomManager.Instance.GetRoom(npc.CurrentRoom);
+            var exit = r.RoomExits.Count > 0 ? r.RoomExits.Values.ToList().GetRandomElement() : null;
+            if (exit != null)
+            {
+                if (ZoneManager.Instance.GetZoneForRID(exit.DestinationRoomID).ZoneID != npc.ZoneID)
+                {
+                    return;
+                }
+                if (!RoomManager.Instance.RoomExists(exit.DestinationRoomID))
+                {
+                    return;
+                }
+                npc.Move(exit.DestinationRoomID, false);
+            }
+        }
+
+
+        private void NPCStartFight(NPC npc)
+        {
+            // only start a fight if the NPC is hostile, isn't fighting already (maybe?) and the room isn't safe
+            var r = RoomManager.Instance.GetRoom(npc.CurrentRoom);
+            if (r.Flags.HasFlag(RoomFlags.Safe))
+            {
+                return;
+            }
+            if (!npc.Flags.HasFlag(NPCFlags.Hostile))
+            {
+                return;
+            }
+            if (npc.InCombat)
+            {
+                return;
+            }
+            if (r.PlayersInRoom.Count == 0 || r.PlayersInRoom.Where(x => x.Player.CanBeSeenBy(npc)).Count() == 0)
+            {
+                return;
+            }
+            var targets = r.PlayersInRoom.Where(x => x.Player.CanBeSeenBy(npc)).ToList();
+            var target = targets.GetRandomElement();
+            target.Send($"%BRT%Suddenly {npc.Name} attacks!%PT%{Constants.NewLine}");
+            var msgToOthers = $"%BRT%For seemingly no reason, %N% suddenly launches an attack on %P%!%PT%{Constants.NewLine}";
+            foreach (var lp in r.PlayersInRoom.Where(x => x.ID != target.ID))
+            {
+                msgToOthers = npc.CanBeSeenBy(lp.Player) ? msgToOthers.Replace("%N%", npc.Name) : msgToOthers.Replace("%N%", "something");
+                msgToOthers = target.Player.CanBeSeenBy(lp.Player) ? msgToOthers.Replace("%P%", target.Player.Name) : msgToOthers.Replace("%P%", "someone");
+                lp.Send(msgToOthers);
+            }
+            npc.AddToTargetQueue(target.Player);
+            target.Player.AddToTargetQueue(npc);
+            Game.LogMessage($"COMBAT: NPC {npc.Name} in Room {r.ID} has started combat with {target.Player.Name}", LogLevel.Combat, true);
+        }
+
+        private void NPCDropInRoom(NPC npc)
+        {
+            // only drop in room if the NPC has the LitterBug flag
+            if (!npc.Flags.HasFlag(NPCFlags.LitterBug))
+            {
+                return;
+            }
+            if (npc.Inventory.Count == 0 && npc.Gold == 0)
+            {
+                return;
+            }
+            var roll = Helpers.RollDice<int>(1, 3);
+            string[] msgs = { string.Empty, string.Empty };
+            switch(roll)
+            {
+                case 1:
+                    // drop item
+                    if (npc.Inventory.Count > 0)
+                    {
+                        var itemID = npc.Inventory.GetRandomElement();
+                        var item = npc.Inventory[itemID];
+                        npc.RemoveItemFromInventory(item);
+                        RoomManager.Instance.AddItemToRoomInventory(npc.CurrentRoom, item);
+                        msgs[0] = $"%BYT%%N% drops {item.ShortDescription} to the floor!%PT%{Constants.NewLine}";
+                    }
+                    break;
+
+                case 2:
+                    // drop gold
+                    if (npc.Gold > 0)
+                    {
+                        var g = npc.Gold;
+                        RoomManager.Instance.AddGoldToRoom(npc.CurrentRoom, g);
+                        npc.Gold = 0;
+                        msgs[0] = $"%BYT%%N% drops {g:N0} gold onto the floor! Hope they didn't need that!%PT%{Constants.NewLine}";
+                    }
+                    break;
+
+                case 3:
+                    // drop both
+                    if (npc.Inventory.Count > 0)
+                    {
+                        var itemID = npc.Inventory.GetRandomElement();
+                        var item = npc.Inventory[itemID];
+                        npc.RemoveItemFromInventory(item);
+                        RoomManager.Instance.AddItemToRoomInventory(npc.CurrentRoom, item);
+                        msgs[0] = $"%BYT%%N% drops {item.ShortDescription} to the floor!%PT%{Constants.NewLine}";
+                    }
+                    if (npc.Gold > 0)
+                    {
+                        var g = npc.Gold;
+                        RoomManager.Instance.AddGoldToRoom(npc.CurrentRoom, g);
+                        npc.Gold = 0;
+                        msgs[1] = $"%BYT%%N% drops {g:N0} gold onto the floor! Hope they didn't need that!%PT%{Constants.NewLine}";
+                    }
+                    break;
+            }
+            if (!string.IsNullOrEmpty(msgs[0]))
+            {
+                foreach (var (lp, msgToPlayer) in from lp in RoomManager.Instance.GetRoom(npc.CurrentRoom).PlayersInRoom
+                                                  let msgToPlayer = npc.CanBeSeenBy(lp.Player) ? msgs[0].Replace("%N%", npc.Name) : msgs[0].Replace("%N%", "Something")
+                                                  select (lp, msgToPlayer))
+                {
+                    lp.Send(msgToPlayer);
+                }
+            }
+            if (!string.IsNullOrEmpty(msgs[1]))
+            {
+                foreach (var (lp, msgToPlayer) in from lp in RoomManager.Instance.GetRoom(npc.CurrentRoom).PlayersInRoom
+                                                  let msgToPlayer = npc.CanBeSeenBy(lp.Player) ? msgs[1].Replace("%N%", npc.Name) : msgs[1].Replace("%N%", "Something")
+                                                  select (lp, msgToPlayer))
+                {
+                    lp.Send(msgToPlayer);
+                }
+            }
+        }
     }
 }

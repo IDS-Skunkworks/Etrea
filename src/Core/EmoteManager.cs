@@ -1,153 +1,142 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using Etrea2.Entities;
 using System.Linq;
-using System.Text.RegularExpressions;
+using Etrea3.Objects;
 
-namespace Etrea2.Core
+namespace Etrea3.Core
 {
-    internal class EmoteManager
+    public class EmoteManager
     {
-        private static EmoteManager _instance = null;
-        private static readonly object _lock = new object();
-        private Dictionary<uint, Emote> _emotes { get; set; }
+        private static EmoteManager instance = null;
+        private ConcurrentDictionary<int, Emote> Emotes { get; set; }
+        public int Count => Emotes.Count;
 
         private EmoteManager()
         {
-            _emotes = new Dictionary<uint, Emote>();
+            Emotes = new ConcurrentDictionary<int, Emote>();
         }
 
-        internal static EmoteManager Instance
+        public static EmoteManager Instance
         {
             get
             {
-                lock (_lock)
+                if (instance == null)
                 {
-                    if (_instance == null)
-                    {
-                        _instance = new EmoteManager();
-                    }
-                    return _instance;
+                    instance = new EmoteManager();
                 }
+                return instance;
             }
         }
 
-        internal bool EmoteExists(uint id)
+        public void SetEmoteLockState(int id, bool locked, Session session)
         {
-            lock(_lock)
+            if (Instance.Emotes.ContainsKey(id))
             {
-                return Instance._emotes.ContainsKey(id);
+                Instance.Emotes[id].OLCLocked = locked;
+                Instance.Emotes[id].LockHolder = locked ? session.ID : Guid.Empty;
             }
         }
 
-        internal bool EmoteExists(string emote)
+        public bool GetEmoteLockState(int id, out Guid lockHolder)
         {
-            lock(_lock)
+            if (Instance.Emotes.ContainsKey(id))
             {
-                return Instance._emotes.Values.Where(x => x.EmoteName.ToLower() == emote.ToLower()).Any();
+                lockHolder = Instance.Emotes[id].LockHolder;
+                return Instance.Emotes[id].OLCLocked;
             }
+            lockHolder = Guid.Empty;
+            return false;
         }
 
-        internal List<Emote> GetAllEmotes(string name)
+        public bool EmoteExists(string name)
         {
-            if (!string.IsNullOrEmpty(name))
-            {
-                var result = from e in Instance._emotes.Values where Regex.Match(e.EmoteName, name, RegexOptions.IgnoreCase).Success select e;
-                return result.ToList();
-            }
-            return Instance._emotes.Values.ToList();
+            return Instance.Emotes.Values.Any(x => x.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
-        internal bool AddEmote(Emote emote, ref Descriptor desc)
+        public bool EmoteExists(int id)
+        {
+            return Instance.Emotes.ContainsKey(id);
+        }
+
+        public List<Emote> GetEmote(int start, int end)
+        {
+            return end <= start ? null : Instance.Emotes.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
+        }
+
+        public Emote GetEmote(int id)
+        {
+            return Instance.Emotes.ContainsKey(id) ? Instance.Emotes[id] : null;
+        }
+
+        public Emote GetEmote(string name)
+        {
+            return Instance.Emotes.Values.FirstOrDefault(x => x.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        public List<Emote> GetEmote()
+        {
+            return Instance.Emotes.Values.ToList();
+        }
+
+        public bool AddOrUpdateEmote(Emote emote, bool isNew)
         {
             try
             {
-                lock (_lock)
+                if (!DatabaseManager.SaveEmoteToWorldDatabase(emote, isNew))
                 {
-                    Instance._emotes.Add(emote.ID, emote);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} added Emote {emote.ID} ({emote.EmoteName}) to EmoteManager", LogLevel.OLC, true);
+                    Game.LogMessage($"ERROR: Failed to save Emote {emote.Name} ({emote.ID}) to the World Database", LogLevel.Error, true);
+                    return false;
+                }
+                if (isNew)
+                {
+                    if (!Instance.Emotes.TryAdd(emote.ID, emote))
+                    {
+                        Game.LogMessage($"ERROR: Failed to add new Emote {emote.Name} ({emote.ID}) to Emote Manager", LogLevel.Error, true);
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!Instance.Emotes.TryGetValue(emote.ID, out Emote existingEmote))
+                    {
+                        Game.LogMessage($"ERROR: Emote {emote.ID} not found in Emote Manager for update", LogLevel.Error, true);
+                        return false;
+                    }
+                    if (!Instance.Emotes.TryUpdate(emote.ID, emote, existingEmote))
+                    {
+                        Game.LogMessage($"ERROR: Failed to update Emote {emote.ID} is Emote Manager due to a value mismatch", LogLevel.Error, true);
+                        return false;
+                    }
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error adding new Emote to EmoteManager: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in EmoteManager.AddOrUpdateEmote(): {ex.Message}", LogLevel.Error, true);
                 return false;
             }
         }
 
-        internal bool RemoveEmote(uint id, ref Descriptor desc)
+        public bool RemoveEmote(int id)
         {
-            try
+            if (Instance.Emotes.ContainsKey(id))
             {
-                lock (_lock)
+                return Instance.Emotes.TryRemove(id, out _) && DatabaseManager.RemoveEmote(id);
+            }
+            Game.LogMessage($"ERROR: Error removing Emote '{id}': No such Emote in EmoteManager", LogLevel.Error, true);
+            return false;
+        }
+
+        public void LoadAllEmotes(out bool hasErr)
+        {
+            var result = DatabaseManager.LoadAllEmotes(out hasErr);
+            if (!hasErr && result != null)
+            {
+                foreach (var emote in result)
                 {
-                    Instance._emotes.Remove(id);
-                    Game.LogMessage($"OLC: Player {desc.Player.Name} removed Emote {id} from EmoteManager", LogLevel.OLC, true);
+                    Instance.Emotes.AddOrUpdate(emote.Key, emote.Value, (k, v) => emote.Value);
                 }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error removing Emote {id} from EmoteManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal Emote GetEmoteByID(uint id)
-        {
-            if (Instance._emotes.ContainsKey(id))
-            {
-                return Instance._emotes[id];
-            }
-            return null;
-        }
-
-        internal Emote GetEmoteByName(string name)
-        {
-            return (from Emote e in Instance._emotes.Values where Regex.Match(e.EmoteName, name, RegexOptions.IgnoreCase).Success select e).FirstOrDefault();
-        }
-
-        internal bool UpdateEmoteByID(uint id, ref Descriptor desc, Emote e)
-        {
-            try
-            {
-                lock (_lock)
-                {
-                    if (Instance._emotes.ContainsKey(id))
-                    {
-                        Instance._emotes.Remove(id);
-                        Instance._emotes.Add(id, e);
-                        Game.LogMessage($"OLC: Player {desc.Player.Name} updated Emote {id} ({e.EmoteName}) in EmoteManager", LogLevel.OLC, true);
-                        return true;
-                    }
-                    else
-                    {
-                        Game.LogMessage($"OLC: EmoteManager does not contain an Emote with ID {id} to update, it will be added instead", LogLevel.OLC, true);
-                        bool OK = AddEmote(e, ref desc);
-                        return OK;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Player {desc.Player.Name} encountered an error updating Emote {id} ({e.EmoteName}) in EmoteManager: {ex.Message}", LogLevel.Error, true);
-                return false;
-            }
-        }
-
-        internal int GetEmoteCount()
-        {
-            return Instance._emotes.Count();
-        }
-
-        internal void LoadAllEmotes(out bool hasError)
-        {
-            var result = DatabaseManager.LoadAllEmotes(out hasError);
-            if (!hasError && result != null)
-            {
-                Instance._emotes.Clear();
-                Instance._emotes = result;
             }
         }
     }
