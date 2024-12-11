@@ -113,6 +113,19 @@ namespace Etrea3.Core
                                 {
                                     ((Player)target).Send($"%BYT%{n.Name} suddenly breaks combat and flees!%PT%{Constants.NewLine}");
                                 }
+                                if (n.MobProgs.Count > 0)
+                                {
+                                    foreach (var mp in n.MobProgs.Keys)
+                                    {
+                                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                                        if (mobProg != null)
+                                        {
+                                            string attackerID = target.ActorType == ActorType.Player ? target.ID.ToString() : string.Empty;
+                                            mobProg.Init();
+                                            mobProg.TriggerEvent(MobProgTrigger.MobFlees, new { mob = n.ID.ToString(), player = attackerID });
+                                        }
+                                    }
+                                }
                                 n.Move(rid, false);
                             }
                             else

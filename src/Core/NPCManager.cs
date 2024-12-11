@@ -245,9 +245,14 @@ namespace Etrea3.Core
         {
             foreach (var npc in Instance.NPCInstances.Values)
             {
-                foreach(var mp in npc.MobProgs)
+                foreach(var mp in npc.MobProgs.Keys)
                 {
-                    // TODO: MobProgs that trigger on tick
+                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    if (mobProg != null)
+                    {
+                        mobProg.Init();
+                        mobProg.TriggerEvent(MobProgTrigger.MudTick, new { mob = npc.ID.ToString() });
+                    }
                 }
                 var actionRoll = Helpers.RollDice<int>(1, 12);
                 switch(actionRoll)

@@ -115,7 +115,7 @@ namespace Etrea3.Objects
         public void AppraiseItem(Session session, InventoryItem item)
         {
             var price = Helpers.GetSalePrice(session, item.BaseValue);
-            session.Send($"%BYT%{ShopName} give {item.ShortDescription} a quick look. \"I'd say that's worth about {price:N0} gold.\"{Constants.NewLine}%PT%");
+            session.Send($"%BYT%{ShopName} gives {item.ShortDescription} a quick look. \"I'd say that's worth about {price:N0} gold.\"{Constants.NewLine}%PT%");
         }
 
         public void PlayerBuyItem(Session session, string itemName)
@@ -153,6 +153,20 @@ namespace Etrea3.Objects
                     CurrentInventory[foundItem.ID]--;
                 }
                 session.Send($"%BYT%{ShopName} smiles broadly. \"I hope you enjoy your purchase!\"%PT%{Constants.NewLine}");
+                Game.LogMessage($"SHOP: Player {session.Player.Name} purchased Item {foundItem.ID} from Shop {ID} for {purchasePrice:N0} gold", LogLevel.Shop, true);
+                var npc = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).NPCsInRoom.Where(x => x.ShopID == ID).FirstOrDefault();
+                if (npc != null && npc.MobProgs.Count > 0)
+                {
+                    foreach (var mp in npc.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerPurchaseItem, new { mob = npc.ID.ToString(), player = session.ID.ToString(), itemID = foundItem.ID });
+                        }
+                    }
+                }
             }
             else
             {
@@ -175,7 +189,22 @@ namespace Etrea3.Objects
                 }
                 CurrentGold -= (ulong)salePrice;
                 session.Player.AdjustGold(salePrice, true);
+                session.Player.RemoveItemFromInventory(item);
                 session.Send($"You hand {item.ShortDescription} to {ShopName} and pocket the {salePrice:N0} gold!{Constants.NewLine}");
+                Game.LogMessage($"SHOP: Player {session.Player.Name} sold {item.ID} to Shop {ID} for {salePrice:N0} gold", LogLevel.Shop, true);
+                var npc = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).NPCsInRoom.Where(x => x.ShopID == ID).FirstOrDefault();
+                if (npc != null && npc.MobProgs.Count > 0)
+                {
+                    foreach(var mp in npc.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerSellItem, new { mob = npc.ID.ToString(), player = session.ID.ToString(), itemID = item.ID });
+                        }
+                    }
+                }
             }
             else
             {

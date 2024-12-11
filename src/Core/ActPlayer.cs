@@ -1,7 +1,7 @@
 ﻿using Etrea3.Objects;
-using NCalc;
 using System;
 using System.Linq;
+using System.ServiceModel;
 using System.Text;
 
 namespace Etrea3.Core
@@ -142,15 +142,42 @@ namespace Etrea3.Core
                 session.Send($"Whisper what, exactly?{Constants.NewLine}");
                 return;
             }
-            var tp = SessionManager.Instance.ActivePlayers.Where(x => x.Player.CanBeSeenBy(session.Player) && x.Player.Name.IndexOf(targetName, StringComparison.OrdinalIgnoreCase) >= 0).FirstOrDefault();
-            if (tp == null)
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(targetName, session.Player);
+            if (target != null && target.ActorType == ActorType.NonPlayer)
             {
-                session.Send($"That person doesn't seem to be in the Realms right now...{Constants.NewLine}");
-                return;
+                session.Send($"You whisper \"{toSay}\" to {target.Name}{Constants.NewLine}");
+                foreach(var lp in RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom)
+                {
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"{session.Player.Name} whispers something to {target.Name}{Constants.NewLine}" :
+                        $"Something whispers something to {target.Name}{Constants.NewLine}";
+                    lp.Send(msg);
+                }
+                var nTarget = (NPC)target;
+                if (nTarget.MobProgs.Count > 0)
+                {
+                    foreach(var mp in nTarget.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerWhisper, new { mob = nTarget.ID.ToString(), player = session.ID.ToString(), whisper = toSay });
+                        }
+                    }
+                }
             }
-            session.Send($"You whisper \"{toSay}\" to {tp.Player.Name}{Constants.NewLine}");
-            string pName = session.Player.CanBeSeenBy(tp.Player) ? session.Player.Name : "Someone";
-            tp.Send($"%BYT%{pName} whispers \"{toSay}\"{Constants.NewLine}%PT%");
+            else
+            {
+                var tp = SessionManager.Instance.ActivePlayers.Where(x => x.Player.CanBeSeenBy(session.Player) && x.Player.Name.IndexOf(targetName, StringComparison.OrdinalIgnoreCase) >= 0).FirstOrDefault();
+                if (tp == null)
+                {
+                    session.Send($"That person doesn't seem to be in the Realms right now...{Constants.NewLine}");
+                    return;
+                }
+                session.Send($"You whisper \"{toSay}\" to {tp.Player.Name}{Constants.NewLine}");
+                string pName = session.Player.CanBeSeenBy(tp.Player) ? session.Player.Name : "Someone";
+                tp.Send($"%BYT%{pName} whispers \"{toSay}\"{Constants.NewLine}%PT%");
+            }
         }
 
         public static void CharSayRoom(Session session, string saying)
@@ -181,6 +208,21 @@ namespace Etrea3.Core
                     lp.Send(msg);
                 }
             }
+            foreach(var n in RoomManager.Instance.GetRoom(session.Player.CurrentRoom).NPCsInRoom)
+            {
+                if (n.MobProgs.Count > 0)
+                {
+                    foreach(var mp in n.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerSay, new { mob = n.ID.ToString(), player = session.ID.ToString(), say = saying });
+                        }
+                    }
+                }
+            }
         }
 
         public static void PlayerLanguages(Session session, string arg)
@@ -208,6 +250,23 @@ namespace Etrea3.Core
         #endregion
 
         #region Misc
+        public static void ShowHelp(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: help <subject> - show help on the subject%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Example: help shop - shop help on shops and shopping%PT%{Constants.NewLine}");
+                return;
+            }
+            var article = HelpManager.Instance.GetArticle(arg.ToLower());
+            if (article == null)
+            {
+                session.Send($"%BRT%No Help Articles found for that subject. Please contact an Imm to have one created!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Send(article.ArticleText);
+        }
+
         public static void PlayerListEmotes(Session session, string arg)
         {
             var matchingEmotes = string.IsNullOrEmpty(arg) ? EmoteManager.Instance.GetEmote().OrderBy(x => x.Name).ToList() : EmoteManager.Instance.GetEmote().Where(x => x.Name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0).OrderBy(x => x.Name).ToList();
@@ -1865,6 +1924,22 @@ namespace Etrea3.Core
                             $"You feel a shiver as something gives you a studious look.{Constants.NewLine}";
                         ((Player)targetActor).Send(msg);
                     }
+                    else
+                    {
+                        var tNPC = (NPC)targetActor;
+                        if (tNPC.MobProgs.Count > 0)
+                        {
+                            foreach(var mp in tNPC.MobProgs.Keys)
+                            {
+                                var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                                if (mobProg != null)
+                                {
+                                    mobProg.Init();
+                                    mobProg.TriggerEvent(MobProgTrigger.PlayerLook, new { mob = tNPC.ID.ToString(), player = session.ID.ToString() });
+                                }
+                            }
+                        }
+                    }
                     var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID && x.ID != targetActor.ID).ToList();
                     if (localPlayers != null && localPlayers.Count > 0)
                     {
@@ -2428,6 +2503,22 @@ namespace Etrea3.Core
                         $"%BYT%The air shifts as something hands you {gp:N0} gold!%PT%{Constants.NewLine}";
                     ((Player)target).Send(tMsg);
                 }
+                else
+                {
+                    var tNPC = (NPC)target;
+                    if (tNPC.MobProgs.Count > 0)
+                    {
+                        foreach(var mp in tNPC.MobProgs.Keys)
+                        {
+                            var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                            if (mobProg != null)
+                            {
+                                mobProg.Init();
+                                mobProg.TriggerEvent(MobProgTrigger.ReceiveGold, new { mob = tNPC.ID.ToString(), player = session.ID.ToString(), amount = gp });
+                            }
+                        }
+                    }
+                }
                 var lPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
                 if (lPlayers != null && lPlayers.Count > 1)
                 {
@@ -2455,6 +2546,22 @@ namespace Etrea3.Core
                 var msgToTarget = session.Player.CanBeSeenBy(target) ? $"%BYT%{session.Player.Name} hands you {item.ShortDescription}.%PT%{Constants.NewLine}" :
                     $"%BYT%The air around you shifts as something hands you {item.ShortDescription}.%PT%{Constants.NewLine}";
                 ((Player)target).Send(msgToTarget);
+            }
+            else
+            {
+                var tNPC = (NPC)target;
+                if (tNPC.MobProgs.Count > 0)
+                {
+                    foreach(var mp in tNPC.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.ReceiveItem, new {mob = tNPC.ID.ToString(), player = session.ID.ToString(), itemID = item.ID });
+                        }
+                    }
+                }
             }
             var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
             if (localPlayers != null && localPlayers.Count > 1)
@@ -2500,6 +2607,21 @@ namespace Etrea3.Core
                         lp.Send(msg);
                     }
                 }
+                foreach(var n in r.NPCsInRoom)
+                {
+                    if (n.MobProgs.Count > 0)
+                    {
+                        foreach(var mp in n.MobProgs.Keys)
+                        {
+                            var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                            if (mobProg != null)
+                            {
+                                mobProg.Init();
+                                mobProg.TriggerEvent(MobProgTrigger.PlayerDropGold, new { player = session.ID.ToString(), mob = n.ID.ToString(), amount });
+                            }
+                        }
+                    }
+                }
                 return;
             }
             var item = session.Player.Inventory.Values.FirstOrDefault(x => x.Name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0);
@@ -2519,6 +2641,21 @@ namespace Etrea3.Core
                     var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} drops {item.ShortDescription} to the floor.%PT%{Constants.NewLine}" :
                         $"%BYT%The air shifts as something drops {item.ShortDescription} onto the floor.%PT%{Constants.NewLine}";
                     lp.Send(msg);
+                }
+            }
+            foreach(var n in r.NPCsInRoom)
+            {
+                if (n.MobProgs.Count > 0)
+                {
+                    foreach(var mp in n.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerDropItem, new { mob = n.ID.ToString(), player = session.ID.ToString(), itemID = item.ID });
+                        }
+                    }
                 }
             }
         }
@@ -2559,6 +2696,21 @@ namespace Etrea3.Core
                         lp.Send(msg);
                     }
                 }
+                foreach(var n in r.NPCsInRoom)
+                {
+                    if (n.MobProgs.Count > 0)
+                    {
+                        foreach(var mp in n.MobProgs.Keys)
+                        {
+                            var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                            if (mobProg != null)
+                            {
+                                mobProg.Init();
+                                mobProg.TriggerEvent(MobProgTrigger.PlayerTakeGold, new { mob = n.ID.ToString(), player = session.ID.ToString(), amount });
+                            }
+                        }
+                    }
+                }
                 return;
             }
             var item = r.GetItem(arg);
@@ -2578,6 +2730,21 @@ namespace Etrea3.Core
                     var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} takes {item.ShortDescription} off the floor.%PT%{Constants.NewLine}" :
                         $"%BYT%The air shifts as something snatches up {item.ShortDescription}!%PT%{Constants.NewLine}";
                     lp.Send(msg);
+                }
+            }
+            foreach(var n in r.NPCsInRoom)
+            {
+                if (n.MobProgs.Count > 0)
+                {
+                    foreach(var mp in n.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerTakeItem, new { mob = n.ID.ToString(), player = session.ID.ToString(), itemID = item.ID });
+                        }
+                    }
                 }
             }
         }
@@ -2939,7 +3106,6 @@ namespace Etrea3.Core
                 session.Send($"%BRT%You aren't carrying anything like that!%PT%{Constants.NewLine}");
                 return;
             }
-            session.Player.RemoveItemFromInventory(i);
             session.Player.ShopContext.PlayerSellItem(session, i);
         }
         #endregion
@@ -3101,6 +3267,18 @@ namespace Etrea3.Core
             }
             session.Player.TargetQueue.TryAdd(tNPC.ID, true);
             tNPC.TargetQueue.TryAdd(session.ID, true);
+            if (tNPC.MobProgs.Count > 0)
+            {
+                foreach(var mp in tNPC.MobProgs.Keys)
+                {
+                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    if (mobProg != null)
+                    {
+                        mobProg.Init();
+                        mobProg.TriggerEvent(MobProgTrigger.MobAttacked, new { mob = tNPC.ID.ToString(), player = session.ID.ToString() });
+                    }
+                }
+            }
         }
 
         public static void PlayerFleeCombat(Session session)

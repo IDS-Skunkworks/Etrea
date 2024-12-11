@@ -34,6 +34,12 @@ namespace Etrea3.Core
             switch(args[0].Trim().ToLower())
             {
                 case "query":
+                    if (session.Player.Level < 110)
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to query the API Key of player {args[1]} but they are not Level 110", LogLevel.Warning, true);
+                        session.Send($"%BRT%You aren't a high enough level to do that!%PT%{Constants.NewLine}");
+                        return;
+                    }
                     var key = DatabaseManager.GetPlayerAPIKey(args[1]);
                     if (string.IsNullOrEmpty(key))
                     {

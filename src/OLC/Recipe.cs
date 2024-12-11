@@ -147,12 +147,12 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int recipeID))
             {
-                session.Send($"%BRT%That is not a valid Recipe ID.{Constants.NewLine}");
+                session.Send($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
                 return;
             }
             if (!RecipeManager.Instance.RecipeExists(recipeID))
             {
-                session.Send($"%BRT%That is not a valid Recipe ID.{Constants.NewLine}");
+                session.Send($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
                 return;
             }
             var recipe = RecipeManager.Instance.GetRecipe(recipeID);

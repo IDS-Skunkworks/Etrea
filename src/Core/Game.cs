@@ -583,7 +583,6 @@ namespace Etrea3.Core
                 }
             }
             LogMessage($"INFO: Loading Database, {RoomManager.Instance.Count} Rooms loaded", LogLevel.Info, true);
-            // TODO: Load MobProgs here - need to load these before NPCs
             ItemManager.Instance.LoadAllItems(out bool itemErr);
             if (itemErr)
             {
@@ -596,6 +595,12 @@ namespace Etrea3.Core
                 return false;
             }
             LogMessage($"INFO: Loading Database, {ShopManager.Instance.Count} Shops loaded", LogLevel.Info, true);
+            MobProgManager.Instance.LoadAllMobProgs(out bool mobErr);
+            if (mobErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {MobProgManager.Instance.Count} MobProgs loaded", LogLevel.Info, true);
             NPCManager.Instance.LoadAllNPCs(out bool npcErr);
             if (npcErr)
             {
@@ -632,6 +637,12 @@ namespace Etrea3.Core
                 return false;
             }
             LogMessage($"INFO: Loading Database, {SpellManager.Instance.Count} Spells loaded", LogLevel.Info, true);
+            HelpManager.Instance.LoadAllArticles(out bool helpErr);
+            if (helpErr)
+            {
+                return false;
+            }
+            LogMessage($"INFO: Loading Database, {HelpManager.Instance.Count} Help articles loaded", LogLevel.Info, true);
             return true;
         }
 

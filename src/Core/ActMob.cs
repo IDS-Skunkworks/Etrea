@@ -6,6 +6,7 @@ namespace Etrea3.Core
 {
     public static partial class ActMob
     {
+        // TODO: Add in functions for remembering, recalling and forgetting players
         private static void MobMove(NPC mob, string args, Session session)
         {
             if (!mob.CanMove())
@@ -22,9 +23,19 @@ namespace Etrea3.Core
             }
             var exit = r.GetRoomExit(fullDirection);
             var destRoom = RoomManager.Instance.GetRoom(exit.DestinationRoomID);
+            if (destRoom == null)
+            {
+                session?.Send($"%BRT%{mob.Name} cannot move {fullDirection}, there is only the void...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (ZoneManager.Instance.GetZoneForRID(destRoom.ID).ZoneID != mob.ZoneID)
+            {
+                session?.Send($"%BRT%{mob.Name} cannot move {fullDirection}, that is outside its assigned Zone!%PT%{Constants.NewLine}");
+                return;
+            }
             if (destRoom.Flags.HasFlag(RoomFlags.NoMobs))
             {
-                session?.Send($"%BRT%Some mystical force prevents {mob.Name} from moving in that direction!%PT%{Constants.NewLine}");
+                session?.Send($"%BRT%Some mystical force prevents {mob.Name} from moving {fullDirection}!%PT%{Constants.NewLine}");
                 return;
             }
             mob.Move(exit.DestinationRoomID, false);

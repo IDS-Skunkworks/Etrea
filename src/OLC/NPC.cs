@@ -50,7 +50,8 @@ namespace Etrea3.OLC
                 sb.AppendLine($"12. Set Hit Dice{Constants.TabStop}{Constants.TabStop}13. Set Appearance Chance{Constants.TabStop}14. Set Max. Number");
                 sb.AppendLine($"15. Set Gender{Constants.TabStop}16. Set Flags{Constants.TabStop}17. Set Arrival Message");
                 sb.AppendLine($"18. Set Departure Message{Constants.TabStop}19. Set Attacks{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}20. Manage Spells");
-                sb.AppendLine($"21. Set Shop ID{Constants.TabStop}22. Save{Constants.TabStop}23. Return");
+                sb.AppendLine($"21. Set Shop ID{Constants.TabStop}{Constants.TabStop}22. Manage MobProgs");
+                sb.AppendLine($"23. Save{Constants.TabStop}24. Return");
                 session.Send(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
@@ -153,6 +154,10 @@ namespace Etrea3.OLC
                         break;
 
                     case 22:
+                        ManageNPCMobProgs(session, ref newNPC);
+                        break;
+
+                    case 23:
                         if (ValidateAsset(session, newNPC, true, out _))
                         {
                             if (NPCManager.Instance.AddOrUpdateNPCTemplate(newNPC, true))
@@ -174,7 +179,7 @@ namespace Etrea3.OLC
                         }
                         break;
 
-                    case 23:
+                    case 24:
                         return;
 
                     default:
@@ -299,8 +304,8 @@ namespace Etrea3.OLC
                 sb.AppendLine($"11. Set Hit Dice{Constants.TabStop}12. Set Appearance Chance{Constants.TabStop}13. Set Max. Number");
                 sb.AppendLine($"14. Set Gender{Constants.TabStop}15. Set Flags{Constants.TabStop}16. Set Arrival Message");
                 sb.AppendLine($"17. Set Departure Message{Constants.TabStop}18. Set Attacks{Constants.TabStop}19. Manage Spells");
-                sb.AppendLine($"20. Set Shop ID");
-                sb.AppendLine($"21. Save{Constants.TabStop}22. Return");
+                sb.AppendLine($"20. Set Shop ID{Constants.TabStop}{Constants.TabStop}21. Manage MobProgs");
+                sb.AppendLine($"22. Save{Constants.TabStop}23. Return");
                 session.Send(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
@@ -399,6 +404,10 @@ namespace Etrea3.OLC
                         break;
 
                     case 21:
+                        ManageNPCMobProgs(session, ref npcTemplate);
+                        break;
+
+                    case 22:
                         if (ValidateAsset(session, npcTemplate, false, out _))
                         {
                             if (NPCManager.Instance.AddOrUpdateNPCTemplate(npcTemplate, false))
@@ -421,7 +430,7 @@ namespace Etrea3.OLC
                         }
                         break;
 
-                    case 22:
+                    case 23:
                         NPCManager.Instance.SetNPCLockState(npcTemplate.TemplateID, false, session);
                         return;
 
@@ -493,6 +502,72 @@ namespace Etrea3.OLC
 
                     default:
                         session.Send($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
+                        continue;
+                }
+            }
+        }
+
+        private static void ManageNPCMobProgs(Session session, ref NPC npc)
+        {
+            StringBuilder sb = new StringBuilder();
+            while (true)
+            {
+                sb.Clear();
+                if (npc.MobProgs.Count > 0)
+                {
+                    sb.AppendLine("MobProgs:");
+                    foreach (var mp in npc.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            sb.AppendLine($"  {mobProg.ID} - {mobProg.Name}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"  {mp} - Unknown MobProg");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine("MobProgs: None");
+                }
+                sb.AppendLine("Options:");
+                sb.AppendLine($"1. Add MobProg{Constants.TabStop}{Constants.TabStop}2. Remove MobProg");
+                sb.AppendLine($"3. Clear MobProgs{Constants.TabStop}{Constants.TabStop}4. Return");
+                sb.AppendLine("Choice:");
+                session.Send(sb.ToString());
+                var input = session.Read();
+                if (string.IsNullOrEmpty(input) || !int.TryParse(input, out int option))
+                {
+                    session.Send($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
+                    continue;
+                }
+                switch (option)
+                {
+                    case 1:
+                        var id = GetValue<int>(session, "Enter MobProg ID:");
+                        if (MobProgManager.Instance.MobProgExists(id))
+                        {
+                            npc.MobProgs.TryAdd(id, true);
+                        }
+                        break;
+
+                    case 2:
+                        id = GetValue<int>(session, "Enter MobProg ID:");
+                        npc.MobProgs.TryRemove(id, out _);
+                        break;
+
+                    case 3:
+                        npc.MobProgs.Clear();
+                        break;
+
+                    case 4:
+                        return;
+
+                    default:
+                        session.Send($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
                         continue;
                 }
             }

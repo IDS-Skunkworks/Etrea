@@ -1491,5 +1491,184 @@ namespace Etrea3.Core
             }
         }
         #endregion
+
+        #region Help Articles
+        public static bool RemoveArticle(string title)
+        {
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "DELETE FROM tblHelpEntries WHERE HelpName = @t;";
+                        cmd.Parameters.Add(new SQLiteParameter("@t", title));
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveArticle(): {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        public static ConcurrentDictionary<string, HelpArticle> LoadAllArticles(out bool hasErr)
+        {
+            hasErr = false;
+            ConcurrentDictionary<string, HelpArticle> retval = new ConcurrentDictionary<string, HelpArticle>();
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "SELECT * FROM tblHelpEntries;";
+                        using (SQLiteDataReader dr = cmd.ExecuteReader())
+                        {
+                            while (dr.Read())
+                            {
+                                retval.TryAdd(dr["HelpName"].ToString(), new HelpArticle
+                                {
+                                   Title = dr["HelpName"].ToString(),
+                                   ArticleText = dr["HelpText"].ToString(),
+                                   ImmOnly = bool.Parse(dr["ImmOnly"].ToString())
+                                });
+                            }
+                        }
+                    }
+                    con.Close();
+                }
+                return retval;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllArticles(): {ex.Message}", LogLevel.Error, true);
+                hasErr = true;
+                return null;
+            }
+        }
+
+        public static bool SaveArticleToWorldDatabase(HelpArticle article, bool isNew)
+        {
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = isNew ? "INSERT INTO tblHelpEntries (HelpName, HelpText, ImmOnly) VALUES (@n, @t, @i);" :
+                            "UPDATE tblHelpEntries SET HelpText = @t, ImmOnly = @i WHERE HelpName = @n;";
+                        cmd.Parameters.Add(new SQLiteParameter("@n", article.Title));
+                        cmd.Parameters.Add(new SQLiteParameter("@t", article.ArticleText));
+                        cmd.Parameters.Add(new SQLiteParameter("@i", article.ImmOnly.ToString()));
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveArticleToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+        #endregion
+
+        #region MobProgs
+        public static bool RemoveMobProg(int id)
+        {
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "DELETE FROM tblMobProgs WHERE ID = @i;";
+                        cmd.Parameters.Add(new SQLiteParameter("@i", id));
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveMobProg(): {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+
+        public static ConcurrentDictionary<int, MobProg> LoadAllMobProgs(out bool hasErr)
+        {
+            hasErr = false;
+            ConcurrentDictionary<int, MobProg> retval = new ConcurrentDictionary<int, MobProg>();
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "SELECT * FROM tblMobProgs;";
+                        using (SQLiteDataReader dr = cmd.ExecuteReader())
+                        {
+                            while (dr.Read())
+                            {
+                                var mobProgs = Helpers.DeserialiseEtreaObject<MobProg>(dr["MobProgData"].ToString());
+                                retval.TryAdd(mobProgs.ID, mobProgs);
+                            }
+                        }
+                    }
+                    con.Close();
+                }
+                return retval;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllMobProgs(): {ex.Message}", LogLevel.Error, true);
+                hasErr = true;
+                return null;
+            }
+        }
+
+        public static bool SaveMobProgToWorldDatabase(MobProg mobProg, bool isNew)
+        {
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = isNew ? "INSERT INTO tblMobProgs (ID, MobProgData) VALUES (@i, @d);" :
+                            "UPDATE tblMobProgs SET MobProgData = @d WHERE ID = @i;";
+                        cmd.Parameters.Add(new SQLiteParameter("@i", mobProg.ID));
+                        cmd.Parameters.Add(new SQLiteParameter("@d", Helpers.SerialiseEtreaObject<MobProg>(mobProg)));
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveMobProgToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                return false;
+            }
+        }
+        #endregion
     }
 }

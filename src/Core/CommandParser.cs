@@ -234,6 +234,11 @@ namespace Etrea3.Core
                 #endregion
 
                 #region Misc
+                case "help":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowHelp(session, arg);
+                    break;
+
                 case "quit":
                     QuitGame(session);
                     break;

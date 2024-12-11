@@ -71,6 +71,70 @@ namespace Etrea3.OLC
         public static bool ValidateAsset<T>(Session session, T asset, bool isNew, out string reply)
         {
             reply = string.Empty;
+            if (typeof(T) == typeof(MobProg))
+            {
+                var mp = (MobProg)(object)asset;
+                if (mp.ID < 0)
+                {
+                    reply = "MobProg ID cannot be less than 0.";
+                    session?.Send($"%BRT%MobProg ID cannot be less than 0%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(mp.Name))
+                {
+                    reply = "MobProg must have a Name";
+                    session?.Send($"%BRT%MobProg must have a Name%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(mp.Description))
+                {
+                    reply = "MobProg must have a Description";
+                    session?.Send($"%BRT%MobProg must have a Description%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(mp.Script))
+                {
+                    reply = "MobProg contains no LUA script";
+                    session?.Send($"%BRT%MobProg contains no LUA script%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (mp.Triggers == MobProgTrigger.None)
+                {
+                    reply = "MobProg Trigger cannot be None";
+                    session?.Send($"%BRT%MobProg Trigger cannot be None%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (isNew && MobProgManager.Instance.MobProgExists(mp.ID))
+                {
+                    reply = "MobProg ID is already in use";
+                    session?.Send($"%BRT%MobProg ID is already in use%PT%{Constants.NewLine}");
+                    return false;
+                }
+                return true;
+            }
+            if (typeof(T) == typeof(HelpArticle))
+            {
+                var article = (HelpArticle)(object)asset;
+                if (string.IsNullOrEmpty(article.Title))
+                {
+                    reply = "Article must have a Title.";
+                    session?.Send($"%BRT%Article must have a title.%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(article.ArticleText))
+                {
+                    reply = "Article must have help text.";
+                    session?.Send($"%BRT%Article must have help text.%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (isNew && HelpManager.Instance.GetArticle(article.Title) != null)
+                {
+                    reply = "The Article's Title is already in use.";
+                    session?.Send($"%BRT%The Article's Title is already in use.%PT%{Constants.NewLine}");
+                    return false;
+                }
+                return true;
+            }
             if (typeof(T) == typeof(ResourceNode))
             {
                 var node = (ResourceNode)(object)asset;

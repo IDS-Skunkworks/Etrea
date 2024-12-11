@@ -81,6 +81,23 @@ namespace Etrea3.Objects
                 ((Player)target).Send(tMessage);
             }
             SendToOthers(performer, target, MessageToOthers[1]);
+            if (target.ActorType == ActorType.NonPlayer && performer.ActorType == ActorType.Player)
+            {
+                NPC tgt = (NPC)target;
+                Player perf = (Player)performer;
+                if (tgt.MobProgs.Count > 0)
+                {
+                    foreach(var mp in tgt.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.EmoteTarget, new { mob = tgt.ID.ToString(), player = perf.ID.ToString(), emotename = Name });
+                        }
+                    }
+                }
+            }
         }
 
         private string ParseMessageForPerformer(Actor performer, Actor target, string message)

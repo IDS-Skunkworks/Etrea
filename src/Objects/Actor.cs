@@ -983,6 +983,18 @@ namespace Etrea3.Objects
                     p.Send($"{msgToLeavingRoom}{Constants.NewLine}");
                 }
             }
+            if (MobProgs.Count > 0)
+            {
+                foreach (var mp in MobProgs.Keys)
+                {
+                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    if (mobProg != null)
+                    {
+                        mobProg.Init();
+                        mobProg.TriggerEvent(MobProgTrigger.MobLeave, new { mob = ID.ToString() });
+                    }
+                }
+            }
             CurrentRoom = newRID;
             var playersInArrivalRoom = RoomManager.Instance.GetRoom(CurrentRoom).PlayersInRoom;
             if (playersInArrivalRoom != null && playersInArrivalRoom.Count > 0)
@@ -990,6 +1002,18 @@ namespace Etrea3.Objects
                 foreach(var p in playersInArrivalRoom)
                 {
                     p.Send($"{msgToArrivalRoom}{Constants.NewLine}");
+                }
+            }
+            if (MobProgs.Count > 0)
+            {
+                foreach (var mp in MobProgs.Keys)
+                {
+                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    if (mobProg != null)
+                    {
+                        mobProg.Init();
+                        mobProg.TriggerEvent(MobProgTrigger.MobEnter, new { mob = ID.ToString() });
+                    }
                 }
             }
         }
@@ -1075,9 +1099,15 @@ namespace Etrea3.Objects
             }
             if (MobProgs.Count > 0)
             {
-                foreach(var mp in MobProgs)
+                foreach(var mp in MobProgs.Keys)
                 {
-                    // TODO: get the mobprog, check if it triggers on death and run it if it does
+                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    if (mobProg != null)
+                    {
+                        mobProg.Init();
+                        var killerID = killer != null ? killer.ID.ToString() : string.Empty;
+                        mobProg.TriggerEvent(MobProgTrigger.MobDeath, new { mob = ID.ToString(), killer = killerID });
+                    }
                 }
             }
             NPCManager.Instance.RemoveNPCInstance(ID);
@@ -1160,6 +1190,7 @@ namespace Etrea3.Objects
 
         protected override void MoveActor(int newRID, bool wasTeleported)
         {
+            // TODO: MobProgs for player leaving and entering room
             string msgToLeavingRoom = wasTeleported ? "%N% vanishes, swallowed by the Winds of Magic!" : "%N% strides away";
             string msgToArrivalRoom = wasTeleported ? "%N% appears from a swirling cloud of magic!" : "%N% strides in";
             var playersInLeavingRoom = RoomManager.Instance.GetRoom(CurrentRoom).PlayersInRoom.Where(x => x.Player.ID != ID).ToList();
@@ -1178,6 +1209,21 @@ namespace Etrea3.Objects
                             break;
                     }
                     p.Send($"{msgToLeavingRoom}{Constants.NewLine}");
+                }
+            }
+            foreach(var n in RoomManager.Instance.GetRoom(CurrentRoom).NPCsInRoom)
+            {
+                if (n.MobProgs.Count > 0)
+                {
+                    foreach(var mp in n.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerLeave, new { player = ID.ToString(), mob = n.ID.ToString() });
+                        }
+                    }
                 }
             }
             CurrentRoom = newRID;
@@ -1200,6 +1246,21 @@ namespace Etrea3.Objects
                 }
             }
             RoomManager.Instance.GetRoom(CurrentRoom).DescribeRoom(SessionManager.Instance.GetSession(ID));
+            foreach(var n in RoomManager.Instance.GetRoom(CurrentRoom).NPCsInRoom)
+            {
+                if (n.MobProgs.Count > 0)
+                {
+                    foreach(var m in n.MobProgs)
+                    {
+                        var mp = MobProgManager.Instance.GetMobProg(m.Key);
+                        if (mp != null)
+                        {
+                            mp.Init();
+                            mp.TriggerEvent(MobProgTrigger.PlayerEnter, new { player = ID.ToString(), mob = n.ID.ToString() });
+                        }
+                    }
+                }
+            }
         }
 
         protected override void KillActor(Actor killer, bool killedInCombat)

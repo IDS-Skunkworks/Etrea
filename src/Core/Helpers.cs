@@ -91,16 +91,41 @@ namespace Etrea3.Core
             return sb.ToString();
         }
 
+        public static string GetMobProgScript(Session session)
+        {
+            int row = 1;
+            StringBuilder sb = new StringBuilder();
+            session.Send($"Enter the MobProg LUA Script");
+            session.Send($"Enter //DONE on a new line to finish.{Constants.NewLine}");
+            while (true)
+            {
+                session.Send($"[{row}] ");
+                var input = session.Read();
+                if (!string.IsNullOrEmpty(input))
+                {
+                    if (input.Trim().ToUpper() == "//DONE")
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        sb.AppendLine(input.Trim());
+                        row++;
+                    }
+                }
+            }
+            return sb.ToString().Trim();
+        }
+
         public static string GetLongDescription(Session session)
         {
             int row = 1;
             StringBuilder sb = new StringBuilder();
-            bool validInput = false;
             session.Send($"Enter the long description. This should be 30 lines or less");
             session.Send($"and each line should be 80 characters or less.");
             session.Send($"Descriptions can be changed later if you want.");
             session.Send($"Enter END on a new line to finish.{Constants.NewLine}");
-            while (!validInput)
+            while (true)
             {
                 session.Send($"[{row}] ");
                 var input = session.Read();
@@ -108,7 +133,7 @@ namespace Etrea3.Core
                 {
                     if (input.Trim().ToUpper() == "END")
                     {
-                        validInput = true;
+                        break;
                     }
                     else
                     {
@@ -116,12 +141,12 @@ namespace Etrea3.Core
                         row++;
                         if (row > 30)
                         {
-                            validInput = true;
+                            break;
                         }
                     }
                 }
             }
-            return sb.ToString();
+            return sb.ToString().Trim();
         }
 
         public static string GetFullDirectionString(string dir)
