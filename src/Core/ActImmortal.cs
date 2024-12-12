@@ -358,6 +358,18 @@ namespace Etrea3.Core
                 return;
             }
             session.Player.Visible = !session.Player.Visible;
+            var msg = session.Player.Visible ? $"%BYT%You become visible again.%PT%{Constants.NewLine}" : $"%BYT%You slowly fade from view...%PT%{Constants.NewLine}";
+            session.Send(msg);
+            var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
+            if (localPlayers != null && localPlayers.Count > 0)
+            {
+                var lpMsg = session.Player.Visible ? $"%BYT%The air shimmers as {session.Player.Name} becomes visible.%PT%{Constants.NewLine}" :
+                    $"The air shimmers and {session.Player.Name} vanishes!%PT%{Constants.NewLine}";
+                foreach(var lp in localPlayers)
+                {
+                    lp.Send(lpMsg);
+                }
+            }
         }
 
         public static void ShowUpTime(Session session)
@@ -1687,6 +1699,10 @@ namespace Etrea3.Core
             var criteria = arg.Remove(0, assetType.Length).Trim();
             switch(assetType.ToLower())
             {
+                case "mobprog":
+                    ListMobProgs(session, criteria);
+                    break;
+
                 case "room":
                     ListRooms(session, criteria);
                     break;
@@ -3255,6 +3271,89 @@ namespace Etrea3.Core
             }
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
+        }
+
+        private static void ListMobProgs(Session session, string criteria)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (string.IsNullOrEmpty(criteria))
+            {
+                var mobprogs = MobProgManager.Instance.GetMobProg();
+                if (mobprogs == null || mobprogs.Count == 0)
+                {
+                    session.Send($"%BRT%No MobProgs found in MobProg Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var mp in mobprogs)
+                {
+                    sb.AppendLine($"|| {mp.ID} - {mp.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (int.TryParse(criteria, out int mpID))
+            {
+                var mp = MobProgManager.Instance.GetMobProg(mpID);
+                if (mp == null)
+                {
+                    session.Send($"%BRT%No MobProg with that ID was found in MobProg Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"|| ID: {mp.ID}{Constants.TabStop}Name: {mp.Name}");
+                sb.AppendLine($"|| Description: {mp.Description}");
+                sb.AppendLine($"|| Triggers: {mp.Triggers}");
+                sb.AppendLine($"|| Script:");
+                foreach(var ln in mp.Script.Split(new[] {Constants.NewLine}, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    sb.AppendLine($"|| {ln}");
+                }
+                if (mp.OLCLocked)
+                {
+                    var lockingSession = SessionManager.Instance.GetSession(mp.LockHolder);
+                    if (lockingSession != null)
+                    {
+                        sb.AppendLine($"|| OLC Locked: {mp.OLCLocked}{Constants.TabStop}Lock Holder: {lockingSession.Player.Name}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"|| OLC Locked: {mp.OLCLocked}{Constants.TabStop}Lock Holder: Not Found");
+                    }
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (criteria.IndexOf('-') > 1)
+            {
+                var rangeParts = criteria.Split('-');
+                if (!int.TryParse(rangeParts[0].Trim(), out int start) || !int.TryParse(rangeParts[1].Trim(), out int end))
+                {
+                    session.Send($"%BRT%Cannot parse ID range.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (end < start)
+                {
+                    session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
+                    return;
+                }
+                var mobProgs = MobProgManager.Instance.GetMobProg(start, end);
+                if (mobProgs == null || mobProgs.Count == 0)
+                {
+                    session.Send($"%BRT%No MobProgs in the specified range were found in MobProg Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                foreach(var mp in mobProgs)
+                {
+                    sb.AppendLine($"|| {mp.ID} - {mp.Name}");
+                }
+                sb.AppendLine($"  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
         }
 
         private static void ListRooms(Session session, string criteria)

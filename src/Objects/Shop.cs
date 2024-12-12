@@ -163,7 +163,7 @@ namespace Etrea3.Objects
                         if (mobProg != null)
                         {
                             mobProg.Init();
-                            mobProg.TriggerEvent(MobProgTrigger.PlayerPurchaseItem, new { mob = npc.ID.ToString(), player = session.ID.ToString(), itemID = foundItem.ID });
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerPurchaseItem, new { mob = npc.ID.ToString(), player = session.ID.ToString(), itemID = foundItem.ID, price = purchasePrice });
                         }
                     }
                 }
@@ -201,7 +201,7 @@ namespace Etrea3.Objects
                         if (mobProg != null)
                         {
                             mobProg.Init();
-                            mobProg.TriggerEvent(MobProgTrigger.PlayerSellItem, new { mob = npc.ID.ToString(), player = session.ID.ToString(), itemID = item.ID });
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerSellItem, new { mob = npc.ID.ToString(), player = session.ID.ToString(), itemID = item.ID, price = salePrice });
                         }
                     }
                 }

@@ -251,7 +251,7 @@ namespace Etrea3.Core
                     if (mobProg != null)
                     {
                         mobProg.Init();
-                        mobProg.TriggerEvent(MobProgTrigger.MudTick, new { mob = npc.ID.ToString() });
+                        mobProg.TriggerEvent(MobProgTrigger.MudTick, new { mob = npc.ID.ToString(), tick = tickCount });
                     }
                 }
                 var actionRoll = Helpers.RollDice<int>(1, 12);

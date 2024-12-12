@@ -5,8 +5,24 @@ namespace Etrea3.Core
 {
     public static partial class ActMob
     {
-        // These functions are designed to support LUA MobProg scripts and should retrieve game objects based off
-        // values passed back from the LUA script before calling the main function in ActMob.cs
+        public static string MobProgGetRandomPlayerID(string mobID)
+        {
+            if (string.IsNullOrEmpty(mobID))
+            {
+                Game.LogMessage($"DEBUG: MobProgGetRandomPlayerID called with no Mob ID", LogLevel.Debug, true);
+                return null;
+            }
+            var gMobID = Guid.Parse(mobID);
+            var mob = NPCManager.Instance.GetNPC(gMobID);
+            if (RoomManager.Instance.GetRoom(mob.CurrentRoom).PlayersInRoom.Count > 0)
+            {
+                var player = RoomManager.Instance.GetRoom(mob.CurrentRoom).PlayersInRoom.GetRandomElement();
+                return player.ID.ToString();
+            }
+            return null;
+        }
+
+
         public static void MobProgEmote(string mobID, string args)
         {
             if (string.IsNullOrEmpty(mobID))
@@ -127,10 +143,45 @@ namespace Etrea3.Core
             MobWhisper(mob, args, null);
         }
 
-        public static void MobProgTeleportPlayer(string mobID, string args, int gold)
+        public static void MobProgTeleportPlayer(string mobID, string playerID, string destination, ulong cost)
         {
-            // TODO: Implement
-            Game.LogMessage($"DEBUG: Tell Zohar to implement MobProgTeleportPlayer", LogLevel.Debug, true);
+            if (string.IsNullOrEmpty(mobID))
+            {
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null Mob ID", LogLevel.Debug, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(playerID))
+            {
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null Player ID", LogLevel.Debug, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(destination))
+            {
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null destination", LogLevel.Debug, true);
+                return;
+            }
+            if (!int.TryParse(destination, out int rid))
+            {
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a destination that was not an int", LogLevel.Debug, true);
+                return;
+            }
+            var gMobID = Guid.Parse(mobID);
+            var gPlayerID = Guid.Parse(playerID);
+            var mob = NPCManager.Instance.GetNPC(gMobID);
+            var sess = SessionManager.Instance.GetSession(gPlayerID);
+            if (!sess.Player.CanMove())
+            {
+                MobSay(mob, $"Sorry, {sess.Player.Name}, you're not ready to be teleported just now!", null);
+                return;
+            }
+            if (sess.Player.Gold < cost)
+            {
+                MobSay(mob, $"Sorry, {sess.Player.Name}, you can't afford that!", null);
+                return;
+            }
+            MobSay(mob, $"Very well, {sess.Player.Name}, just a moment.", null);
+            sess.Player.AdjustGold((long)cost * -1, true, false);
+            sess.Player.Move(rid, true);
         }
 
         public static string MobProgGetPlayerName(string args)

@@ -95,7 +95,7 @@ namespace Etrea3.Core
         {
             int row = 1;
             StringBuilder sb = new StringBuilder();
-            session.Send($"Enter the MobProg LUA Script");
+            session.Send($"Enter the MobProg LUA Script{Constants.NewLine}");
             session.Send($"Enter //DONE on a new line to finish.{Constants.NewLine}");
             while (true)
             {

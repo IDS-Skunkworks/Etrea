@@ -84,6 +84,14 @@ namespace Etrea3.Core
                     MobYell(npc, arg, session);
                     break;
 
+                case "remember":
+                    // TODO: Implement imms forcing mobs to remember / forget players
+                    break;
+
+                case "forget":
+
+                    break;
+
                 default:
                     session?.Send($"%BRT%{npc.Name} does not know how to {verb} and cannot comply!%PT%{Constants.NewLine}");
                     break;

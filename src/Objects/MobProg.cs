@@ -42,12 +42,13 @@ namespace Etrea3.Objects
             _lua.RegisterFunction("MobRememberPlayer", typeof(ActMob).GetMethod("MobProgRememberPlayer"));
             _lua.RegisterFunction("MobForgetPlayer", typeof(ActMob).GetMethod("MobProgForgetPlayer"));
             _lua.RegisterFunction("MobRemembersPlayer", typeof(ActMob).GetMethod("MobProgRemembersPlayer"));
-            _lua.RegisterFunction("MobGetRememberPlayerTickCount", typeof(ActMob).GetMethod("MobProgGetRememberPlayerTickCount"));
-            _lua.RegisterFunction("MobMobHasItem", typeof(ActMob).GetMethod("MobProgMobHasItem"));
+            _lua.RegisterFunction("MobGetRememberedPlayerTick", typeof(ActMob).GetMethod("MobProgGetRememberPlayerTickCount"));
+            _lua.RegisterFunction("MobHasItem", typeof(ActMob).GetMethod("MobProgMobHasItem"));
             _lua.RegisterFunction("MobGetMUDTick", typeof(ActMob).GetMethod("MobProgGetMudTick"));
             _lua.RegisterFunction("MobRollDice", typeof(ActMob).GetMethod("MobProgRollDice"));
             _lua.RegisterFunction("MobCheckIfPlayerIsImm", typeof(ActMob).GetMethod("MobProgCheckPlayerIsImm"));
             _lua.RegisterFunction("MobGetPlayerName", typeof(ActMob).GetMethod("MobProgGetPlayerName"));
+            _lua.RegisterFunction("MobGetRandomPlayer", typeof(ActMob).GetMethod("MobProgGetRandomPlayerID"));
         }
 
         public void Init()
@@ -64,7 +65,7 @@ namespace Etrea3.Objects
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in MobProg.TriggerEvent(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in MobProg.TriggerEvent() for MobProg {ID}: {ex.Message}", LogLevel.Error, true);
             }
         }
     }

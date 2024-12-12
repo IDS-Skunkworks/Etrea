@@ -218,6 +218,7 @@ namespace Etrea3.Core
                         if (mobProg != null)
                         {
                             mobProg.Init();
+                            Game.LogMessage($"DEBUG: Triggering MobProg {mobProg.Name} for {n.ID.ToString()}", LogLevel.Debug, true);
                             mobProg.TriggerEvent(MobProgTrigger.PlayerSay, new { mob = n.ID.ToString(), player = session.ID.ToString(), say = saying });
                         }
                     }
