@@ -41,10 +41,6 @@ namespace Etrea3.Networking.API
                 var config = new HttpSelfHostConfiguration(baseAddress);
                 config.MessageHandlers.Add(new APIKeyAuthenticationHandler());
                 config.Routes.MapHttpRoute(name: "DefaultApi", routeTemplate: "api/{controller}/{id}", defaults: new { id = RouteParameter.Optional });
-                foreach(var route in config.Routes)
-                {
-                    Game.LogMessage($"DEBUG: Route: {route.RouteTemplate}", LogLevel.Debug, true);
-                }
                 config.MessageHandlers.Add(new LoggingHandler());
                 server = new HttpSelfHostServer(config);
                 server.OpenAsync().Wait();

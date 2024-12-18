@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Configuration;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using Etrea3.Objects;
 using System.IO;
-using Newtonsoft.Json.Linq;
-using System.Net.Sockets;
 
 namespace Etrea3.Core
 {

@@ -17,7 +17,7 @@ namespace Etrea3.OLC
             StringBuilder sb = new StringBuilder();
             while (true)
             {
-                sb.AppendLine($"%BGT%Weldome to OLC {session.Player.Name}!%PT%");
+                sb.AppendLine($"%BGT%Welcome to OLC {session.Player.Name}!%PT%");
                 sb.AppendLine("OLC allows you to create, change and remove the fabric of the Realms");
                 sb.AppendLine();
                 sb.AppendLine("Options:");

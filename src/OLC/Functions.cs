@@ -280,6 +280,12 @@ namespace Etrea3.OLC
                     session?.Send($"%BRT%{reply}%PT%T%{Constants.NewLine}");
                     return false;
                 }
+                if (npc.Gender == Gender.Undefined)
+                {
+                    reply = "The NPC must have a gender (Male, Female, NonBinary)";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
                 return true;
             }
             if (typeof(T) == typeof(Quest))
@@ -409,7 +415,7 @@ namespace Etrea3.OLC
                     session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
                     return false;
                 }
-                if (spell.SpellType == SpellType.Buff || spell.SpellType == SpellType.Debuff && spell.AppliedBuffs.Count == 0)
+                if ((spell.SpellType == SpellType.Buff || spell.SpellType == SpellType.Debuff) && spell.AppliedBuffs.Count == 0)
                 {
                     reply = "If the Spell Type is Buff or Debuff it must apply at least one Buff.";
                     session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
@@ -461,6 +467,18 @@ namespace Etrea3.OLC
                     || string.IsNullOrEmpty(room.LongDescription))
                 {
                     reply = "The Room must have a Name, Short and Long Descriptions.";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (room.Flags.HasFlag(RoomFlags.Sign) && string.IsNullOrEmpty(room.SignText))
+                {
+                    reply = "If the Room has the Sign Flag, it must also have Sign Text";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (!string.IsNullOrEmpty(room.SignText) && !room.Flags.HasFlag(RoomFlags.Sign))
+                {
+                    reply = "If the Room has Sign Text, it must also have the Sign Flag";
                     session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
                     return false;
                 }

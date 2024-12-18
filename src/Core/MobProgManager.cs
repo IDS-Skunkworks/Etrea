@@ -101,7 +101,13 @@ namespace Etrea3.Core
         {
             if (Instance.MobProgs.ContainsKey(id))
             {
-                return Instance.MobProgs.TryRemove(id, out _) && DatabaseManager.RemoveMobProg(id);
+                if (Instance.MobProgs.TryRemove(id, out var mp) && DatabaseManager.RemoveMobProg(id))
+                {
+                    mp.Dispose();
+                    return true;
+                }
+                Game.LogMessage($"ERROR: Failed to remove MobProg {id} from MobProg Manager and/or World Database", LogLevel.Error, true);
+                return false;
             }
             Game.LogMessage($"ERROR: Error removing MobProg {id}: No such MobProg in MobProg Manager", LogLevel.Error, true);
             return false;

@@ -6,7 +6,6 @@ namespace Etrea3.Core
 {
     public static partial class ActMob
     {
-        // TODO: Add in functions for remembering, recalling and forgetting players
         private static void MobMove(NPC mob, string args, Session session)
         {
             if (!mob.CanMove())
@@ -285,7 +284,7 @@ namespace Etrea3.Core
                 }
                 var line = args.Remove(0, argElements[0].Length).Trim();
                 var target = !string.IsNullOrEmpty(line) ? RoomManager.Instance.GetRoom(mob.CurrentRoom).GetActor(line, mob) : null;
-                emote.Perform(mob, target, !string.IsNullOrEmpty(line));
+                emote.Perform(mob, target, !string.IsNullOrEmpty(line), line);
             }
             else
             {
@@ -397,6 +396,40 @@ namespace Etrea3.Core
                 var mobName = mob.CanBeSeenBy(lp.Player) ? mob.Name : "Something";
                 var tName = target.CanBeSeenBy(lp.Player) ? target.Name : "someone";
                 lp.Send($"%BYT%{mobName} whisers something to {tName}.%PT%{Constants.NewLine}");
+            }
+        }
+
+        private static void MobRememberPlayer(NPC mob, string args, Session session)
+        {
+            if (string.IsNullOrEmpty(args))
+            {
+                session?.Send($"%BRT%{mob.Name} should remember who, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            var argElements = args.Split(' ');
+            var target = SessionManager.Instance.GetSession(argElements[0].Trim());
+            if (target == null)
+            {
+                session?.Send($"%BRT%{mob.Name} cannot remember {argElements[0]} that person isn't in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            mob.RememberPlayer(target.Player, Game.TickCount);
+            session?.Send($"%BGT%{mob.Name} now remembers {target.Player.Name}%PT%{Constants.NewLine}");
+        }
+
+        private static void MobForgetPlayer(NPC mob, string args, Session session)
+        {
+            if (string.IsNullOrEmpty(args))
+            {
+                session?.Send($"%BRT%{mob.Name} should forget who, exactly?%PT%{Constants.NewLine}");
+                return;
+            }
+            var argElements = args.Split(' ');
+            var target = SessionManager.Instance.GetSession(argElements[0].Trim());
+            if (target != null)
+            {
+                mob.ForgetPlayer(target.Player);
+                session?.Send($"%BGT%{mob.Name} has now forgotten {target.Player.Name}%PT%{Constants.NewLine}");
             }
         }
     }

@@ -85,11 +85,11 @@ namespace Etrea3.Core
                     break;
 
                 case "remember":
-                    // TODO: Implement imms forcing mobs to remember / forget players
+                    MobRememberPlayer(npc, arg, session);
                     break;
 
                 case "forget":
-
+                    MobForgetPlayer(npc, arg, session);
                     break;
 
                 default:

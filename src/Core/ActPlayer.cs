@@ -1,7 +1,6 @@
 ﻿using Etrea3.Objects;
 using System;
 using System.Linq;
-using System.ServiceModel;
 using System.Text;
 
 namespace Etrea3.Core
@@ -322,8 +321,15 @@ namespace Etrea3.Core
                     session.Send($"%BRT%You can't do that, no such Emote exists!%PT%{Constants.NewLine}");
                     return;
                 }
-                var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
-                emote.Perform(session.Player, target, !string.IsNullOrEmpty(arg));
+                if (!string.IsNullOrEmpty(arg))
+                {
+                    var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+                    emote.Perform(session.Player, target, !string.IsNullOrEmpty(arg), arg);
+                }
+                else
+                {
+                    emote.Perform(session.Player, null, !string.IsNullOrEmpty(arg), arg);
+                }
             }
         }
 
@@ -2049,6 +2055,20 @@ namespace Etrea3.Core
             {
                 session.Send($"%BRT%Usage: read '<scroll name>' <target>%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Example: read 'scroll of lightning bolt' orc warboss%PT%{Constants.NewLine}");
+                session.Send($"%BRT%To read a sign in a room: read sign%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length == 1 && args[0].ToLower() == "sign")
+            {
+                if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Sign))
+                {
+                    session.Send(RoomManager.Instance.GetRoom(session.Player.CurrentRoom).SignText);
+                }
+                else
+                {
+                    session.Send($"%BRT%There is no sign here to read!%PT%{Constants.NewLine}");
+                }
                 return;
             }
             if (!session.Player.HasSkill("Read Scroll"))

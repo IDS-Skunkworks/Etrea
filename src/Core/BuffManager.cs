@@ -159,6 +159,12 @@ namespace Etrea3.Core
                     Name = "Iron Skin",
                     Description = "The Winds of Magic make your skin as iron, turning aside all but the strongest attack!",
                     Duration = 5
+                },
+                new Buff
+                {
+                    Name = "Bless",
+                    Description = "Blessed with Holy Power you strike with purpose and might",
+                    Duration = 5
                 }
             };
         }

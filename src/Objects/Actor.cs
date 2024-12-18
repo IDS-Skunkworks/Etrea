@@ -301,6 +301,10 @@ namespace Etrea3.Objects
             {
                 modRoll -= 4;
             }
+            if (HasBuff("Bless"))
+            {
+                modRoll += 1;
+            }
             if (WeaponEquip != null)
             {
                 Weapon w = (Weapon)WeaponEquip;
@@ -390,6 +394,10 @@ namespace Etrea3.Objects
             if (HasBuff("Desperate Attack"))
             {
                 modDmg += 4;
+            }
+            if (HasBuff("Bless"))
+            {
+                modDmg += 2;
             }
             if (isCritical)
             {

@@ -9,7 +9,6 @@ namespace Etrea3
 {
     public class Program
     {
-        // https://chatgpt.com/c/671a694c-79a4-8001-9ecc-4ede06f0ddde - API for client app
         private static TcpServer tcpServer;
         private static APIServer apiServer;
         private static Game game;

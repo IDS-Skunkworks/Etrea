@@ -5,6 +5,31 @@ namespace Etrea3.Core
 {
     public static partial class ActMob
     {
+        public static bool MobProgItemInRoom(string mobID, string item)
+        {
+            if (string.IsNullOrEmpty(mobID))
+            {
+                Game.LogMessage($"DEBUG: MobProgItemInRoom called with no Mob ID", LogLevel.Debug, true);
+                return false;
+            }
+            if (string.IsNullOrEmpty(item))
+            {
+                Game.LogMessage($"DEBUG: MobProgItemInRoom called with no Item criteria", LogLevel.Debug, true);
+                return false;
+            }
+            var gMobID = Guid.Parse(mobID);
+            var mob = NPCManager.Instance.GetNPC(gMobID);
+            var r = RoomManager.Instance.GetRoom(mob.CurrentRoom);
+            if (int.TryParse(item, out int itemID))
+            {
+                return r.ItemsInRoom.Values.Any(x => x.ID == itemID);
+            }
+            else
+            {
+                return r.ItemsInRoom.Values.Any(x => x.Name.IndexOf(item, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+        }
+
         public static string MobProgGetRandomPlayerID(string mobID)
         {
             if (string.IsNullOrEmpty(mobID))
@@ -21,7 +46,6 @@ namespace Etrea3.Core
             }
             return null;
         }
-
 
         public static void MobProgEmote(string mobID, string args)
         {
@@ -184,6 +208,22 @@ namespace Etrea3.Core
             sess.Player.Move(rid, true);
         }
 
+        public static string MobProgGetItemName(string args)
+        {
+            if (string.IsNullOrEmpty(args))
+            {
+                Game.LogMessage($"DEBUG: MobProgGetItemName called with no args", LogLevel.Debug, true);
+                return null;
+            }
+            if (int.TryParse(args, out int rid))
+            {
+                var item = ItemManager.Instance.GetItem(int.Parse(args));
+                return item != null ? item.Name : null;
+            }
+            Game.LogMessage($"DEBUG: MobProgGetItemName called with args that could not be transformed to an integer", LogLevel.Debug, true);
+            return null;
+        }
+
         public static string MobProgGetPlayerName(string args)
         {
             if (string.IsNullOrEmpty(args))
@@ -205,7 +245,8 @@ namespace Etrea3.Core
             }
             var gMobID = Guid.Parse(mobID);
             var mob = NPCManager.Instance.GetNPC(gMobID);
-            var player = SessionManager.Instance.ActivePlayers.Where(x => x.Player.Name == args).Select(x => x.Player).FirstOrDefault();
+            var gPlayerID = Guid.Parse(args);
+            var player = SessionManager.Instance.ActivePlayers.Where(x => x.ID == gPlayerID).Select(x => x.Player).FirstOrDefault();
             mob.RememberPlayer(player, Game.TickCount);
         }
 
@@ -218,7 +259,8 @@ namespace Etrea3.Core
             }
             var gMobID = Guid.Parse(mobID);
             var mob = NPCManager.Instance.GetNPC(gMobID);
-            var player = SessionManager.Instance.ActivePlayers.Where(x => x.Player.Name == args).Select(x => x.Player).FirstOrDefault();
+            var gPlayerID = Guid.Parse(args);
+            var player = SessionManager.Instance.ActivePlayers.Where(x => x.ID == gPlayerID).Select(x => x.Player).FirstOrDefault();
             mob.ForgetPlayer(player);
         }
 
@@ -231,7 +273,8 @@ namespace Etrea3.Core
             }
             var gMobID = Guid.Parse(mobID);
             var mob = NPCManager.Instance.GetNPC(gMobID);
-            var player = SessionManager.Instance.ActivePlayers.Where(x => x.Player.Name == args).Select(x => x.Player).FirstOrDefault();
+            var gPlayerID = Guid.Parse(args);
+            var player = SessionManager.Instance.ActivePlayers.Where(x => x.ID == gPlayerID).Select(x => x.Player).FirstOrDefault();
             return mob.RemembersPlayer(player, out _);
         }
 
@@ -244,7 +287,8 @@ namespace Etrea3.Core
             }
             var gMobID = Guid.Parse(mobID);
             var mob = NPCManager.Instance.GetNPC(gMobID);
-            var player = SessionManager.Instance.ActivePlayers.Where(x => x.Player.Name == args).Select(x => x.Player).FirstOrDefault();
+            var gPlayerID = Guid.Parse(args);
+            var player = SessionManager.Instance.ActivePlayers.Where(x => x.ID == gPlayerID).Select(x => x.Player).FirstOrDefault();
             if (mob.RemembersPlayer(player, out ulong tick))
             {
                 return tick;

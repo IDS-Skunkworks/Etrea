@@ -184,7 +184,6 @@ namespace Etrea3.Core
                     player.MaxMP = Math.Max(10, 10 + Helpers.CalculateAbilityModifier(player.Intelligence));
                     player.AddSpell("Magic Missile");
                     player.AddSpell("Mage Armour");
-                    player.AddSkill("Light Armour");
                     player.AddSkill("Simple Weapons");
                     break;
 
@@ -228,7 +227,7 @@ namespace Etrea3.Core
                     player.AddSkill("Martial Weapons");
                     break;
             }
-            player.Gold = Helpers.RollDice<ulong>(10, 10);
+            player.Gold = 10 + Helpers.RollDice<ulong>(10, 10);
             player.MaxSP = Math.Max(20, 20 + Helpers.CalculateAbilityModifier(player.Constitution));
             player.CurrentHP = player.MaxHP;
             player.CurrentMP = player.MaxMP;

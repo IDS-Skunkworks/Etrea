@@ -32,5 +32,6 @@ namespace Etrea3
         Chef = 1 << 23,
         Exorcist = 1 << 24,
         Scribe = 1 << 25,
+        Sign = 1 << 26,
     }
 }

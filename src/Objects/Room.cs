@@ -22,6 +22,8 @@ namespace Etrea3.Objects
         [JsonProperty]
         public string LongDescription { get; set; }
         [JsonProperty]
+        public string SignText { get; set; }
+        [JsonProperty]
         public ConcurrentDictionary<string, RoomExit> RoomExits { get; set; }
         [JsonProperty]
         public RoomFlags Flags { get; set; }
@@ -224,6 +226,10 @@ namespace Etrea3.Objects
                     if (Flags.HasFlag(RoomFlags.Exorcist))
                     {
                         roomDesc.AppendLine("An Exorcist cleric is here, helping to deal with curses and ailments!");
+                    }
+                    if (Flags.HasFlag(RoomFlags.Sign))
+                    {
+                        roomDesc.AppendLine("A sign here beckons you to %BYT%read%PT% it.");
                     }
                     if (RSSNode != null)
                     {

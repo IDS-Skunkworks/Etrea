@@ -9,6 +9,46 @@ namespace Etrea3.Core
 {
     public static class ActImmortal
     {
+        public static void CheckMobMemory(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to check an NPC's memory but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: checkmemory <target> - display a list of players the target NPC remembers%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(arg, session.Player);
+            if (target == null)
+            {
+                session.Send($"%BRT%The target of your power cannot be found!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.ActorType != ActorType.NonPlayer)
+            {
+                session.Send($"%BRT%You can only use this power on NPCs!%PT%{Constants.NewLine}");
+                return;
+            }
+            var n = (NPC)target;
+            if (n.PlayersRemembered.Count > 0)
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"%BYT%  {new string('=', 77)}");
+                var ct = Game.TickCount;
+                foreach(var pr in n.PlayersRemembered)
+                {
+                    sb.AppendLine($"%BYT%||%PT% {pr.Key} - {pr.Value} ({ct - pr.Value})");
+                }
+                sb.AppendLine($"%BYT%  {new string('=', 77)}");
+                session.Send(sb.ToString());
+                return;
+            }
+            session.Send($"%BGT%{n.Name} doesn't remember anyone!%PT%{Constants.NewLine}");
+        }
+
         public static void GenerateAPIKey(Session session, string arg)
         {
             if (!session.Player.IsImmortal)

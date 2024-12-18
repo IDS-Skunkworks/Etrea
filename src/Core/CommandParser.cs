@@ -571,6 +571,11 @@ namespace Etrea3.Core
                     arg = input.Remove(0, verb.Length).Trim();
                     ForceActor(session, arg);
                     break;
+
+                case "checkmemory":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    CheckMobMemory(session, arg);
+                    break;
                 #endregion
 
                 #region Default

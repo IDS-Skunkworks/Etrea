@@ -23,13 +23,14 @@ namespace Etrea3.Objects
         [JsonIgnore]
         public Guid LockHolder { get; set; } = Guid.Empty;
 
-        public void Perform(Actor performer, Actor target, bool targetProvided)
+        public void Perform(Actor performer, Actor target, bool targetProvided, string tName)
         {
             // %pg% / %tg% = performer/target gender: male, female, nonbinary
             // %pg1% / %tg1% = obj pronoun: him, her, them
             // %pg2% / %tg2% = pos pronoun: his, hers, their
             // %pg3% / %tg3% = per pronoun: he, she, they
             // %pn% / %tn% = performer/target name
+            string targetName = target != null ? target.Name : tName;
             string pMessage, tMessage = string.Empty;
             if (performer == null)
             {
@@ -41,7 +42,7 @@ namespace Etrea3.Objects
                 // we looked for a target but couldn't find one so send MessageToPerformer[2], MessageToOthers[2]
                 if (performer.ActorType == ActorType.Player)
                 {
-                    pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[2]);
+                    pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[2], targetName);
                     ((Player)performer).Send(pMessage);
                 }
                 SendToOthers(performer, target, MessageToOthers[2]);
@@ -52,7 +53,7 @@ namespace Etrea3.Objects
                 // we didn't look for a target (none specified) so send MessageToPerformer[0], MessageToOthers[0]
                 if (performer.ActorType == ActorType.Player)
                 {
-                    pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[0]);
+                    pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[0], targetName);
                     ((Player)performer).Send(pMessage);
                 }
                 SendToOthers(performer, target, MessageToOthers[0]);
@@ -63,14 +64,14 @@ namespace Etrea3.Objects
                 // emote against self, send MessageToPerformer[3] and MessageToOthers[3]
                 if (performer.ActorType == ActorType.Player)
                 {
-                    pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[3]);
+                    pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[3], targetName);
                     ((Player)performer).Send(pMessage);
                 }
                 SendToOthers(performer, target, MessageToOthers[3]);
                 return;
             }
             // with a target, send MessageToPerformer[1], MessageToTarget and MessageToOthers[1]
-            pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[1]);
+            pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[1], targetName);
             if (performer.ActorType == ActorType.Player)
             {
                 ((Player)performer).Send(pMessage);
@@ -100,7 +101,7 @@ namespace Etrea3.Objects
             }
         }
 
-        private string ParseMessageForPerformer(Actor performer, Actor target, string message)
+        private string ParseMessageForPerformer(Actor performer, Actor target, string message, string targetName)
         {
             string parsedMessage = message;
             if (message.IndexOf("%pn%") >= 0)
@@ -109,7 +110,7 @@ namespace Etrea3.Objects
             }
             if (message.IndexOf("%tn%") >= 0)
             {
-                parsedMessage = parsedMessage.Replace("%tn%", target.Name);
+                parsedMessage = target != null ? parsedMessage.Replace("%tn%", target.Name) : parsedMessage.Replace("%tn%", targetName);
             }
             if (message.IndexOf("%pg%") >= 0)
             {
@@ -117,7 +118,7 @@ namespace Etrea3.Objects
             }
             if (message.IndexOf("%tg%") >= 0)
             {
-                parsedMessage = parsedMessage.Replace("%tg%", target.Gender.ToString());
+                parsedMessage = target != null ? parsedMessage.Replace("%tg%", target.Gender.ToString()) : parsedMessage.Replace("%tg%", "it");
             }
             if (message.IndexOf("%pg1%") >= 0)
             {
@@ -172,53 +173,86 @@ namespace Etrea3.Objects
             }
             if (message.IndexOf("%tg1%") >= 0)
             {
-                switch (target.Gender)
+                if (target == null)
                 {
-                    case Gender.Male:
-                        parsedMessage = parsedMessage.Replace("%tg1%", Constants.ObjectivePronouns[0]);
-                        break;
+                    parsedMessage = parsedMessage.Replace("%tg1%", "it");
+                }
+                else
+                {
+                    switch (target.Gender)
+                    {
+                        case Gender.Male:
+                            parsedMessage = parsedMessage.Replace("%tg1%", Constants.ObjectivePronouns[0]);
+                            break;
 
-                    case Gender.Female:
-                        parsedMessage = parsedMessage.Replace("%tg1%", Constants.ObjectivePronouns[1]);
-                        break;
+                        case Gender.Female:
+                            parsedMessage = parsedMessage.Replace("%tg1%", Constants.ObjectivePronouns[1]);
+                            break;
 
-                    case Gender.NonBinary:
-                        parsedMessage = parsedMessage.Replace("%tg1%", Constants.ObjectivePronouns[2]);
-                        break;
+                        case Gender.NonBinary:
+                            parsedMessage = parsedMessage.Replace("%tg1%", Constants.ObjectivePronouns[2]);
+                            break;
+
+                        case Gender.Undefined:
+                            parsedMessage = parsedMessage.Replace("%tg1%", "it");
+                            break;
+                    }
                 }
             }
             if (message.IndexOf("%tg2%") >= 0)
             {
-                switch (target.Gender)
+                if (target == null)
                 {
-                    case Gender.Male:
-                        parsedMessage = parsedMessage.Replace("%tg2%", Constants.PosessivePronouns[0]);
-                        break;
+                    parsedMessage = parsedMessage.Replace("%tg2%", "it");
+                }
+                else
+                {
+                    switch (target.Gender)
+                    {
+                        case Gender.Male:
+                            parsedMessage = parsedMessage.Replace("%tg2%", Constants.PosessivePronouns[0]);
+                            break;
 
-                    case Gender.Female:
-                        parsedMessage = parsedMessage.Replace("%tg2%", Constants.PosessivePronouns[1]);
-                        break;
+                        case Gender.Female:
+                            parsedMessage = parsedMessage.Replace("%tg2%", Constants.PosessivePronouns[1]);
+                            break;
 
-                    case Gender.NonBinary:
-                        parsedMessage = parsedMessage.Replace("%tg2%", Constants.PosessivePronouns[2]);
-                        break;
+                        case Gender.NonBinary:
+                            parsedMessage = parsedMessage.Replace("%tg2%", Constants.PosessivePronouns[2]);
+                            break;
+
+                        case Gender.Undefined:
+                            parsedMessage = parsedMessage.Replace("%tg2%", "it");
+                            break;
+                    }
                 }
             }
             if (message.IndexOf("%pg3%") >= 0)
             {
-                switch (target.Gender)
+                if (target == null)
                 {
-                    case Gender.Male:
-                        parsedMessage = parsedMessage.Replace("%tg3%", Constants.PersonalPronouns[0]);
-                        break;
+                    parsedMessage = parsedMessage.Replace("%tg3%", "it");
+                }
+                else
+                {
+                    switch (target.Gender)
+                    {
+                        case Gender.Male:
+                            parsedMessage = parsedMessage.Replace("%tg3%", Constants.PersonalPronouns[0]);
+                            break;
 
-                    case Gender.Female:
-                        parsedMessage = parsedMessage.Replace("%tg3%", Constants.PersonalPronouns[1]);
-                        break;
+                        case Gender.Female:
+                            parsedMessage = parsedMessage.Replace("%tg3%", Constants.PersonalPronouns[1]);
+                            break;
 
-                    case Gender.NonBinary:
-                        parsedMessage = parsedMessage.Replace("%tg3%", Constants.PersonalPronouns[2]);
-                        break;
+                        case Gender.NonBinary:
+                            parsedMessage = parsedMessage.Replace("%tg3%", Constants.PersonalPronouns[2]);
+                            break;
+
+                        case Gender.Undefined:
+                            parsedMessage = parsedMessage.Replace("%tg3%", "it");
+                            break;
+                    }
                 }
             }
             return parsedMessage;

@@ -57,7 +57,7 @@ namespace Etrea3.Core
 
         public List<Room> GetRoom()
         {
-            return Instance.Rooms.Values.ToList();
+            return Instance.Rooms.Values.OrderBy(x => x.ID).ToList();
         }
 
         public bool RoomExists(int id)
@@ -79,7 +79,7 @@ namespace Etrea3.Core
 
         public List<Room> GetRoomsForZone(int zoneId)
         {
-            return (from r in Instance.Rooms.Values where r.ZoneID == zoneId select r).ToList();
+            return (from r in Instance.Rooms.Values where r.ZoneID == zoneId select r).OrderBy(x => x.ID).ToList();
         }
 
         public Room GetRoom(int roomId)
@@ -97,9 +97,11 @@ namespace Etrea3.Core
             {
                 return null;
             }
-            return (from r in Instance.Rooms.Values where Regex.IsMatch(r.RoomName, criteria, RegexOptions.IgnoreCase)
+            return (from r in Instance.Rooms.Values
+                    where Regex.IsMatch(r.RoomName, criteria, RegexOptions.IgnoreCase)
                     || Regex.IsMatch(r.ShortDescription, criteria, RegexOptions.IgnoreCase)
-                    || Regex.IsMatch(r.LongDescription, criteria, RegexOptions.IgnoreCase) select r).ToList();
+                    || Regex.IsMatch(r.LongDescription, criteria, RegexOptions.IgnoreCase)
+                    select r).OrderBy(x => x.ID).ToList();
         }
 
         public List<Room> GetRoom(int start, int end)
@@ -108,7 +110,7 @@ namespace Etrea3.Core
             {
                 return null;
             }
-            return (from r in Instance.Rooms.Values where r.ID >= start && r.ID <= end select r).ToList();
+            return (from r in Instance.Rooms.Values where r.ID >= start && r.ID <= end select r).OrderBy(x => x.ID).ToList();
         }
 
         public void LoadPlayerIntoRoom(int roomID, Session session)

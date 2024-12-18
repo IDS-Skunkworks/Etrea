@@ -49,11 +49,21 @@ namespace Etrea3.Objects
             _lua.RegisterFunction("MobCheckIfPlayerIsImm", typeof(ActMob).GetMethod("MobProgCheckPlayerIsImm"));
             _lua.RegisterFunction("MobGetPlayerName", typeof(ActMob).GetMethod("MobProgGetPlayerName"));
             _lua.RegisterFunction("MobGetRandomPlayer", typeof(ActMob).GetMethod("MobProgGetRandomPlayerID"));
+            _lua.RegisterFunction("MobGetItemName", typeof(ActMob).GetMethod("MobProgGetItemName"));
+            _lua.RegisterFunction("MobItemInRoom", typeof(ActMob).GetMethod("MobProgItemInRoom"));
         }
 
         public void Init()
         {
             _lua.DoString(Script);
+        }
+
+        public void Dispose()
+        {
+            if (_lua != null)
+            {
+                _lua.Dispose();
+            }
         }
 
         public void TriggerEvent(MobProgTrigger trigger, object parameters)

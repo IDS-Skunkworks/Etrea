@@ -917,7 +917,7 @@ namespace Etrea3.OLC
                 session.Send(msg);
                 return;
             }
-            var modItem = ItemManager.Instance.GetItem(itemID).Clone();
+            InventoryItem modItem = Helpers.Clone<InventoryItem>(item);
             ItemManager.Instance.SetItemLockState(itemID, true, session);
             StringBuilder sb = new StringBuilder();
             while (true)
@@ -1026,7 +1026,7 @@ namespace Etrea3.OLC
                 session.Send(msg);
                 return;
             }
-            var modWeapon = (Weapon)ItemManager.Instance.GetItem(wpn.ID).Clone();
+            Weapon modWeapon = Helpers.Clone<Weapon>(wpn);
             ItemManager.Instance.SetItemLockState(modWeapon.ID, true, session);
             StringBuilder sb = new StringBuilder();
             while (true)
@@ -1183,7 +1183,7 @@ namespace Etrea3.OLC
                 session.Send(msg);
                 return;
             }
-            var modArmour = (Armour)ItemManager.Instance.GetItem(armour.ID).Clone();
+            Armour modArmour = Helpers.Clone<Armour>(armour);
             ItemManager.Instance.SetItemLockState(modArmour.ID, true, session);
             StringBuilder sb = new StringBuilder();
             while (true)
@@ -1330,7 +1330,7 @@ namespace Etrea3.OLC
                 session.Send(msg);
                 return;
             }
-            var modArmour = (Armour)ItemManager.Instance.GetItem(item.ID).Clone();
+            Armour modArmour = Helpers.Clone<Armour>(item);
             ItemManager.Instance.SetItemLockState(modArmour.ID, true, session);
             StringBuilder sb = new StringBuilder();
             while (true)
@@ -1468,7 +1468,7 @@ namespace Etrea3.OLC
                 return;
             }
             ItemManager.Instance.SetItemLockState(item.ID, true, session);
-            var modRing = (Ring)ItemManager.Instance.GetItem(item.ID).Clone();
+            Ring modRing = Helpers.Clone<Ring>(item);
             StringBuilder sb = new StringBuilder();
             while (true)
             {
@@ -1603,7 +1603,7 @@ namespace Etrea3.OLC
                 return;
             }
             ItemManager.Instance.SetItemLockState(item.ID, true, session);
-            var modScroll = (Scroll)ItemManager.Instance.GetItem(item.ID).Clone();
+            Scroll modScroll = Helpers.Clone<Scroll>(item);
             StringBuilder sb = new StringBuilder();
             while (true)
             {
@@ -1729,7 +1729,7 @@ namespace Etrea3.OLC
                 return;
             }
             ItemManager.Instance.SetItemLockState(item.ID, true, session);
-            var modConsumable = (Consumable)ItemManager.Instance.GetItem(item.ID).Clone();
+            Consumable modConsumable = Helpers.Clone<Consumable>(item);
             StringBuilder sb = new StringBuilder();
             while (true)
             {

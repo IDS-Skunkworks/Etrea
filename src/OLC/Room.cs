@@ -17,6 +17,7 @@ namespace Etrea3.OLC
                 sb.AppendLine($"Room ID: {newRoom.ID}{Constants.TabStop}Zone: {newRoom.ZoneID}{Constants.TabStop}Name: {newRoom.RoomName}");
                 sb.AppendLine($"Short Desc: {newRoom.ShortDescription}");
                 sb.AppendLine($"Long Desc: {newRoom.LongDescription}");
+                sb.AppendLine($"Sign Text: {!string.IsNullOrEmpty(newRoom.SignText)}");
                 sb.AppendLine($"Flags: {newRoom.Flags}");
                 sb.AppendLine($"Exits: {newRoom.RoomExits.Count}");
                 sb.AppendLine($"Starting NPCs: {newRoom.StartingNPCs.Count}{Constants.TabStop}Starting Items: {newRoom.StartingItems.Count}");
@@ -28,7 +29,8 @@ namespace Etrea3.OLC
                 sb.AppendLine($"6. Set Flags{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}7. Manage Exits");
                 sb.AppendLine($"8. Manage Starting NPCs{Constants.TabStop}{Constants.TabStop}9. Manage Starting Items");
                 sb.AppendLine($"10. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}11. Manage Tick Items");
-                sb.AppendLine($"12. Save Room{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}13. Return");
+                sb.AppendLine($"12. Set Sign Text{Constants.TabStop}{Constants.TabStop}13. Clear Sign Text");
+                sb.AppendLine($"14. Save Room{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}15. Return");
                 session.Send(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
@@ -83,6 +85,14 @@ namespace Etrea3.OLC
                         break;
 
                     case 12:
+                        newRoom.SignText = Helpers.GetLongDescription(session);
+                        break;
+
+                    case 13:
+                        newRoom.SignText = string.Empty;
+                        break;
+
+                    case 14:
                         if (ValidateAsset(session, newRoom, true, out _))
                         {
                             if (RoomManager.Instance.AddOrUpdateRoom(newRoom, true))
@@ -104,7 +114,7 @@ namespace Etrea3.OLC
                         }
                         break;
 
-                    case 13:
+                    case 15:
                         return;
 
                     default:
@@ -158,10 +168,20 @@ namespace Etrea3.OLC
                     }
                     if (r.NPCsInRoom.Count > 0)
                     {
+                        bool npcDeleteErr = false;
                         while (r.NPCsInRoom.Count > 0)
                         {
-                            // TODO: Need to wrap a test around this and abort room deletion if we fail
-                            NPCManager.Instance.RemoveNPCInstance(r.NPCsInRoom[0].ID);
+                            if (!NPCManager.Instance.RemoveNPCInstance(r.NPCsInRoom[0].ID))
+                            {
+                                Game.LogMessage($"ERROR: Error removing NPC {r.NPCsInRoom[0].ID} from Room {r.ID}, aborting deletion of Room", LogLevel.Error, true);
+                                session.Send($"%BRT%Failed to delete an NPC from the Room, aborting deletion of Room%PT%{Constants.NewLine}");
+                                npcDeleteErr = true;
+                                break;
+                            }
+                        }
+                        if (npcDeleteErr)
+                        {
+                            continue;
                         }
                     }
                     if (r.ItemsInRoom.Count > 0)
@@ -220,6 +240,7 @@ namespace Etrea3.OLC
                 sb.AppendLine($"Room ID: {room.ID}{Constants.TabStop}Zone: {room.ZoneID}{Constants.TabStop}Name: {room.RoomName}");
                 sb.AppendLine($"Short Desc: {room.ShortDescription}");
                 sb.AppendLine($"Long Desc: {room.LongDescription}");
+                sb.AppendLine($"Sign Text: {!string.IsNullOrEmpty(room.SignText)}");
                 sb.AppendLine($"Flags: {room.Flags}");
                 sb.AppendLine($"Exits: {room.RoomExits.Count}");
                 sb.AppendLine($"Starting NPCs: {room.StartingNPCs.Count}{Constants.TabStop}Starting Items: {room.StartingItems.Count}");
@@ -231,7 +252,8 @@ namespace Etrea3.OLC
                 sb.AppendLine($"5. Set Flags{Constants.TabStop}6. Manage Exits");
                 sb.AppendLine($"7. Manage Starting NPCs{Constants.TabStop}{Constants.TabStop}8. Manage Starting Items");
                 sb.AppendLine($"9. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}10. Manage Tick Items");
-                sb.AppendLine($"11. Save Room{Constants.TabStop}12. Return");
+                sb.AppendLine($"11. Set Sign Text{Constants.TabStop}{Constants.TabStop}12. Clear Sign Text");
+                sb.AppendLine($"13. Save Room{Constants.TabStop}14. Return");
                 session.Send(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
@@ -282,6 +304,14 @@ namespace Etrea3.OLC
                         break;
 
                     case 11:
+                        room.SignText = Helpers.GetLongDescription(session);
+                        break;
+
+                    case 12:
+                        room.SignText = string.Empty;
+                        break;
+
+                    case 13:
                         if (ValidateAsset(session, room, false, out _))
                         {
                             if (RoomManager.Instance.AddOrUpdateRoom(room, false))
@@ -304,7 +334,7 @@ namespace Etrea3.OLC
                         }
                         break;
 
-                    case 12:
+                    case 14:
                         RoomManager.Instance.SetRoomLockState(rid, false, session);
                         return;
 
