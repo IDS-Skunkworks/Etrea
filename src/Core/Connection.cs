@@ -96,6 +96,10 @@ namespace Etrea3.Core
                             playerSession.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
                         }
                     }
+                    else
+                    {
+                        Game.LogMessage($"ERROR: Input from {playerSession.Client.Client.RemoteEndPoint} could not be validated", LogLevel.Error, true);
+                    }
                 }
                 else
                 {

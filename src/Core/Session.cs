@@ -43,24 +43,16 @@ namespace Etrea3.Core
                 }
                 byte[] buffer = new byte[4096];
                 string input = string.Empty;
-                bool validInput = false;
-                while (!validInput)
+                try
                 {
-                    try
-                    {
-                        int byteCount = Client.GetStream().Read(buffer, 0, buffer.Length);
-                        input = Encoding.UTF8.GetString(buffer, 0, byteCount);
-                        if (byteCount > 1)
-                        {
-                            validInput = buffer[byteCount - 1] == 10;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Game.LogMessage($"ERROR: Error reading from socket {Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
-                        SessionManager.Instance.Close(this);
-                        break;
-                    }
+                    int byteCount = Client.GetStream().Read(buffer, 0, buffer.Length);
+                    input = Encoding.UTF8.GetString(buffer, 0, byteCount);
+                }
+                catch (Exception ex)
+                {
+                    Game.LogMessage($"ERROR: Error reading from socket {Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
+                    SessionManager.Instance.Close(this);
+                    return null;
                 }
                 return input;
             }
@@ -77,7 +69,7 @@ namespace Etrea3.Core
             if (IsConnected)
             {
                 Game.LogMessage($"CONNECTION: Disconnecting socket {Client.Client.RemoteEndPoint}", LogLevel.Connection, true);
-                Client.Client.Close();
+                Client.Client.Dispose();
             }
         }
     }

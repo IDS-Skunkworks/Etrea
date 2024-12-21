@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Etrea3.Core
@@ -57,7 +56,7 @@ namespace Etrea3.Core
             EndPoint endPoint = null;
             try
             {
-                endPoint = session.Client.Client.RemoteEndPoint;
+                endPoint = session.Client.Client?.RemoteEndPoint;
                 var charName = session.Player?.Name ?? string.Empty;
                 if (session.Player != null)
                 {

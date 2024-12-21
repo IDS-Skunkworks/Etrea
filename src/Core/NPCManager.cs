@@ -98,7 +98,7 @@ namespace Etrea3.Core
 
         public List<NPC> GetNPCsForZone(int zoneId)
         {
-            return NPCTemplates.Values.Where(x => x.ZoneID >= zoneId).ToList();
+            return NPCTemplates.Values.Where(x => x.ZoneID == zoneId).ToList();
         }
 
         public int GetNPCInstanceCount(int id)
