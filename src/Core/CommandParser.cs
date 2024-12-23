@@ -382,6 +382,11 @@ namespace Etrea3.Core
                     GenerateAPIKey(session, arg);
                     break;
 
+                case "releaselock":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ReleaseOLCLock(session, arg);
+                    break;
+
                 case "shutdown":
                     arg = input.Remove(0, verb.Length).Trim();
                     ShutDownGame(session, arg);

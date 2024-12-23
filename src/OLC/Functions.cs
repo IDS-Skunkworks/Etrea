@@ -542,6 +542,65 @@ namespace Etrea3.OLC
                 }
                 return true;
             }
+            if (typeof(T) == typeof(Armour))
+            {
+                var armour = (Armour)(object)asset;
+                if (isNew && ItemManager.Instance.ItemExists(armour.ID))
+                {
+                    reply = "The Item ID is already in use.";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (armour.ID <= 0)
+                {
+                    reply = "The Item ID must be greater than 0.";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (armour.BaseValue < 0)
+                {
+                    reply = "The Base Value of the Armour must be greater than 0";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (armour.IsCursed && !armour.IsMagical)
+                {
+                    reply = "If the Armour has the Curse flag, it must also have the Magical flag.";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (armour.AppliedBuffs.Count > 0 && !armour.IsMagical)
+                {
+                    reply = "If the Armour applies buffs it must also have the Magical flag.";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (armour.ArmourType == ArmourType.Undefined)
+                {
+                    reply = "Armour Type cannot be Undefined.";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (armour.Slot == WearSlot.None)
+                {
+                    reply = "The Armour must have a defined Wear Slot";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (armour.DamageReduction < 0)
+                {
+                    reply = "The Damage Reduction value cannot be less than 0";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(armour.Name) || string.IsNullOrEmpty(armour.ShortDescription) || string.IsNullOrEmpty(armour.LongDescription))
+                {
+                    reply = "The Armour must have a name, short and long descriptions.";
+                    session?.Send($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                return true;
+            }
             if (typeof(T) == typeof(Weapon))
             {
                 var weapon = (Weapon)(object)asset;

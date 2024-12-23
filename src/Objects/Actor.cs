@@ -59,21 +59,21 @@ namespace Etrea3.Objects
         [JsonProperty]
         public int NumberOfAttacks { get; set; } = 1;
         [JsonProperty]
-        public InventoryItem HeadEquip { get; set; } = null;
+        public Armour HeadEquip { get; set; } = null;
         [JsonProperty]
-        public InventoryItem NeckEquip { get; set; } = null;
+        public Armour NeckEquip { get; set; } = null;
         [JsonProperty]
-        public InventoryItem WeaponEquip { get; set; } = null;
+        public Weapon WeaponEquip { get; set; } = null;
         [JsonProperty]
-        public InventoryItem HeldEquip { get; set; } = null;
+        public Armour HeldEquip { get; set; } = null;
         [JsonProperty]
-        public InventoryItem ArmourEquip { get; set; } = null;
+        public Armour ArmourEquip { get; set; } = null;
         [JsonProperty]
-        public InventoryItem LeftFingerEquip { get; set; } = null;
+        public Ring LeftFingerEquip { get; set; } = null;
         [JsonProperty]
-        public InventoryItem RightFingerEquip { get; set; } = null;
+        public Ring RightFingerEquip { get; set; } = null;
         [JsonProperty]
-        public InventoryItem FeetEquip { get; set; } = null;
+        public Armour FeetEquip { get; set; } = null;
         [JsonProperty]
         public Gender Gender { get; set; } = Gender.Undefined;
         [JsonProperty]
@@ -191,7 +191,36 @@ namespace Etrea3.Objects
             }
             else
             {
-                Buffs.TryAdd(buffName, duration);
+                // Doesn't have the buff so add it and make sure we apply stat changes if needed
+                if (Buffs.TryAdd(buffName, duration))
+                {
+                    switch (buffName)
+                    {
+                        case "Foxs Cunning":
+                            Intelligence += 4;
+                            break;
+
+                        case "Bears Endurance":
+                            Constitution += 4;
+                            break;
+
+                        case "Owls Wisdom":
+                            Wisdom += 4;
+                            break;
+
+                        case "Eagles Splendour":
+                            Charisma += 4;
+                            break;
+
+                        case "Cats Grace":
+                            Dexterity += 4;
+                            break;
+
+                        case "Bulls Strength":
+                            Strength += 4;
+                            break;
+                    }
+                }
             }
         }
 
@@ -208,12 +237,68 @@ namespace Etrea3.Objects
             {
                 // remove an expired buff
                 Game.LogMessage($"TICK: Removing expired Buff '{buffName}' on {Name}", LogLevel.Info, true);
-                Buffs.TryRemove(buffName, out _);
+                if (Buffs.TryRemove(buffName, out _))
+                {
+                    switch (buffName)
+                    {
+                        case "Foxs Cunning":
+                            Intelligence -= 4;
+                            break;
+
+                        case "Bears Endurance":
+                            Constitution -= 4;
+                            break;
+
+                        case "Owls Wisdom":
+                            Wisdom -= 4;
+                            break;
+
+                        case "Eagles Splendour":
+                            Charisma -= 4;
+                            break;
+
+                        case "Cats Grace":
+                            Dexterity -= 4;
+                            break;
+
+                        case "Bulls Strength":
+                            Strength -= 4;
+                            break;
+                    }
+                }
             }
             if (removePermBuff)
             {
                 // remove a permabuff that is no longer applicable
-                Buffs.TryRemove(buffName, out _);
+                if (Buffs.TryRemove(buffName, out _))
+                {
+                    switch (buffName)
+                    {
+                        case "Foxs Cunning":
+                            Intelligence -= 4;
+                            break;
+
+                        case "Bears Endurance":
+                            Constitution -= 4;
+                            break;
+
+                        case "Owls Wisdom":
+                            Wisdom -= 4;
+                            break;
+
+                        case "Eagles Splendour":
+                            Charisma -= 4;
+                            break;
+
+                        case "Cats Grace":
+                            Dexterity -= 4;
+                            break;
+
+                        case "Bulls Strength":
+                            Strength -= 4;
+                            break;
+                    }
+                }
             }
         }
 
@@ -530,21 +615,21 @@ namespace Etrea3.Objects
             switch(slot)
             {
                 case WearSlot.Weapon:
-                    WeaponEquip = item;
+                    WeaponEquip = (Weapon)item;
                     RemoveItemFromInventory(item);
                     break;
 
                 case WearSlot.Finger:
                     if (RightFingerEquip == null)
                     {
-                        RightFingerEquip = item;
+                        RightFingerEquip = (Ring)item;
                         RemoveItemFromInventory(item);
                     }
                     else
                     {
                         if (LeftFingerEquip == null)
                         {
-                            LeftFingerEquip = item;
+                            LeftFingerEquip = (Ring)item;
                             RemoveItemFromInventory(item);
                         }
                     }
@@ -553,7 +638,7 @@ namespace Etrea3.Objects
                 case WearSlot.Head:
                     if (HeadEquip == null)
                     {
-                        HeadEquip = item;
+                        HeadEquip = (Armour)item;
                         RemoveItemFromInventory(item);
                     }
                     break;
@@ -561,7 +646,7 @@ namespace Etrea3.Objects
                 case WearSlot.Held:
                     if (HeldEquip == null)
                     {
-                        HeldEquip = item;
+                        HeldEquip = (Armour)item;
                         RemoveItemFromInventory(item);
                     }    
                     break;
@@ -569,7 +654,7 @@ namespace Etrea3.Objects
                 case WearSlot.Body:
                     if (ArmourEquip == null)
                     {
-                        ArmourEquip = item;
+                        ArmourEquip = (Armour)item;
                         RemoveItemFromInventory(item);
                     }
                     break;
@@ -577,7 +662,7 @@ namespace Etrea3.Objects
                 case WearSlot.Neck:
                     if (NeckEquip == null)
                     {
-                        NeckEquip = item;
+                        NeckEquip = (Armour)item;
                         RemoveItemFromInventory(item);
                     }
                     break;
@@ -585,7 +670,7 @@ namespace Etrea3.Objects
                 case WearSlot.Feet:
                     if (FeetEquip == null)
                     {
-                        FeetEquip = item;
+                        FeetEquip = (Armour)item;
                         RemoveItemFromInventory(item);
                     }
                     break;

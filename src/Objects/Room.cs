@@ -106,7 +106,25 @@ namespace Etrea3.Objects
 
         public Actor GetActor(string name, Actor viewer)
         {
-            return AllActorsInRoom.FirstOrDefault(x => x.CanBeSeenBy(viewer) && x.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (name.IndexOf(':') >= 0)
+            {
+                var strIndex = name.Split(':').Last();
+                var tName = name.Split(':').First();
+                if (!int.TryParse(strIndex, out int index))
+                {
+                    return null;
+                }
+                index = Math.Max(0, index - 1);
+                var matchingActors = AllActorsInRoom.Where(x => x.CanBeSeenBy(viewer) && (x.Name.IndexOf(tName, StringComparison.OrdinalIgnoreCase) >= 0 || 
+                x.ShortDescription.IndexOf(tName, StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
+                if (matchingActors.Count > 0 && index <= matchingActors.Count - 1)
+                {
+                    return matchingActors[index];
+                }
+                return null;
+            }
+            return AllActorsInRoom.FirstOrDefault(x => x.CanBeSeenBy(viewer) && (x.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0 ||
+            x.ShortDescription.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0));
         }
 
         public InventoryItem GetItem(string name)

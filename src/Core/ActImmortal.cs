@@ -9,6 +9,181 @@ namespace Etrea3.Core
 {
     public static class ActImmortal
     {
+        public static void ReleaseOLCLock(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release a lock in OLC but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            // releaselock npc 10
+            var args = arg.Split(' ');
+            if (args.Length != 2)
+            {
+                session.Send($"%BRT%Usage: releaselock <type> <id> - force-release a lock in OLC%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Exmaple: releaselock item 10%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(args[1].Trim(), out int objID))
+            {
+                session.Send($"%BRT%That is not a valid ID.%PT%{Constants.NewLine}");
+                return;
+            }
+            switch(args[0].Trim().ToLower())
+            {
+                case "item":
+                    if (ItemManager.Instance.ItemExists(objID))
+                    {
+                        ItemManager.Instance.SetItemLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Item {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Item {objID} but no such Item was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Item with ID {objID} was found in Item Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "npc":
+                    if (NPCManager.Instance.NPCTemplateExists(objID))
+                    {
+                        NPCManager.Instance.SetNPCLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of NPC {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of NPC {objID} but no such NPC was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No NPC with ID {objID} was found in NPC Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "room":
+                    if (RoomManager.Instance.RoomExists(objID))
+                    {
+                        RoomManager.Instance.SetRoomLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Room {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Room {objID} but no such Room was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Room with ID {objID} was found in Room Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "spell":
+                    if (SpellManager.Instance.SpellExists(objID))
+                    {
+                        SpellManager.Instance.SetSpellLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Spell {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Spell {objID} but no such Spell was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Spell with ID {objID} was found in Spell Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "shop":
+                    if (ShopManager.Instance.ShopExists(objID))
+                    {
+                        ShopManager.Instance.SetShopLockStatus(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Shop {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Shop {objID} but no such Shop was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Shop with ID {objID} was found in Shop Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "zone":
+                    if (ZoneManager.Instance.ZoneExists(objID))
+                    {
+                        ZoneManager.Instance.SetZoneLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Zone {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Zone {objID} but no such Zone was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Zone with ID {objID} was found in Zone Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "quest":
+                    if (QuestManager.Instance.QuestExists(objID))
+                    {
+                        QuestManager.Instance.SetQuestLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Quest {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Quest {objID} but no such Quest was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Quest with ID {objID} was found in Quest Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "recipe":
+                case "craftingrecipe":
+                    if (RecipeManager.Instance.RecipeExists(objID))
+                    {
+                        RecipeManager.Instance.SetRecipeLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Crafting Recipe {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Crafting Recipe {objID} but no such Recipe was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Crafting Recipe with ID {objID} was found in Recipe Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "mobprog":
+                    if (MobProgManager.Instance.MobProgExists(objID))
+                    {
+                        MobProgManager.Instance.SetMobProgLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of MobProg {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of MobProg {objID} but no such MobProg was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No MobProg with ID {objID} was found in MobProg Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "node":
+                case "resourcenode":
+                case "rssnode":
+                    if (NodeManager.Instance.NodeExists(objID))
+                    {
+                        NodeManager.Instance.SetNodeLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock on Resource Node {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Resource Node {objID} but no such Node was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Resource Node with ID {objID} was found in Node Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case "emote":
+                    if (EmoteManager.Instance.EmoteExists(objID))
+                    {
+                        EmoteManager.Instance.SetEmoteLockState(objID, false, session);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock on Emote {objID}", LogLevel.Info, true);
+                    }
+                    else
+                    {
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to release the OLC lock of Emote {objID} but no such Emote was found", LogLevel.Warning, true);
+                        session.Send($"%BRT%No Emote with ID {objID} was found in Emote Manager.%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                default:
+                    Game.LogMessage($"DEBUG: releaselock called with unsupported asset type: {args[0]}", LogLevel.Debug, true);
+                    session.Send($"%BRT%Unknown asset type: {args[0]}%PT%{Constants.NewLine}");
+                    return;
+            }
+        }
+
         public static void CheckMobMemory(Session session, string arg)
         {
             if (!session.Player.IsImmortal)
@@ -540,7 +715,7 @@ namespace Etrea3.Core
                 return;
             }
             var argLang = arg.Remove(0, tPlayer.Player.Name.Length).Trim();
-            var lang = Constants.Languages.FirstOrDefault(x => x.IndexOf(argLang, StringComparison.OrdinalIgnoreCase) > 0);
+            var lang = Constants.Languages.FirstOrDefault(x => x.IndexOf(argLang, StringComparison.OrdinalIgnoreCase) >= 0);
             if (string.IsNullOrEmpty(lang))
             {
                 session.Send($"%BRT%You can't add a language that doesn't exist!%PT%{Constants.NewLine}");

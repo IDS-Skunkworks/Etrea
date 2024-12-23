@@ -404,7 +404,7 @@ namespace Etrea3.Core
                         hpRegen += Helpers.RollDice<int>(1, 6);
                         mpRegen += Helpers.RollDice<int>(1, 8);
                     }
-                    LogMessage($"INFO: Restoring {hpRegen} HP and {mpRegen} MP to {n.Name}", LogLevel.Info, true);
+                    //LogMessage($"INFO: Restoring {hpRegen} HP and {mpRegen} MP to {n.Name}", LogLevel.Info, true);
                     n.AdjustHP(hpRegen, out _);
                     n.AdjustMP(mpRegen);
                 }
@@ -445,7 +445,7 @@ namespace Etrea3.Core
                             spRegen += Helpers.RollDice<int>(1, 6);
                             break;
                     }
-                    LogMessage($"INFO: Restoring {hpRegen} HP, {mpRegen} MP and {spRegen} SP to {p.Player.Name}", LogLevel.Info, true);
+                    //LogMessage($"INFO: Restoring {hpRegen} HP, {mpRegen} MP and {spRegen} SP to {p.Player.Name}", LogLevel.Info, true);
                     p.Player.AdjustHP(hpRegen, out _);
                     p.Player.AdjustMP(mpRegen);
                     p.Player.AdjustSP(spRegen);

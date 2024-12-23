@@ -50,33 +50,6 @@ namespace Etrea3.Objects
             return false;
         }
 
-        public void ShowInventory(Session session)
-        {
-            if (CurrentInventory != null)
-            {
-                var availabileItems = CurrentInventory.Where(x => ItemManager.Instance.ItemExists(x.Key) && (x.Value == -1 || x.Value >= 0)).ToList();
-                if (availabileItems != null && availabileItems.Count > 0)
-                {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"{ShopName} says \"Certainly! This is what I have in stock!\"");
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    sb.AppendLine($"|| Price{Constants.TabStop}|| Item");
-                    sb.AppendLine($"||==============||{new string('=', 61)}");
-                    foreach (var item in availabileItems)
-                    {
-                        var i = ItemManager.Instance.GetItem(item.Key);
-                        var purchasePrice = Helpers.GetPurchasePrice(session, i.BaseValue);
-                        sb.AppendLine($"|| {purchasePrice:N0}{Constants.TabStop}{Constants.TabStop}|| {(item.Value == -1 ? "Unlimited" : item.Value.ToString())} x {i.Name}, {i.ShortDescription}");
-                    }
-                    sb.AppendLine($"  {new string('=', 77)}");
-                    session.Send(sb.ToString());
-                    availabileItems = null;
-                    return;
-                }
-            }
-            session.Send($"{ShopName} says \"Sorry, I don't have anything in stock right now.\"{Constants.NewLine}");
-        }
-
         public void ShowInventory(Session session, string criteria)
         {
             if (CurrentInventory != null)
@@ -97,7 +70,14 @@ namespace Etrea3.Objects
                         {
                             matchingItems = true;
                             var purchasePrice = Helpers.GetPurchasePrice(session, i.BaseValue);
-                            sb.AppendLine($"%BYT%||%PT% {purchasePrice:N0}{Constants.TabStop}{Constants.TabStop}%BYT%||%PT% {(item.Value == -1 ? "Unlimited" : item.Value.ToString())} x {i.Name}, {i.ShortDescription}");
+                            if (purchasePrice.ToString("N0").Length >= 5)
+                            {
+                                sb.AppendLine($"%BYT%||%PT% {purchasePrice:N0}{Constants.TabStop}%BYT%||%PT% {(item.Value == -1 ? "Unlimited" : item.Value.ToString())} x {i.Name}, {i.ShortDescription}");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"%BYT%||%PT% {purchasePrice:N0}{Constants.TabStop}{Constants.TabStop}%BYT%||%PT% {(item.Value == -1 ? "Unlimited" : item.Value.ToString())} x {i.Name}, {i.ShortDescription}");
+                            }
                         }
                     }
                     sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");

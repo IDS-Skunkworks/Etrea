@@ -180,7 +180,7 @@ namespace Etrea3.Objects
 
         private int CalculateDamage(Actor caster)
         {
-            var dicePattern = new Regex(@"(.*)d(\d+)");
+            var dicePattern = new Regex(@"(.*)[dD](\d+)");
             var match = dicePattern.Match(DamageExpression);
             int ttlDamage = 0;
             string damExpr = string.Empty;
@@ -223,7 +223,7 @@ namespace Etrea3.Objects
         private int EvaluateExpression(string expression, Actor caster)
         {
             int damage = 0;
-            var expr = new Expression(DamageExpression);
+            var expr = new Expression(expression);
             expr.Parameters["INT"] = Helpers.CalculateAbilityModifier(caster.Intelligence);
             expr.Parameters["WIS"] = Helpers.CalculateAbilityModifier(caster.Wisdom);
             expr.Parameters["level"] = caster.Level;
@@ -296,8 +296,8 @@ namespace Etrea3.Objects
                     }
                     continue;
                 }
-                var dmg = Math.Min(0, (CalculateDamage(caster) - t.DamageReduction) * -1);
-                t.AdjustHP(dmg, out bool isKilled);
+                var dmg = Math.Max(0, CalculateDamage(caster));
+                t.AdjustHP(dmg * -1, out bool isKilled);
                 if (isKilled)
                 {
                     startCombat = false;
@@ -369,8 +369,8 @@ namespace Etrea3.Objects
             bool hitsTarget = AutoHitTarget || caster.HitsTarget(target, out _, out _, out _);
             if (hitsTarget)
             {
-                var dmg = Math.Min(0, (CalculateDamage(caster) - target.DamageReduction) * -1);
-                target.AdjustHP(dmg, out bool isKilled);
+                var dmg = Math.Max(0, CalculateDamage(caster));
+                target.AdjustHP(dmg * -1, out bool isKilled);
                 if (caster.ActorType == ActorType.NonPlayer && target.ActorType == ActorType.Player)
                 {
                     if (isKilled)
