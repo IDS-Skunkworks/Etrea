@@ -2923,6 +2923,8 @@ namespace Etrea3.Core
                     lp.Send(msg);
                 }
             }
+            var spCost = session.Player.CurrentSP / 2;
+            session.Player.AdjustSP(spCost * -1);
             session.Player.Move(Game.PlayerStartRoom, true);
         }
 

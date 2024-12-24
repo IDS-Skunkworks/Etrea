@@ -1502,6 +1502,8 @@ namespace Etrea3.Objects
                 }
                 if (LevelTable.HasAchievedNewLevel(Exp, Level, out int nLevel))
                 {
+                    var levelsToAdvance = nLevel - Level;
+                    Game.LogMessage($"DEBUG: Advancing Player {Name} by {levelsToAdvance} character levels", LogLevel.Debug, true);
                     LevelUp(nLevel - Level);
                 }
             }
@@ -1566,6 +1568,13 @@ namespace Etrea3.Objects
                         }
                         break;
                 }
+                CurrentHP += hpIncrease;
+                CurrentMP += mpIncrease;
+                CurrentSP += spIncrease;
+                MaxHP += hpIncrease;
+                MaxMP += mpIncrease;
+                MaxSP += spIncrease;
+                Send($"You have gained %BRT%{hpIncrease}%PT% HP, %BGT%{mpIncrease}%PT% MP and %BYT%{spIncrease}%PT% SP!{Constants.NewLine}");
             }
         }
 
