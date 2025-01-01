@@ -1925,6 +1925,7 @@ namespace Etrea3.Core
                 if (targetActor.CanBeSeenBy(session.Player))
                 {
                     session.Send(targetActor.LongDescription);
+                    session.Send($"{Constants.NewLine}{targetActor.GetDiagnosis()}{Constants.NewLine}");
                     if (targetActor.ActorType == ActorType.Player)
                     {
                         string msg = session.Player.CanBeSeenBy(targetActor) ? $"{session.Player.Name} gives you a studious look.{Constants.NewLine}" :
@@ -2875,6 +2876,11 @@ namespace Etrea3.Core
                 session.Send($"%BYT%Some mystical force prevents that from happening.%PT%{Constants.NewLine}");
                 return;
             }
+            if (RoomManager.Instance.GetRoom(exit.DestinationRoomID).Flags.HasFlag(RoomFlags.NoMobs) || RoomManager.Instance.GetRoom(exit.DestinationRoomID).Flags.HasFlag(RoomFlags.GodRoom))
+            {
+                session.Send($"%BYT%Some mystical force prevents that from happening...%PT%{Constants.NewLine}");
+                return;
+            }
             var pRoll = Helpers.RollDice<int>(1, 20);
             var nRoll = Helpers.RollDice<int>(1, 20);
             var pFinal = Math.Max(1, pRoll + Helpers.CalculateAbilityModifier(session.Player.Strength));
@@ -3001,6 +3007,11 @@ namespace Etrea3.Core
                 session.Send($"You lack the skill to go that way!{Constants.NewLine}");
                 return;
             }
+            if (RoomManager.Instance.GetRoom(exitObj.DestinationRoomID).Flags.HasFlag(RoomFlags.GodRoom) && !session.Player.IsImmortal)
+            {
+                session.Send($"%BYT%Some mystical force prevents you from going that way...%PT%{Constants.NewLine}");
+                return;
+            }
             int spCost = 1;
             bool landWalker = session.Player.HasSkill("Land Walker") || session.Player.HasBuff("Land Walker");
             if (!landWalker && RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.HardTerrain))
@@ -3043,10 +3054,23 @@ namespace Etrea3.Core
             }
             var shops = from npc in shopNPCs select ShopManager.Instance.GetShop(npc.ShopID);
             var tShop = shops.FirstOrDefault(x => x.ShopName.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0);
+            var tNPC = shopNPCs.FirstOrDefault(x => x.ShopID == tShop.ID);
             if (tShop != null)
             {
                 session.Player.ShopContext = tShop;
                 session.Send($"%BGT%You are now a customer of {tShop.ShopName}%PT%{Constants.NewLine}");
+                if (tNPC.MobProgs.Count > 0)
+                {
+                    foreach(var mp in tNPC.MobProgs.Keys)
+                    {
+                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        if (mobProg != null)
+                        {
+                            mobProg.Init();
+                            mobProg.TriggerEvent(MobProgTrigger.PlayerEnterShop, new { mob = tNPC.ID.ToString(), player = session.Player.ID.ToString() });
+                        }
+                    }
+                }
             }
             else
             {
@@ -3062,6 +3086,20 @@ namespace Etrea3.Core
                 return;
             }
             session.Send($"%BGT%You stop doing business with {session.Player.ShopContext.ShopName}!%PT%{Constants.NewLine}");
+            var r = RoomManager.Instance.GetRoom(session.Player.CurrentRoom);
+            var tNPC = r.NPCsInRoom.FirstOrDefault(x => x.ShopID == session.Player.ShopContext.ID);
+            if (tNPC.MobProgs.Count > 0)
+            {
+                foreach (var mp in tNPC.MobProgs.Keys)
+                {
+                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    if (mobProg != null)
+                    {
+                        mobProg.Init();
+                        mobProg.TriggerEvent(MobProgTrigger.PlayerLeaveShop, new { mob = tNPC.ID.ToString(), player = session.Player.ID.ToString() });
+                    }
+                }
+            }
             session.Player.ShopContext = null;
         }
 

@@ -417,6 +417,10 @@ namespace Etrea3.Core
                 {
                     return;
                 }
+                if (RoomManager.Instance.GetRoom(exit.DestinationRoomID).Flags.HasFlag(RoomFlags.NoMobs) || RoomManager.Instance.GetRoom(exit.DestinationRoomID).Flags.HasFlag(RoomFlags.GodRoom))
+                {
+                    return;
+                }
                 npc.Move(exit.DestinationRoomID, false);
             }
         }

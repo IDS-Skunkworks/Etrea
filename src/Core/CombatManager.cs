@@ -165,25 +165,30 @@ namespace Etrea3.Core
                             continue;
                         }
                     }
+                    // should only really be doing this if the NPC actually has spells...
                     var magChance = Math.Max(1, Math.Min(9, 5 + Helpers.CalculateAbilityModifier(n.Intelligence))) * 10;
                     if (Helpers.RollDice<int>(1, 100) < magChance)
                     {
-                        var spell = npcSpells.Except(npcSpells.Where(x => x.SpellType == SpellType.Healing)).ToList().GetRandomElement();
-                        if (spell != null)
+                        var spells = npcSpells.Except(npcSpells.Where(x => x.SpellType == SpellType.Healing)).ToList();
+                        if (spells != null && spells.Count > 0)
                         {
-                            if (spell.SpellType == SpellType.Buff)
+                            var spell = spells.GetRandomElement();
+                            if (spell != null)
                             {
-                                spell.Cast(n, n);
-                                if (target.ActorType == ActorType.Player)
+                                if (spell.SpellType == SpellType.Buff)
                                 {
-                                    ((Player)target).Send($"%BYT%{n.Name} calls on the Winds of Magic to aid them!%PT%{Constants.NewLine}");
+                                    spell.Cast(n, n);
+                                    if (target.ActorType == ActorType.Player)
+                                    {
+                                        ((Player)target).Send($"%BYT%{n.Name} calls on the Winds of Magic to aid them!%PT%{Constants.NewLine}");
+                                    }
                                 }
+                                else
+                                {
+                                    spell.Cast(n, target);
+                                }
+                                continue;
                             }
-                            else
-                            {
-                                spell.Cast(n, target);
-                            }
-                            continue;
                         }
                     }
                     var wpnName = n.WeaponEquip != null ? n.WeaponEquip.Name.ToLower() : "strike";

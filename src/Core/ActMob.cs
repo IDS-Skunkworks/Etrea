@@ -357,11 +357,11 @@ namespace Etrea3.Core
                 switch(mob.CanBeSeenBy(player.Player))
                 {
                     case true:
-                        player.Send($"%BGT%{mob.Name} bellows \"{args}\"%PT%{Constants.NewLine}");
+                        player.Send($"%BGT%{mob.Name} yells \"{args}\"%PT%{Constants.NewLine}");
                         break;
 
                     case false:
-                        player.Send($"%BGT%Something bellows \"{args}\"%PT%{Constants.NewLine}");
+                        player.Send($"%BGT%Something yells \"{args}\"%PT%{Constants.NewLine}");
                         break;
                 }
             }

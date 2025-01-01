@@ -10,11 +10,13 @@
         public const string YellowText = "\u001b[33m";                                        // yellow console text
         public const string GreenText = "\u001b[32m";                                         // green console text
         public const string WhiteText = "\u001b[37m";                                         // white console text
+        public const string MagentaText = "\u001b[35m";                                       // purple console text
         public const string BrightWhiteText = "\u001b[37;1m";                                 // bright white console text
         public const string BrightYellowText = "\u001b[33;1m";                                // bright yellow console text
         public const string BrightRedText = "\u001b[31;1m";                                   // bright red console text
         public const string BrightGreenText = "\u001b[32;1m";                                 // bright green console text
         public const string BrightBlueText = "\u001b[34;1m";                                  // bright blue console text
+        public const string BrightMagentaText = "\u001b[35:1m";                               // bright purple console text
         public const string EchoOff = "\xff\xfb\x01";                                         // tell client not to echo input to screen
         public const string EchoOn = "\xff\xfc\x01";                                          // tell client to resume echo input
         public const string NewLine = "\r\n";                                                 // carriage return/line-feed

@@ -49,6 +49,11 @@ Fan of Knives (thief only, AOE skill)
 Quick Learner (bonus Exp)
 Land Walker (no movement penalty on difficult terrain)
 
+MobProg to have Auntie Wainwright force-sell something to a player when they enter shop context - need a new trigger to deal with it.
+http://www.mysticalmud.org/wiki/doku.php?id=spells
+https://github.com/Yuffster/CircleMUD/blob/master/src/interpreter.c - emote ideas
+https://github.com/Yuffster/CircleMUD/blob/master/src/magic.c - 167 for magic
+
 
 
 Spells: - spells available only to certain classes, see skills

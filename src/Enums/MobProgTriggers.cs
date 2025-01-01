@@ -26,5 +26,7 @@ namespace Etrea3
         PlayerSellItem = 1 << 17,                   // when a player sells an item to a shop
         PlayerTakeGold = 1 << 18,                   // when a player takes gold from a room
         PlayerDropGold = 1 << 19,                   // when a player drops gold on the floor
+        PlayerEnterShop = 1 << 20,                  // when a player enters a shop context to do business
+        PlayerLeaveShop = 1 << 21,                  // when a player leaves a shop context
     }
 }

@@ -21,6 +21,8 @@ namespace Etrea3.Core
                 .Replace("%YT%", Constants.YellowText)
                 .Replace("%GT%", Constants.GreenText)
                 .Replace("%WT%", Constants.WhiteText)
+                .Replace("%MT%", Constants.MagentaText)
+                .Replace("%BMT%", Constants.BrightMagentaText)
                 .Replace("%BWT%", Constants.BrightWhiteText)
                 .Replace("%BYT%", Constants.BrightYellowText)
                 .Replace("%BGT%", Constants.BrightGreenText)
@@ -65,7 +67,7 @@ namespace Etrea3.Core
             int row = 1;
             StringBuilder sb = new StringBuilder();
             bool validInput = false;
-            session.Send($"Enter the new Message of the Day.");
+            session.Send($"Enter the new Message of the Day.{Constants.NewLine}");
             session.Send($"Enter END on a new line to finish.{Constants.NewLine}");
             while (!validInput)
             {
@@ -121,9 +123,9 @@ namespace Etrea3.Core
         {
             int row = 1;
             StringBuilder sb = new StringBuilder();
-            session.Send($"Enter the long description. This should be 30 lines or less");
-            session.Send($"and each line should be 80 characters or less.");
-            session.Send($"Descriptions can be changed later if you want.");
+            session.Send($"Enter the long description. This should be 30 lines or less{Constants.NewLine}");
+            session.Send($"and each line should be 80 characters or less.{Constants.NewLine}");
+            session.Send($"Descriptions can be changed later if you want.{Constants.NewLine}");
             session.Send($"Enter END on a new line to finish.{Constants.NewLine}");
             while (true)
             {
@@ -322,27 +324,27 @@ namespace Etrea3.Core
         public static string GetDamageString(int dmg, int maxHP)
         {
             var percDmg = dmg / maxHP * 100;
-            if (percDmg > 90)
+            if (percDmg >= 90)
             {
                 return "destroys";
             }
-            if (percDmg <= 90 && percDmg > 80)
+            if (percDmg >= 80)
             {
                 return "devastates";
             }
-            if (percDmg <= 80 && percDmg > 50)
+            if (percDmg >= 50)
             {
                 return "eviscerates";
             }
-            if (percDmg <= 50 && percDmg > 20)
+            if (percDmg >= 20)
             {
                 return "smashes";
             }
-            if (percDmg <= 20 && percDmg > 10)
+            if (percDmg >= 10)
             {
                 return "hurts";
             }
-            if (percDmg <= 10 && percDmg > 5)
+            if (percDmg >= 5)
             {
                 return "wounds";
             }

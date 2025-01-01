@@ -1914,6 +1914,10 @@ namespace Etrea3.Core
             var criteria = arg.Remove(0, assetType.Length).Trim();
             switch(assetType.ToLower())
             {
+                case "connection":
+                    ListConnections(session);
+                    break;
+
                 case "mobprog":
                     ListMobProgs(session, criteria);
                     break;
@@ -3756,6 +3760,28 @@ namespace Etrea3.Core
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
             return;
+        }
+
+        private static void ListConnections(Session session)
+        {
+            var connections = SessionManager.Instance.AllSessions;
+            if (connections == null || connections.Count == 0)
+            {
+                session.Send($"%BRT%No connected sessions.%PT%{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"  {new string('=', 77)}");
+            foreach (var con in connections)
+            {
+                sb.AppendLine($"|| Remote IP: {con.Client?.Client?.RemoteEndPoint}");
+                sb.AppendLine($"|| Connect Time: {con.ConnectionTime}");
+                sb.AppendLine($"|| Player: {con.Player?.Name ?? "None"}");
+                sb.AppendLine($"||{new string('=', 77)}");
+            }
+            sb.AppendLine($"|| {connections.Count} connections");
+            sb.AppendLine($"  {new string('=', 77)}");
+            session.Send(sb.ToString());
         }
         #endregion
     }

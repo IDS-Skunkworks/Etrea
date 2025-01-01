@@ -1,10 +1,63 @@
-﻿using System;
+﻿using Etrea3.Objects;
+using System;
 using System.Linq;
 
 namespace Etrea3.Core
 {
     public static partial class ActMob
     {
+        public static void MogProgMobSellPlayerItem(string mobID, string playerID, string item)
+        {
+            if (string.IsNullOrEmpty(mobID))
+            {
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with no Mob ID", LogLevel.Debug, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(playerID))
+            {
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with no Player ID", LogLevel.Debug, true);
+                return;
+            }
+            var gMobID = Guid.Parse(mobID);
+            var gPlayerID = Guid.Parse(playerID);
+            var mob = NPCManager.Instance.GetNPC(gMobID);
+            var player = SessionManager.Instance.GetSession(gPlayerID);
+            InventoryItem sellItem = null;
+            if (mob == null || player == null)
+            {
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with IDs that could not be matched to a Player or an NPC", LogLevel.Debug, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(item))
+            {
+                sellItem = ItemManager.Instance.GetItem().Where(x => x.BaseValue <= 10).ToList().GetRandomElement();
+            }
+            if (int.TryParse(item, out int itemID))
+            {
+                sellItem = ItemManager.Instance.GetItem(itemID);
+            }
+            else
+            {
+                sellItem = ItemManager.Instance.GetItem(item);
+            }
+            if (sellItem == null)
+            {
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem could not find a suitable item to sell to the player", LogLevel.Debug, true);
+                return;
+            }
+            if (player.Player.Gold >= (ulong)sellItem.BaseValue)
+            {
+                player.Player.AddItemToInventory(sellItem);
+                player.Player.AdjustGold(sellItem.BaseValue * -1);
+                player.Send($"%BYT%Somehow {mob.Name} has managed to sell you {sellItem.ShortDescription} for {sellItem.BaseValue:N0} gold!%PT%{Constants.NewLine}");
+            }
+            else
+            {
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem cannot sell Item {sellItem.ID} to player {player.Player.Name}: value of {sellItem.BaseValue:N0} is higher than Player Gold of {player.Player.Gold:N0}", LogLevel.Debug, true);
+                return;
+            }
+        }
+
         public static bool MobProgItemInRoom(string mobID, string item)
         {
             if (string.IsNullOrEmpty(mobID))

@@ -190,6 +190,11 @@ namespace Etrea3.Core
             {
                 s.RestockShop();
             }
+            if (bool.TryParse(ConfigurationManager.AppSettings["TickZonesOnStartup"], out bool startZoneTick) && startZoneTick)
+            {
+                LogMessage("INFO: Performing startup Zone tick...", LogLevel.Info, true);
+                ZoneManager.Instance.PulseAllZones();
+            }
             LogMessage("INFO: Starting timers and entering main game loop", LogLevel.Info, true);
             zoneTickTimer.Elapsed += ZoneTick;
             npcTickTimer.Elapsed += NPCTick;

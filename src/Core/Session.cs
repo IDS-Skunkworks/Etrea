@@ -28,6 +28,10 @@ namespace Etrea3.Core
         {
             if (IsConnected)
             {
+                if (Player != null && (Player.Flags.HasFlag(PlayerFlags.UsingOLC) || Player.Flags.HasFlag(PlayerFlags.WritingMail)))
+                {
+                    return;
+                }
                 byte[] msgBytes = Encoding.UTF8.GetBytes(Helpers.ParseColourCodes(message));
                 Client.GetStream().Write(msgBytes, 0, msgBytes.Length);
             }

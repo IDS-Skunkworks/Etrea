@@ -136,6 +136,7 @@
     <Compile Include="Enums\ConsumableEffect.cs" />
     <Compile Include="Enums\ExitDirections.cs" />
     <Compile Include="Enums\MobProgTriggers.cs" />
+    <Compile Include="Enums\PlayerFlags.cs" />
     <Compile Include="Enums\QuestType.cs" />
     <Compile Include="Enums\SpellType.cs" />
     <Compile Include="Networking\API\APIKeyAuthenticationHandler.cs" />

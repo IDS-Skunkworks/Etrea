@@ -174,6 +174,36 @@ namespace Etrea3.Objects
             return Position == ActorPosition.Standing;
         }
 
+        public string GetDiagnosis()
+        {
+            int percHealth = CurrentHP / MaxHP * 100;
+            if (percHealth == 100)
+            {
+                return $"{Name} is in excellent condition.";
+            }
+            if (percHealth >= 90)
+            {
+                return $"{Name} has a few scratches";
+            }
+            if (percHealth >= 75)
+            {
+                return $"{Name} has some small wounds and bruises";
+            }
+            if (percHealth >= 50)
+            {
+                return $"{Name} has some quite a few wounds";
+            }
+            if (percHealth >= 30)
+            {
+                return $"{Name} has some big nasty wounds and scratches";
+            }
+            if (percHealth >= 15)
+            {
+                return $"{Name} has taken severe damage";
+            }
+            return $"{Name} could bleed out at any moment";
+        }
+
         public bool HasBuff(string name)
         {
             return Buffs != null && Buffs.ContainsKey(name) && (Buffs[name] > 0 || Buffs[name] == -1);
@@ -312,31 +342,31 @@ namespace Etrea3.Objects
             int damageReduction = 0;
             if (ArmourEquip != null)
             {
-                damageReduction += ((Armour)ArmourEquip).DamageReduction;
+                damageReduction += ArmourEquip.DamageReduction;
             }
             if (HeldEquip != null)
             {
-                damageReduction += ((Armour)HeldEquip).DamageReduction;
+                damageReduction += HeldEquip.DamageReduction;
             }
             if (FeetEquip != null)
             {
-                damageReduction += ((Armour)FeetEquip).DamageReduction;
+                damageReduction += FeetEquip.DamageReduction;
             }
             if (LeftFingerEquip != null)
             {
-                damageReduction += ((Ring)LeftFingerEquip).DamageReduction;
+                damageReduction += LeftFingerEquip.DamageReduction;
             }
             if (RightFingerEquip != null)
             {
-                damageReduction += ((Ring)RightFingerEquip).DamageReduction;
+                damageReduction += RightFingerEquip.DamageReduction;
             }
             if (HeadEquip != null)
             {
-                damageReduction += ((Armour)HeadEquip).DamageReduction;
+                damageReduction += HeadEquip.DamageReduction;
             }
             if (NeckEquip != null)
             {
-                damageReduction += ((Armour)NeckEquip).DamageReduction;
+                damageReduction += NeckEquip.DamageReduction;
             }
             if (HasBuff("Bark Skin"))
             {
@@ -362,6 +392,31 @@ namespace Etrea3.Objects
         {
             baseRoll = Helpers.RollDice<int>(1, 20);
             modRoll = baseRoll;
+            if (target.ActorType == ActorType.NonPlayer)
+            {
+                if (((NPC)target).Flags.HasFlag(NPCFlags.Flying))
+                {
+                    if (WeaponEquip == null)
+                    {
+                        if (ActorType == ActorType.Player)
+                        {
+                            ((Player)this).Send($"%BRT%Your target is flying and out of reach!%PT%{Constants.NewLine}");
+                        }
+                        isCritical = false;
+                        return false;
+                    }
+                    var wpnIsBow = WeaponEquip.WeaponType == WeaponType.Longbow && WeaponEquip.WeaponType == WeaponType.Shortbow && WeaponEquip.WeaponType == WeaponType.Crossbow;
+                    if (!wpnIsBow)
+                    {
+                        if (ActorType == ActorType.Player)
+                        {
+                            ((Player)this).Send($"%BRT%Your target is flying and out of reach!%PT%{Constants.NewLine}");
+                        }
+                        isCritical = false;
+                        return false;
+                    }
+                }
+            }
             if (baseRoll == 1)
             {
                 isCritical = false;
@@ -424,7 +479,6 @@ namespace Etrea3.Objects
                     modRoll += 2;
                 }
             }
-
             return modRoll >= target.ArmourClass;
         }
 
@@ -692,31 +746,31 @@ namespace Etrea3.Objects
             baseAC += Helpers.CalculateAbilityModifier(Dexterity);
             if (ArmourEquip != null)
             {
-                baseAC += ((Armour)ArmourEquip).ACModifier;
+                baseAC += ArmourEquip.ACModifier;
             }
             if (HeldEquip != null)
             {
-                baseAC += ((Armour)HeldEquip).ACModifier;
+                baseAC += HeldEquip.ACModifier;
             }
             if (FeetEquip != null)
             {
-                baseAC += ((Armour)FeetEquip).ACModifier;
+                baseAC += FeetEquip.ACModifier;
             }
             if (LeftFingerEquip != null)
             {
-                baseAC += ((Ring)LeftFingerEquip).ACModifier;
+                baseAC += LeftFingerEquip.ACModifier;
             }
             if (RightFingerEquip != null)
             {
-                baseAC += ((Ring)RightFingerEquip).ACModifier;
+                baseAC += RightFingerEquip.ACModifier;
             }
             if (HeadEquip != null)
             {
-                baseAC += ((Armour)HeadEquip).ACModifier;
+                baseAC += HeadEquip.ACModifier;
             }
             if (NeckEquip != null)
             {
-                baseAC += ((Armour)NeckEquip).ACModifier;
+                baseAC += NeckEquip.ACModifier;
             }
             if (HasBuff("Mage Armour"))
             {
@@ -1274,11 +1328,23 @@ namespace Etrea3.Objects
         public PlayerPrompt PromptStyle { get; set; } = PlayerPrompt.Normal;
         [JsonIgnore]
         public bool IsImmortal => Level >= Constants.ImmLevel;
+        [JsonIgnore]
+        public PlayerFlags Flags { get; set; } = PlayerFlags.None;
 
         public Player()
         {
             NaturalArmour = false;
             ActorType = ActorType.Player;
+        }
+
+        public void AddPlayerFlag(PlayerFlags flag)
+        {
+            Flags |= flag;
+        }
+
+        public void RemovePlayerFlag(PlayerFlags flag)
+        {
+            Flags &= ~flag;
         }
 
         protected override void MoveActor(int newRID, bool wasTeleported)
