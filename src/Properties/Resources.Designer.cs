@@ -59,45 +59,5 @@ namespace Etrea3.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] logs {
-            get {
-                object obj = ResourceManager.GetObject("logs", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] players {
-            get {
-                object obj = ResourceManager.GetObject("players", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] welcome {
-            get {
-                object obj = ResourceManager.GetObject("welcome", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] world {
-            get {
-                object obj = ResourceManager.GetObject("world", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }

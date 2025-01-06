@@ -180,6 +180,30 @@ namespace Etrea3.Core
         #endregion
 
         #region Players
+        public static int GetPlayerCount()
+        {
+            int pCount = 0;
+            try
+            {
+                using (var con = new SQLiteConnection(playerDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM tblPlayers;";
+                        pCount = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+                    con.Close();
+                }
+                return pCount;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerCount(): {ex.Message}", LogLevel.Error, true);
+                return -1;
+            }
+        }
+
         public static bool ValidateAPIKey(string apiKey, out string user)
         {
             user = string.Empty;
@@ -375,30 +399,6 @@ namespace Etrea3.Core
             {
                 Game.LogMessage($"ERROR: Error in DatabaseManager.ValidatePlayerPassword() verifying password for player '{playerName}': {ex.Message}", LogLevel.Error, true);
                 return false;
-            }
-        }
-
-        public static int GetPlayerCount()
-        {
-            int playerCount = 0;
-            try
-            {
-                using (SQLiteConnection con = new SQLiteConnection(playerDBConnectionString))
-                {
-                    con.Open();
-                    using (var cmd = new SQLiteCommand(con))
-                    {
-                        cmd.CommandText = "SELECT COUNT(*) FROM tblPlayers;";
-                        playerCount = int.Parse(cmd.ExecuteScalar().ToString());
-                    }
-                    con.Close();
-                }
-                return playerCount;
-            }
-            catch (Exception ex)
-            {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerCount(): {ex.Message}", LogLevel.Error, true);
-                return 1; // prevent a character from becoming an Imm in the event of an exception in this function
             }
         }
 

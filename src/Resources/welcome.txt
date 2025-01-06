@@ -1,0 +1,46 @@
+                       %BRT%Kingdoms of Etrea%PT%
+                               %BYT% o%PT%
+                           %GT% .-'"%PT%%WT%|%PT%
+                            %GT%|-'"%PT%%WT%|%PT%
+                                %WT%|%PT%%BWT%   _.-'`.%PT%
+                               %BWT%_|-"'_.-'|.`.%PT%
+                              %BWT%|:^.-'_.-'`.;.`.%PT%
+                              %BWT%| `.'.   ,-'_.-'|%PT%
+                              %BWT%|   + '-'.-'   J%PT%
+          %BWT% __.%PT%            %BBT%.d88%PT%%BWT%|    `.-'      |%PT%
+      %BWT%_.--'_..`.%PT%    %BBT%.d88888888%PT%%BWT%|     |       J'%PT%%BBT%b.%PT%
+   %BWT%+:" ,--'_.|`.`%PT%%BBT%.d88888888888%PT%%BWT%|-.   |    _-.|%PT%%BBT%888b.%PT%
+   %BWT%| \ \-'_.--'_.-+%PT%%BBT%888888888%PT%%BWT%+'  _>F F +:'   `%PT%%BBT%88888bo.%PT%
+    %BWT%L \ +'_.--'   |%PT%%BBT%88888%PT%%BWT%+"'  _.' J J J  `.    +%PT%%BBT%8888888b.%PT%
+    %BWT%|  `+'        |%PT%%BBT%8%PT%%BWT%+"'  _.-'    | | |    +    `+%PT%%BBT%8888888.%PT%%BWT%_-'.%PT%
+  %BBT%.d8%PT%%BWT%L  L         J  _.-'        | | |     `.    `+%PT%%BBT%888%PT%%BWT%+^'.-|.`.%PT%
+ %BBT%d888%PT%%BWT%|  |         J-'            F F F       `.  _.-"_.-'_.+.`.`.%PT%
+%BBT%d88888%PT%%BWT%L  L     _.  L            J J J          `|. +'_.-'    `_+ `;%PT%
+%BBT%888888%PT%%BWT%J  |  +-'  \ L         _.-+.|.+.          F `.`.     .-'_.-"J%PT%
+%BBT%8888888%PT%%BWT%|  L L\    \|     _.-'     '   `.       J    `.`.,-'.-"    |%PT%
+%BBT%8888888%PT%%BWT%PL | | \    `._.-'               `.     |      `..-"      J%PT%%BBT%.b%PT%
+%BBT%8888888 %PT%%BWT%|  L L `.    \     _.-+.          `.   L+`.     |        F%PT%%BBT%88b%PT%
+%BBT%8888888  %PT%%BWT%L | |   \   _..--'_.-|.`.          >-'    `., J        |%PT%%BBT%8888b%PT%
+%BBT%8888888  %PT%%BWT%|  L L   +:" _.--'_.-'.`.`.    _.-'     .-' | |       J%PT%%BBT%Y88888b%PT%
+%BBT%8888888   %PT%%BWT%L | |   J \ \_.-'     `.`.`.-'     _.-'   J J        F %PT%%BBT%Y88888b%PT%
+%BBT%Y888888    %PT%%BWT%\ L L   L \ `.      _.-'_.-+  _.-'       | |       |   %PT%%BBT%Y88888b%PT%
+%BBT%`888888b    %PT%%BWT%\| |   |  `. \ _.-'_.-'   |-'          J J       J     %PT%%BBT%Y88888b%PT%
+ %BBT%Y888888     %PT%%BWT%+'\   J    \ '_.-'       F    ,-T"\   | |    .-'      %PT%%BBT%)888888%PT%
+  %BBT%Y88888b.      %PT%%BWT%\   L    +'          J    /  | J  J J  .-'        %PT%%BBT%.d888888%PT%
+   %BBT%Y888888b      %PT%%BWT%\  |    |           |    F  '.|.-'+|-'         %PT%%BBT%.d88888888%PT%
+    %BBT%Y888888b      %PT%%BWT%\ J    |           F   J    -.              %PT%%BBT%.od88888888P%PT%
+     %BBT%Y888888b      %PT%%BWT%\ L   |          J    | .' ` \%PT%%BBT%d8888888888888888888888P%PT%
+      %BBT%Y888888b      %PT%%BWT%\|   |          |  .-'`.  `\ `.%PT%%BBT%88888888888888888888P%PT%
+       %BBT%Y888888b.     %PT%%BWT%J   |          F-'     \\ ` \ \%PT%%BBT%88888888888888888P'%PT%
+        %BBT%Y8888888b     %PT%%BWT%L  |         J       %PT%%BBT%d8%PT%%BWT%`.`\  \`.%PT%%BBT%8888888888888P'%PT%
+         %BBT%Y8888888b    %PT%%BWT%|  |        .+      %PT%%BBT%d8888%PT%%BWT%\  ` .'%PT%%BBT%  `Y888888P'%PT%
+         %BBT%`88888888b   %PT%%BWT%J  |     .-'     %PT%%BBT%.od888888%PT%%BWT%\.-'%PT%
+          %BBT%Y88888888b   %PT%%BWT%\ |  .-'     %PT%%BBT%d888888888P'%PT%
+          %BBT%`888888888b   %PT%%BWT%\|-'       %PT%%BBT%d888888888P%PT%
+           %BBT%`Y88888888b            d8888888P'%PT%  %BWT%Main Menu:%PT%
+             %BBT%Y88888888bo.      .od88888888%PT%    %BWT%1. Log in%PT%
+             %BBT%`8888888888888888888888888888%PT%    %BWT%2. Create new Character%PT%
+              %BBT%Y88888888888888888888888888P%PT%    %BWT%3. Exit%PT%
+               %BBT%`Y8888888888888888888888P'%PT%     %BWT%Enter Option: %PT%
+                 %BBT%`Y8888888888888P'%PT%
+                      %BBT%`Y88888P'%PT%

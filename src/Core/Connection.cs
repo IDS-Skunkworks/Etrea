@@ -128,7 +128,7 @@ namespace Etrea3.Core
         {
             try
             {
-                string welcomePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resources");
+                string welcomePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world");
                 string[] welcomeMessage = File.ReadAllLines($"{welcomePath}\\welcome.txt");
                 StringBuilder sb = new StringBuilder();
                 foreach(string line in welcomeMessage)
@@ -141,6 +141,12 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("1. Log In");
+                sb.AppendLine("2. Create Character");
+                sb.AppendLine("3. Exit");
+                sb.AppendLine("Choice: ");
+                playerSession.Send(sb.ToString());
                 Game.LogMessage($"ERROR: Error sending welcome message to {playerSession.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
             }
         }

@@ -644,6 +644,7 @@ namespace Etrea3.Core
                 return false;
             }
             LogMessage($"INFO: Loading Database, {HelpManager.Instance.Count} Help articles loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Player Database check... {DatabaseManager.GetPlayerCount()} Players in database", LogLevel.Info, true);
             return true;
         }
 

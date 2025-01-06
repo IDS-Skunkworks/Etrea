@@ -5,6 +5,7 @@ using Etrea3.Core;
 using System.Threading.Tasks;
 using Etrea3.Networking.API;
 using System.IO;
+using System.Reflection;
 
 namespace Etrea3
 {
@@ -48,39 +49,75 @@ namespace Etrea3
         {
             try
             {
-                Console.WriteLine("Checking required files...");
-                string basePath = AppDomain.CurrentDomain.BaseDirectory;
-                if (!File.Exists(Path.Combine(basePath, "resources\\welcome.txt")))
+                Assembly assembly = Assembly.GetExecutingAssembly();
+                Console.WriteLine("Starting file check...");
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world")))
                 {
-                    byte[] welcomeBytes = Properties.Resources.welcome;
-                    if (!Directory.Exists(Path.Combine(basePath, "resources")))
+                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world"));
+                }
+                if (!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\welcome.txt")))
+                {
+                    using (Stream rStream = assembly.GetManifestResourceStream("Etrea3.Resources.welcome.txt"))
                     {
-                        Directory.CreateDirectory(Path.Combine(basePath, "resources"));
-                        Console.WriteLine("Creating default Welcome Message");
-                        File.WriteAllBytes(Path.Combine(basePath, "resources\\welcome.txt"), welcomeBytes);
+                        if (rStream == null)
+                        {
+                            Console.WriteLine("ERROR: Cannot open default welcome message resource");
+                            return false;
+                        }
+                        Console.WriteLine("Creating default welcome message file...");
+                        using (FileStream fs = new FileStream(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\welcome.txt"), FileMode.Create, FileAccess.Write))
+                        {
+                            rStream.CopyTo(fs);
+                        }
                     }
                 }
-                if (!Directory.Exists(Path.Combine(basePath, "world")))
+                if (!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\players.db")))
                 {
-                    Directory.CreateDirectory(Path.Combine(basePath, "world"));
+                    using (Stream rStream = assembly.GetManifestResourceStream("Etrea3.Resources.players.db"))
+                    {
+                        if (rStream == null)
+                        {
+                            Console.WriteLine("ERROR: Cannot open default player database resource");
+                            return false;
+                        }
+                        Console.WriteLine("Creating blank player database...");
+                        using (FileStream fs = new FileStream(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\players.db"), FileMode.Create, FileAccess.Write))
+                        {
+                            rStream.CopyTo(fs);
+                        }
+                    }
                 }
-                if (!File.Exists(Path.Combine(basePath, "world\\logs.db")))
+                if (!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\world.db")))
                 {
-                    byte[] logDBBytes = Properties.Resources.logs;
-                    Console.WriteLine("Creating logs database");
-                    File.WriteAllBytes(Path.Combine(basePath, "world\\logs.db"), logDBBytes);
+                    using (Stream rStream = assembly.GetManifestResourceStream("Etrea3.Resources.world.db"))
+                    {
+                        if (rStream == null)
+                        {
+                            Console.WriteLine("ERROR: Cannot open default world database resource");
+                            return false;
+                        }
+                        Console.WriteLine("Creating default world database...");
+                        using (FileStream fs = new FileStream(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\world.db"), FileMode.Create, FileAccess.Write))
+                        {
+                            rStream.CopyTo(fs);
+                        }
+                    }
                 }
-                if (!File.Exists(Path.Combine(basePath, "world\\players.db")))
+                if (!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\logs.db")))
                 {
-                    byte[] playerDBBytes = Properties.Resources.players;
-                    Console.WriteLine("Creating player database");
-                    File.WriteAllBytes(Path.Combine(basePath, "world\\players.db"), playerDBBytes);
-                }
-                if (!File.Exists(Path.Combine(basePath, "world\\world.db")))
-                {
-                    byte[] worldDBBytes = Properties.Resources.world;
-                    Console.WriteLine("Creating world database");
-                    File.WriteAllBytes(Path.Combine(basePath, "world\\world.db"), worldDBBytes);
+                    using (Stream rStream = assembly.GetManifestResourceStream("Etrea3.Resources.logs.db"))
+                    {
+                        if (rStream == null)
+                        {
+                            Console.WriteLine("ERROR: Cannot open default logs database resoure");
+                            return false;
+                        }
+                        Console.WriteLine("Creating default logging database...");
+                        using (FileStream fs = new FileStream(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\logs.db"), FileMode.Create, FileAccess.Write))
+                        {
+                            rStream.CopyTo(fs);
+                        }
+                    }
                 }
                 return true;
             }
