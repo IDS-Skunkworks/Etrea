@@ -2463,6 +2463,7 @@ namespace Etrea3.Core
                 return;
             }
             session.Player.RemoveItemFromInventory(item);
+            session.Send($"%BYT%You offer {item.ShortDescription} to the Gods and it vanishes with a flash!%PT%{Constants.NewLine}");
             RoomManager.Instance.AddItemToRoomInventory(Game.DonationRoomID, item);
             Game.LogMessage($"INFO: Player {session.Player.Name} donated {item.Name} ({item.ID})", LogLevel.Info, true);
             var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
