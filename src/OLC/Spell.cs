@@ -29,11 +29,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"10. Set Learn Cost{Constants.TabStop}11. Set Ability Modifier{Constants.TabStop}12. Manage Buffs");
                 sb.AppendLine($"13. Save{Constants.TabStop}{Constants.TabStop}14. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.ToLower(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -91,20 +91,20 @@ namespace Etrea3.OLC
                         {
                             if (SpellManager.Instance.AddOrUpdateSpell(newSpell, true))
                             {
-                                session.Send($"%BGT%The new Spell has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Spell has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Spell: {newSpell.Name} ({newSpell.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The new Spell could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Spell could not be saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Spell {newSpell.Name} ({newSpell.ID}) but the attempt failed.", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The Spell could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The Spell could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -112,7 +112,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -120,7 +120,7 @@ namespace Etrea3.OLC
 
         private static void DeleteSpell(Session session)
         {
-            session.Send($"Enter Spell ID or END to return: ");
+            session.SendSystem($"Enter Spell ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -128,13 +128,13 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int spellID))
             {
-                session.Send($"%RT%That is not a valid Spell ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%RT%That is not a valid Spell ID.%PT%{Constants.NewLine}");
                 return;
             }
             var spell = SpellManager.Instance.GetSpell(spellID);
             if (spell == null)
             {
-                session.Send($"%BRT%No Spell with that ID could be found in Spell Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Spell with that ID could be found in Spell Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (spell.OLCLocked)
@@ -142,24 +142,24 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(spell.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Spell is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified spell is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             if (SpellManager.Instance.RemoveSpell(spell.ID))
             {
-                session.Send($"%BGT%The specified Spell was removed successfully.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BGT%The specified Spell was removed successfully.%PT%{Constants.NewLine}");
                 Game.LogMessage($"OLC: Player {session.Player.Name} has removed Spell {spell.Name} ({spell.ID})", LogLevel.OLC, true);
             }
             else
             {
-                session.Send($"%BRT%The specified Spell could not be removed.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Spell could not be removed.%PT%{Constants.NewLine}");
                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Spell {spell.Name} ({spell.ID}) but the attempt failed", LogLevel.OLC, true);
             }
         }
 
         private static void ChangeSpell(Session session)
         {
-            session.Send($"Enter Spell ID or END to return:");
+            session.SendSystem($"Enter Spell ID or END to return:");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -167,13 +167,13 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int spellID))
             {
-                session.Send($"%BRT%That is not a valid Spell ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Spell ID.%PT%{Constants.NewLine}");
                 return;
             }
             var spell = SpellManager.Instance.GetSpell(spellID);
             if (spell == null)
             {
-                session.Send($"BRT%No Spell with that ID could be found in Spell Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"BRT%No Spell with that ID could be found in Spell Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (spell.OLCLocked)
@@ -181,7 +181,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(spell.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Spell is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified spell is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             SpellManager.Instance.SetSpellLockState(spellID, true, session);
@@ -206,11 +206,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"9. Set Learn Cost{Constants.TabStop}{Constants.TabStop}10. Set Ability Modifier{Constants.TabStop}11. Manage Buffs");
                 sb.AppendLine($"12. Save{Constants.TabStop}{Constants.TabStop}13. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.ToLower(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -265,20 +265,20 @@ namespace Etrea3.OLC
                             if (SpellManager.Instance.AddOrUpdateSpell(modSpell, false))
                             {
                                 SpellManager.Instance.SetSpellLockState(spellID, false, session);
-                                session.Send($"%BGT%The Spell has been updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Spell has been updated successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Spell: {modSpell.Name} ({modSpell.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The updated Spell could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The updated Spell could not be saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Spell {modSpell.Name} ({modSpell.ID}) but the attempt failed.", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The Spell could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The Spell could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -287,7 +287,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -324,11 +324,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Buff{Constants.TabStop}{Constants.TabStop}2. Remove Buff");
                 sb.AppendLine($"3. Clear Buffs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -342,7 +342,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -362,7 +362,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

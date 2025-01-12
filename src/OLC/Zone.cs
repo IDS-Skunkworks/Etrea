@@ -23,11 +23,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"3. Set Start Room{Constants.TabStop}4. Set End Room");
                 sb.AppendLine($"5. Save Zone{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -54,19 +54,19 @@ namespace Etrea3.OLC
                             if (ZoneManager.Instance.AddOrUpdateZone(newZone, true))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added a new Zone: {newZone.ZoneName} ({newZone.ZoneID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%New Zone has been successfully created.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%New Zone has been successfully created.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new Zone: {newZone.ZoneName} ({newZone.ZoneID}) however the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%Failed to save the new Zone.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new Zone.%PT%{Constants.NewLine}");
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Zone could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Zone could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -74,7 +74,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -84,12 +84,12 @@ namespace Etrea3.OLC
         {
             while(true)
             {
-                session.Send($"%BRT%This is a permanent change to the Realms. All Rooms in the Zone will also be removed.%PT%{Constants.NewLine}");
-                session.Send("Enter Zone ID or END to return: ");
+                session.SendSystem($"%BRT%This is a permanent change to the Realms. All Rooms in the Zone will also be removed.%PT%{Constants.NewLine}");
+                session.SendSystem("Enter Zone ID or END to return: ");
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input))
                 {
-                    session.Send($"%BRT%Sorry, that is not a valid Zone ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that is not a valid Zone ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (input.Trim().ToUpper() == "END")
@@ -98,18 +98,18 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int value))
                 {
-                    session.Send($"%BRT%Sorry, that is not a valid Zone ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that is not a valid Zone ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (value <= 0)
                 {
-                    session.Send($"%BRT%Sorry, that Zone cannot be removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that Zone cannot be removed.%PT%{Constants.NewLine}");
                     continue;
                 }
                 var zone = ZoneManager.Instance.GetZone(value);
                 if (zone == null)
                 {
-                    session.Send($"%BRT%No Zone with that ID could be found in Zone Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%No Zone with that ID could be found in Zone Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (zone.OLCLocked)
@@ -117,7 +117,7 @@ namespace Etrea3.OLC
                     var lockingSession = SessionManager.Instance.GetSession(zone.LockHolder);
                     var msg = lockingSession != null ? $"%BRT%The specified Zone is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                         $"%BRT%The specified Zone is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                    session.Send(msg);
+                    session.SendSystem(msg);
                     continue;
                 }
                 while (RoomManager.Instance.GetRoom(zone.MinRoom, zone.MaxRoom).Count > 0)
@@ -128,19 +128,19 @@ namespace Etrea3.OLC
                     {
                         if (r.PlayersInRoom.Count > 0)
                         {
-                            session.Send($"%BRT%Cannot remove Room {r.ID}, there is at least one Player in the Room.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%Cannot remove Room {r.ID}, there is at least one Player in the Room.%PT%{Constants.NewLine}");
                             Game.LogMessage($"OLC: Player {session.Player.Name} failed to remove Room {r.ID} as part of a Zone removal, at least one Player is in the Room", LogLevel.OLC, true);
                             return;
                         }
                         if (r.OLCLocked)
                         {
-                            session.Send($"%BRT%Cannot remove Room {r.ID}, the Room is Locked in OLC.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%Cannot remove Room {r.ID}, the Room is Locked in OLC.%PT%{Constants.NewLine}");
                             Game.LogMessage($"OLC: Player {session.Player.Name} failed to remove Room {r.ID} as part of a Zone removal, the Room is Locked", LogLevel.OLC, true);
                             return;
                         }
                         if (!RoomManager.Instance.ClearRoomInventory(r.ID))
                         {
-                            session.Send($"%BRT%Failed to clear Inventory of Room {r.ID}.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%Failed to clear Inventory of Room {r.ID}.%PT%{Constants.NewLine}");
                             Game.LogMessage($"OLC: Player {session.Player.Name} failed to remove Room {r.ID} as part of a Zone removal, the Room inventory could not be cleared", LogLevel.OLC, true);
                             return;
                         }
@@ -151,7 +151,7 @@ namespace Etrea3.OLC
                             {
                                 if (!NPCManager.Instance.RemoveNPCInstance(n.ID))
                                 {
-                                    session.Send($"%BRT%Failed to remove NPCs from Room {r.ID}.%PT%{Constants.NewLine}");
+                                    session.SendSystem($"%BRT%Failed to remove NPCs from Room {r.ID}.%PT%{Constants.NewLine}");
                                     Game.LogMessage($"OLC: Player {session.Player.Name} failed to remove Room {r.ID} as part of a Zone removal, NPC instances could not be cleared", LogLevel.OLC, true);
                                     return;
                                 }
@@ -159,31 +159,31 @@ namespace Etrea3.OLC
                         }
                         if (!RoomManager.Instance.RemoveRoom(r.ID))
                         {
-                            session.Send($"%BRT%Failed to remove Room {r.ID} from Room Manager.{Constants.NewLine}");
+                            session.SendSystem($"%BRT%Failed to remove Room {r.ID} from Room Manager.{Constants.NewLine}");
                             Game.LogMessage($"OLC: Player {session.Player.Name} failed to remove Room {r.ID}, the request to Room Manager returned FALSE", LogLevel.OLC, true);
                             return;
                         }
                         Game.LogMessage($"OLC: Player {session.Player.Name} removed Room {r.ID} as part of a Zone removal", LogLevel.OLC, true);
                     }
                 }
-                session.Send($"%BGT%All Rooms in the Zone have been removed.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BGT%All Rooms in the Zone have been removed.%PT%{Constants.NewLine}");
                 if (ZoneManager.Instance.RemoveZone(zone.ZoneID))
                 {
                     Game.LogMessage($"OLC: Player {session.Player.Name} has removed Zone {zone.ZoneID} ({zone.ZoneName})", LogLevel.OLC, true);
-                    session.Send($"%BGT%The specified Zone has been deleted.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BGT%The specified Zone has been deleted.%PT%{Constants.NewLine}");
                     return;
                 }
                 else
                 {
                     Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Zone {zone.ZoneID} ({zone.ZoneName}) however the attempt failed", LogLevel.OLC, true);
-                    session.Send($"%BRT%Failed to remove the specified Zone.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Failed to remove the specified Zone.%PT%{Constants.NewLine}");
                 }
             }
         }
 
         private static void ChangeZone(Session session)
         {
-            session.Send("Enter Zone ID or END to return: ");
+            session.SendSystem("Enter Zone ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -191,12 +191,12 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int zoneID))
             {
-                session.Send($"%BRT%That is not a valid Zone ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Zone ID.%PT%{Constants.NewLine}");
                 return;
             }
             if (!ZoneManager.Instance.ZoneExists(zoneID))
             {
-                session.Send($"%BRT%No Zone with that ID could be found in Zone Manager!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Zone with that ID could be found in Zone Manager!%PT%{Constants.NewLine}");
                 return;
             }
             if (ZoneManager.Instance.GetZone(zoneID).OLCLocked)
@@ -204,7 +204,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(ZoneManager.Instance.GetZone(zoneID).LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Zone is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Zone is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             var zone = Helpers.Clone(ZoneManager.Instance.GetZone(zoneID));
@@ -223,11 +223,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"2. Set Start Room{Constants.TabStop}3. Set End Room");
                 sb.AppendLine($"4. Save Zone{Constants.TabStop}{Constants.TabStop}5. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -251,19 +251,19 @@ namespace Etrea3.OLC
                             {
                                 ZoneManager.Instance.SetZoneLockState(zone.ZoneID, false, session);
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Zone: {zone.ZoneName} ({zone.ZoneID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The Zone has been successfully updated.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Zone has been successfully updated.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Zone: {zone.ZoneName} ({zone.ZoneID}) however the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%Failed to save the updated Zone.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the updated Zone.%PT%{Constants.NewLine}");
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Zone could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Zone could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -272,7 +272,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

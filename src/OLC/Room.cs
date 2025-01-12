@@ -31,11 +31,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"10. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}11. Manage Tick Items");
                 sb.AppendLine($"12. Set Sign Text{Constants.TabStop}{Constants.TabStop}13. Clear Sign Text");
                 sb.AppendLine($"14. Save Room{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}15. Return");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -98,19 +98,19 @@ namespace Etrea3.OLC
                             if (RoomManager.Instance.AddOrUpdateRoom(newRoom, true))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added a new Room: {newRoom.RoomName} ({newRoom.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%New Room has been successfully created.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%New Room has been successfully created.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new Room: {newRoom.RoomName} ({newRoom.ID}) however the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%Failed to save the new Room.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new Room.%PT%{Constants.NewLine}");
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Room could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Room could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -118,7 +118,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -128,8 +128,8 @@ namespace Etrea3.OLC
         {
             while (true)
             {
-                session.Send($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
-                session.Send($"Enter Room ID or END to return: ");
+                session.SendSystem($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
+                session.SendSystem($"Enter Room ID or END to return: ");
                 string input = session.Read();
                 if (!string.IsNullOrEmpty(input))
                 {
@@ -139,18 +139,18 @@ namespace Etrea3.OLC
                     }
                     if (!int.TryParse(input.Trim(), out int rid))
                     {
-                        session.Send($"Sorry, that isn't a valid Room ID!{Constants.NewLine}");
+                        session.SendSystem($"Sorry, that isn't a valid Room ID!{Constants.NewLine}");
                         continue;
                     }
                     if (rid <= 0)
                     {
-                        session.Send($"%BRT%Sorry, you can't delete that Room!%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%Sorry, you can't delete that Room!%PT%{Constants.NewLine}");
                         continue;
                     }
                     var r = RoomManager.Instance.GetRoom(rid);
                     if (r == null)
                     {
-                        session.Send($"%BRT%No Room with that ID could be found!%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%No Room with that ID could be found!%PT%{Constants.NewLine}");
                         continue;
                     }
                     if (r.OLCLocked)
@@ -158,12 +158,12 @@ namespace Etrea3.OLC
                         var lockHolder = SessionManager.Instance.GetSession(r.LockHolder);
                         var msg = lockHolder != null ? $"%BRT%The specified Room is currently locked in OLC by {lockHolder.Player.Name}.%PT%{Constants.NewLine}" :
                             $"%BRT%The specified Room is currently locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                        session.Send(msg);
+                        session.SendSystem(msg);
                         continue;
                     }
                     if (r.PlayersInRoom.Count > 0)
                     {
-                        session.Send($"%BRT%There are Players in that Room and it cannot be deleted!%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%There are Players in that Room and it cannot be deleted!%PT%{Constants.NewLine}");
                         continue;
                     }
                     if (r.NPCsInRoom.Count > 0)
@@ -174,7 +174,7 @@ namespace Etrea3.OLC
                             if (!NPCManager.Instance.RemoveNPCInstance(r.NPCsInRoom[0].ID))
                             {
                                 Game.LogMessage($"ERROR: Error removing NPC {r.NPCsInRoom[0].ID} from Room {r.ID}, aborting deletion of Room", LogLevel.Error, true);
-                                session.Send($"%BRT%Failed to delete an NPC from the Room, aborting deletion of Room%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to delete an NPC from the Room, aborting deletion of Room%PT%{Constants.NewLine}");
                                 npcDeleteErr = true;
                                 break;
                             }
@@ -191,13 +191,13 @@ namespace Etrea3.OLC
                     if (RoomManager.Instance.RemoveRoom(r.ID))
                     {
                         Game.LogMessage($"OLC: Player {session.Player.Name} has removed Room {r.ID} ({r.RoomName})", LogLevel.OLC, true);
-                        session.Send($"%BGT%The specified Room has been deleted.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BGT%The specified Room has been deleted.%PT%{Constants.NewLine}");
                         return;
                     }
                     else
                     {
                         Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Room {r.ID} ({r.RoomName}) but the attempt failed", LogLevel.OLC, true);
-                        session.Send($"%BRT%Failed to remove the specified Room.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%Failed to remove the specified Room.%PT%{Constants.NewLine}");
                         continue;
                     }
                 }
@@ -206,7 +206,7 @@ namespace Etrea3.OLC
 
         private static void ChangeRoom(Session session)
         {
-            session.Send("Enter Room ID or END to return: ");
+            session.SendSystem("Enter Room ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -214,13 +214,13 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int rid))
             {
-                session.Send($"%BRT%That is not a valid Room ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Room ID.%PT%{Constants.NewLine}");
                 return;
             }
             var r = RoomManager.Instance.GetRoom(rid);
             if (r == null)
             {
-                session.Send($"%BRT%No Room with that ID could be found in Room Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Room with that ID could be found in Room Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (r.OLCLocked)
@@ -228,7 +228,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(r.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Room is Locked by {lockingSession.Player.Name} and cannot be changed.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Room is Locked but the lock holder could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             RoomManager.Instance.SetRoomLockState(rid, true, session);
@@ -254,11 +254,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"9. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}10. Manage Tick Items");
                 sb.AppendLine($"11. Set Sign Text{Constants.TabStop}{Constants.TabStop}12. Clear Sign Text");
                 sb.AppendLine($"13. Save Room{Constants.TabStop}14. Return");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -317,20 +317,20 @@ namespace Etrea3.OLC
                             if (RoomManager.Instance.AddOrUpdateRoom(room, false))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Room: {room.RoomName} ({room.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%Room has been successfully updated.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%Room has been successfully updated.%PT%{Constants.NewLine}");
                                 RoomManager.Instance.SetRoomLockState(rid, false, session);
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Room: {room.RoomName} ({room.ID}) however the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%Failed to save the updated Room.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the updated Room.%PT%{Constants.NewLine}");
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Room could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Room could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -339,7 +339,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -375,11 +375,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add NPC{Constants.TabStop}{Constants.TabStop}2. Remove NPC");
                 sb.AppendLine($"3. Clear NPCs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -395,7 +395,7 @@ namespace Etrea3.OLC
                             }
                             else
                             {
-                                session.Send($"%BRT%Either the NPC does not exist or is not valid for the Zone this Room is in.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Either the NPC does not exist or is not valid for the Zone this Room is in.%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -424,7 +424,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -460,11 +460,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -480,7 +480,7 @@ namespace Etrea3.OLC
                             }
                             else
                             {
-                                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -509,7 +509,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -544,11 +544,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add NPC{Constants.TabStop}{Constants.TabStop}2. Remove NPC");
                 sb.AppendLine($"3. Clear NPCs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -564,7 +564,7 @@ namespace Etrea3.OLC
                             }
                             else
                             {
-                                session.Send($"%BRT%Either the NPC does not exist or is not valid for the Zone this Room is in.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Either the NPC does not exist or is not valid for the Zone this Room is in.%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -593,7 +593,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...{Constants.NewLine}");
                         continue;
                 }
             }
@@ -629,11 +629,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input, out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.TabStop}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.TabStop}");
                     continue;
                 }
                 switch(option)
@@ -649,7 +649,7 @@ namespace Etrea3.OLC
                             }
                             else
                             {
-                                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -678,7 +678,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.TabStop}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.TabStop}");
                         continue;
                 }
             }
@@ -706,11 +706,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Exit{Constants.TabStop}{Constants.TabStop}2. Remove Exit");
                 sb.AppendLine("3. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -737,11 +737,11 @@ namespace Etrea3.OLC
                             }
                             if (room.RoomExits.TryAdd(roomExit.ExitDirection.ToLower(), roomExit))
                             {
-                                session.Send($"%BGT%Room Exit added successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%Room Exit added successfully.%PT%{Constants.NewLine}");
                             }
                             else
                             {
-                                session.Send($"%BRT%Failed to add new Room Exit.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to add new Room Exit.%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -758,7 +758,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

@@ -40,7 +40,7 @@ namespace Etrea3.Objects
         {
             if (session.Player.Gold < 5)
             {
-                session.Send($"%BRT%You don't have enough gold! It costs 5 gold to send a mail!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%You don't have enough gold! It costs 5 gold to send a mail!%PT%{Constants.NewLine}");
                 return;
             }
             PlayerMail newMail = new PlayerMail
@@ -68,17 +68,17 @@ namespace Etrea3.Objects
                 sb.AppendLine($"3. Set Message{Constants.TabStop}{Constants.TabStop}4. Attach Gold");
                 sb.AppendLine($"5. Manage Attachments{Constants.TabStop}6. Send{Constants.TabStop}7. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option.%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
                 {
                     case 1:
-                        session.Send("Enter Recipient: ");
+                        session.SendSystem("Enter Recipient: ");
                         var recipient = session.Read();
                         if (!string.IsNullOrEmpty(recipient))
                         {
@@ -87,7 +87,7 @@ namespace Etrea3.Objects
                         break;
 
                     case 2:
-                        session.Send("Enter Subject: ");
+                        session.SendSystem("Enter Subject: ");
                         var subj = session.Read();
                         if (!string.IsNullOrEmpty(subj))
                         {
@@ -100,7 +100,7 @@ namespace Etrea3.Objects
                         break;
 
                     case 4:
-                        session.Send("Enter Gold to include:");
+                        session.SendSystem("Enter Gold to include:");
                         var g = session.Read();
                         if (!string.IsNullOrEmpty(g) && uint.TryParse(g.Trim(), out uint includeGold))
                         {
@@ -109,7 +109,7 @@ namespace Etrea3.Objects
                                 newMail.AttachedGold = Convert.ToInt32(includeGold);
                                 break;
                             }
-                            session.Send($"%BRT%You don't have enough gold!%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%You don't have enough gold!%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -127,12 +127,12 @@ namespace Etrea3.Objects
                                 {
                                     session.Player.AdjustGold(newMail.AttachedGold * -1, true, false);
                                 }
-                                session.Send($"%BGT%The Winds of Magic swirl and your message vanishes!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Winds of Magic swirl and your message vanishes!%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The Winds of Magic die down and will not deliver your message! Please see an Imm!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The Winds of Magic die down and will not deliver your message! Please see an Imm!%PT%{Constants.NewLine}");
                             }
                             return;
                         }
@@ -142,7 +142,7 @@ namespace Etrea3.Objects
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option.%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -153,12 +153,12 @@ namespace Etrea3.Objects
             session.Player.CurrentMail = DatabaseManager.GetPlayerMail(session.Player.Name);
             if (session.Player.CurrentMail == null)
             {
-                session.Send($"%BRT%Request to get Mail returned Null, see an Imm!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%Request to get Mail returned Null, see an Imm!%PT%{Constants.NewLine}");
                 return;
             }
             if (session.Player.CurrentMail.Count == 0)
             {
-                session.Send($"%BGT%You don't have any mail to read right now!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BGT%You don't have any mail to read right now!%PT%{Constants.NewLine}");
                 return;
             }
             int counter = 1;
@@ -175,7 +175,7 @@ namespace Etrea3.Objects
             }
             sb.AppendLine($"%BYT%|| You have {session.Player.CurrentMail.Count} mail(s)%PT%");
             sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-            session.Send(sb.ToString());
+            session.SendSystem(sb.ToString());
         }
 
         public static void DeleteMail(Session session, int id)
@@ -183,7 +183,7 @@ namespace Etrea3.Objects
             var mID = id - 1;
             if (mID < 0 || mID > session.Player.CurrentMail.Count)
             {
-                session.Send($"%BRT%That ID isn't valid!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That ID isn't valid!%PT%{Constants.NewLine}");
                 return;
             }
             var m = session.Player.CurrentMail[mID];
@@ -201,11 +201,11 @@ namespace Etrea3.Objects
                 sb.AppendLine($"Options:");
                 sb.AppendLine($"1. Delete{Constants.TabStop}{Constants.TabStop}2. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That doesn't look like a valid option!%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That doesn't look like a valid option!%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -213,13 +213,13 @@ namespace Etrea3.Objects
                     case 1:
                         if (DatabaseManager.DeleteMail(m.MailGuid.ToString()))
                         {
-                            session.Send($"%BGT%The Winds of Magic swirl about, and suddenly your mail is gone!%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BGT%The Winds of Magic swirl about, and suddenly your mail is gone!%PT%{Constants.NewLine}");
                             session.Player.CurrentMail.Remove(m);
                             return;
                         }
                         else
                         {
-                            session.Send($"BRT%The Winds of Magic do not seem to respond... Something is wrong!%PT%{Constants.NewLine}");
+                            session.SendSystem($"BRT%The Winds of Magic do not seem to respond... Something is wrong!%PT%{Constants.NewLine}");
                             return;
                         }
 
@@ -227,7 +227,7 @@ namespace Etrea3.Objects
                         return;
 
                     default:
-                        session.Send($"%BRT%That doesn't look like a valid option!%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That doesn't look like a valid option!%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -238,7 +238,7 @@ namespace Etrea3.Objects
             var mID = id - 1;
             if (mID < 0 || mID > session.Player.CurrentMail.Count)
             {
-                session.Send($"%BRT%That ID isn't valid!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That ID isn't valid!%PT%{Constants.NewLine}");
                 return;
             }
             var m = session.Player.CurrentMail[mID];
@@ -248,12 +248,12 @@ namespace Etrea3.Objects
                 DatabaseManager.MarkMailAsRead(m);
                 if (m.AttachedGold > 0)
                 {
-                    session.Send($"%BYT%The Winds of Magic swirl about this message, depositing {m.AttachedGold:N0} gold with you!%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BYT%The Winds of Magic swirl about this message, depositing {m.AttachedGold:N0} gold with you!%PT%{Constants.NewLine}");
                     session.Player.AdjustGold(m.AttachedGold, true, false);
                 }
                 if (m.Attachments != null && m.Attachments.Count > 0)
                 {
-                    session.Send($"%BYT%The Winds of Magic swirl about this message, depositing some items with you!%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BYT%The Winds of Magic swirl about this message, depositing some items with you!%PT%{Constants.NewLine}");
                     foreach(var i in m.Attachments)
                     {
                         session.Player.AddItemToInventory(i.ID);
@@ -277,34 +277,34 @@ namespace Etrea3.Objects
                 sb.AppendLine($"%BYT%|| Attached Items: {m.Attachments.Count}");
             }
             sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-            session.Send(sb.ToString());
+            session.SendSystem(sb.ToString());
         }
 
         private static bool ValidateMail(Session session, ref PlayerMail mail)
         {
             if (string.IsNullOrEmpty(mail.Subject))
             {
-                session.Send($"%BRT%Your mail needs a subject!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%Your mail needs a subject!%PT%{Constants.NewLine}");
                 return false;
             }
             if (string.IsNullOrEmpty(mail.Body))
             {
-                session.Send($"%BRT%Your mail needs a message body!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%Your mail needs a message body!%PT%{Constants.NewLine}");
                 return false;
             }
             if (string.IsNullOrEmpty(mail.Recipient))
             {
-                session.Send($"%BRT%You need to specify a recipient!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%You need to specify a recipient!%PT%{Constants.NewLine}");
                 return false;
             }
             if (!DatabaseManager.CharacterExists(mail.Recipient))
             {
-                session.Send($"%BRT%The recipient doesn't exist within the Realms!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The recipient doesn't exist within the Realms!%PT%{Constants.NewLine}");
                 return false;
             }
             if ((ulong)mail.AttachedGold > (session.Player.Gold -5))
             {
-                session.Send($"%BRT%You don't have enough gold!%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%You don't have enough gold!%PT%{Constants.NewLine}");
                 return false;
             }
             return true;
@@ -333,17 +333,17 @@ namespace Etrea3.Objects
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
                 {
                     case 1:
-                        session.Send($"Enter Item Name or ID: ");
+                        session.SendSystem($"Enter Item Name or ID: ");
                         var itemID = session.Read();
                         if (string.IsNullOrEmpty(itemID))
                         {
@@ -353,13 +353,13 @@ namespace Etrea3.Objects
                         {
                             if (id <= 0)
                             {
-                                session.Send($"%BRT%That isn't a valid Item ID!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That isn't a valid Item ID!%PT%{Constants.NewLine}");
                                 continue;
                             }
                             var item = session.Player.GetInventoryItem(id);
                             if (item == null)
                             {
-                                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                                 continue;
                             }
                             session.Player.RemoveItemFromInventory(item);
@@ -370,7 +370,7 @@ namespace Etrea3.Objects
                             var item = session.Player.GetInventoryItem(input.Trim());
                             if (item == null)
                             {
-                                session.Send($"%BRT%No Item with that name could be found in Item Manager.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%No Item with that name could be found in Item Manager.%PT%{Constants.NewLine}");
                                 continue;
                             }
                             session.Player.RemoveItemFromInventory(item);
@@ -379,17 +379,17 @@ namespace Etrea3.Objects
                         break;
 
                     case 2:
-                        session.Send("Enter Item ID: ");
+                        session.SendSystem("Enter Item ID: ");
                         itemID = session.Read();
                         if (string.IsNullOrEmpty(itemID) || !int.TryParse(itemID.Trim(), out id))
                         {
-                            session.Send($"%BRT%That isn't a valid Item ID!%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%That isn't a valid Item ID!%PT%{Constants.NewLine}");
                             continue;
                         }
                         var remItem = mail.Attachments.FirstOrDefault(x => x.ID == id);
                         if (remItem == null)
                         {
-                            session.Send($"%BRT%No Attachment with that Item ID could be found.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Attachment with that Item ID could be found.%PT%{Constants.NewLine}");
                             continue;
                         }
                         mail.Attachments.Remove(remItem);
@@ -408,7 +408,7 @@ namespace Etrea3.Objects
                         return;
 
                     default:
-                        session.Send($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -418,12 +418,12 @@ namespace Etrea3.Objects
         {
             StringBuilder sb = new StringBuilder();
             int line = 1;
-            session.Send($"%BGT%Enter your message, try to keep each line to a max of 80 characters.%PT%{Constants.NewLine}");
-            session.Send($"%BGT%Enter END on a new line to finish.%PT%{Constants.NewLine}");
-            session.Send($"%BYT%{new string('=', 77)}%PT%{Constants.NewLine}");
+            session.SendSystem($"%BGT%Enter your message, try to keep each line to a max of 80 characters.%PT%{Constants.NewLine}");
+            session.SendSystem($"%BGT%Enter END on a new line to finish.%PT%{Constants.NewLine}");
+            session.SendSystem($"%BYT%{new string('=', 77)}%PT%{Constants.NewLine}");
             while (true)
             {
-                session.Send($"[{line}] ");
+                session.SendSystem($"[{line}] ");
                 var input = session.Read();
                 if (!string.IsNullOrEmpty(input) && input.Trim().ToUpper() == "END")
                 {

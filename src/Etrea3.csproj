@@ -24,16 +24,18 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
+    <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
   <PropertyGroup />
   <ItemGroup>
@@ -207,9 +209,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="bin\Debug\_blankDBs\logs.db" />
-    <None Include="bin\Debug\_blankDBs\players.db" />
-    <None Include="bin\Debug\_blankDBs\world.db" />
     <None Include="packages.config" />
     <EmbeddedResource Include="Resources\logs.db" />
     <EmbeddedResource Include="Resources\players.db" />
@@ -222,7 +221,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="bin\Debug\resources\welcome.txt" />
     <EmbeddedResource Include="Resources\welcome.txt" />
     <Content Include="ToDo.txt" />
   </ItemGroup>

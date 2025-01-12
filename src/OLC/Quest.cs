@@ -39,11 +39,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"9. Manage Required Monsters{Constants.TabStop}10. Manage Reward Items");
                 sb.AppendLine($"11. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}12. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -93,20 +93,20 @@ namespace Etrea3.OLC
                         {
                             if (QuestManager.Instance.AddOrUpdateQuest(newQuest, true))
                             {
-                                session.Send($"%BGT%The new Quest has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Quest has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Quest: {newQuest.Name} ({newQuest.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The new Quest was not successfully saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Quest was not successfully saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Quest: {newQuest.Name} ({newQuest.ID}) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Quest could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Quest could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -114,7 +114,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.TabStop}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.TabStop}");
                         continue;
                 }
             }
@@ -124,7 +124,7 @@ namespace Etrea3.OLC
         {
             while (true)
             {
-                session.Send($"Enter Quest ID or END to return: ");
+                session.SendSystem($"Enter Quest ID or END to return: ");
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
                 {
@@ -132,13 +132,13 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int questID))
                 {
-                    session.Send($"%BRT%That is not a valid Quest ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That is not a valid Quest ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 var q = QuestManager.Instance.GetQuest(questID);
                 if (q == null)
                 {
-                    session.Send($"%BRT%No Quest with that ID could be found in Quest Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%No Quest with that ID could be found in Quest Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (q.OLCLocked)
@@ -146,19 +146,19 @@ namespace Etrea3.OLC
                     var lockingSession = SessionManager.Instance.GetSession(q.LockHolder);
                     var msg = lockingSession != null ? $"%BRT%That Quest is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                         $"%BRT%That Quest is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                    session.Send(msg);
+                    session.SendSystem(msg);
                     continue;
                 }
                 if (QuestManager.Instance.RemoveQuest(q.ID))
                 {
                     Game.LogMessage($"OLC: Player {session.Player.Name} has removed Quest: {q.Name} ({q.ID})", LogLevel.OLC, true);
-                    session.Send($"%BGT%The specified Quest has been successfully removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BGT%The specified Quest has been successfully removed.%PT%{Constants.NewLine}");
                     return;
                 }
                 else
                 {
                     Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Quest: {q.Name} ({q.ID}) but the attempt failed", LogLevel.OLC, true);
-                    session.Send($"%BRT%Failed to remove the specified Quest.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Failed to remove the specified Quest.%PT%{Constants.NewLine}");
                     continue;
                 }
             }
@@ -166,7 +166,7 @@ namespace Etrea3.OLC
 
         private static void ChangeQuest(Session session)
         {
-            session.Send($"Enter Quest ID or END to return: ");
+            session.SendSystem($"Enter Quest ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -174,13 +174,13 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int questID))
             {
-                session.Send($"%BRT%That is not a valid Quest ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Quest ID.%PT%{Constants.NewLine}");
                 return;
             }
             var q = QuestManager.Instance.GetQuest(questID);
             if (q == null)
             {
-                session.Send($"%BRT%No Quest with that ID could be found in Quest Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Quest with that ID could be found in Quest Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (q.OLCLocked)
@@ -188,7 +188,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(q.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Quest is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Quest is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             var modQuest = Helpers.Clone(QuestManager.Instance.GetQuest(questID));
@@ -221,11 +221,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"8. Manage Required Monsters{Constants.TabStop}9. Manage Reward Items");
                 sb.AppendLine($"10. Save{Constants.TabStop}{Constants.TabStop}11. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -271,20 +271,20 @@ namespace Etrea3.OLC
                         {
                             if (QuestManager.Instance.AddOrUpdateQuest(modQuest, false))
                             {
-                                session.Send($"%BGT%The Quest has been updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Quest has been updated successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Quest: {modQuest.Name} ({modQuest.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The Quest was not successfully updated.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The Quest was not successfully updated.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Quest: {modQuest.Name} ({modQuest.ID}) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Quest could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Quest could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -292,7 +292,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.TabStop}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.TabStop}");
                         continue;
                 }
             }
@@ -302,12 +302,12 @@ namespace Etrea3.OLC
         {
             StringBuilder sb = new StringBuilder();
             int line = 1;
-            session.Send($"%BGT%Enter Quest flavour text, try to keep each line to a max of 80 characters.%PT%{Constants.NewLine}");
-            session.Send($"%BGT%Enter END on a new line to finish.%PT%{Constants.NewLine}");
-            session.Send($"%BYT%{new string('=', 77)}%PT%{Constants.NewLine}");
+            session.SendSystem($"%BGT%Enter Quest flavour text, try to keep each line to a max of 80 characters.%PT%{Constants.NewLine}");
+            session.SendSystem($"%BGT%Enter END on a new line to finish.%PT%{Constants.NewLine}");
+            session.SendSystem($"%BYT%{new string('=', 77)}%PT%{Constants.NewLine}");
             while (true)
             {
-                session.Send($"[{line}] ");
+                session.SendSystem($"[{line}] ");
                 var input = session.Read();
                 if (!string.IsNullOrEmpty(input) && input.Trim().ToUpper() == "END")
                 {
@@ -349,11 +349,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -367,7 +367,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -395,7 +395,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -431,11 +431,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Monster{Constants.TabStop}{Constants.TabStop}2. Remove Monster");
                 sb.AppendLine($"3. Clear Monsters{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -449,7 +449,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No NPC with that ID could be found in NPC Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No NPC with that ID could be found in NPC Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -477,7 +477,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -511,11 +511,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -529,7 +529,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -557,7 +557,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

@@ -1,5 +1,4 @@
 ﻿using Etrea3.Core;
-using System.Data.SQLite;
 using System.Text;
 
 namespace Etrea3.OLC
@@ -24,8 +23,8 @@ namespace Etrea3.OLC
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Create{Constants.TabStop}2. Change");
                 sb.AppendLine($"3. Remove{Constants.TabStop}4. Return");
-                session.Send(sb.ToString());
-                session.Send("Choice: ");
+                session.SendSystem(sb.ToString());
+                session.SendSystem("Choice: ");
                 var input = session.Read();
                 if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
                 {
@@ -49,13 +48,13 @@ namespace Etrea3.OLC
                             return;
 
                         default:
-                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                             break;
                     }
                 }
                 else
                 {
-                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                    session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                 }
             }
         }
@@ -72,7 +71,7 @@ namespace Etrea3.OLC
                 sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
                 sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
                 {
@@ -126,13 +125,13 @@ namespace Etrea3.OLC
                             return;
 
                         default:
-                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                             break;
                     }
                 }
                 else
                 {
-                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                    session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                 }
             }
         }
@@ -149,7 +148,7 @@ namespace Etrea3.OLC
                 sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
                 sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
                 {
@@ -203,13 +202,13 @@ namespace Etrea3.OLC
                             return;
 
                         default:
-                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                             break;
                     }
                 }
                 else
                 {
-                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                    session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                 }
             }
         }
@@ -226,7 +225,7 @@ namespace Etrea3.OLC
                 sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
                 sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (!string.IsNullOrEmpty(input) && int.TryParse(input.Trim(), out int option))
                 {
@@ -280,13 +279,13 @@ namespace Etrea3.OLC
                             return;
 
                         default:
-                            session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                            session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                             break;
                     }
                 }
                 else
                 {
-                    session.Send($"Sorry, that isn't a valid selection!{Constants.NewLine}");
+                    session.SendSystem($"Sorry, that isn't a valid selection!{Constants.NewLine}");
                 }
             }
         }

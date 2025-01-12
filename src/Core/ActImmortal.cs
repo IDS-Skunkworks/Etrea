@@ -3337,7 +3337,7 @@ namespace Etrea3.Core
                 session.Send(sb.ToString());
                 return;
             }
-            var matchingItems = ItemManager.Instance.GetItem(criteria);
+            var matchingItems = ItemManager.Instance.GetItems(criteria);
             if (matchingItems == null || matchingItems.Count == 0)
             {
                 session.Send($"%BRT%No Items matching the specified criteria could be found in Item Manager.%PT%{Constants.NewLine}");

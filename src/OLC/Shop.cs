@@ -25,11 +25,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"3. Set Gold{Constants.TabStop}{Constants.TabStop}4. Manage Inventory");
                 sb.AppendLine($"5. Save Shop{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -55,20 +55,20 @@ namespace Etrea3.OLC
                         {
                             if (ShopManager.Instance.AddOrUpdateShop(newShop, true))
                             {
-                                session.Send($"%BGT%The new Shop has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Shop has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added Shop {newShop.ShopName} ({newShop.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%Failed to correctly save the new Shop!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to correctly save the new Shop!%PT%{Constants.NewLine}");
                                 Game.LogMessage($"Player {session.Player.Name} attempted to add Shop {newShop.ShopName} ({newShop.ID}) but the attempt failed.", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%Failed to validate the Shop, it cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%Failed to validate the Shop, it cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -76,7 +76,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -86,12 +86,12 @@ namespace Etrea3.OLC
         {
             while (true)
             {
-                session.Send($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
-                session.Send($"Enter Shop ID or END to return: ");
+                session.SendSystem($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
+                session.SendSystem($"Enter Shop ID or END to return: ");
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input))
                 {
-                    session.Send($"%BRT%That is not a valid Shop ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That is not a valid Shop ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (input.Trim().ToUpper() == "END")
@@ -100,18 +100,18 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int value))
                 {
-                    session.Send($"%BRT%That is not a valid Shop ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That is not a valid Shop ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 var shop = ShopManager.Instance.GetShop(value);
                 if (shop == null)
                 {
-                    session.Send($"%BRT%No Shop with that ID could be found in Shop Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%No Shop with that ID could be found in Shop Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (shop.HasCustomers)
                 {
-                    session.Send($"%BRT%The specified Shop currently has customers and cannot be removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%The specified Shop currently has customers and cannot be removed.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (shop.OLCLocked)
@@ -119,23 +119,23 @@ namespace Etrea3.OLC
                     var lockingSession = SessionManager.Instance.GetSession(shop.LockHolder);
                     var msg = lockingSession != null ? $"%BRT%The specified Shop is currently locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                         $"%BRT%The specified Shop is currently locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                    session.Send(msg);
+                    session.SendSystem(msg);
                     continue;
                 }
                 if (NPCManager.Instance.GetShopNPCs(shop.ID).Count > 0)
                 {
-                    session.Send($"%BRT%The specified Shop is currently attached to NPCs and cannot be removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%The specified Shop is currently attached to NPCs and cannot be removed.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (ShopManager.Instance.RemoveShop(shop.ID))
                 {
-                    session.Send($"%BGT%The specified Shop has been successfully removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BGT%The specified Shop has been successfully removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} has removed Shop {shop.ShopName} ({shop.ID})", LogLevel.OLC, true);
                     return;
                 }
                 else
                 {
-                    session.Send($"%BRT% Failed to remove the specified Shop.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT% Failed to remove the specified Shop.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Shop {shop.ShopName} ({shop.ID}) however the attempt failed", LogLevel.OLC, true);
                     continue;
                 }
@@ -144,7 +144,7 @@ namespace Etrea3.OLC
 
         private static void ChangeShop(Session session)
         {
-            session.Send($"Enter Shop ID or END to return: ");
+            session.SendSystem($"Enter Shop ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -152,12 +152,12 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int shopID))
             {
-                session.Send($"%BRT%That is not a valid Shop ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Shop ID.%PT%{Constants.NewLine}");
                 return;
             }
             if (!ShopManager.Instance.ShopExists(shopID))
             {
-                session.Send($"%BRT%No Shop with that ID could be found in Shop Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Shop with that ID could be found in Shop Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (ShopManager.Instance.GetShop(shopID).OLCLocked)
@@ -165,7 +165,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(ShopManager.Instance.GetShop(shopID).LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Shop is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Shop is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             ShopManager.Instance.SetShopLockStatus(shopID, true, session);
@@ -184,11 +184,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"2. Set Gold{Constants.TabStop}{Constants.TabStop}3. Manage Inventory");
                 sb.AppendLine($"4. Save Shop{Constants.TabStop}{Constants.TabStop}5. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -210,20 +210,20 @@ namespace Etrea3.OLC
                         {
                             if (ShopManager.Instance.AddOrUpdateShop(shop, false))
                             {
-                                session.Send($"%BGT%Shop has been updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%Shop has been updated successfully.%PT%{Constants.NewLine}");
                                 ShopManager.Instance.SetShopLockStatus(shopID, false, session);
                                 Game.LogMessage($"Player {session.Player.Name} has updated Shop {shop.ID} ({shop.ShopName})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%Failed to update Shop.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to update Shop.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Shop {shop.ID} ({shop.ShopName}) however the attempt failed", LogLevel.OLC, true);
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%Shop could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%Shop could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                             continue;
                         }
                         break;
@@ -233,7 +233,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -270,11 +270,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -287,7 +287,7 @@ namespace Etrea3.OLC
                             int amount = GetValue<int>(session, "Enter Amount: ");
                             if (amount == 0)
                             {
-                                session.Send($"%BRT%That isn't valid: only positive non-zero numbers or -1 are allowed!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That isn't valid: only positive non-zero numbers or -1 are allowed!%PT%{Constants.NewLine}");
                                 break;
                             }
                             shop.BaseInventory.AddOrUpdate(item.ID, amount, (k, v) => amount);
@@ -310,7 +310,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

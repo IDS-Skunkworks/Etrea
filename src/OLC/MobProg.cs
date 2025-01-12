@@ -25,11 +25,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"5. Set Triggers");
                 sb.AppendLine($"6. Save{Constants.TabStop}{Constants.TabStop}7. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That doesn't look like a valid choice.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That doesn't look like a valid choice.%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -59,20 +59,20 @@ namespace Etrea3.OLC
                         {
                             if (MobProgManager.Instance.AddOrUpdateMobProg(mobProg, true))
                             {
-                                session.Send($"%BGT%The new MobProg has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new MobProg has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new MobProg: {mobProg.Name} ({mobProg.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The new MobProg was not successfully saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new MobProg was not successfully saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add MobProg {mobProg.Name} ({mobProg.ID}) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new MobProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new MobProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -80,7 +80,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -90,7 +90,7 @@ namespace Etrea3.OLC
         {
             while (true)
             {
-                session.Send($"Enter MobProg ID or END to return: ");
+                session.SendSystem($"Enter MobProg ID or END to return: ");
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
                 {
@@ -98,13 +98,13 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int progID))
                 {
-                    session.Send($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 var mobProg = MobProgManager.Instance.GetMobProg(progID);
                 if (mobProg == null)
                 {
-                    session.Send($"%BRT%No MobProg with that ID could be found in MobProg Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%No MobProg with that ID could be found in MobProg Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (mobProg.OLCLocked)
@@ -112,18 +112,18 @@ namespace Etrea3.OLC
                     var lockHolder = SessionManager.Instance.GetSession(mobProg.LockHolder);
                     var msg = lockHolder != null ? $"%BRT%The specified MobProg is locked in OLC by {lockHolder.Player.Name}.%PT%{Constants.NewLine}" :
                         $"The specified MobProg is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                    session.Send(msg);
+                    session.SendSystem(msg);
                     continue;
                 }
                 if (MobProgManager.Instance.RemoveMobProg(mobProg.ID))
                 {
-                    session.Send($"%BGT%The specified MobProg has been successfully removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BGT%The specified MobProg has been successfully removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} has removed MobProg {mobProg.ID} ({mobProg.Name})", LogLevel.OLC, true);
                     return;
                 }
                 else
                 {
-                    session.Send($"%BRT%The specified MobProg could not be removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%The specified MobProg could not be removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove MobProg {mobProg.ID} ({mobProg.Name}) but the attempt failed", LogLevel.OLC, true);
                     continue;
                 }
@@ -132,7 +132,7 @@ namespace Etrea3.OLC
 
         private static void ChangeMobProg(Session session)
         {
-            session.Send("Enter MobProg ID or END to return: ");
+            session.SendSystem("Enter MobProg ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -140,12 +140,12 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int progID))
             {
-                session.Send($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
                 return;
             }
             if (!MobProgManager.Instance.MobProgExists(progID))
             {
-                session.Send($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
                 return;
             }
             var mobProg = MobProgManager.Instance.GetMobProg(progID);
@@ -154,7 +154,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(mobProg.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified MobProg is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"The specified MobProg is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             var updatedMobProg = Helpers.Clone<MobProg>(mobProg);
@@ -174,11 +174,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"3. Set Script Text{Constants.TabStop}{Constants.TabStop}4. Set Triggers");
                 sb.AppendLine($"5. Save{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That is not a valid option.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That is not a valid option.%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -204,20 +204,20 @@ namespace Etrea3.OLC
                         {
                             if (MobProgManager.Instance.AddOrUpdateMobProg(updatedMobProg, false))
                             {
-                                session.Send($"%BGT%The updated MobProg has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The updated MobProg has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated MobProg: {updatedMobProg.Name} ({updatedMobProg.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The updated MobProg was not successfully saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The updated MobProg was not successfully saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update MobProg {updatedMobProg.Name} ({updatedMobProg.ID}) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated MobProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated MobProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -225,7 +225,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That is not a valid option.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That is not a valid option.%PT%{Constants.NewLine}");
                         continue;
                 }
             }

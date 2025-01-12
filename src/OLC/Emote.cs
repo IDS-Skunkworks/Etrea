@@ -39,11 +39,11 @@ namespace Etrea3.OLC
                 sb.AppendLine("5. Set Messages to Others");
                 sb.AppendLine($"6. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}7. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -57,7 +57,7 @@ namespace Etrea3.OLC
                         break;
 
                     case 3:
-                        session.Send($"Set Messages to Performer:{Constants.NewLine}");
+                        session.SendSystem($"Set Messages to Performer:{Constants.NewLine}");
                         newEmote.MessageToPerformer[0] = GetValue<string>(session, "No Target: ");
                         newEmote.MessageToPerformer[1] = GetValue<string>(session, "With Target: ");
                         newEmote.MessageToPerformer[2] = GetValue<string>(session, "Target Not Found: ");
@@ -69,7 +69,7 @@ namespace Etrea3.OLC
                         break;
 
                     case 5:
-                        session.Send($"Set Messages to Others:{Constants.NewLine}");
+                        session.SendSystem($"Set Messages to Others:{Constants.NewLine}");
                         newEmote.MessageToOthers[0] = GetValue<string>(session, "No Target: ");
                         newEmote.MessageToOthers[1] = GetValue<string>(session, "With Target: ");
                         newEmote.MessageToOthers[2] = GetValue<string>(session, "Target Not Found: ");
@@ -81,20 +81,20 @@ namespace Etrea3.OLC
                         {
                             if (EmoteManager.Instance.AddOrUpdateEmote(newEmote, true))
                             {
-                                session.Send($"%BGT%The new Emote has been successfully saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Emote has been successfully saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} added new Emote: {newEmote.Name}", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%Failed to save the new Emote.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new Emote.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Emote ({newEmote.Name}) however the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Emote could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Emote could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -102,7 +102,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -112,19 +112,19 @@ namespace Etrea3.OLC
         {
             while(true)
             {
-                session.Send($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
-                session.Send($"Enter Emote ID or Name or END to return: ");
+                session.SendSystem($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
+                session.SendSystem($"Enter Emote ID or Name or END to return: ");
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input))
                 {
-                    session.Send($"%BRT%Sorry, that is not a valid Emote Name or ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that is not a valid Emote Name or ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (int.TryParse(input.Trim(), out int value))
                 {
                     if (!EmoteManager.Instance.EmoteExists(value))
                     {
-                        session.Send($"%BRT%No Emote with that ID could be found in Emote Manager.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%No Emote with that ID could be found in Emote Manager.%PT%{Constants.NewLine}");
                         continue;
                     }
                     var emote = EmoteManager.Instance.GetEmote(value);
@@ -133,18 +133,18 @@ namespace Etrea3.OLC
                         var lockingSession = SessionManager.Instance.GetSession(emote.LockHolder);
                         var msg = lockingSession != null ? $"%BRT%The specified Emote is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                             $"%BRT%The specified Emote is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                        session.Send(msg);
+                        session.SendSystem(msg);
                         continue;
                     }
                     if (EmoteManager.Instance.RemoveEmote(emote.ID))
                     {
-                        session.Send($"%BGT%The specified Emote has been removed successfully.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BGT%The specified Emote has been removed successfully.%PT%{Constants.NewLine}");
                         Game.LogMessage($"OLC: Player {session.Player.Name} has removed Emote {emote.Name} ({emote.ID})", LogLevel.OLC, true);
                         return;
                     }
                     else
                     {
-                        session.Send($"%BRT%The specified Emote could not be removed.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%The specified Emote could not be removed.%PT%{Constants.NewLine}");
                         Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Emote {emote.Name} ({emote.ID}) but the attempt failed", LogLevel.OLC, true);
                         continue;
                     }
@@ -157,7 +157,7 @@ namespace Etrea3.OLC
                     }
                     if (!EmoteManager.Instance.EmoteExists(input.Trim()))
                     {
-                        session.Send($"%BRT%No Emote with that name could be found in Emote Manager.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%No Emote with that name could be found in Emote Manager.%PT%{Constants.NewLine}");
                         continue;
                     }
                     var emote = EmoteManager.Instance.GetEmote(input.Trim());
@@ -166,18 +166,18 @@ namespace Etrea3.OLC
                         var lockingSession = SessionManager.Instance.GetSession(emote.LockHolder);
                         var msg = lockingSession != null ? $"%BRT%The specified Emote is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                             $"%BRT%The specified Emote is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                        session.Send(msg);
+                        session.SendSystem(msg);
                         continue;
                     }
                     if (EmoteManager.Instance.RemoveEmote(emote.ID))
                     {
-                        session.Send($"%BGT%The specified Emote has been removed successfully.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BGT%The specified Emote has been removed successfully.%PT%{Constants.NewLine}");
                         Game.LogMessage($"OLC: Player {session.Player.Name} has removed Emote {emote.Name} ({emote.ID})", LogLevel.OLC, true);
                         return;
                     }
                     else
                     {
-                        session.Send($"%BRT%The specified Emote could not be removed.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%The specified Emote could not be removed.%PT%{Constants.NewLine}");
                         Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Emote {emote.Name} ({emote.ID}) but the attempt failed", LogLevel.OLC, true);
                         continue;
                     }
@@ -187,7 +187,7 @@ namespace Etrea3.OLC
 
         private static void ChangeEmote(Session session)
         {
-            session.Send($"Enter Emote ID or END to return: ");
+            session.SendSystem($"Enter Emote ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -195,12 +195,12 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int emoteID))
             {
-                session.Send($"%BRT%Sorry, that is not a valid Emote ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%Sorry, that is not a valid Emote ID.%PT%{Constants.NewLine}");
                 return;
             }
             if (!EmoteManager.Instance.EmoteExists(emoteID))
             {
-                session.Send($"%BRT%No Emote with that ID could be found in Emote Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Emote with that ID could be found in Emote Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (EmoteManager.Instance.GetEmote(emoteID).OLCLocked)
@@ -208,7 +208,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(EmoteManager.Instance.GetEmote(emoteID).LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Emote is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Emote is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             EmoteManager.Instance.SetEmoteLockState(emoteID, true, session);
@@ -238,11 +238,11 @@ namespace Etrea3.OLC
                 sb.AppendLine("4. Set Messages to Others");
                 sb.AppendLine($"5. Save{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -252,7 +252,7 @@ namespace Etrea3.OLC
                         break;
 
                     case 2:
-                        session.Send($"Set Messages to Performer:{Constants.NewLine}");
+                        session.SendSystem($"Set Messages to Performer:{Constants.NewLine}");
                         emote.MessageToPerformer[0] = GetValue<string>(session, "No Target: ");
                         emote.MessageToPerformer[1] = GetValue<string>(session, "With Target: ");
                         emote.MessageToPerformer[2] = GetValue<string>(session, "Target Not Found: ");
@@ -264,7 +264,7 @@ namespace Etrea3.OLC
                         break;
 
                     case 4:
-                        session.Send($"Set Messages to Others:{Constants.NewLine}");
+                        session.SendSystem($"Set Messages to Others:{Constants.NewLine}");
                         emote.MessageToOthers[0] = GetValue<string>(session, "No Target: ");
                         emote.MessageToOthers[1] = GetValue<string>(session, "With Target: ");
                         emote.MessageToOthers[2] = GetValue<string>(session, "Target Not Found: ");
@@ -276,21 +276,21 @@ namespace Etrea3.OLC
                         {
                             if (EmoteManager.Instance.AddOrUpdateEmote(emote, false))
                             {
-                                session.Send($"%BGT%The updated Emote has been successfully saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The updated Emote has been successfully saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} updated Emote: {emote.Name}", LogLevel.OLC, true);
                                 EmoteManager.Instance.SetEmoteLockState(emote.ID, false, session);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%Failed to save the new Emote.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new Emote.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Emote ({emote.Name}) however the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Emote could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Emote could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -299,7 +299,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

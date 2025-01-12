@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Net.Sockets;
 using System.Text;
 using Etrea3.Objects;
@@ -15,6 +16,9 @@ namespace Etrea3.Core
         public ConnectionState State { get; set; }
         public bool IsConnected => Client != null && Client.Connected;
 
+        private const int MaxBufferSize = 0x1000;
+        private static readonly object _lockObject = new object();
+
         public Session(TcpClient client)
         {
             Client = client;
@@ -24,16 +28,44 @@ namespace Etrea3.Core
             Player = null;
         }
 
-        public void Send(string message)
+        public void SendSystem(string message)
+        {
+            Send(message, true);
+        }
+
+        public void Send(string message, bool bypass = false)
         {
             if (IsConnected)
             {
-                if (Player != null && (Player.Flags.HasFlag(PlayerFlags.UsingOLC) || Player.Flags.HasFlag(PlayerFlags.WritingMail)))
+                if (Player != null && (Player.Flags.HasFlag(PlayerFlags.UsingOLC) || Player.Flags.HasFlag(PlayerFlags.WritingMail)) && !bypass)
                 {
                     return;
                 }
-                byte[] msgBytes = Encoding.UTF8.GetBytes(Helpers.ParseColourCodes(message));
-                Client.GetStream().Write(msgBytes, 0, msgBytes.Length);
+                string parsedMessage = Helpers.ParseColourCodes(message);
+                int maxByteCount = Encoding.UTF8.GetMaxByteCount(parsedMessage.Length);
+                byte[] heapBuffer = maxByteCount >= MaxBufferSize ? ArrayPool<byte>.Shared.Rent(maxByteCount) : ArrayPool<byte>.Shared.Rent(MaxBufferSize);
+                try
+                {
+                    int byteCount = Encoding.UTF8.GetBytes(parsedMessage, 0, parsedMessage.Length, heapBuffer, 0);
+                    Client.GetStream().Write(heapBuffer, 0, byteCount);
+                }
+                catch (Exception ex)
+                {
+                    string endpoint = "unknown";
+                    try
+                    {
+                        endpoint = Client?.Client?.RemoteEndPoint?.ToString() ?? "null client";
+                    }
+                    catch (Exception exc)
+                    {
+                        endpoint = $"Error retrieving endpoint: {exc.Message}";
+                    }
+                    Game.LogMessage($"ERROR: Error sending to Client {endpoint}: {ex.Message}", LogLevel.Error, true);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(heapBuffer);
+                }
             }
         }
 
@@ -45,20 +77,35 @@ namespace Etrea3.Core
                 {
                     return null;
                 }
-                byte[] buffer = new byte[4096];
-                string input = string.Empty;
+                byte[] heapBuffer = ArrayPool<byte>.Shared.Rent(MaxBufferSize);
                 try
                 {
-                    int byteCount = Client.GetStream().Read(buffer, 0, buffer.Length);
-                    input = Encoding.UTF8.GetString(buffer, 0, byteCount);
+                    int byteCount = Client.GetStream().Read(heapBuffer, 0, heapBuffer.Length);
+                    if (byteCount == 0)
+                    {
+                        return null;
+                    }
+                    return Encoding.UTF8.GetString(heapBuffer, 0, byteCount);
                 }
                 catch (Exception ex)
                 {
-                    Game.LogMessage($"ERROR: Error reading from socket {Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
+                    string endpoint = "unknown";
+                    try
+                    {
+                        endpoint = Client?.Client?.RemoteEndPoint?.ToString() ?? "null client";
+                    }
+                    catch (Exception exc)
+                    {
+                        endpoint = $"Error retrieving endpoint: {exc.Message}";
+                    }
+                    Game.LogMessage($"ERROR: Error reading from socket {endpoint}: {ex.Message}", LogLevel.Error, true);
                     SessionManager.Instance.Close(this);
                     return null;
                 }
-                return input;
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(heapBuffer);
+                }
             }
             catch (Exception ex)
             {

@@ -19,11 +19,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"4. Held{Constants.TabStop}{Constants.TabStop}5. Ring{Constants.TabStop}{Constants.TabStop}6. Scroll");
                 sb.AppendLine($"7. Consumable{Constants.TabStop}8. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -60,7 +60,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -91,11 +91,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"5. Set Base Value");
                 sb.AppendLine($"6. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}7. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -126,18 +126,18 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(newItem, true))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Item {newItem.Name} ({newItem.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The new Item has been created successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Item has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Item {newItem.Name} ({newItem.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The new Item could not be created.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Item could not be created.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The Item could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The Item could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -145,7 +145,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -181,11 +181,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"13. Set Damage Modifier{Constants.TabStop}14. Manage Required Skills{Constants.TabStop}15. Manage Applied Buffs");
                 sb.AppendLine($"16. Save{Constants.TabStop}{Constants.TabStop}17. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -257,18 +257,18 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(newWeapon, true))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Weapon {newWeapon.Name} ({newWeapon.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The new Weapon has been created successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Weapon has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Weapon {newWeapon.Name} ({newWeapon.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The new Weapon could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Weapon could not be saved.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Weapon could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Weapon could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -276,7 +276,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -311,11 +311,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"13. Manage Applied Buffs");
                 sb.AppendLine($"14. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}15. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -378,18 +378,18 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(newArmour, true))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Armour {newArmour.Name} ({newArmour.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The new Armour has been created successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Armour has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Armour {newArmour.Name} ({newArmour.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The new Armour was not successfully created.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Armour was not successfully created.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -397,7 +397,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -434,11 +434,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"10. Manage Required Skills{Constants.TabStop}11. Manage Applied Buffs");
                 sb.AppendLine($"12. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}13. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -493,18 +493,18 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(newArmour, true))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Armour {newArmour.Name} ({newArmour.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The new Armour has been created successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Armour has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Armour {newArmour.Name} ({newArmour.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The new Armour was not successfully created.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Armour was not successfully created.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -512,7 +512,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -545,11 +545,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"10. Set Damage Reduction{Constants.TabStop}11. Manage Applied Buffs");
                 sb.AppendLine($"12. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}13. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -603,19 +603,19 @@ namespace Etrea3.OLC
                         {
                             if (ItemManager.Instance.AddOrUpdateItem(newRing, true))
                             {
-                                session.Send($"%BGT%The new Ring was saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Ring was saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Ring {newRing.Name} ({newRing.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The new Ring was not successfully saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Ring was not successfully saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Ring {newRing.Name} ({newRing.ID}) but the attempt failed", LogLevel.OLC, true);
                             }
                         }
                         else
                         {
-                            session.Send($"BRT%The new Ring could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"BRT%The new Ring could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -623,7 +623,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -652,11 +652,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"4. Set Long Description{Constants.TabStop}5. Set Value{Constants.TabStop}{Constants.TabStop}6. Set Spell");
                 sb.AppendLine($"7. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}8. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -690,7 +690,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Spell with that name could be found in Spell Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Spell with that name could be found in Spell Manager.%PT%{Constants.NewLine}");
                             newScroll.CastsSpell = string.Empty;
                         }
                         break;
@@ -700,18 +700,18 @@ namespace Etrea3.OLC
                         {
                             if (ItemManager.Instance.AddOrUpdateItem(newScroll, true))
                             {
-                                session.Send($"%BGT%The new Scroll was saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Scroll was saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Scroll {newScroll.Name} ({newScroll.ID})", LogLevel.OLC, true);
                             }
                             else
                             {
-                                session.Send($"%BRT%The new Scroll was not saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Scroll was not saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new Scroll {newScroll.Name} ({newScroll.ID}) but the attempt failed", LogLevel.OLC, true);
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Scroll could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Scroll could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -719,7 +719,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -751,11 +751,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"7. Manage Applied Buffs{Constants.TabStop}{Constants.TabStop}8. Set Effect Dice");
                 sb.AppendLine($"9. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}10. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -798,20 +798,20 @@ namespace Etrea3.OLC
                         {
                             if (ItemManager.Instance.AddOrUpdateItem(newConsumable, true))
                             {
-                                session.Send($"BGT%The new Consumable has been added successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"BGT%The new Consumable has been added successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Consumable {newConsumable.Name} ({newConsumable.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The new Consumable could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Consumable could not be saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Consumable {newConsumable.Name} ({newConsumable.ID}) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Consumable could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Consumable could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -819,7 +819,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -838,11 +838,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"4. Held{Constants.TabStop}{Constants.TabStop}5. Ring{Constants.TabStop}{Constants.TabStop}6. Scroll");
                 sb.AppendLine($"7. Consumable{Constants.TabStop}8. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -879,7 +879,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -887,7 +887,7 @@ namespace Etrea3.OLC
 
         private static void ChangeMiscItem(Session session)
         {
-            session.Send($"Enter Item ID or END to return: ");
+            session.SendSystem($"Enter Item ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -895,18 +895,18 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int itemID))
             {
-                session.Send($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
                 return;
             }
             var item = ItemManager.Instance.GetItem(itemID);
             if (item == null)
             {
-                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.ItemType != ItemType.Misc)
             {
-                session.Send($"%BRT%The specified Item is not of the Misc type ({item.ItemType})%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Item is not of the Misc type ({item.ItemType})%PT%{Constants.NewLine}");
                 return;
             }
             if(item.OLCLocked)
@@ -914,7 +914,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(item.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Item is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Item is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             InventoryItem modItem = Helpers.Clone<InventoryItem>(item);
@@ -936,11 +936,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"3. Set Long Description{Constants.TabStop}4. Set Base Value");
                 sb.AppendLine($"5. Save{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -968,18 +968,18 @@ namespace Etrea3.OLC
                             {
                                 ItemManager.Instance.SetItemLockState(modItem.ID, false, session);
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Item {modItem.Name} ({modItem.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The Item has been updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Item has been updated successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Item {modItem.Name} ({modItem.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The update to the Item failed.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The update to the Item failed.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The Item could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The Item could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -988,7 +988,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -996,7 +996,7 @@ namespace Etrea3.OLC
 
         private static void ChangeWeapon(Session session)
         {
-            session.Send("Enter Weapon ID or END to return: ");
+            session.SendSystem("Enter Weapon ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -1004,18 +1004,18 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int weaponID))
             {
-                session.Send($"%BRT%That is not a valid Weapon ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Weapon ID.%PT%{Constants.NewLine}");
                 return;
             }
             var wpn = ItemManager.Instance.GetItem(weaponID);
             if (wpn == null)
             {
-                session.Send($"%BRT%No Weapon with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Weapon with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (wpn.ItemType != ItemType.Weapon)
             {
-                session.Send($"%BRT%The specified Item is not of the Weapon type.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Item is not of the Weapon type.%PT%{Constants.NewLine}");
                 return;
             }
             if (wpn.OLCLocked)
@@ -1023,7 +1023,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(wpn.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Weapon is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"The specified Weapon is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             Weapon modWeapon = Helpers.Clone<Weapon>(wpn);
@@ -1052,11 +1052,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"12. Set Damage Modifier{Constants.TabStop}13. Manage Required Skills{Constants.TabStop}14. Manage Applied Buffs");
                 sb.AppendLine($"15. Save{Constants.TabStop}16. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -1125,18 +1125,18 @@ namespace Etrea3.OLC
                             {
                                 ItemManager.Instance.SetItemLockState(modWeapon.ID, false, session);
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Weapon {modWeapon.Name} ({modWeapon.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The updated Weapon has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The updated Weapon has been saved successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Weapon {modWeapon.Name} ({modWeapon.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The updated Weapon could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The updated Weapon could not be saved.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Weapon could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Weapon could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -1145,7 +1145,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -1153,7 +1153,7 @@ namespace Etrea3.OLC
 
         private static void ChangeArmour(Session session)
         {
-            session.Send("Enter Item ID or END to return: ");
+            session.SendSystem("Enter Item ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -1161,18 +1161,18 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int itemID))
             {
-                session.Send($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
                 return;
             }
             var armour = ItemManager.Instance.GetItem(itemID);
             if (armour == null)
             {
-                session.Send($"%BRT%No Armour with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Armour with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (armour.ItemType != ItemType.Armour)
             {
-                session.Send($"%BRT%The specified Item is not of the Armour type.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Item is not of the Armour type.%PT%{Constants.NewLine}");
                 return;
             }
             if (armour.OLCLocked)
@@ -1180,7 +1180,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(armour.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Armour is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%PT%The specified Armour is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             Armour modArmour = Helpers.Clone<Armour>(armour);
@@ -1208,11 +1208,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"12. Manage Applied Buffs");
                 sb.AppendLine($"13. Save{Constants.TabStop}{Constants.TabStop}14. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -1272,18 +1272,18 @@ namespace Etrea3.OLC
                             {
                                 ItemManager.Instance.SetItemLockState(modArmour.ID, false, session);
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Armour {modArmour.Name} ({modArmour.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The Armour has been updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Armour has been updated successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Armour {modArmour.Name} ({modArmour.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The Armour could not be successfully updated.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The Armour could not be successfully updated.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -1292,7 +1292,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -1300,7 +1300,7 @@ namespace Etrea3.OLC
 
         private static void ChangeHeldItem(Session session)
         {
-            session.Send($"Enter Item ID or END to return: ");
+            session.SendSystem($"Enter Item ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -1308,18 +1308,18 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int itemID))
             {
-                session.Send($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
                 return;
             }
             var item = ItemManager.Instance.GetItem(itemID);
             if (item == null)
             {
-                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.ItemType != ItemType.Armour)
             {
-                session.Send($"The specified Item is not of the Armour type.%PT%{Constants.NewLine}");
+                session.SendSystem($"The specified Item is not of the Armour type.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.OLCLocked)
@@ -1327,7 +1327,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(item.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Item is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Item is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             Armour modArmour = Helpers.Clone<Armour>(item);
@@ -1353,11 +1353,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"9. Manage Required Skills{Constants.TabStop}10. Manage Applied Buffs");
                 sb.AppendLine($"11. Save{Constants.TabStop}{Constants.TabStop}12. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -1409,18 +1409,18 @@ namespace Etrea3.OLC
                             {
                                 ItemManager.Instance.SetItemLockState(modArmour.ID, false, session);
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Armour {modArmour.Name} ({modArmour.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The Armour has updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Armour has updated successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Armour {modArmour.Name} ({modArmour.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%The Armour was not successfully updated.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The Armour was not successfully updated.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Armour failed validation and cannot be created.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -1429,7 +1429,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -1437,7 +1437,7 @@ namespace Etrea3.OLC
 
         private static void ChangeRing(Session session)
         {
-            session.Send($"Enter Item ID or END to return: ");
+            session.SendSystem($"Enter Item ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -1445,18 +1445,18 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int itemID))
             {
-                session.Send($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
                 return;
             }
             var item = ItemManager.Instance.GetItem(itemID);
             if (item == null)
             {
-                session.Send($"%BRT%No Ring with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Ring with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.ItemType != ItemType.Ring)
             {
-                session.Send($"%BRT%The specified Item is not a Ring.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Item is not a Ring.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.OLCLocked)
@@ -1464,7 +1464,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(item.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Item is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Item is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             ItemManager.Instance.SetItemLockState(item.ID, true, session);
@@ -1490,11 +1490,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"9. Set Damage Reduction{Constants.TabStop}10. Manage Applied Buffs");
                 sb.AppendLine($"11. Save{Constants.TabStop}12. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -1545,17 +1545,17 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(modRing, false))
                             {
                                 ItemManager.Instance.SetItemLockState(modRing.ID, false, session);
-                                session.Send($"%BGT%The Ring was updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The Ring was updated successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The Ring was not successfully updated.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The Ring was not successfully updated.%PT%{Constants.NewLine}");
                             }
                         }
                         else
                         {
-                            session.Send($"BRT%The updated Ring could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"BRT%The updated Ring could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -1564,7 +1564,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -1572,7 +1572,7 @@ namespace Etrea3.OLC
 
         private static void ChangeScroll(Session session)
         {
-            session.Send($"Enter Item ID or END to return: ");
+            session.SendSystem($"Enter Item ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -1580,18 +1580,18 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int itemID))
             {
-                session.Send($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
                 return;
             }
             var item = ItemManager.Instance.GetItem(itemID);
             if (item == null)
             {
-                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.ItemType != ItemType.Scroll)
             {
-                session.Send($"%BRT%The specified Item is not of the Scroll type.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Item is not of the Scroll type.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.OLCLocked)
@@ -1599,7 +1599,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(item.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Item is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Item is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             ItemManager.Instance.SetItemLockState(item.ID, true, session);
@@ -1621,11 +1621,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"4. Set Long Description{Constants.TabStop}5. Set Value{Constants.TabStop}6. Set Spell");
                 sb.AppendLine($"7. Save{Constants.TabStop}{Constants.TabStop}8. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -1659,7 +1659,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Spell with that name could be found in Spell Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Spell with that name could be found in Spell Manager.%PT%{Constants.NewLine}");
                             modScroll.CastsSpell = string.Empty;
                         }
                         break;
@@ -1670,18 +1670,18 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(modScroll, false))
                             {
                                 ItemManager.Instance.SetItemLockState(item.ID, false, session);
-                                session.Send($"%BGT%The updated Scroll was saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The updated Scroll was saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Scroll {modScroll.Name} ({modScroll.ID})", LogLevel.OLC, true);
                             }
                             else
                             {
-                                session.Send($"%BRT%The updated Scroll was not saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The updated Scroll was not saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Scroll {modScroll.Name} ({modScroll.ID}) but the attempt failed", LogLevel.OLC, true);
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Scroll could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Scroll could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -1690,7 +1690,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -1698,7 +1698,7 @@ namespace Etrea3.OLC
 
         private static void ChangeConsumable(Session session)
         {
-            session.Send($"Enter Item ID or END to return: ");
+            session.SendSystem($"Enter Item ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToLower() == "END")
             {
@@ -1706,18 +1706,18 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int itemID))
             {
-                session.Send($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
                 return;
             }
             var item = ItemManager.Instance.GetItem(itemID);
             if (item == null)
             {
-                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.ItemType != ItemType.Consumable)
             {
-                session.Send($"%BRT%The specified Item is not of the Consumable type.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Item is not of the Consumable type.%PT%{Constants.NewLine}");
                 return;
             }
             if (item.OLCLocked)
@@ -1725,7 +1725,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(item.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Item is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Item is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             ItemManager.Instance.SetItemLockState(item.ID, true, session);
@@ -1750,11 +1750,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"7. Manage Applied Buffs{Constants.TabStop}8. Set Effect Dice");
                 sb.AppendLine($"9. Save{Constants.TabStop}{Constants.TabStop}10. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -1798,20 +1798,20 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(modConsumable, false))
                             {
                                 ItemManager.Instance.SetItemLockState(modConsumable.ID, false, session);
-                                session.Send($"BGT%The updated Consumable has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"BGT%The updated Consumable has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Consumable {modConsumable.Name} ({modConsumable.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The updated Consumable could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The updated Consumable could not be saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Consumable {modConsumable.Name} ({modConsumable.ID}) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Consumable could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Consumable could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -1820,7 +1820,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -1830,7 +1830,7 @@ namespace Etrea3.OLC
         #region Delete
         private static void DeleteItem(Session session)
         {
-            session.Send($"Enter Item ID or END to return: ");
+            session.SendSystem($"Enter Item ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -1838,13 +1838,13 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int itemID))
             {
-                session.Send($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Item ID.%PT%{Constants.NewLine}");
                 return;
             }
             var item = ItemManager.Instance.GetItem(itemID);
             if (item == null)
             {
-                session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.TabStop}");
+                session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.TabStop}");
                 return;
             }
             if (item.OLCLocked)
@@ -1852,18 +1852,18 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(item.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Item is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Item is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             if (ItemManager.Instance.RemoveItem(item.ID))
             {
                 Game.LogMessage($"OLC: Player {session.Player.Name} removed Item {item.Name} ({item.ID})", LogLevel.OLC, true);
-                session.Send($"%BGT%The specified Item has been successfully removed.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BGT%The specified Item has been successfully removed.%PT%{Constants.NewLine}");
             }
             else
             {
                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Item {item.Name} ({item.ID}) but the attempt failed", LogLevel.OLC, true);
-                session.Send($"%BRT%The specified Item could not be removed.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%The specified Item could not be removed.%PT%{Constants.NewLine}");
             }
         }
         #endregion
@@ -1899,11 +1899,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Buff{Constants.TabStop}{Constants.TabStop}2. Remove Buff");
                 sb.AppendLine($"3. Clear Buffs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -1917,7 +1917,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -1934,7 +1934,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -1970,11 +1970,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Buff{Constants.TabStop}{Constants.TabStop}2. Remove Buff");
                 sb.AppendLine($"3. Clear Buffs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -1988,7 +1988,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -2005,7 +2005,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -2041,11 +2041,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Skill{Constants.TabStop}{Constants.TabStop}2. Remove Skill");
                 sb.AppendLine($"3. Clear Skills{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -2059,7 +2059,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Skill with that name was found in Skill Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Skill with that name was found in Skill Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -2076,7 +2076,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -2112,11 +2112,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Buff{Constants.TabStop}{Constants.TabStop}2. Remove Buff");
                 sb.AppendLine($"3. Clear Buffs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -2130,7 +2130,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Buff with that name was found in Buff Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Buff with that name was found in Buff Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -2147,7 +2147,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -2183,11 +2183,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Skill{Constants.TabStop}{Constants.TabStop}2. Remove Skill");
                 sb.AppendLine($"3. Clear Skills{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -2201,7 +2201,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Skill with that name could be found in Skill Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Skill with that name could be found in Skill Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -2218,7 +2218,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -2254,11 +2254,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Buff{Constants.TabStop}{Constants.TabStop}2. Remove Buff");
                 sb.AppendLine($"3. Clear Buffs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -2272,7 +2272,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Buff with that name could be found in Buff Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -2289,7 +2289,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

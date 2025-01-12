@@ -40,11 +40,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"3. Set Appearance Chance{Constants.TabStop}4. Manage Findable Items");
                 sb.AppendLine($"5. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -71,19 +71,19 @@ namespace Etrea3.OLC
                             if (NodeManager.Instance.AddOrUpdateNode(newNode, true))
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Resource Node: {newNode.Name} ({newNode.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The new Resource Node has been created successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Resource Node has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to create new Resource Node {newNode.Name} ({newNode.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%Failed to save the new Resource Node.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new Resource Node.%PT%{Constants.NewLine}");
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Resource Node could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Resource Node could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -91,7 +91,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -101,12 +101,12 @@ namespace Etrea3.OLC
         {
             while (true)
             {
-                session.Send($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
-                session.Send($"Enter Node ID or END to return: ");
+                session.SendSystem($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
+                session.SendSystem($"Enter Node ID or END to return: ");
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input))
                 {
-                    session.Send($"%BRT%Sorry, that isn't a valid Resource Node ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that isn't a valid Resource Node ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (input.Trim().ToUpper() == "END")
@@ -115,13 +115,13 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int nodeID))
                 {
-                    session.Send($"%BRT%Sorry, that isn't a valid Resource Node ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that isn't a valid Resource Node ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 var node = NodeManager.Instance.GetNode(nodeID);
                 if (node == null)
                 {
-                    session.Send($"%BRT%No Resource Node with that ID could be found in Node Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%No Resource Node with that ID could be found in Node Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (node.OLCLocked)
@@ -129,18 +129,18 @@ namespace Etrea3.OLC
                     var lockingSession = SessionManager.Instance.GetSession(node.LockHolder);
                     var msg = lockingSession != null ? $"%BRT%That Resource Node is currently locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                         $"%BRT%That Resource Node is currently locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                    session.Send(msg);
+                    session.SendSystem(msg);
                     continue;
                 }
                 if (NodeManager.Instance.RemoveNode(node.ID))
                 {
-                    session.Send($"%BGT%The specified Resource Node has been successfully removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BGT%The specified Resource Node has been successfully removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} has removed Resource Node {node.Name} ({node.ID})", LogLevel.OLC, true);
                     return;
                 }
                 else
                 {
-                    session.Send($"%BRT%The specified Resource Node could not be removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%The specified Resource Node could not be removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Resource Node {node.Name} ({node.ID}) however the attempt failed", LogLevel.OLC, true);
                     continue;
                 }
@@ -152,7 +152,7 @@ namespace Etrea3.OLC
             var nodeID = GetValue<int>(session, "Enter Node ID: ");
             if (!NodeManager.Instance.NodeExists(nodeID))
             {
-                session.Send($"%BRT%No Resource Node with that ID could be found in Node Manager.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No Resource Node with that ID could be found in Node Manager.%PT%{Constants.NewLine}");
                 return;
             }
             if (NodeManager.Instance.GetNode(nodeID).OLCLocked)
@@ -160,7 +160,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(NodeManager.Instance.GetNode(nodeID).LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Resource Node is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Resource Node is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             NodeManager.Instance.SetNodeLockState(nodeID, true, session);
@@ -196,11 +196,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"2. Set Appearance Chance{Constants.TabStop}3. Manage Findable Items");
                 sb.AppendLine($"4. Save{Constants.TabStop}{Constants.TabStop}5. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -224,19 +224,19 @@ namespace Etrea3.OLC
                             {
                                 NodeManager.Instance.SetNodeLockState(nodeID, false, session);
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added new Resource Node: {node.Name} ({node.ID})", LogLevel.OLC, true);
-                                session.Send($"%BGT%The new Resource Node has been created successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Resource Node has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to create new Resource Node {node.Name} ({node.ID}) but the attempt failed", LogLevel.OLC, true);
-                                session.Send($"%BRT%Failed to save the new Resource Node.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new Resource Node.%PT%{Constants.NewLine}");
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Resource Node could not be validated and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Resource Node could not be validated and cannot be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -245,7 +245,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -281,11 +281,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -299,7 +299,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -316,7 +316,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

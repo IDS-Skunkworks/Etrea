@@ -175,7 +175,7 @@ namespace Etrea3.Core
                 }
                 session.Send($"You whisper \"{toSay}\" to {tp.Player.Name}{Constants.NewLine}");
                 string pName = session.Player.CanBeSeenBy(tp.Player) ? session.Player.Name : "Someone";
-                tp.Send($"%BYT%{pName} whispers \"{toSay}\"{Constants.NewLine}%PT%");
+                tp.SendSystem($"%BYT%{pName} whispers \"{toSay}\"{Constants.NewLine}%PT%");
             }
         }
 
@@ -1194,7 +1194,7 @@ namespace Etrea3.Core
                     {
                         Game.LogMessage($"INFO: Player {session.Player.Name} has deleted their character from the database", LogLevel.Info, true);
                         session.Send($"%BRT%Character deleted successfully. Goodbye!%PT%{Constants.NewLine}");
-                        session.Disconnect();
+                        SessionManager.Instance.Close(session);
                     }
                     else
                     {

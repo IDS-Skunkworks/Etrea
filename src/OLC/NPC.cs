@@ -52,11 +52,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"18. Set Departure Message{Constants.TabStop}19. Set Attacks{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}20. Manage Spells");
                 sb.AppendLine($"21. Set Shop ID{Constants.TabStop}{Constants.TabStop}22. Manage MobProgs");
                 sb.AppendLine($"23. Save{Constants.TabStop}24. Return");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -162,20 +162,20 @@ namespace Etrea3.OLC
                         {
                             if (NPCManager.Instance.AddOrUpdateNPCTemplate(newNPC, true))
                             {
-                                session.Send($"%BGT%The new NPC Template has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new NPC Template has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has added a new NPC Template: {newNPC.Name} ({newNPC.TemplateID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%Failed to save the new NPC Template.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new NPC Template.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new NPC Template ({newNPC.Name} ({newNPC.TemplateID})) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new NPC failed validation and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new NPC failed validation and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -183,7 +183,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -193,12 +193,12 @@ namespace Etrea3.OLC
         {
             while(true)
             {
-                session.Send($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
-                session.Send($"Enter NPC Template ID or END to return: ");
+                session.SendSystem($"%BRT%This is a permanent change to the Realms!%PT%{Constants.NewLine}");
+                session.SendSystem($"Enter NPC Template ID or END to return: ");
                 string input = session.Read();
                 if (string.IsNullOrEmpty(input))
                 {
-                    session.Send($"%BRT%Sorry, that is not a valid Template ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that is not a valid Template ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (input.Trim().ToUpper() == "END")
@@ -207,12 +207,12 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int value))
                 {
-                    session.Send($"%BRT%Sorry, that is not a valid Template ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Sorry, that is not a valid Template ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (!NPCManager.Instance.NPCTemplateExists(value))
                 {
-                    session.Send($"%BRT%no NPC Template with that ID could be found in NPC Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%no NPC Template with that ID could be found in NPC Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 var npc = NPCManager.Instance.GetNPC(value);
@@ -221,17 +221,17 @@ namespace Etrea3.OLC
                     var lockingSession = SessionManager.Instance.GetSession(npc.LockHolder);
                     var msg = lockingSession != null ? $"%BRT%The specified NPC template is currently Locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                         $"%BRT%The specified NPC template is currently locked in OLC but the lock holder could not be found.%PT%{Constants.NewLine}";
-                    session.Send(msg);
+                    session.SendSystem(msg);
                     return;
                 }
                 if (NPCManager.Instance.RemoveNPCTemplate(value))
                 {
-                    session.Send($"BGT%The specified NPC Template has been successfully removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"BGT%The specified NPC Template has been successfully removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} has removed NPC Template {npc.Name} ({npc.TemplateID})", LogLevel.OLC, true);
                 }
                 else
                 {
-                    session.Send($"%BRT%Failed to remove the specified NPC Template.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%Failed to remove the specified NPC Template.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove NPC Template {npc.Name} ({npc.TemplateID}) however the attempt failed", LogLevel.OLC, true);
                 }
             }
@@ -239,7 +239,7 @@ namespace Etrea3.OLC
 
         private static void ChangeNPC(Session session)
         {
-            session.Send($"Enter NPC Template ID or END to return: ");
+            session.SendSystem($"Enter NPC Template ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -247,12 +247,12 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int npcID))
             {
-                session.Send($"%BRT%That is not a valid NPC Template ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid NPC Template ID.%PT%{Constants.NewLine}");
                 return;
             }
             if (!NPCManager.Instance.NPCTemplateExists(npcID))
             {
-                session.Send($"%BRT%No NPC Template with that ID could be found.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%No NPC Template with that ID could be found.%PT%{Constants.NewLine}");
                 return;
             }
             if (NPCManager.Instance.GetNPC(npcID).OLCLocked)
@@ -260,7 +260,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(NPCManager.Instance.GetNPC(npcID).LockHolder);
                 string msg = lockingSession != null ? $"%BRT%The specified NPC Template is Locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified NPC Template is Locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             NPCManager.Instance.SetNPCLockState(npcID, true, session);
@@ -306,11 +306,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"17. Set Departure Message{Constants.TabStop}18. Set Attacks{Constants.TabStop}19. Manage Spells");
                 sb.AppendLine($"20. Set Shop ID{Constants.TabStop}{Constants.TabStop}21. Manage MobProgs");
                 sb.AppendLine($"22. Save{Constants.TabStop}23. Return");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -412,21 +412,21 @@ namespace Etrea3.OLC
                         {
                             if (NPCManager.Instance.AddOrUpdateNPCTemplate(npcTemplate, false))
                             {
-                                session.Send($"%BGT%The NPC Template has been updated successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The NPC Template has been updated successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updatedated NPC Template: {npcTemplate.Name} ({npcTemplate.TemplateID})", LogLevel.OLC, true);
                                 NPCManager.Instance.SetNPCLockState(npcTemplate.TemplateID, false, session);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%Failed to save the new NPC Template.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%Failed to save the new NPC Template.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new NPC Template ({npcTemplate.Name} ({npcTemplate.TemplateID})) but the attempt failed", LogLevel.OLC, true);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new NPC failed validation and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new NPC failed validation and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -435,7 +435,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -465,11 +465,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Inventory{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -501,7 +501,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That doesn't look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -537,11 +537,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add MobProg{Constants.TabStop}{Constants.TabStop}2. Remove MobProg");
                 sb.AppendLine($"3. Clear MobProgs{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice:");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input, out int option))
                 {
-                    session.Send($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -567,7 +567,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That doesn't look like a valid option.%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -603,11 +603,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Spell{Constants.TabStop}2. Remove Spell{Constants.TabStop}3. Clear Spells");
                 sb.AppendLine("4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -637,7 +637,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -664,11 +664,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"4. Set Weapon{Constants.TabStop}5. Set Held{Constants.TabStop}6. Set Finger (R)");
                 sb.AppendLine($"7. Set Finger (L){Constants.TabStop}8. Set Feet{Constants.TabStop}9. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -690,12 +690,12 @@ namespace Etrea3.OLC
                                 }
                                 else
                                 {
-                                    session.Send($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
+                                    session.SendSystem($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -717,12 +717,12 @@ namespace Etrea3.OLC
                                 }
                                 else
                                 {
-                                    session.Send($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
+                                    session.SendSystem($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -744,12 +744,12 @@ namespace Etrea3.OLC
                                 }
                                 else
                                 {
-                                    session.Send($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
+                                    session.SendSystem($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -769,7 +769,7 @@ namespace Etrea3.OLC
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be used as a weapon!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be used as a weapon!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -791,12 +791,12 @@ namespace Etrea3.OLC
                                 }
                                 else
                                 {
-                                    session.Send($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
+                                    session.SendSystem($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -816,7 +816,7 @@ namespace Etrea3.OLC
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be worn as a ring!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be worn as a ring!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -836,7 +836,7 @@ namespace Etrea3.OLC
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be worn as a ring!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be worn as a ring!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -858,12 +858,12 @@ namespace Etrea3.OLC
                                 }
                                 else
                                 {
-                                    session.Send($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
+                                    session.SendSystem($"%BRT%That is not a valid item for that slot!%PT%{Constants.NewLine}");
                                 }
                             }
                             else
                             {
-                                session.Send($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%That item cannot be worn as armour!%PT%{Constants.NewLine}");
                             }
                         }
                         break;
@@ -872,7 +872,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }

@@ -59,11 +59,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"6. Set Description{Constants.TabStop}7. Manage Required Items");
                 sb.AppendLine($"8. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch(option)
@@ -88,7 +88,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                             newRecipe.RecipeResult = 0;
                         }
                         break;
@@ -110,19 +110,19 @@ namespace Etrea3.OLC
                         {
                             if (RecipeManager.Instance.AddOrUpdateRecipe(newRecipe, true))
                             {
-                                session.Send($"%BGT%The new Crafting Recipe has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The new Crafting Recipe has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has created new Crafting Recipe: {newRecipe.Name} ({newRecipe.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The new Crafting Recipe could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The new Crafting Recipe could not be saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to save new Crafting Recipe {newRecipe.Name} ({newRecipe.ID}) but the attempt failed.", LogLevel.OLC, true);
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The new Recipe failed validation and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new Recipe failed validation and cannot be saved.%PT%{Constants.NewLine}");
                             continue;
                         }
                         break;
@@ -131,7 +131,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -139,7 +139,7 @@ namespace Etrea3.OLC
 
         private static void ChangeRecipe(Session session)
         {
-            session.Send("Enter Recipe ID or END to return: ");
+            session.SendSystem("Enter Recipe ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -147,12 +147,12 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int recipeID))
             {
-                session.Send($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
                 return;
             }
             if (!RecipeManager.Instance.RecipeExists(recipeID))
             {
-                session.Send($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
                 return;
             }
             var recipe = RecipeManager.Instance.GetRecipe(recipeID);
@@ -161,7 +161,7 @@ namespace Etrea3.OLC
                 var lockingSession = SessionManager.Instance.GetSession(recipe.LockHolder);
                 var msg = lockingSession != null ? $"%BRT%The specified Recipe is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
                     $"%BRT%The specified Recipe is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                session.Send(msg);
+                session.SendSystem(msg);
                 return;
             }
             var updateRecipe = Helpers.Clone(RecipeManager.Instance.GetRecipe(recipeID));
@@ -216,11 +216,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"4. Set Description{Constants.TabStop}5. Manage Required Items{Constants.TabStop}6. Set Learn Cost");
                 sb.AppendLine($"7. Save{Constants.TabStop}{Constants.TabStop}8. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -241,7 +241,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.NewLine}");
                             updateRecipe.RecipeResult = 0;
                         }
                         break;
@@ -264,19 +264,19 @@ namespace Etrea3.OLC
                             if (RecipeManager.Instance.AddOrUpdateRecipe(updateRecipe, false))
                             {
                                 RecipeManager.Instance.SetRecipeLockState(updateRecipe.ID, false, session);
-                                session.Send($"%BGT%The updated Crafting Recipe has been saved successfully.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BGT%The updated Crafting Recipe has been saved successfully.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} has updated Crafting Recipe: {updateRecipe.Name} ({updateRecipe.ID})", LogLevel.OLC, true);
                                 return;
                             }
                             else
                             {
-                                session.Send($"%BRT%The updated Crafting Recipe could not be saved.%PT%{Constants.NewLine}");
+                                session.SendSystem($"%BRT%The updated Crafting Recipe could not be saved.%PT%{Constants.NewLine}");
                                 Game.LogMessage($"OLC: Player {session.Player.Name} attempted to save updated Crafting Recipe {updateRecipe.Name} ({updateRecipe.ID}) but the attempt failed.", LogLevel.OLC, true);
                             }
                         }
                         else
                         {
-                            session.Send($"%BRT%The updated Recipe failed validation and cannot be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated Recipe failed validation and cannot be saved.%PT%{Constants.NewLine}");
                             continue;
                         }
                         break;
@@ -286,7 +286,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
@@ -296,7 +296,7 @@ namespace Etrea3.OLC
         {
             while (true)
             {
-                session.Send($"Enter Recipe ID or END to return: ");
+                session.SendSystem($"Enter Recipe ID or END to return: ");
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
                 {
@@ -304,13 +304,13 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int value))
                 {
-                    session.Send($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That is not a valid Recipe ID.%PT%{Constants.NewLine}");
                     continue;
                 }
                 var recipe = RecipeManager.Instance.GetRecipe(value);
                 if (recipe == null)
                 {
-                    session.Send($"%BRT%No Recipe with that ID could be found in Recipe Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%No Recipe with that ID could be found in Recipe Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (recipe.OLCLocked)
@@ -318,18 +318,18 @@ namespace Etrea3.OLC
                     var lockHolder = SessionManager.Instance.GetSession(recipe.LockHolder);
                     var msg = lockHolder != null ? $"%BRT%The specified Recipe is locked in OLC by {lockHolder.Player.Name}.%PT%{Constants.NewLine}" :
                         $"%BRT%The specified Recipe is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
-                    session.Send(msg);
+                    session.SendSystem(msg);
                     continue;
                 }
                 if (RecipeManager.Instance.RemoveRecipe(recipe.ID))
                 {
-                    session.Send($"%BGT%The specified Recipe has been successfully removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BGT%The specified Recipe has been successfully removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} has removed Crafting Recipe {recipe.ID} ({recipe.Name})", LogLevel.OLC, true);
                     return;
                 }
                 else
                 {
-                    session.Send($"%BRT%The specified Recipe could not be removed.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%The specified Recipe could not be removed.%PT%{Constants.NewLine}");
                     Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Crafting Recipe {recipe.ID} ({recipe.Name}) however the attempt failed", LogLevel.OLC, true);
                     continue;
                 }
@@ -366,11 +366,11 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Add Item{Constants.TabStop}{Constants.TabStop}2. Remove Item");
                 sb.AppendLine($"3. Clear Items{Constants.TabStop}{Constants.TabStop}4. Return");
                 sb.AppendLine("Choice: ");
-                session.Send(sb.ToString());
+                session.SendSystem(sb.ToString());
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
                 {
-                    session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                     continue;
                 }
                 switch (option)
@@ -384,7 +384,7 @@ namespace Etrea3.OLC
                         }
                         else
                         {
-                            session.Send($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.TabStop}");
+                            session.SendSystem($"%BRT%No Item with that ID could be found in Item Manager.%PT%{Constants.TabStop}");
                         }
                         break;
 
@@ -411,7 +411,7 @@ namespace Etrea3.OLC
                         return;
 
                     default:
-                        session.Send($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
+                        session.SendSystem($"%BRT%That does not look like a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
             }
