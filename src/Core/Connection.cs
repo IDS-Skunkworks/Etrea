@@ -81,7 +81,6 @@ namespace Etrea3.Core
                 var input = playerSession.Read();
                 if (!string.IsNullOrEmpty(input))
                 {
-                    SessionManager.Instance.SetLastInputTime(playerSession.ID, DateTime.UtcNow);
                     string tInput = input.Trim();
                     if (ValidateInput(tInput))
                     {

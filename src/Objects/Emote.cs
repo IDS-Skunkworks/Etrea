@@ -43,7 +43,7 @@ namespace Etrea3.Objects
                 if (performer.ActorType == ActorType.Player)
                 {
                     pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[2], targetName);
-                    ((Player)performer).Send(pMessage);
+                    ((Player)performer).Send($"{pMessage}{Constants.NewLine}");
                 }
                 SendToOthers(performer, target, MessageToOthers[2]);
                 return;
@@ -54,7 +54,7 @@ namespace Etrea3.Objects
                 if (performer.ActorType == ActorType.Player)
                 {
                     pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[0], targetName);
-                    ((Player)performer).Send(pMessage);
+                    ((Player)performer).Send($"{pMessage}{Constants.NewLine}");
                 }
                 SendToOthers(performer, target, MessageToOthers[0]);
                 return;
@@ -65,7 +65,7 @@ namespace Etrea3.Objects
                 if (performer.ActorType == ActorType.Player)
                 {
                     pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[3], targetName);
-                    ((Player)performer).Send(pMessage);
+                    ((Player)performer).Send($"{pMessage}{Constants.NewLine}");
                 }
                 SendToOthers(performer, target, MessageToOthers[3]);
                 return;
@@ -74,12 +74,12 @@ namespace Etrea3.Objects
             pMessage = ParseMessageForPerformer(performer, target, MessageToPerformer[1], targetName);
             if (performer.ActorType == ActorType.Player)
             {
-                ((Player)performer).Send(pMessage);
+                ((Player)performer).Send($"{pMessage}{Constants.NewLine}");
             }
             tMessage = ParseMessageForTarget(performer, target, MessageToTarget);
             if (target.ActorType == ActorType.Player)
             {
-                ((Player)target).Send(tMessage);
+                ((Player)target).Send($"{tMessage}{Constants.NewLine}");
             }
             SendToOthers(performer, target, MessageToOthers[1]);
             if (target.ActorType == ActorType.NonPlayer && performer.ActorType == ActorType.Player)
@@ -569,7 +569,7 @@ namespace Etrea3.Objects
                 foreach(var player in localPlayers)
                 {
                     var msg = ParseMessageForOthers(performer, target, player.Player, message);
-                    player.Send(msg);
+                    player.Send($"{msg}{Constants.NewLine}");
                 }
             }
         }

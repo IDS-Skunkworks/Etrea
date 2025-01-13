@@ -86,6 +86,7 @@ namespace Etrea3.Core
                     {
                         return null;
                     }
+                    LastInputTime = DateTime.UtcNow;
                     return Encoding.UTF8.GetString(heapBuffer, 0, byteCount);
                 }
                 catch (Exception ex)
