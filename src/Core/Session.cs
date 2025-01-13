@@ -18,6 +18,7 @@ namespace Etrea3.Core
 
         private const int MaxBufferSize = 0x1000;
         private static readonly object _lockObject = new object();
+        private static ArrayPool<byte> bufferPool = ArrayPool<byte>.Shared;
 
         public Session(TcpClient client)
         {
@@ -43,7 +44,7 @@ namespace Etrea3.Core
                 }
                 string parsedMessage = Helpers.ParseColourCodes(message);
                 int maxByteCount = Encoding.UTF8.GetMaxByteCount(parsedMessage.Length);
-                byte[] heapBuffer = maxByteCount >= MaxBufferSize ? ArrayPool<byte>.Shared.Rent(maxByteCount) : ArrayPool<byte>.Shared.Rent(MaxBufferSize);
+                byte[] heapBuffer = maxByteCount >= MaxBufferSize ? bufferPool.Rent(maxByteCount) : bufferPool.Rent(MaxBufferSize);
                 try
                 {
                     int byteCount = Encoding.UTF8.GetBytes(parsedMessage, 0, parsedMessage.Length, heapBuffer, 0);
@@ -64,7 +65,7 @@ namespace Etrea3.Core
                 }
                 finally
                 {
-                    ArrayPool<byte>.Shared.Return(heapBuffer);
+                    bufferPool.Return(heapBuffer);
                 }
             }
         }
@@ -77,7 +78,7 @@ namespace Etrea3.Core
                 {
                     return null;
                 }
-                byte[] heapBuffer = ArrayPool<byte>.Shared.Rent(MaxBufferSize);
+                byte[] heapBuffer = bufferPool.Rent(MaxBufferSize);
                 try
                 {
                     int byteCount = Client.GetStream().Read(heapBuffer, 0, heapBuffer.Length);
@@ -104,7 +105,7 @@ namespace Etrea3.Core
                 }
                 finally
                 {
-                    ArrayPool<byte>.Shared.Return(heapBuffer);
+                    bufferPool.Return(heapBuffer);
                 }
             }
             catch (Exception ex)
