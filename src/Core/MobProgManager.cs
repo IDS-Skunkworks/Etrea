@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Etrea3.Core
 {
-    internal class MobProgManager
+    public class MobProgManager
     {
         private static MobProgManager instance = null;
         private ConcurrentDictionary<int, MobProg> MobProgs { get; set; }

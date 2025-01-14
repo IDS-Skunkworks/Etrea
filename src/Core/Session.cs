@@ -17,7 +17,6 @@ namespace Etrea3.Core
         public bool IsConnected => Client != null && Client.Connected;
 
         private const int MaxBufferSize = 0x1000;
-        private static readonly object _lockObject = new object();
         private static ArrayPool<byte> bufferPool = ArrayPool<byte>.Shared;
 
         public Session(TcpClient client)
@@ -44,11 +43,11 @@ namespace Etrea3.Core
                 }
                 string parsedMessage = Helpers.ParseColourCodes(message);
                 int maxByteCount = Encoding.UTF8.GetMaxByteCount(parsedMessage.Length);
-                byte[] heapBuffer = maxByteCount >= MaxBufferSize ? bufferPool.Rent(maxByteCount) : bufferPool.Rent(MaxBufferSize);
+                byte[] buffer = maxByteCount >= MaxBufferSize ? bufferPool.Rent(maxByteCount) : bufferPool.Rent(MaxBufferSize);
                 try
                 {
-                    int byteCount = Encoding.UTF8.GetBytes(parsedMessage, 0, parsedMessage.Length, heapBuffer, 0);
-                    Client.GetStream().Write(heapBuffer, 0, byteCount);
+                    int byteCount = Encoding.UTF8.GetBytes(parsedMessage, 0, parsedMessage.Length, buffer, 0);
+                    Client.GetStream().Write(buffer, 0, byteCount);
                 }
                 catch (Exception ex)
                 {
@@ -65,7 +64,7 @@ namespace Etrea3.Core
                 }
                 finally
                 {
-                    bufferPool.Return(heapBuffer);
+                    bufferPool.Return(buffer);
                 }
             }
         }
@@ -78,16 +77,16 @@ namespace Etrea3.Core
                 {
                     return null;
                 }
-                byte[] heapBuffer = bufferPool.Rent(MaxBufferSize);
+                byte[] buffer = bufferPool.Rent(MaxBufferSize);
                 try
                 {
-                    int byteCount = Client.GetStream().Read(heapBuffer, 0, heapBuffer.Length);
+                    int byteCount = Client.GetStream().Read(buffer, 0, buffer.Length);
                     if (byteCount == 0)
                     {
                         return null;
                     }
                     LastInputTime = DateTime.UtcNow;
-                    return Encoding.UTF8.GetString(heapBuffer, 0, byteCount);
+                    return Encoding.UTF8.GetString(buffer, 0, byteCount);
                 }
                 catch (Exception ex)
                 {
@@ -106,7 +105,7 @@ namespace Etrea3.Core
                 }
                 finally
                 {
-                    bufferPool.Return(heapBuffer);
+                    bufferPool.Return(buffer);
                 }
             }
             catch (Exception ex)
