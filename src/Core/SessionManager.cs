@@ -18,6 +18,7 @@ namespace Etrea3.Core
         public List<Session> ActivePlayers => Sessions.Values.Where(x => x.IsConnected && x.Player != null).ToList();
         public List<Session> IdleSessions => Sessions.Values.Where(x => x.IsConnected && x.Player != null && (DateTime.UtcNow - x.LastInputTime).TotalSeconds > Game.MaxIdleSeconds).ToList();
         public List<Session> DisconnectedSessions => Sessions.Values.Where(x => !x.IsConnected || (x.Player == null && x.State != ConnectionState.CreatingCharacter)).ToList();
+        public List<Session> Immortals => Sessions.Values.Where(x => x.IsConnected && x.Player != null && x.Player.IsImmortal).ToList();
 
         private SessionManager()
         {

@@ -13,7 +13,7 @@ namespace Etrea3.OLC
                 return;
             }
             Game.LogMessage($"OLC: Player {session.Player.Name} has started OLC", LogLevel.OLC, true);
-            session.Player.AddPlayerFlag(PlayerFlags.UsingOLC);
+            session.Player.Flags |= PlayerFlags.UsingOLC;
             StringBuilder sb = new StringBuilder();
             while (true)
             {
@@ -44,7 +44,7 @@ namespace Etrea3.OLC
 
                         case 4:
                             Game.LogMessage($"OLC: Player {session.Player.Name} has exited OLC", LogLevel.OLC, true);
-                            session.Player.RemovePlayerFlag(PlayerFlags.UsingOLC);
+                            session.Player.Flags &= ~PlayerFlags.UsingOLC;
                             return;
 
                         default:

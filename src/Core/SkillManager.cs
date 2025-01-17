@@ -268,6 +268,13 @@ namespace Etrea3.Core
                     AvailableToClass = ActorClass.Thief | ActorClass.Wizard | ActorClass.Fighter | ActorClass.Cleric,
                     LearnCost = 5000
                 },
+                new Skill
+                {
+                    Name = "Summon",
+                    Description = "Allows you to summon players to your location",
+                    AvailableToClass = ActorClass.Wizard | ActorClass.Cleric,
+                    LearnCost = 8000
+                }
             };
         }
 

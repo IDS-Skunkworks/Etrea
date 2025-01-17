@@ -249,6 +249,227 @@ namespace Etrea3.Core
         #endregion
 
         #region Misc
+        public static void PlayerSummon(Session session, string arg)
+        {
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to say who you're summoning!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!session.Player.HasSkill("Summon"))
+            {
+                session.Send($"%BRT%You lack the skill to summon other people!%PT%{Constants.NewLine}");
+                return;
+            }
+            var target = SessionManager.Instance.GetSession(arg);
+            if (target == null)
+            {
+                session.Send($"%BRT%That person doesn't seem to be in the Realms right now...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.CurrentMP < 10)
+            {
+                session.Send($"%BRT%You lack the magical reserves to summon anyone!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.IsImmortal)
+            {
+                session.Send($"%BRT%Attempting to summon the Gods would be a bad idea...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!target.Player.CanMove())
+            {
+                session.Send($"%BRT%{target.Player.Name} cannot be teleported right now...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (target.Player.Flags.HasFlag(PlayerFlags.NoSummon))
+            {
+                session.Send($"%BRT%{target.Player.Name} refuses to be summoned!%PT%{Constants.NewLine}");
+                return;
+            }
+            session.Player.AdjustMP(-10);
+            target.Send($"%BMT%{session.Player.Name} is summoning you!%PT%{Constants.NewLine}");
+            session.Send($"%BYT%Calling on the Winds of Magic you reach through reality and transport them!%PT%{Constants.NewLine}");
+            Game.LogMessage($"INFO: Player {session.Player.Name} summoned {target.Player.Name} from Room {target.Player.CurrentRoom} to {session.Player.CurrentRoom}", LogLevel.Info, true);
+            target.Player.Move(session.Player.CurrentRoom, true);
+        }
+
+        public static void TogglePlayerFlag(Session session, string arg)
+        {
+            var args = arg.Split(' ');
+            if (args.Length != 2)
+            {
+                session.Send($"%BRT%Usage: toggle <flag> <on | off> - turn the specified flag on or off%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!Enum.TryParse<PlayerFlags>(args[0].Trim(), true, out var flag))
+            {
+                session.Send($"%BRT%{args[0]} is not a valid flag!%PT%{Constants.NewLine}");
+                return;
+            }
+            bool flagEnabled = args[1].Trim().ToLower() == "on";
+            switch(flag)
+            {
+                case PlayerFlags.NoShowExits:
+                    session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                    string msg = flagEnabled ? $"%BGT%You will no longer see exits in room descriptions%PT%{Constants.NewLine}" :
+                        $"%BGT%You will now see exits in room descriptions%PT%{Constants.NewLine}";
+                    session.Send(msg);
+                    break;
+
+                case PlayerFlags.NoSummon:
+                    session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                    msg = flagEnabled ? $"%BGT%Other players will no longer be able to summon you%PT%{Constants.NewLine}" :
+                        $"%BGT%You can now be summoned by other players%PT%{Constants.NewLine}";
+                    session.Send(msg);
+                    break;
+
+                case PlayerFlags.MUDLogError:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live error logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live error logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogWarn:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live warning logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live warning logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogConnection:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live connection logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live connection logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogCombat:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live combat logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live combat logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogShops:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live shop logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live shop logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogInfo:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live info logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live info logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogOLC:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live OLC logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live OLC logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogGod:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live God logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live God logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.MUDLogDebug:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will now see live debug logs%PT%{Constants.NewLine}" :
+                            $"%BGT%You will no longer see live debug logs%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                case PlayerFlags.NoShowRoomFlags:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will no longer see room flags in descriptions%PT%{Constants.NewLine}" :
+                            $"%BGT%You will now see room flags in descriptions%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
+                    break;
+
+                default:
+                    session.Send($"%BRT%The flag is either invalid or cannot be toggled!%PT%{Constants.NewLine}");
+                    break;
+            }
+        }
+
         public static void ShowHelp(Session session, string arg)
         {
             if (string.IsNullOrEmpty(arg))

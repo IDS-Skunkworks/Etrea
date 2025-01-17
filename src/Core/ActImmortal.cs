@@ -9,6 +9,89 @@ namespace Etrea3.Core
 {
     public static class ActImmortal
     {
+        public static void FreezePlayer(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to freeze a player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: freeze <player> - prevent a player from doing anything%PT%{Constants.NewLine}");
+                session.Send($"%BRT%freeze <player> <freeze time> - freeze a player for the number of minutes%PT%{Constants.NewLine}");
+                session.Send($"%BRT%The target player must be online.%PT%{Constants.NewLine}");
+                session.Send($"%BRT%If no time is specified the player will be frozen for 5 minutes%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            var targetPlayer = SessionManager.Instance.GetSession(args[0].Trim());
+            if (targetPlayer == null)
+            {
+                session.Send($"%BRT%That person can't be found in the Realms right now...%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetPlayer.ID == session.ID)
+            {
+                session.Send($"%BRT%You cannot freeze yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetPlayer.Player.Level >= session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot freeze someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            int freezeMinutes = 5;
+            if (args.Length == 2)
+            {
+                if (!int.TryParse(args[1].Trim(), out freezeMinutes))
+                {
+                    session.Send($"%BRT%If specifying a time, you must give a valid number of minutes!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (freezeMinutes <= 0)
+                {
+                    session.Send($"%BRT%The freeze duration cannot be less than 1%PT%{Constants.NewLine}");
+                    return;
+                }
+            }
+            var thawTime = DateTime.UtcNow.AddMinutes(freezeMinutes);
+            targetPlayer.Player.FreezePlayer(thawTime);
+            targetPlayer.Send($"%BMT%{session.Player.Name} calls on divine power and freezes you to the spot!%PT%{Constants.NewLine}");
+            session.Send($"%BYT%You have frozen {targetPlayer.Player.Name}. They will be able to act again after {thawTime:dd-MM-yyyy HH:mm:ss} UTC%PT%{Constants.NewLine}");
+            session.Send($"%BYT%You can use the thaw command to relase them early.%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} has Frozen {targetPlayer.Player.Name} until {thawTime}", LogLevel.God, true);
+        }
+
+        public static void ThawPlayer(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to thaw a player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You must provide the name of the person to thaw. That person must be in the Realms.%PT%{Constants.NewLine}");
+                return;
+            }
+            var targetPlayer = SessionManager.Instance.GetSession(arg.Trim());
+            if (targetPlayer == null)
+            {
+                session.Send($"%BRT%That person could not be found in the Realms!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (targetPlayer.Player.Level >= session.Player.Level)
+            {
+                session.Send($"%BRT%You cannot thaw someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            targetPlayer.Player.ThawPlayer();
+            targetPlayer.Send($"%BYT%{session.Player.Name} calls on holy power and you can now move again!%PT%{Constants.NewLine}");
+            session.Send($"%BYT%Calling on holy power, you free {targetPlayer.Player.Name} enabling them to move again!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: {session.Player.Name} has thawed {targetPlayer.Player.Name}", LogLevel.God, true);
+        }
+
         public static void ReleaseOLCLock(Session session, string arg)
         {
             if (!session.Player.IsImmortal)
@@ -35,7 +118,7 @@ namespace Etrea3.Core
                     if (ItemManager.Instance.ItemExists(objID))
                     {
                         ItemManager.Instance.SetItemLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Item {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of Item {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -48,7 +131,7 @@ namespace Etrea3.Core
                     if (NPCManager.Instance.NPCTemplateExists(objID))
                     {
                         NPCManager.Instance.SetNPCLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of NPC {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of NPC {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -61,7 +144,7 @@ namespace Etrea3.Core
                     if (RoomManager.Instance.RoomExists(objID))
                     {
                         RoomManager.Instance.SetRoomLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Room {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of Room {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -74,7 +157,7 @@ namespace Etrea3.Core
                     if (SpellManager.Instance.SpellExists(objID))
                     {
                         SpellManager.Instance.SetSpellLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Spell {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of Spell {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -87,7 +170,7 @@ namespace Etrea3.Core
                     if (ShopManager.Instance.ShopExists(objID))
                     {
                         ShopManager.Instance.SetShopLockStatus(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Shop {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of Shop {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -100,7 +183,7 @@ namespace Etrea3.Core
                     if (ZoneManager.Instance.ZoneExists(objID))
                     {
                         ZoneManager.Instance.SetZoneLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Zone {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of Zone {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -113,7 +196,7 @@ namespace Etrea3.Core
                     if (QuestManager.Instance.QuestExists(objID))
                     {
                         QuestManager.Instance.SetQuestLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Quest {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of Quest {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -127,7 +210,7 @@ namespace Etrea3.Core
                     if (RecipeManager.Instance.RecipeExists(objID))
                     {
                         RecipeManager.Instance.SetRecipeLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of Crafting Recipe {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of Crafting Recipe {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -140,7 +223,7 @@ namespace Etrea3.Core
                     if (MobProgManager.Instance.MobProgExists(objID))
                     {
                         MobProgManager.Instance.SetMobProgLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock of MobProg {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of MobProg {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -155,7 +238,7 @@ namespace Etrea3.Core
                     if (NodeManager.Instance.NodeExists(objID))
                     {
                         NodeManager.Instance.SetNodeLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock on Resource Node {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock on Resource Node {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -168,7 +251,7 @@ namespace Etrea3.Core
                     if (EmoteManager.Instance.EmoteExists(objID))
                     {
                         EmoteManager.Instance.SetEmoteLockState(objID, false, session);
-                        Game.LogMessage($"INFO: Player {session.Player.Name} force-released the OLC lock on Emote {objID}", LogLevel.Info, true);
+                        Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock on Emote {objID}", LogLevel.God, true);
                     }
                     else
                     {
@@ -222,6 +305,7 @@ namespace Etrea3.Core
                 return;
             }
             session.Send($"%BGT%{n.Name} doesn't remember anyone!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: {session.Player.Name} checked the memory of {n.Name} ({n.ID})", LogLevel.God, true);
         }
 
         public static void GenerateAPIKey(Session session, string arg)
@@ -263,7 +347,7 @@ namespace Etrea3.Core
                         return;
                     }
                     session.Send($"%BGT%API Key: {key}%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} queried the API key for {args[1]}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} queried the API key for {args[1]}", LogLevel.God, true);
                     break;
 
                 case "generate":
@@ -271,13 +355,13 @@ namespace Etrea3.Core
                     if (target == null)
                     {
                         session.Send($"%BRT%That person isn't here!%PT%{Constants.NewLine}");
-                        Game.LogMessage($"INFO: Player {session.Player.Name} attempted to generate an API key for {args[1]} but no such player was found", LogLevel.Info, true);
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to generate an API key for {args[1]} but no such player was found", LogLevel.Warning, true);
                         return;
                     }
                     if (!target.Player.IsImmortal)
                     {
                         session.Send($"%BRT%{target.Player.Name} is not Immortal!%PT%{Constants.NewLine}");
-                        Game.LogMessage($"INFO: Player {session.Player.Name} attempted to generate an API key for {target.Player.Name} but that player is not Immortal", LogLevel.Info, true);
+                        Game.LogMessage($"WARN: Player {session.Player.Name} attempted to generate an API key for {target.Player.Name} but that player is not Immortal", LogLevel.Warning, true);
                         return;
                     }
                     using (SHA512 sha = SHA512.Create())
@@ -287,7 +371,7 @@ namespace Etrea3.Core
                         var hashString = Convert.ToBase64String(hash);
                         if (DatabaseManager.UpdatePlayerAPIKey(target.Player.Name, hashString))
                         {
-                            Game.LogMessage($"INFO: Player {session.Player.Name} generated an API key for {target.Player.Name}", LogLevel.Info, true);
+                            Game.LogMessage($"GOD: Player {session.Player.Name} generated an API key for {target.Player.Name}", LogLevel.God, true);
                             session.Send($"%BGT%API key for {target.Player.Name} generated successfully.%PT%{Constants.NewLine}");
                         }
                         else
@@ -321,7 +405,7 @@ namespace Etrea3.Core
             RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode = null;
             session.Send($"%BYT%Calling on mystic energies you destroy the resource node in this area!%PT%{Constants.NewLine}");
             var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
-            Game.LogMessage($"INFO: Player {session.Player.Name} destroyed the Resource Node in Room {session.Player.CurrentRoom}", LogLevel.Info, true);
+            Game.LogMessage($"GOD: Player {session.Player.Name} destroyed the Resource Node in Room {session.Player.CurrentRoom}", LogLevel.God, true);
             if (localPlayers.Count > 0)
             {
                 foreach (var player in localPlayers)
@@ -362,7 +446,7 @@ namespace Etrea3.Core
                 newNode.Depth = Helpers.RollDice<int>(1, 4);
                 RoomManager.Instance.GetRoom(session.Player.CurrentRoom).RSSNode = newNode;
                 session.Send($"%BYT%You have create a {newNode.Name} here to mine!%PT%{Constants.NewLine}");
-                Game.LogMessage($"INFO: Player {session.Player.Name} created Resource Node {newNode.Name} ({newNode.ID}) in Room {session.Player.CurrentRoom}", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} created Resource Node {newNode.Name} ({newNode.ID}) in Room {session.Player.CurrentRoom}", LogLevel.God, true);
                 var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom.Where(x => x.ID != session.ID).ToList();
                 if (localPlayers.Count > 0)
                 {
@@ -421,7 +505,7 @@ namespace Etrea3.Core
             }
             sb.AppendLine($"%BYT%  {new string('=', 77)}");
             session.Send(sb.ToString());
-            Game.LogMessage($"INFO: Player {session.Player.Name} reviewed stats for Shop {shop.ID}", LogLevel.Info, true);
+            Game.LogMessage($"GOD: Player {session.Player.Name} reviewed stats for Shop {shop.ID}", LogLevel.God, true);
         }
 
         public static void TickShop(Session session, string arg)
@@ -447,7 +531,7 @@ namespace Etrea3.Core
                 return;
             }
             var shop = ShopManager.Instance.GetShop(shopID);
-            Game.LogMessage($"INFO: Player {session.Player.Name} forced a refresh of Shop {shop.ShopName} ({shop.ID})", LogLevel.Info, true);
+            Game.LogMessage($"GOD: Player {session.Player.Name} forced a refresh of Shop {shop.ShopName}", LogLevel.God, true);
             shop.RestockShop();
             session.Send($"%BGT%Shop {shop.ShopName} refreshed succesfully.%PT%{Constants.NewLine}");
         }
@@ -466,6 +550,7 @@ namespace Etrea3.Core
             }
             if (!string.IsNullOrEmpty(arg) && bool.TryParse(arg, out bool force))
             {
+                Game.LogMessage($"GOD: {session.Player.Name} has initiated a shutdown", LogLevel.God, true);
                 Game.ImmShutdown(session, force);
             }
             else
@@ -502,6 +587,7 @@ namespace Etrea3.Core
                 if (DatabaseManager.ClearMOTD())
                 {
                     session.Send($"%BYT%MOTD has been cleared.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"GOD: Player {session.Player.Name} has cleared the Message of The Day", LogLevel.God, true);
                 }
                 else
                 {
@@ -521,6 +607,7 @@ namespace Etrea3.Core
                     if (DatabaseManager.SetMOTD(motd))
                     {
                         session.Send($"%BYT%Message of the Day updated successfully.%PT%{Constants.NewLine}");
+                        Game.LogMessage($"GOD: Player {session.Player.Name} has updated the Message of The Day", LogLevel.God, true);
                     }
                     else
                     {
@@ -548,6 +635,7 @@ namespace Etrea3.Core
                     var nextBackup = backupTime.AddSeconds(backupTimer);
                     session.Send($"%BYT%Last Bacup: {backupTime}%PT%{Constants.NewLine}");
                     session.Send($"%BYT%Next Backup: {nextBackup}%PT%{Constants.NewLine}");
+                    Game.LogMessage($"GOD: Player {session.Player.Name} queried the World backup times", LogLevel.God, true);
                 }
                 else
                 {
@@ -558,7 +646,7 @@ namespace Etrea3.Core
             if (arg.ToLower() == "backupnow")
             {
                 Game.BackupNow();
-                Game.LogMessage($"INFO: Player {session.Player.Name} triggered a backup of World databases", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} triggered a backup of World databases", LogLevel.God, true);
                 return;
             }
             session.Send($"%BRT%Usage: backupinfo - show backup information%PT%{Constants.NewLine}");
@@ -596,6 +684,7 @@ namespace Etrea3.Core
             }
             var upTime = DateTime.UtcNow - Game.StartTime;
             session.Send($"%BYT%The World came to life on {Game.StartTime} and has been up for {upTime.Days} day(s), {upTime.Hours:00}:{upTime.Minutes:00}:{upTime.Seconds:00}%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} queried the age of the Realms", LogLevel.God, true);
         }
 
         public static void SetDonationRoom(Session session, string arg)
@@ -623,7 +712,7 @@ namespace Etrea3.Core
                 session.Send($"%BRT%The specified Room does not exist.%PT%{Constants.NewLine}");
                 return;
             }
-            Game.LogMessage($"INFO: Player {session.Player.Name} has changed the Donation Room from {Game.DonationRoomID} to {rid}", LogLevel.Info, true);
+            Game.LogMessage($"GOD: Player {session.Player.Name} has changed the Donation Room from {Game.DonationRoomID} to {rid}", LogLevel.God, true);
             Game.SetDonationRoom(rid);
             session.Send($"%BYT%The Donation Room has been updated successfully.%PT%{Constants.NewLine}");
         }
@@ -638,7 +727,7 @@ namespace Etrea3.Core
             var args = arg.Split(' ');
             if (args.Length < 1)
             {
-                session.Send($"%BRT%Usage: log read <info | connection | combat | warn | error | debug | olc> <amount>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: log read <info | connection | combat | warn | error | debug | shop | god | olc> <amount>%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: log clear%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Example: log read olc 10%PT%{Constants.NewLine}");
                 return;
@@ -648,6 +737,7 @@ namespace Etrea3.Core
                 if (DatabaseManager.ClearLogTable(out int rCount))
                 {
                     session.Send($"%BYT%Logs cleared, {rCount:N0} entries removed.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"GOD: Player {session.Player.Name} cleared the World Log", LogLevel.God, true);
                 }
                 else
                 {
@@ -682,6 +772,7 @@ namespace Etrea3.Core
                 }
                 sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
                 session.Send(sb.ToString());
+                Game.LogMessage($"GOD: Player {session.Player.Name} queried the World Log", LogLevel.God, true);
                 return;
             }
             session.Send($"%BRT%Usage: log read <info | connection | combat | warn | error | debug | olc> <amount>%PT%{Constants.NewLine}");
@@ -731,7 +822,7 @@ namespace Etrea3.Core
                 $"%BYT%Something calls upon the Winds of Magic and you find you can suddenly use the {lang} langauge!%PT%{Constants.NewLine}";
             tPlayer.Send(msg);
             session.Send($"%BYT%You have granted {tPlayer.Player.Name} the ability to use the {lang} language!%PT%{Constants.NewLine}");
-            Game.LogMessage($"INFO: {session.Player} has added the {lang} language to {tPlayer.Player.Name}", LogLevel.Info, true);
+            Game.LogMessage($"GOD: {session.Player} has added the {lang} language to {tPlayer.Player.Name}", LogLevel.God, true);
         }
 
         public static void RemovePlayerLanguage(Session session, string arg)
@@ -775,7 +866,7 @@ namespace Etrea3.Core
                 $"%BYT%Something calls upon the Winds of Magic and you find you can no longer use the {lang} langauge!%PT%{Constants.NewLine}";
             tPlayer.Send(msg);
             session.Send($"%BYT%You have removed {tPlayer.Player.Name}'s ability to use the {lang} language!%PT%{Constants.NewLine}");
-            Game.LogMessage($"INFO: {session.Player} has removed the {lang} language from {tPlayer.Player.Name}", LogLevel.Info, true);
+            Game.LogMessage($"GOD: {session.Player} has removed the {lang} language from {tPlayer.Player.Name}", LogLevel.God, true);
         }
 
         public static void GiveRecipe(Session session, string arg)
@@ -822,7 +913,7 @@ namespace Etrea3.Core
                 var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to grant you knowledge of the {recipe.Name} Recipe!%PT%{Constants.NewLine}" :
                     $"%BYT%The Winds of Magic swirl about you, granting you the {recipe.Name} Recipe!%PT%{Constants.NewLine}";
                 target.Send(msg);
-                Game.LogMessage($"INFO: Player {session.Player.Name} has granted {target.Player.Name} the {recipe.Name} Recipe", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} has granted {target.Player.Name} the {recipe.Name} Recipe", LogLevel.God, true);
             }
             else
             {
@@ -868,7 +959,7 @@ namespace Etrea3.Core
                 var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to remove your knowledge of the {recipeName} Recipe!%PT%{Constants.NewLine}" :
                     $"%BYT%The Winds of Magic swirl about you, removing the knowledge of the {recipeName} Recipe!%PT%{Constants.NewLine}";
                 target.Send(msg);
-                Game.LogMessage($"INFO: Player {session.Player.Name} has removed the {recipeName} Recipe from {target.Player.Name}", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} has removed the {recipeName} Recipe from {target.Player.Name}", LogLevel.God, true);
             }
             else
             {
@@ -920,7 +1011,7 @@ namespace Etrea3.Core
                 var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to grant you knowledge of the {spell.Name} Spell!%PT%{Constants.NewLine}" :
                     $"%BYT%The Winds of Magic swirl about you, granting you the {spell.Name} Spell!%PT%{Constants.NewLine}";
                 target.Send(msg);
-                Game.LogMessage($"INFO: Player {session.Player.Name} has granted {target.Player.Name} the {spell.Name} Spell", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} has granted {target.Player.Name} the {spell.Name} Spell", LogLevel.God, true);
             }
             else
             {
@@ -1040,7 +1131,7 @@ namespace Etrea3.Core
                 var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to remove your knowledge of the {spellName} Spell!%PT%{Constants.NewLine}" :
                     $"%BYT%The Winds of Magic swirl about you, removing the knowledge of the {spellName} Spell!%PT%{Constants.NewLine}";
                 target.Send(msg);
-                Game.LogMessage($"INFO: Player {session.Player.Name} has removed the {spellName} Spell from {target.Player.Name}", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} has removed the {spellName} Spell from {target.Player.Name}", LogLevel.God, true);
             }
             else
             {
@@ -1086,7 +1177,7 @@ namespace Etrea3.Core
                 var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to remove your knowledge of the {skillName} Skill!%PT%{Constants.NewLine}" : 
                     $"%BYT%The Winds of Magic swirl about you, removing the knowledge of the {skillName} Skill!%PT%{Constants.NewLine}";
                 target.Send(msg);
-                Game.LogMessage($"INFO: Player {session.Player.Name} has removed the {skillName} Skill from {target.Player.Name}", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} has removed the {skillName} Skill from {target.Player.Name}", LogLevel.God, true);
             }
             else
             {
@@ -1138,7 +1229,7 @@ namespace Etrea3.Core
                 var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls upon the Winds of Magic to grant you the {skill.Name} Skill!%PT%{Constants.NewLine}" :
                     $"%BYT%The Winds of Magic swirl about you, granting you the {skill.Name} Skill!%PT%{Constants.NewLine}";
                 target.Send(msg);
-                Game.LogMessage($"INFO: Player {session.Player.Name} has granted {target.Player.Name} the {skill.Name} Skill", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} has granted {target.Player.Name} the {skill.Name} Skill", LogLevel.God, true);
             }
             else
             {
@@ -1169,6 +1260,7 @@ namespace Etrea3.Core
                 $"%BYT%You feel the Winds of Magic course through you, restoring you!%PT%{Constants.NewLine}";
             target.Send(msg);
             session.Send($"%BYT%You restore {target.Player.Name}!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} Restored {target.Player.Name}", LogLevel.God, true);
         }
 
         public static void ChangeExp(Session session, string arg)
@@ -1213,7 +1305,7 @@ namespace Etrea3.Core
                 $"%BYT%The Winds of Magic swirl about you, granting {exp} Exp!%PT%{Constants.NewLine}";
             target.Send(msg);
             session.Send($"%BYT%You have granted {target.Player.Name} {exp} Exp!%PT%{Constants.NewLine}");
-            Game.LogMessage($"INFO: Player {session.Player.Name} granted {target.Player.Name} {exp} Exp", LogLevel.Info, true);
+            Game.LogMessage($"GOD: Player {session.Player.Name} granted {target.Player.Name} {exp} Exp", LogLevel.God, true);
         }
 
         public static void VoiceOfGod(Session session, string arg)
@@ -1309,7 +1401,7 @@ namespace Etrea3.Core
                     hpVal = Math.Max(hpVal, 1);
                     target.Player.CurrentHP = hpVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Current HP to {hpVal:N0}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s HP to {hpVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s HP to {hpVal}", LogLevel.God, true);
                     var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your HP!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and your HP changes!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1325,7 +1417,7 @@ namespace Etrea3.Core
                     mpVal = Math.Max(mpVal, 1);
                     target.Player.CurrentMP = mpVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Current MP to {mpVal:N0}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s MP to {mpVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s MP to {mpVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your MP!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and your MP changes!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1340,7 +1432,7 @@ namespace Etrea3.Core
                     mhpVal = Math.Max(mhpVal, 1);
                     target.Player.MaxHP = mhpVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Max HP to {mhpVal:N0}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Max HP to {mhpVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Max HP to {mhpVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your Max HP!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and your Max HP changes!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1355,7 +1447,7 @@ namespace Etrea3.Core
                     mmpVal = Math.Max(mmpVal, 1);
                     target.Player.MaxMP = mmpVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Max MP to {mmpVal:N0}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Max MP to {mmpVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Max MP to {mmpVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your Max MP!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and your Max MP changes!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1371,7 +1463,7 @@ namespace Etrea3.Core
                     spVal = Math.Max(spVal, 1);
                     target.Player.CurrentSP = spVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Current SP to {spVal:N0}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s SP to {spVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s SP to {spVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your SP!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and your SP changes!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1386,7 +1478,7 @@ namespace Etrea3.Core
                     mspVal = Math.Max(mspVal, 1);
                     target.Player.MaxSP = mspVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Max SP to {mspVal:N0}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Max SP to {mspVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Max SP to {mspVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic to change your Max SP!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and your Max SP changes!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1402,7 +1494,7 @@ namespace Etrea3.Core
                     strVal = Math.Max(strVal, 1);
                     target.Player.Strength = strVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Strength to {strVal}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Strength to {strVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Strength to {strVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Strength changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Strength changing...%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1418,7 +1510,7 @@ namespace Etrea3.Core
                     dexVal = Math.Max(dexVal, 1);
                     target.Player.Dexterity = dexVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Dexterity to {dexVal}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Dexterity to {dexVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Dexterity to {dexVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Dexterity changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Dexterity changing...%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1434,7 +1526,7 @@ namespace Etrea3.Core
                     conVal = Math.Max(conVal, 1);
                     target.Player.Constitution = conVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Constitution to {conVal}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Constitution to {conVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Constitution to {conVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Constitution changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Constitution changing...%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1450,7 +1542,7 @@ namespace Etrea3.Core
                     intVal = Math.Max(intVal, 1);
                     target.Player.Intelligence = intVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Intelligence to {intVal}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Intelligence to {intVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Intelligence to {intVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Intelligence changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Intelligence changing...%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1466,7 +1558,7 @@ namespace Etrea3.Core
                     wisVal = Math.Max(wisVal, 1);
                     target.Player.Wisdom = wisVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Wisdom to {wisVal}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Wisdom to {wisVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Wisdom to {wisVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Wisdom changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Wisdom changing...%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1482,7 +1574,7 @@ namespace Etrea3.Core
                     chaVal = Math.Max(chaVal, 1);
                     target.Player.Charisma = chaVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Charisma to {chaVal}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Charisma to {chaVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Charisma to {chaVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Charisma changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Charisma changing...%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1498,7 +1590,7 @@ namespace Etrea3.Core
                     gpVal = Math.Max(gpVal, 0);
                     target.Player.Gold = gpVal;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Gold to {gpVal}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Gold to {gpVal}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Gold to {gpVal}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Gold balance changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Gold balance changing!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1523,7 +1615,7 @@ namespace Etrea3.Core
                     }
                     target.Player.Level = lvl;
                     session.Send($"%BYT%You have changed {target.Player.Name}'s Level to {lvl}.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"INFO: Player {session.Player.Name} changed {target.Player.Name}'s Level to {lvl}", LogLevel.Info, true);
+                    Game.LogMessage($"GOD: Player {session.Player.Name} changed {target.Player.Name}'s Level to {lvl}", LogLevel.God, true);
                     msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} summons the Winds of Magic and you feel your Level changing!%PT%{Constants.NewLine}" :
                         $"%BYT%The Winds of Magic shift and you feel your Level changing!%PT%{Constants.NewLine}";
                     target.Send(msg);
@@ -1578,6 +1670,7 @@ namespace Etrea3.Core
             var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} calls on the Winds of Magic and your find yourself transported!%PT%{Constants.NewLine}" :
                 $"%BYT%You feel the Winds of Magic shift and you find yourself transported elsewhere!%PT%{Constants.NewLine}";
             target.Send(msg);
+            Game.LogMessage($"GOD: Player {session.Player.Name} transported {target.Player.Name} from RID {target.Player.CurrentRoom} to {rid}", LogLevel.God, true);
             target.Player.Move(rid, true);
         }
 
@@ -1635,13 +1728,13 @@ namespace Etrea3.Core
                         $"%BYT%The Winds of Magic flood your mind, forcing you to act against your will!%PT%{Constants.NewLine}";
                 tSession.Send(msg);
                 CommandParser.Parse(tSession, ref actionString);
-                Game.LogMessage($"INFO: Player {session.Player.Name} used FORCE on {tSession.Player.Name}: {actionString}", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} used FORCE on {tSession.Player.Name}: {actionString}", LogLevel.God, true);
                 return;
             }
             if (targetActor.ActorType == ActorType.NonPlayer)
             {
                 ActMob.ParseCommand((NPC)targetActor, actionString, session);
-                Game.LogMessage($"INFO: Player {session.Player.Name} used FORCE on NPC {targetActor.Name}: {actionString}", LogLevel.Info, true);
+                Game.LogMessage($"GOD: Player {session.Player.Name} used FORCE on NPC {targetActor.Name}: {actionString}", LogLevel.God, true);
                 return;
             }
             Game.LogMessage($"DEBUG: {session.Player.Name} called ForceActor() on an unsupported Actor Type: {targetActor.ActorType}", LogLevel.Debug, true);
@@ -1716,6 +1809,7 @@ namespace Etrea3.Core
             }
             var msg = session.Player.CanBeSeenBy(target.Player) ? $"%BYT%{session.Player.Name} reaches through the Universe, summoning you to them!%PT%{Constants.NewLine}" :
                 $"%BYT%You feel a strange sensation as some power pulls you through the very fabric of reality!%PT%{Constants.NewLine}";
+            Game.LogMessage($"GOD: Player {session.Player.Name} transported {target.Player.Name} from Room {target.Player.CurrentRoom} to Room {session.Player.CurrentRoom}", LogLevel.God, true);
             target.Player.Move(session.Player.CurrentRoom, true);
         }
 
@@ -1730,6 +1824,7 @@ namespace Etrea3.Core
             {
                 RoomManager.Instance.GetRoom(session.Player.CurrentRoom).ItemsInRoom.Clear();
                 session.Send($"%BYT%Bathing the area in holy fire, you burn any stray items from the world!%PT%{Constants.NewLine}");
+                Game.LogMessage($"GOD: Player {session.Player.Name} destroyed all items in Room {session.Player.CurrentRoom}", LogLevel.God, true);
                 var players = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
                 if (players != null && players.Count > 1)
                 {
@@ -1750,6 +1845,7 @@ namespace Etrea3.Core
             }
             RoomManager.Instance.GetRoom(session.Player.CurrentRoom).ItemsInRoom.TryRemove(target.ItemID, out _);
             session.Send($"%BYT%With an arcane gesure you burn {target.ShortDescription} from the world!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} destroyed Item {target.Name} ({target.ID}) in Room {session.Player.CurrentRoom}", LogLevel.God, true);
             var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
             if (localPlayers != null || localPlayers.Count > 1)
             {
@@ -1787,6 +1883,7 @@ namespace Etrea3.Core
                     session.Send($"%BRT%No Room with the specified ID could be found in Room Manager.%PT%{Constants.NewLine}");
                     return;
                 }
+                Game.LogMessage($"GOD: Player {session.Player.Name} teleported from Room {session.Player.CurrentRoom} to Room {room.ID}", LogLevel.God, true);
                 session.Player.Move(room.ID, true);
                 return;
             }
@@ -1796,6 +1893,7 @@ namespace Etrea3.Core
                 session.Send($"%BRT%You can't find anyone of that name in the Realms right now.%PT%{Constants.NewLine}");
                 return;
             }
+            Game.LogMessage($"GOD: Player {session.Player.Name} teleported to the same room as {target.Player.Name} (From: {session.Player.CurrentRoom} To: {target.Player.CurrentRoom})", LogLevel.God, true);
             session.Player.Move(target.Player.CurrentRoom, true);
         }
 
@@ -1827,8 +1925,8 @@ namespace Etrea3.Core
                 session.Send($"%BRT%You cannot smite someone more powerful than yourself!%PT%{Constants.NewLine}");
                 return;
             }
+            Game.LogMessage($"GOD: Player {session.Player.Name} used holy power to kill {target.Name} in Room {target.CurrentRoom}", LogLevel.God, true);
             ((Player)target).Kill(session.Player, false);
-            Game.LogMessage($"INFO: Player {session.Player.Name} used holy power to smite {target.Name}", LogLevel.Info, true);
             session.Send($"%BYT%Calling on holy power, you smite {target.Name}, killing them instantly!%PT%{Constants.NewLine}");
         }
 
@@ -1851,6 +1949,7 @@ namespace Etrea3.Core
                 {
                     npc.Kill(session.Player, false);
                 }
+                Game.LogMessage($"GOD: Player {session.Player.Name} purged Room {session.Player.CurrentRoom} killing all NPCs", LogLevel.God, true);
                 session.Send($"%BYT%You bathe the area in purifying holy fire, burning the area clean!%PT%{Constants.NewLine}");
                 var roomPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
                 if (roomPlayers != null && roomPlayers.Count > 0)
@@ -1877,6 +1976,7 @@ namespace Etrea3.Core
             }
             var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
             session.Send($"%BYT%You bathe {target.Name} in holy fire, burning them from the fabric of the world!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} purged NPC {target.Name} in Room {target.CurrentRoom}", LogLevel.God, true);
             if (localPlayers != null & localPlayers.Count > 1)
             {
                 foreach(var lp in localPlayers.Where(x => x.ID != session.ID))
@@ -1915,6 +2015,9 @@ namespace Etrea3.Core
             switch(assetType.ToLower())
             {
                 case "connection":
+                case "connections":
+                case "session":
+                case "sessions":
                     ListConnections(session);
                     break;
 
@@ -2009,6 +2112,7 @@ namespace Etrea3.Core
             sb.AppendLine($"%BYT%||%PT% Gold: %YT%{targetPlayer.Player.Gold:N0}%PT%");
             sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
             session.Send(sb.ToString());
+            Game.LogMessage($"GOD: Player {session.Player.Name} viewed the character sheet of {targetPlayer.Player.Name}", LogLevel.God, true);
         }
 
         private static void ShowNPCCharSheet(Session session, string targetName)
@@ -2035,6 +2139,7 @@ namespace Etrea3.Core
             sb.AppendLine($"%BYT%||%PT% Gold: %YT%{targetNPC.Gold:N0}%PT%");
             sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
             session.Send(sb.ToString());
+            Game.LogMessage($"GOD: Player {session.Player.Name} viewed the character sheet of NPC {targetNPC.Name}", LogLevel.God, true);
         }
 
         private static void ShowPlayerInventory(Session session, string targetName)
@@ -2073,6 +2178,7 @@ namespace Etrea3.Core
             }
             sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
             session.Send(sb.ToString());
+            Game.LogMessage($"GOD: Player {session.Player.Name} viewed the inventory of player {targetPlayer.Player.Name}", LogLevel.God, true);
         }
 
         private static void ShowNPCInventory(Session session, string targetName)
@@ -2111,6 +2217,7 @@ namespace Etrea3.Core
             }
             sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
             session.Send(sb.ToString());
+            Game.LogMessage($"GOD: Player {session.Player.Name} viewed the inventory of NPC {targetNPC.Name}", LogLevel.God, true);
         }
 
         private static void FindItemInWorld(Session session, string targetString)
@@ -2233,6 +2340,7 @@ namespace Etrea3.Core
                 }
                 NPCManager.Instance.AddNewNPCInstance(npc.TemplateID, session.Player.CurrentRoom);
                 session.Send($"%BYT%Calling on the Winds of Magic, you bring life to {npc.ShortDescription}!%PT%{Constants.NewLine}");
+                Game.LogMessage($"GOD: Player {session.Player.Name} created NPC {npc.TemplateID} in Room {session.Player.CurrentRoom}", LogLevel.God, true);
                 var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
                 if (localPlayers != null && localPlayers.Count > 1)
                 {
@@ -2253,6 +2361,7 @@ namespace Etrea3.Core
             }
             NPCManager.Instance.AddNewNPCInstance(tNPC.TemplateID, session.Player.CurrentRoom);
             session.Send($"%BYT%Calling on the Winds of Magic, you bring life to {tNPC.ShortDescription}!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} created NPC {tNPC.TemplateID} in Room {session.Player.CurrentRoom}", LogLevel.God, true);
             var players = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
             if (players != null && players.Count > 1)
             {
@@ -2305,6 +2414,7 @@ namespace Etrea3.Core
                 newItem.ItemID = Guid.NewGuid();
                 RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, newItem);
                 session.Send($"%BYT%Calling on the Winds of Magic, you summon {newItem.ShortDescription} into existence!%PT%{Constants.NewLine}");
+                Game.LogMessage($"GOD: Player {session.Player.Name} created item {newItem.Name} ({newItem.ID}) in Room {session.Player.CurrentRoom}", LogLevel.God, true);
                 var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
                 if (localPlayers != null && localPlayers.Count > 1)
                 {
@@ -2353,6 +2463,7 @@ namespace Etrea3.Core
             mItemNew.ItemID = Guid.NewGuid();
             RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, mItemNew);
             session.Send($"%BYT%Calling on the Winds of Magic, you summon {mItemNew.ShortDescription} into existence!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} created item {mItemNew.Name} ({mItemNew.ID}) in Room {session.Player.CurrentRoom}", LogLevel.God, true);
             var players = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
             if (players != null && players.Count > 1)
             {

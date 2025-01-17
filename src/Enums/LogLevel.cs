@@ -11,5 +11,6 @@
         Connection,
         Shop,
         Combat,
+        God,
     }
 }

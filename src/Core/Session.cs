@@ -47,7 +47,7 @@ namespace Etrea3.Core
                 try
                 {
                     int byteCount = Encoding.UTF8.GetBytes(parsedMessage, 0, parsedMessage.Length, buffer, 0);
-                    Client.GetStream().Write(buffer, 0, byteCount);
+                    Client?.GetStream()?.Write(buffer, 0, byteCount);
                 }
                 catch (Exception ex)
                 {
@@ -80,13 +80,13 @@ namespace Etrea3.Core
                 byte[] buffer = bufferPool.Rent(MaxBufferSize);
                 try
                 {
-                    int byteCount = Client.GetStream().Read(buffer, 0, buffer.Length);
-                    if (byteCount == 0)
+                    int? byteCount = Client?.GetStream()?.Read(buffer, 0, buffer.Length);
+                    if (byteCount == null || byteCount == 0)
                     {
                         return null;
                     }
                     LastInputTime = DateTime.UtcNow;
-                    return Encoding.UTF8.GetString(buffer, 0, byteCount);
+                    return Encoding.UTF8.GetString(buffer, 0, byteCount.Value);
                 }
                 catch (Exception ex)
                 {

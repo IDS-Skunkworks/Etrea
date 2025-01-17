@@ -1328,8 +1328,12 @@ namespace Etrea3.Objects
         public PlayerPrompt PromptStyle { get; set; } = PlayerPrompt.Normal;
         [JsonIgnore]
         public bool IsImmortal => Level >= Constants.ImmLevel;
-        [JsonIgnore]
+        [JsonProperty]
         public PlayerFlags Flags { get; set; } = PlayerFlags.None;
+        [JsonProperty]
+        public DateTime ThawTime { get; set; }
+        [JsonIgnore]
+        private System.Timers.Timer FreezeTimer;
 
         public Player()
         {
@@ -1337,14 +1341,41 @@ namespace Etrea3.Objects
             ActorType = ActorType.Player;
         }
 
-        public void AddPlayerFlag(PlayerFlags flag)
+        public void FreezePlayer(DateTime thawTime)
         {
-            Flags |= flag;
+            ThawTime = thawTime;
+            Flags |= PlayerFlags.Frozen;
+            if (FreezeTimer == null)
+            {
+                FreezeTimer = new System.Timers.Timer();
+                FreezeTimer.Elapsed += FreezeTimer_Elapsed;
+            }
+            FreezeTimer.Interval = 60000;
+            FreezeTimer.Start();
         }
 
-        public void RemovePlayerFlag(PlayerFlags flag)
+        public double GetRemainingFreezeDuration()
         {
-            Flags &= ~flag;
+            var thawTime = ThawTime - DateTime.UtcNow;
+            return thawTime.TotalMinutes;
+        }
+
+        private void FreezeTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (DateTime.UtcNow >= ThawTime)
+            {
+                ThawPlayer();
+                return;
+            }
+            int thawTime = (int)Math.Round((ThawTime - DateTime.UtcNow).TotalMinutes, 0);
+            Send($"%BMT%You are frozen! You will be able to move in {thawTime} minutes%PT%{Constants.NewLine}");
+        }
+
+        public void ThawPlayer()
+        {
+            FreezeTimer?.Stop();
+            Flags &= ~PlayerFlags.Frozen;
+            Send($"%BMT%The magic holding you fades and you can move again!%PT%{Constants.NewLine}");
         }
 
         protected override void MoveActor(int newRID, bool wasTeleported)

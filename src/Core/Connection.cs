@@ -70,15 +70,30 @@ namespace Etrea3.Core
                 switch(playerSession.Player.PromptStyle)
                 {
                     case PlayerPrompt.Normal:
-                        prompt = $"{Constants.NewLine}{Constants.BrightRedText}{playerSession.Player.CurrentHP:N0}/{playerSession.Player.MaxHP:N0} HP{Constants.PlainText}; {Constants.BrightGreenText}{playerSession.Player.CurrentMP:N0}/{playerSession.Player.MaxMP:N0} MP{Constants.PlainText}; {Constants.BrightYellowText}{playerSession.Player.CurrentSP:N0}/{playerSession.Player.MaxSP:N0} SP{Constants.PlainText} >>";
+                        prompt = $"{Constants.NewLine}%BRT%{playerSession.Player.CurrentHP:N0}/{playerSession.Player.MaxHP:N0} HP%PT%; %BGT%{playerSession.Player.CurrentMP:N0}/{playerSession.Player.MaxMP:N0} MP%PT%; %BYT%{playerSession.Player.CurrentSP:N0}/{playerSession.Player.MaxSP:N0} SP%PT% >>";
                         break;
 
                     case PlayerPrompt.Percentage:
-                        prompt = $"{Constants.NewLine}{Constants.BrightRedText}{Math.Round((double)playerSession.Player.CurrentHP / playerSession.Player.MaxHP * 100, 0)}% HP{Constants.PlainText}; {Constants.BrightGreenText}{Math.Round((double)playerSession.Player.CurrentMP / playerSession.Player.MaxMP * 100, 0)}% MP{Constants.PlainText}; {Constants.BrightYellowText}{Math.Round((double)playerSession.Player.CurrentSP / playerSession.Player.MaxSP * 100, 0)}% SP{Constants.PlainText} >>";
+                        prompt = $"{Constants.NewLine}%BRT%{Math.Round((double)playerSession.Player.CurrentHP / playerSession.Player.MaxHP * 100, 0)}% HP%PT%; %BGT%{Math.Round((double)playerSession.Player.CurrentMP / playerSession.Player.MaxMP * 100, 0)}% MP%PT%; %BYT%{Math.Round((double)playerSession.Player.CurrentSP / playerSession.Player.MaxSP * 100, 0)}% SP%PT% >>";
                         break;
-                }                    
+                }
                 playerSession.Send(prompt);
                 var input = playerSession.Read();
+                if (playerSession.Player.Flags.HasFlag(PlayerFlags.Frozen))
+                {
+                    var freezeDuration = playerSession.Player.GetRemainingFreezeDuration();
+                    if (freezeDuration <= 0)
+                    {
+                        playerSession.Player.ThawPlayer();
+                        playerSession.Send($"%BMT%The power holding you fades. You can move again.%PT%{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        playerSession.Send($"%BMT%You have been frozen by the Gods!%PT%{Constants.NewLine}");
+                        playerSession.Send($"%BMT%You must wait {(int)freezeDuration} minutes before you can do anything!%PT%{Constants.NewLine}");
+                        continue;
+                    }
+                }
                 if (!string.IsNullOrEmpty(input))
                 {
                     string tInput = input.Trim();

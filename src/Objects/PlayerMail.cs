@@ -48,6 +48,7 @@ namespace Etrea3.Objects
                 Sender = session.Player.Name
             };
             StringBuilder sb = new StringBuilder();
+            session.Player.Flags |= PlayerFlags.WritingMail;
             while (true)
             {
                 sb.Clear();
@@ -128,17 +129,20 @@ namespace Etrea3.Objects
                                     session.Player.AdjustGold(newMail.AttachedGold * -1, true, false);
                                 }
                                 session.SendSystem($"%BGT%The Winds of Magic swirl and your message vanishes!%PT%{Constants.NewLine}");
+                                session.Player.Flags &= ~PlayerFlags.WritingMail;
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The Winds of Magic die down and will not deliver your message! Please see an Imm!%PT%{Constants.NewLine}");
                             }
+                            session.Player.Flags &= ~PlayerFlags.WritingMail;
                             return;
                         }
                         break;
 
                     case 7:
+                        session.Player.Flags &= ~PlayerFlags.WritingMail;
                         return;
 
                     default:

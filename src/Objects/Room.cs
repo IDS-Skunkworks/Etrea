@@ -148,7 +148,7 @@ namespace Etrea3.Objects
             bool playerIsImm = session.Player.Level >= Constants.ImmLevel;
             bool playerHasDarkvision = session.Player.HasBuff("Darkvision") || session.Player.HasBuff("Truesight");
             StringBuilder roomDesc = new StringBuilder();
-            if (playerIsImm)
+            if (playerIsImm && !session.Player.Flags.HasFlag(PlayerFlags.NoShowRoomFlags))
             {
                 roomDesc.AppendLine($"Room ID: {ID}{Constants.TabStop}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(ZoneID).ZoneName} (ID: {ZoneID})");
                 roomDesc.AppendLine($"Flags: {Flags}");
@@ -322,7 +322,7 @@ namespace Etrea3.Objects
                 }
                 if (playerInRoom)
                 {
-                    if (RoomExits != null && RoomExits.Count > 0)
+                    if (RoomExits != null && RoomExits.Count > 0 && !session.Player.Flags.HasFlag(PlayerFlags.NoShowExits))
                     {
                         roomDesc.AppendLine();
                         roomDesc.AppendLine($"%BGT%Exits: {string.Join(", ", RoomExits.OrderBy(x => x.Value.ExitDirection).Select(x => x.Value.ExitDirection).ToArray())}%PT%");

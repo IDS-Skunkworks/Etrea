@@ -94,6 +94,57 @@ namespace Etrea3.Core
         public static void LogMessage(string message, LogLevel level, bool writeToScreen)
         {
             Logger.LogMessage(message, level, writeToScreen);
+            PlayerFlags pFlag = PlayerFlags.None;
+            switch(level)
+            {
+                case LogLevel.Error:
+                    pFlag = PlayerFlags.MUDLogError;
+                    break;
+
+                case LogLevel.Warning:
+                    pFlag = PlayerFlags.MUDLogWarn;
+                    break;
+
+                case LogLevel.Connection:
+                    pFlag = PlayerFlags.MUDLogConnection;
+                    break;
+
+                case LogLevel.Debug:
+                    pFlag = PlayerFlags.MUDLogDebug;
+                    break;
+
+                case LogLevel.Info:
+                    pFlag = PlayerFlags.MUDLogInfo;
+                    break;
+
+                case LogLevel.Combat:
+                    pFlag = PlayerFlags.MUDLogCombat;
+                    break;
+
+                case LogLevel.Shop:
+                    pFlag = PlayerFlags.MUDLogShops;
+                    break;
+
+                case LogLevel.OLC:
+                    pFlag = PlayerFlags.MUDLogOLC;
+                    break;
+
+                case LogLevel.God:
+                    pFlag = PlayerFlags.MUDLogGod;
+                    break;
+            }
+            if (pFlag == PlayerFlags.None)
+            {
+                return;
+            }
+            var connectedImms = SessionManager.Instance.Immortals.Where(x => x.Player.Flags.HasFlag(pFlag)).ToList();
+            if (connectedImms != null && connectedImms.Count > 0)
+            {
+                foreach(var imm in connectedImms)
+                {
+                    imm.Send($"%BMT%{message}%PT%{Constants.NewLine}");
+                }
+            }
         }
 
         public async Task Run()
@@ -374,7 +425,7 @@ namespace Etrea3.Core
                     LogMessage($"INFO: Disconnecting idle players, {idlePlayers.Count} players to process", LogLevel.Info, true);
                     foreach (var p in idlePlayers)
                     {
-                        bool okToDiscon = okToDiscon = p.Player.Level < Constants.ImmLevel || DisconnectIdleImms;
+                        bool okToDiscon = (p.Player.Level < Constants.ImmLevel && !p.Player.Flags.HasFlag(PlayerFlags.Frozen)) || DisconnectIdleImms;
                         if (!okToDiscon)
                         {
                             LogMessage($"INFO: Not disconnecting player {p.Player.Name}", LogLevel.Info, true);

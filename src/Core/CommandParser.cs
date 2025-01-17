@@ -234,6 +234,16 @@ namespace Etrea3.Core
                 #endregion
 
                 #region Misc
+                case "psummon":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    PlayerSummon(session, arg);
+                    break;
+
+                case "toggle":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    TogglePlayerFlag(session, arg);
+                    break;
+
                 case "help":
                     arg = input.Remove(0, verb.Length).Trim();
                     ShowHelp(session, arg);
@@ -373,6 +383,16 @@ namespace Etrea3.Core
                 #endregion
 
                 #region Immortal
+                case "freeze":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    FreezePlayer(session, arg);
+                    break;
+
+                case "thaw":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ThawPlayer(session, arg);
+                    break;
+
                 case "olc":
                     StartOLC(session);
                     break;
