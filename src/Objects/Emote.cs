@@ -25,11 +25,6 @@ namespace Etrea3.Objects
 
         public void Perform(Actor performer, Actor target, bool targetProvided, string tName)
         {
-            // %pg% / %tg% = performer/target gender: male, female, nonbinary
-            // %pg1% / %tg1% = obj pronoun: him, her, them
-            // %pg2% / %tg2% = pos pronoun: his, hers, their
-            // %pg3% / %tg3% = per pronoun: he, she, they
-            // %pn% / %tn% = performer/target name
             string targetName = target != null ? target.Name : tName;
             string pMessage, tMessage = string.Empty;
             if (performer == null)

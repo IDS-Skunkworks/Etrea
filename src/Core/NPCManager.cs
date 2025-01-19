@@ -446,7 +446,11 @@ namespace Etrea3.Core
             {
                 return;
             }
-            var targets = r.PlayersInRoom.Where(x => x.Player.CanBeSeenBy(npc)).ToList();
+            var targets = r.PlayersInRoom.Where(x => x.Player.CanBeSeenBy(npc) && !x.Player.Flags.HasFlag(PlayerFlags.NoHassle)).ToList();
+            if (targets == null || targets.Count == 0)
+            {
+                return;
+            }
             var target = targets.GetRandomElement();
             target.Send($"%BRT%Suddenly {npc.Name} attacks!%PT%{Constants.NewLine}");
             var msgToOthers = $"%BRT%For seemingly no reason, %N% suddenly launches an attack on %P%!%PT%{Constants.NewLine}";

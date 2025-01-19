@@ -9,6 +9,173 @@ namespace Etrea3.Core
 {
     public static class ActImmortal
     {
+        public static void SnoopConnection(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to start a snooping session but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You must specify the name of a player or the ID of a connection!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.Snooping != Guid.Empty)
+            {
+                session.Send($"%BRT%You are already snooping!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (Guid.TryParse(arg, out Guid gReseult))
+            {
+                var tSession = SessionManager.Instance.GetSession(gReseult);
+                if (tSession == null)
+                {
+                    Game.LogMessage($"GOD: Player {session.Player.Name} tried to snoop connection {gReseult} but no matching session was found", LogLevel.God, true);
+                    session.Send($"%BRT%No connection with that ID was found.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (tSession.SetSnooper(session.ID, false, out string repl))
+                {
+                    session.Player.Snooping = gReseult;
+                    session.Send($"%BGT%You are now snooping connection {gReseult}: use NOSNOOP to stop snooping.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"GOD: Player {session.Player.Name} is now snooping connection {gReseult}", LogLevel.God, true);
+                }
+                else
+                {
+                    session.Send($"%BRT%Failed to snoop the connection: {repl}%PT%{Constants.NewLine}");
+                    Game.LogMessage($"GOD: Player {session.Player.Name} failed to snoop connection {gReseult}: {repl}", LogLevel.God, true);
+                }
+            }
+            else
+            {
+                var tSession = SessionManager.Instance.GetSession(arg);
+                if (tSession == null)
+                {
+                    Game.LogMessage($"GOD: Player {session.Player.Name} tried to snoop connection {arg} but no matching session was found", LogLevel.God, true);
+                    session.Send($"%BRT%No connection matching that name was found.%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (tSession.SetSnooper(session.ID, false, out string repl))
+                {
+                    session.Player.Snooping = tSession.ID;
+                    session.Send($"%BGT%You are now snooping the connection of player {tSession.Player.Name}: use NOSNOOP to stop snooping.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"GOD: Player {session.Player.Name} is now snooping the connection of player {tSession.Player.Name}", LogLevel.God, true);
+                    return;
+                }
+                else
+                {
+                    session.Send($"%BRT%Failed to snoop the connection: {repl}%PT%{Constants.NewLine}");
+                    Game.LogMessage($"GOD: Player {session.Player.Name} failed to snoop the connection of {tSession.Player.Name}: {repl}", LogLevel.God, true);
+                }
+            }
+        }
+
+        public static void StopSnoop(Session session)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to end a snoop session but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (session.Player.Snooping == Guid.Empty)
+            {
+                session.Send($"%BYT%You aren't snooping anyone!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (SessionManager.Instance.GetSession(session.Player.Snooping).SetSnooper(session.ID, true, out string reply))
+            {
+                Game.LogMessage($"GOD: Player {session.Player.Name} stopped snooping connection {session.Player.Snooping}", LogLevel.God, true);
+                session.Player.Snooping = Guid.Empty;
+                return;
+            }
+            else
+            {
+                Game.LogMessage($"GOD: Player {session.Player.Name} failed to stop snooping connection {session.Player.Snooping}: {reply}", LogLevel.God, true);
+                return;
+            }
+        }
+
+        public static void MutePlayer(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to mute someone but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to specify who you want to mute!%PT%{Constants.NewLine}");
+                return;
+            }
+            var tPlayer = SessionManager.Instance.GetSession(arg);
+            if (tPlayer == null)
+            {
+                session.Send($"%BRT%No player by that name could be found.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (tPlayer.ID == session.ID)
+            {
+                session.Send($"%BRT%You can't mute yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (tPlayer.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You can't mute someone more powerful than yourself!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (tPlayer.Player.Flags.HasFlag(PlayerFlags.Mute))
+            {
+                session.Send($"%BRT%{tPlayer.Player.Name} is already muted!%PT%{Constants.NewLine}");
+                return;
+            }
+            tPlayer.Player.Flags |= PlayerFlags.Mute;
+            session.Send($"%BGT%You have muted {tPlayer.Player.Name}, they will only be able to whisper to Immortals.%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} muted {tPlayer.Player.Name}", LogLevel.God, true);
+            tPlayer.SendSystem($"%BMT%You have been muted by {session.Player.Name}. You will only be able to WHISPER to Immortals.%PT%{Constants.NewLine}");
+        }
+
+        public static void UnMutePlayer(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to unmute a player but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%You need to specify who you want to unmute!%PT%{Constants.NewLine}");
+                return;
+            }
+            var tPlayer = SessionManager.Instance.GetSession(arg);
+            if (tPlayer == null)
+            {
+                session.Send($"%BRT%No player with that name could be found.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (tPlayer.ID == session.ID)
+            {
+                session.Send($"%BRT%You can't unmute yourself!%PT%{Constants.NewLine}");
+                Game.LogMessage($"GOD: Player {session.Player.Name} attempted to unmute themselves!", LogLevel.God, true);
+                return;
+            }
+            if (tPlayer.Player.Level > session.Player.Level)
+            {
+                session.Send($"%BRT%You can't unmute someone more powerful than yourself!%PT%{Constants.NewLine}");
+                Game.LogMessage($"GOD: Player {session.Player.Name} attempted to unmute {tPlayer.Player.Name} but that person is more powerful", LogLevel.God, true);
+                return;
+            }
+            if (!tPlayer.Player.Flags.HasFlag(PlayerFlags.Mute))
+            {
+                session.Send($"%BRT%{tPlayer.Player.Name} is not muted!%PT%{Constants.NewLine}");
+                return;
+            }
+            tPlayer.Player.Flags &= ~PlayerFlags.Mute;
+            session.Send($"%BGT%You have unmuted {tPlayer.Player.Name}!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} has unmuted {tPlayer.Player.Name}", LogLevel.God, true);
+            tPlayer.SendSystem($"%BMT%{session.Player.Name} has unmuted you, you may now talk normally again!%PT%{Constants.NewLine}");
+        }
+
         public static void FreezePlayer(Session session, string arg)
         {
             if (!session.Player.IsImmortal)
@@ -90,6 +257,49 @@ namespace Etrea3.Core
             targetPlayer.Send($"%BYT%{session.Player.Name} calls on holy power and you can now move again!%PT%{Constants.NewLine}");
             session.Send($"%BYT%Calling on holy power, you free {targetPlayer.Player.Name} enabling them to move again!%PT%{Constants.NewLine}");
             Game.LogMessage($"GOD: {session.Player.Name} has thawed {targetPlayer.Player.Name}", LogLevel.God, true);
+        }
+
+        public static void ZoneReset(Session session, string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to perform a Zone Reset but they are not Immortal", LogLevel.Warning, true);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%Usage: zreset < zone ID | all | this >%PT%{Constants.NewLine}");
+                session.Send($"%BRT%zreset 2 - Tick Zone 2%PT%{Constants.NewLine}");
+                session.Send($"%BRT%zreset all - Tick all Zones%PT%{Constants.NewLine}");
+                session.Send($"%BRT%zreset this - Tick the Zone you are currently in%PT%{Constants.NewLine}");
+                return;
+            }
+            if (int.TryParse(arg, out int zid))
+            {
+                var tZone = ZoneManager.Instance.GetZone(zid);
+                if (tZone == null)
+                {
+                    session.Send($"%BRT%No Zone with ID {zid} was found in Zone Manager.%PT%{Constants.NewLine}");
+                    return;
+                }
+                Game.LogMessage($"GOD: Player {session.Player.Name} has forced Zone {tZone.ZoneName} (ID: {tZone.ZoneID}) to pulse", LogLevel.God, true);
+                tZone.PulseZone();
+                return;
+            }
+            if (arg.ToLower() == "all")
+            {
+                Game.LogMessage($"GOD: Player {session.Player.Name} has forced all Zones to pulse", LogLevel.God, true);
+                ZoneManager.Instance.PulseAllZones();
+                return;
+            }
+            if (arg.ToLower() == "this")
+            {
+                var z = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom);
+                Game.LogMessage($"GOD: Player {session.Player.Name} has forced Zone {z.ZoneName} (ID: {z.ZoneID}) to pulse", LogLevel.God, true);
+                z.PulseZone();
+                return;
+            }
+            session.Send($"%BRT%Usage: zreset < zone ID | all | this >%PT%{Constants.NewLine}");
         }
 
         public static void ReleaseOLCLock(Session session, string arg)
@@ -1702,8 +1912,13 @@ namespace Etrea3.Core
             var targetActor = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(target, session.Player);
             if (targetActor == null)
             {
-                session.Send($"%BRT%The target of your power cannot be found!%PT%{Constants.NewLine}");
-                return;
+                var tSession = SessionManager.Instance.GetSession(target);
+                if (tSession == null)
+                {
+                    session.Send($"%BRT%The target of your power cannot be found!%PT%{Constants.NewLine}");
+                    return;
+                }
+                targetActor = tSession.Player;
             }
             if (targetActor.ActorType == ActorType.Player)
             {
@@ -3885,6 +4100,7 @@ namespace Etrea3.Core
             sb.AppendLine($"  {new string('=', 77)}");
             foreach (var con in connections)
             {
+                sb.AppendLine($"|| ID: {con.ID}");
                 sb.AppendLine($"|| Remote IP: {con.Client?.Client?.RemoteEndPoint}");
                 sb.AppendLine($"|| Connect Time: {con.ConnectionTime}");
                 sb.AppendLine($"|| Player: {con.Player?.Name ?? "None"}");

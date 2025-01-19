@@ -18,6 +18,7 @@ namespace Etrea3.Core
 
         private const int MaxBufferSize = 0x1000;
         private static ArrayPool<byte> bufferPool = ArrayPool<byte>.Shared;
+        private Guid Snooper { get; set; } = Guid.Empty;
 
         public Session(TcpClient client)
         {
@@ -26,6 +27,34 @@ namespace Etrea3.Core
             State = ConnectionState.MainMenu;
             ID = Guid.NewGuid();
             Player = null;
+        }
+
+        public bool SetSnooper(Guid snooper, bool clearSnoop, out string response)
+        {
+            if (clearSnoop)
+            {
+                if (Snooper == snooper)
+                {
+                    Snooper = Guid.Empty;
+                    response = "Snooper cleared";
+                    return true;
+                }
+                response = "Cannot clear some else's snoop session";
+                return false;
+            }
+            if (Snooper != Guid.Empty)
+            {
+                if (Snooper != snooper)
+                {
+                    response = "Someone else is already snooping that connection";
+                    return false;
+                }
+                response = "You are already snooping that connection";
+                return false;
+            }
+            Snooper = snooper;
+            response = "Snooping OK";
+            return true;
         }
 
         public void SendSystem(string message)
@@ -48,6 +77,10 @@ namespace Etrea3.Core
                 {
                     int byteCount = Encoding.UTF8.GetBytes(parsedMessage, 0, parsedMessage.Length, buffer, 0);
                     Client?.GetStream()?.Write(buffer, 0, byteCount);
+                    if (Snooper != Guid.Empty)
+                    {
+                        SessionManager.Instance.GetSession(Snooper)?.SendSystem($"%BMT%<<{message}<<%PT%");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -86,7 +119,12 @@ namespace Etrea3.Core
                         return null;
                     }
                     LastInputTime = DateTime.UtcNow;
-                    return Encoding.UTF8.GetString(buffer, 0, byteCount.Value);
+                    string msg = Encoding.UTF8.GetString(buffer, 0, byteCount.Value);
+                    if (Snooper != Guid.Empty)
+                    {
+                        SessionManager.Instance.GetSession(Snooper)?.SendSystem($"%BMT%>>{msg}>>%PT%");
+                    }
+                    return msg;
                 }
                 catch (Exception ex)
                 {

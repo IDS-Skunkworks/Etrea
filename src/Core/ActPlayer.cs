@@ -92,6 +92,11 @@ namespace Etrea3.Core
 
         public static void CharShout(Session session, string arg)
         {
+            if (session.Player.Flags.HasFlag(PlayerFlags.Mute))
+            {
+                session.Send($"%BMT%No can do, you have been muted!%PT%{Constants.NewLine}");
+                return;
+            }
             if (string.IsNullOrEmpty(arg))
             {
                 session.Send($"Shout what, exactly?{Constants.NewLine}");
@@ -144,6 +149,11 @@ namespace Etrea3.Core
             var target = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).GetActor(targetName, session.Player);
             if (target != null && target.ActorType == ActorType.NonPlayer)
             {
+                if (session.Player.Flags.HasFlag(PlayerFlags.Mute))
+                {
+                    session.SendSystem($"%BMT%No can do, you have been muted!%PT%{Constants.NewLine}");
+                    return;
+                }
                 session.Send($"You whisper \"{toSay}\" to {target.Name}{Constants.NewLine}");
                 foreach(var lp in RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom)
                 {
@@ -173,6 +183,11 @@ namespace Etrea3.Core
                     session.Send($"That person doesn't seem to be in the Realms right now...{Constants.NewLine}");
                     return;
                 }
+                if (session.Player.Flags.HasFlag(PlayerFlags.Mute) && !tp.Player.IsImmortal)
+                {
+                    session.SendSystem($"%BMT%No can do, you have been muted!%PT%{Constants.NewLine}");
+                    return;
+                }
                 session.Send($"You whisper \"{toSay}\" to {tp.Player.Name}{Constants.NewLine}");
                 string pName = session.Player.CanBeSeenBy(tp.Player) ? session.Player.Name : "Someone";
                 tp.SendSystem($"%BYT%{pName} whispers \"{toSay}\"{Constants.NewLine}%PT%");
@@ -184,6 +199,11 @@ namespace Etrea3.Core
             if (string.IsNullOrEmpty(saying))
             {
                 session.Send($"Say what, exactly?{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.Flags.HasFlag(PlayerFlags.Mute))
+            {
+                session.SendSystem($"%BMT%No can do, you have been muted!%PT%{Constants.NewLine}");
                 return;
             }
             session.Send($"%BGT%You say \"{saying}\"{Constants.NewLine}%PT%");
@@ -322,6 +342,20 @@ namespace Etrea3.Core
                     msg = flagEnabled ? $"%BGT%Other players will no longer be able to summon you%PT%{Constants.NewLine}" :
                         $"%BGT%You can now be summoned by other players%PT%{Constants.NewLine}";
                     session.Send(msg);
+                    break;
+
+                case PlayerFlags.NoHassle:
+                    if (session.Player.IsImmortal)
+                    {
+                        session.Player.Flags = flagEnabled ? session.Player.Flags |= flag : session.Player.Flags &= ~flag;
+                        msg = flagEnabled ? $"%BGT%You will no longer be attacked by hostile NPCS%PT%{Constants.NewLine}" :
+                            $"%BGT%You can now be attacked by hostile NPCS%PT%{Constants.NewLine}";
+                        session.Send(msg);
+                    }
+                    else
+                    {
+                        session.Send($"%BRT%That flag can only be toggled by the Gods!%PT%{Constants.NewLine}");
+                    }
                     break;
 
                 case PlayerFlags.MUDLogError:
@@ -503,7 +537,7 @@ namespace Etrea3.Core
             {
                 l = $"{l}{matchingEmotes[i].Name}{Constants.TabStop}{Constants.TabStop}";
                 c++;
-                if (c >= 5 && i < matchingEmotes.Count)
+                if (c >= 4 && i < matchingEmotes.Count)
                 {
                     c = 0;
                     sb.AppendLine(l.Trim());

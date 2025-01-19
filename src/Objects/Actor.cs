@@ -1334,6 +1334,8 @@ namespace Etrea3.Objects
         public DateTime ThawTime { get; set; }
         [JsonIgnore]
         private System.Timers.Timer FreezeTimer;
+        [JsonIgnore]
+        public Guid Snooping { get; set; } = Guid.Empty;
 
         public Player()
         {

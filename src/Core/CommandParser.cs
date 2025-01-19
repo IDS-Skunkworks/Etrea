@@ -383,6 +383,26 @@ namespace Etrea3.Core
                 #endregion
 
                 #region Immortal
+                case "snoop":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    SnoopConnection(session, arg);
+                    break;
+
+                case "nosnoop":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    StopSnoop(session);
+                    break;
+
+                case "mute":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    MutePlayer(session, arg);
+                    break;
+
+                case "unmute":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    UnMutePlayer(session, arg);
+                    break;
+                    
                 case "freeze":
                     arg = input.Remove(0, verb.Length).Trim();
                     FreezePlayer(session, arg);
@@ -391,6 +411,11 @@ namespace Etrea3.Core
                 case "thaw":
                     arg = input.Remove(0, verb.Length).Trim();
                     ThawPlayer(session, arg);
+                    break;
+
+                case "zreset":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ZoneReset(session, arg);
                     break;
 
                 case "olc":

@@ -21,5 +21,7 @@ namespace Etrea3
         MUDLogOLC = 1 << 12,                            // show OLC messages as they are logged, Imm only
         MUDLogGod = 1 << 13,                            // show usage of god-like powers, Imm only
         MUDLogDebug = 1 << 14,                          // show debug messages as they are logged
+        NoHassle = 1 << 15,                             // player will not be attacked by hotile mobs, Imm only
+        Mute = 1 << 16,                                 // player will not be able to yell or say and can only whisper to Imms
     }
 }
