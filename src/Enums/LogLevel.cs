@@ -8,6 +8,7 @@
         Info,
         Debug,
         OLC,
+        API,
         Connection,
         Shop,
         Combat,

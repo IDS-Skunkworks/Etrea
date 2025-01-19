@@ -28,6 +28,16 @@ namespace Etrea3.Core
             }
             if (Guid.TryParse(arg, out Guid gReseult))
             {
+                if (session.ID == gReseult)
+                {
+                    session.Send($"%BRT%You can't snoop yourself!%PT%{Constants.NewLine}");
+                    return;
+                }
+                if (gReseult == Guid.Empty)
+                {
+                    session.Send($"%BRT%That isn't a valid connection ID!%PT%{Constants.NewLine}");
+                    return;
+                }
                 var tSession = SessionManager.Instance.GetSession(gReseult);
                 if (tSession == null)
                 {
