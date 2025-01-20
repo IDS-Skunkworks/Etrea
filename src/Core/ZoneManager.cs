@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Etrea3.Objects;
 
 namespace Etrea3.Core
@@ -143,15 +144,15 @@ namespace Etrea3.Core
 
         public void PulseAllZones()
         {
-            foreach (var zone in Instance.Zones.Values)
+            Task.Run(() =>
             {
-                zone.PulseZone();
-            }
+                Parallel.ForEach(Instance.Zones, x =>
+                {
+                    x.Value.PulseZone();
+                });
+            });
             Game.LogMessage($"INFO: Restocking Shops", LogLevel.Info);
-            foreach (var s in ShopManager.Instance.GetShop())
-            {
-                s.RestockShop();
-            }
+            ShopManager.Instance.RestockShops();
         }
     }
 }

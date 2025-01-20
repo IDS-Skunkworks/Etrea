@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Etrea3.Core
 {
@@ -302,7 +303,10 @@ namespace Etrea3.Core
                     return;
                 }
                 Game.LogMessage($"GOD: Player {session.Player.Name} has forced Zone {tZone.ZoneName} (ID: {tZone.ZoneID}) to pulse", LogLevel.God);
-                tZone.PulseZone();
+                Task.Run(() =>
+                {
+                    tZone.PulseZone();
+                });
                 return;
             }
             if (arg.ToLower() == "all")
@@ -315,7 +319,10 @@ namespace Etrea3.Core
             {
                 var z = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom);
                 Game.LogMessage($"GOD: Player {session.Player.Name} has forced Zone {z.ZoneName} (ID: {z.ZoneID}) to pulse", LogLevel.God);
-                z.PulseZone();
+                Task.Run(() =>
+                {
+                    z.PulseZone();
+                });
                 return;
             }
             session.Send($"%BRT%Usage: zreset < zone ID | all | this >%PT%{Constants.NewLine}");

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Etrea3.Objects;
 
 namespace Etrea3.Core
@@ -135,6 +136,17 @@ namespace Etrea3.Core
                     Instance.Shops.AddOrUpdate(shop.Key, shop.Value, (k, v) => shop.Value);
                 }
             }
+        }
+
+        public void RestockShops()
+        {
+            Task.Run(() =>
+            {
+                Parallel.ForEach(Instance.Shops, x =>
+                {
+                    x.Value.RestockShop();
+                });
+            });
         }
     }
 }
