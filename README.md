@@ -16,5 +16,6 @@ If you want to learn more about how to play, or if you have comments, suggestion
 2. Move the game objects to a shared library project to properly support the Admin console
 3. Complete the REST API for the Admin console
 4. Complete the Admin console
+5. Tidy the menus in OLC
 
 I'm not a trained developer, so these goals might take me longer to achieve than if I was. Naturally all this will be updated as progress is made.
