@@ -18,23 +18,23 @@ namespace Etrea3.Core
                     var tNPC = NPCManager.Instance.GetNPC(targetID);
                     if (tNPC == null)
                     {
-                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {p.Player.Name}, no such NPC Instance in NPC Manager", LogLevel.Combat, true);
+                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {p.Player.Name}, no such NPC Instance in NPC Manager", LogLevel.Combat);
                         p.Player.TargetQueue.TryRemove(targetID, out _);
                         continue;
                     }
                     if (tNPC.CurrentRoom != p.Player.CurrentRoom)
                     {
-                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {p.Player.Name}, target is not in the same Room", LogLevel.Combat, true);
+                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {p.Player.Name}, target is not in the same Room", LogLevel.Combat);
                         p.Player.TargetQueue.TryRemove(targetID, out _);
                         continue;
                     }
-                    Game.LogMessage($"COMBAT: {p.Player.Name} is targeting {tNPC.Name} in Room {p.Player.CurrentRoom}", LogLevel.Combat, true);
+                    Game.LogMessage($"COMBAT: {p.Player.Name} is targeting {tNPC.Name} in Room {p.Player.CurrentRoom}", LogLevel.Combat);
                     for (int attacks = 0; attacks < p.Player.NumberOfAttacks; attacks++)
                     {
                         if (p.Player.HitsTarget(tNPC, out bool criticalHit, out int baseRoll, out int modRoll))
                         {
                             var damage = p.Player.CalculateHitDamage(tNPC, criticalHit);
-                            Game.LogMessage($"COMBAT: Player {p.Player.Name} in Room {p.Player.CurrentRoom} hits {tNPC.Name} for {damage} points of damage", LogLevel.Combat, true);
+                            Game.LogMessage($"COMBAT: Player {p.Player.Name} in Room {p.Player.CurrentRoom} hits {tNPC.Name} for {damage} points of damage", LogLevel.Combat);
                             var dmgString = Helpers.GetDamageString(damage, tNPC.MaxHP);
                             if (p.Player.ShowDetailedRollInfo)
                             {
@@ -47,7 +47,7 @@ namespace Etrea3.Core
                             tNPC.AdjustHP((damage * -1), out bool killed);
                             if (killed)
                             {
-                                Game.LogMessage($"COMBAT: Player {p.Player.Name} has killed {tNPC.Name} in Room {p.Player.CurrentRoom}", LogLevel.Combat, true);
+                                Game.LogMessage($"COMBAT: Player {p.Player.Name} has killed {tNPC.Name} in Room {p.Player.CurrentRoom}", LogLevel.Combat);
                                 tNPC.Kill(p.Player, true);
                                 break;
                             }
@@ -80,23 +80,23 @@ namespace Etrea3.Core
                         NPCManager.Instance.GetNPC(targetID);
                     if (target == null)
                     {
-                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {n.Name}, no Player or NPC with that ID could be found", LogLevel.Combat, true);
+                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {n.Name}, no Player or NPC with that ID could be found", LogLevel.Combat);
                         n.TargetQueue.TryRemove(targetID, out _);
                         continue;
                     }
                     if (target.CurrentHP <= 0)
                     {
-                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {n.Name}, target is dead", LogLevel.Combat, true);
+                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {n.Name}, target is dead", LogLevel.Combat);
                         n.TargetQueue.TryRemove(targetID, out _);
                         continue;
                     }
                     if (target.CurrentRoom != n.CurrentRoom)
                     {
-                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {n.Name}, target is not in the same Room", LogLevel.Combat, true);
+                        Game.LogMessage($"COMBAT: Removing {targetID} from target queue of {n.Name}, target is not in the same Room", LogLevel.Combat);
                         n.TargetQueue.TryRemove(targetID, out _);
                         continue;
                     }
-                    Game.LogMessage($"COMBAT: {n.Name} is targeting {target.ActorType} {target.Name} in Room {n.CurrentRoom}", LogLevel.Combat, true);
+                    Game.LogMessage($"COMBAT: {n.Name} is targeting {target.ActorType} {target.Name} in Room {n.CurrentRoom}", LogLevel.Combat);
                     var npcSpells = (from string spellName in n.Spells.Keys where SpellManager.Instance.GetSpell(spellName) != null select SpellManager.Instance.GetSpell(spellName)).ToList();
                     var npcDamageSpells = npcSpells.Where(x => x.SpellType == SpellType.Damage && x.MPCost(n) <= n.CurrentMP).ToList();
                     var npcHealingSpells = npcSpells.Where(x => x.SpellType == SpellType.Healing && x.MPCost(n) <= n.CurrentMP).ToList();
@@ -197,7 +197,7 @@ namespace Etrea3.Core
                         if (n.HitsTarget(target, out bool isCritical, out int baseRoll, out int modRoll))
                         {
                             var damage = n.CalculateHitDamage(target, isCritical);
-                            Game.LogMessage($"COMBAT: NPC {n.Name} in Room {n.CurrentRoom} hits {target.Name} for {damage} damage", LogLevel.Combat, true);
+                            Game.LogMessage($"COMBAT: NPC {n.Name} in Room {n.CurrentRoom} hits {target.Name} for {damage} damage", LogLevel.Combat);
                             var dmgString = Helpers.GetDamageString(damage, target.MaxHP);
                             if (target.ActorType == ActorType.Player)
                             {
@@ -213,7 +213,7 @@ namespace Etrea3.Core
                                 tPlayer.AdjustHP((damage * -1), out bool isKilled);
                                 if (isKilled)
                                 {
-                                    Game.LogMessage($"COMBAT: Player {tPlayer.Name} was killed in Room {tPlayer.CurrentRoom} by {n.Name}", LogLevel.Combat, true);
+                                    Game.LogMessage($"COMBAT: Player {tPlayer.Name} was killed in Room {tPlayer.CurrentRoom} by {n.Name}", LogLevel.Combat);
                                     tPlayer.Kill(n, true);
                                     break;
                                 }

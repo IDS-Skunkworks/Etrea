@@ -13,7 +13,7 @@ namespace Etrea3.Core
         {
             if (dictionary == null || dictionary.Count == 0)
             {
-                Game.LogMessage($"DEBUG: GetRandomElement was called on a null or empty dictionary", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: GetRandomElement was called on a null or empty dictionary", LogLevel.Debug);
                 return default(Tkey);
             }
             var keys = dictionary.Keys.ToList();
@@ -25,7 +25,7 @@ namespace Etrea3.Core
         {
             if (elements == null || elements.Count == 0)
             {
-                Game.LogMessage($"DEBUG: GetRandomElement was called on a null or empty list", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: GetRandomElement was called on a null or empty list", LogLevel.Debug);
                 return default(T);
             }
             var elementID = rnd.Next(elements.Count);

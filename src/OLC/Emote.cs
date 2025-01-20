@@ -82,13 +82,13 @@ namespace Etrea3.OLC
                             if (EmoteManager.Instance.AddOrUpdateEmote(newEmote, true))
                             {
                                 session.SendSystem($"%BGT%The new Emote has been successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} added new Emote: {newEmote.Name}", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} added new Emote: {newEmote.Name}", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%Failed to save the new Emote.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Emote ({newEmote.Name}) however the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Emote ({newEmote.Name}) however the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -139,13 +139,13 @@ namespace Etrea3.OLC
                     if (EmoteManager.Instance.RemoveEmote(emote.ID))
                     {
                         session.SendSystem($"%BGT%The specified Emote has been removed successfully.%PT%{Constants.NewLine}");
-                        Game.LogMessage($"OLC: Player {session.Player.Name} has removed Emote {emote.Name} ({emote.ID})", LogLevel.OLC, true);
+                        Game.LogMessage($"OLC: Player {session.Player.Name} has removed Emote {emote.Name} ({emote.ID})", LogLevel.OLC);
                         return;
                     }
                     else
                     {
                         session.SendSystem($"%BRT%The specified Emote could not be removed.%PT%{Constants.NewLine}");
-                        Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Emote {emote.Name} ({emote.ID}) but the attempt failed", LogLevel.OLC, true);
+                        Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Emote {emote.Name} ({emote.ID}) but the attempt failed", LogLevel.OLC);
                         continue;
                     }
                 }
@@ -172,13 +172,13 @@ namespace Etrea3.OLC
                     if (EmoteManager.Instance.RemoveEmote(emote.ID))
                     {
                         session.SendSystem($"%BGT%The specified Emote has been removed successfully.%PT%{Constants.NewLine}");
-                        Game.LogMessage($"OLC: Player {session.Player.Name} has removed Emote {emote.Name} ({emote.ID})", LogLevel.OLC, true);
+                        Game.LogMessage($"OLC: Player {session.Player.Name} has removed Emote {emote.Name} ({emote.ID})", LogLevel.OLC);
                         return;
                     }
                     else
                     {
                         session.SendSystem($"%BRT%The specified Emote could not be removed.%PT%{Constants.NewLine}");
-                        Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Emote {emote.Name} ({emote.ID}) but the attempt failed", LogLevel.OLC, true);
+                        Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Emote {emote.Name} ({emote.ID}) but the attempt failed", LogLevel.OLC);
                         continue;
                     }
                 }
@@ -277,14 +277,14 @@ namespace Etrea3.OLC
                             if (EmoteManager.Instance.AddOrUpdateEmote(emote, false))
                             {
                                 session.SendSystem($"%BGT%The updated Emote has been successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} updated Emote: {emote.Name}", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} updated Emote: {emote.Name}", LogLevel.OLC);
                                 EmoteManager.Instance.SetEmoteLockState(emote.ID, false, session);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%Failed to save the new Emote.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Emote ({emote.Name}) however the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Emote ({emote.Name}) however the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }

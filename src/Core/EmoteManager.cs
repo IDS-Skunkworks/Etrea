@@ -85,14 +85,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveEmoteToWorldDatabase(emote, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Emote {emote.Name} ({emote.ID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Emote {emote.Name} ({emote.ID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Emotes.TryAdd(emote.ID, emote))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Emote {emote.Name} ({emote.ID}) to Emote Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Emote {emote.Name} ({emote.ID}) to Emote Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -100,12 +100,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Emotes.TryGetValue(emote.ID, out Emote existingEmote))
                     {
-                        Game.LogMessage($"ERROR: Emote {emote.ID} not found in Emote Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Emote {emote.ID} not found in Emote Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Emotes.TryUpdate(emote.ID, emote, existingEmote))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Emote {emote.ID} is Emote Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Emote {emote.ID} is Emote Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -113,7 +113,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in EmoteManager.AddOrUpdateEmote(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in EmoteManager.AddOrUpdateEmote(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -124,7 +124,7 @@ namespace Etrea3.Core
             {
                 return Instance.Emotes.TryRemove(id, out _) && DatabaseManager.RemoveEmote(id);
             }
-            Game.LogMessage($"ERROR: Error removing Emote '{id}': No such Emote in EmoteManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Emote '{id}': No such Emote in EmoteManager", LogLevel.Error);
             return false;
         }
 

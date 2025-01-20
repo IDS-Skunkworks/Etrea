@@ -12,7 +12,7 @@ namespace Etrea3.Core
 
         public static Player CreateNewCharacter(Session playerSession)
         {
-            Game.LogMessage($"INFO: Client at {playerSession.Client.Client.RemoteEndPoint} has started the Character Creator", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Client at {playerSession.Client.Client.RemoteEndPoint} has started the Character Creator", LogLevel.Info);
             Player player = new Player
             {
                 ID = playerSession.ID,

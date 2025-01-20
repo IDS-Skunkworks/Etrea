@@ -15,7 +15,7 @@ namespace Etrea3.Networking.API
             var routeData = request.GetRouteData();
             var controller = routeData?.Values["controller"]?.ToString() ?? "Unknown Controller";
             var action = routeData?.Values["action"]?.ToString() ?? "Unknown Action";
-            Game.LogMessage($"INFO: API received a {request.Method} message from {remoteIP} to {request.RequestUri}", LogLevel.Info, true);
+            Game.LogMessage($"INFO: API received a {request.Method} message from {remoteIP} to {request.RequestUri}", LogLevel.Info);
             var response = await base.SendAsync(request, cancellationToken);
             return response;
         }

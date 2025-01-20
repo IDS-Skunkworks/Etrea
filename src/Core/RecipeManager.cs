@@ -85,14 +85,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveRecipeToWorldDatabase(recipe, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Recipe {recipe.Name} ({recipe.ID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Recipe {recipe.Name} ({recipe.ID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Recipes.TryAdd(recipe.ID, recipe))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Recipe {recipe.Name} ({recipe.ID}) to Recipe Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Recipe {recipe.Name} ({recipe.ID}) to Recipe Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -100,12 +100,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Recipes.TryGetValue(recipe.ID, out CraftingRecipe existingRecipe))
                     {
-                        Game.LogMessage($"ERROR: Recipe {recipe.ID} not found in Recipe Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Recipe {recipe.ID} not found in Recipe Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Recipes.TryUpdate(recipe.ID, recipe, existingRecipe))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Recipe {recipe.ID} in Recipe Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Recipe {recipe.ID} in Recipe Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -113,7 +113,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in RecipeManager.AddOrUpdateRecipe(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in RecipeManager.AddOrUpdateRecipe(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -124,7 +124,7 @@ namespace Etrea3.Core
             {
                 return Instance.Recipes.TryRemove(id, out _) && DatabaseManager.RemoveRecipe(id);
             }
-            Game.LogMessage($"ERROR: Error removing Recipe with ID {id}: No such Recipe in RecipeManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Recipe with ID {id}: No such Recipe in RecipeManager", LogLevel.Error);
             return false;
         }
 

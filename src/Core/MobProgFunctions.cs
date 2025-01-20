@@ -10,12 +10,12 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with no Mob ID", LogLevel.Debug);
                 return;
             }
             if (string.IsNullOrEmpty(playerID))
             {
-                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with no Player ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with no Player ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -25,7 +25,7 @@ namespace Etrea3.Core
             InventoryItem sellItem = null;
             if (mob == null || player == null)
             {
-                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with IDs that could not be matched to a Player or an NPC", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem called with IDs that could not be matched to a Player or an NPC", LogLevel.Debug);
                 return;
             }
             if (string.IsNullOrEmpty(item))
@@ -42,7 +42,7 @@ namespace Etrea3.Core
             }
             if (sellItem == null)
             {
-                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem could not find a suitable item to sell to the player", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem could not find a suitable item to sell to the player", LogLevel.Debug);
                 return;
             }
             if (player.Player.Gold >= (ulong)sellItem.BaseValue)
@@ -53,7 +53,7 @@ namespace Etrea3.Core
             }
             else
             {
-                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem cannot sell Item {sellItem.ID} to player {player.Player.Name}: value of {sellItem.BaseValue:N0} is higher than Player Gold of {player.Player.Gold:N0}", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgMobSellPlayerItem cannot sell Item {sellItem.ID} to player {player.Player.Name}: value of {sellItem.BaseValue:N0} is higher than Player Gold of {player.Player.Gold:N0}", LogLevel.Debug);
                 return;
             }
         }
@@ -62,12 +62,12 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgItemInRoom called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgItemInRoom called with no Mob ID", LogLevel.Debug);
                 return false;
             }
             if (string.IsNullOrEmpty(item))
             {
-                Game.LogMessage($"DEBUG: MobProgItemInRoom called with no Item criteria", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgItemInRoom called with no Item criteria", LogLevel.Debug);
                 return false;
             }
             var gMobID = Guid.Parse(mobID);
@@ -87,7 +87,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgGetRandomPlayerID called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgGetRandomPlayerID called with no Mob ID", LogLevel.Debug);
                 return null;
             }
             var gMobID = Guid.Parse(mobID);
@@ -104,7 +104,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgEmote called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgEmote called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -116,7 +116,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgMove called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgMove called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -128,7 +128,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgTakeItem called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgTakeItem called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -140,7 +140,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgDropItem called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgDropItem called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMogID = Guid.Parse(mobID);
@@ -152,7 +152,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgGiveItem called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgGiveItem called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -164,7 +164,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgAttack called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgAttack called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -176,7 +176,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgCastSpell called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgCastSpell called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -188,7 +188,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgSay called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgSay called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -200,7 +200,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgYell called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgYell called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -212,7 +212,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgWhisper called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgWhisper called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -224,22 +224,22 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null Mob ID", LogLevel.Debug);
                 return;
             }
             if (string.IsNullOrEmpty(playerID))
             {
-                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null Player ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null Player ID", LogLevel.Debug);
                 return;
             }
             if (string.IsNullOrEmpty(destination))
             {
-                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null destination", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a null destination", LogLevel.Debug);
                 return;
             }
             if (!int.TryParse(destination, out int rid))
             {
-                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a destination that was not an int", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgTeleportPlayer was called with a destination that was not an int", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -265,7 +265,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(args))
             {
-                Game.LogMessage($"DEBUG: MobProgGetItemName called with no args", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgGetItemName called with no args", LogLevel.Debug);
                 return null;
             }
             if (int.TryParse(args, out int rid))
@@ -273,7 +273,7 @@ namespace Etrea3.Core
                 var item = ItemManager.Instance.GetItem(int.Parse(args));
                 return item != null ? item.Name : null;
             }
-            Game.LogMessage($"DEBUG: MobProgGetItemName called with args that could not be transformed to an integer", LogLevel.Debug, true);
+            Game.LogMessage($"DEBUG: MobProgGetItemName called with args that could not be transformed to an integer", LogLevel.Debug);
             return null;
         }
 
@@ -281,7 +281,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(args))
             {
-                Game.LogMessage($"DEBUG: MobProgGetPlayerName called with no args", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgGetPlayerName called with no args", LogLevel.Debug);
                 return null;
             }
             var gPlayerID = Guid.Parse(args);
@@ -293,7 +293,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgRememberPlayer called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgRememberPlayer called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -307,7 +307,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgForgetPlayer called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgForgetPlayer called with no Mob ID", LogLevel.Debug);
                 return;
             }
             var gMobID = Guid.Parse(mobID);
@@ -321,7 +321,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgRemembersPlayer called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgRemembersPlayer called with no Mob ID", LogLevel.Debug);
                 return false;
             }
             var gMobID = Guid.Parse(mobID);
@@ -335,7 +335,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgGetRememberPlayerTickCount called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgGetRememberPlayerTickCount called with no Mob ID", LogLevel.Debug);
                 return 0;
             }
             var gMobID = Guid.Parse(mobID);
@@ -353,7 +353,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(mobID))
             {
-                Game.LogMessage($"DEBUG: MobProgMobHasItem called with no Mob ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgMobHasItem called with no Mob ID", LogLevel.Debug);
                 return false;
             }
             var gMobID = Guid.Parse(mobID);
@@ -382,7 +382,7 @@ namespace Etrea3.Core
         {
             if (string.IsNullOrEmpty(args))
             {
-                Game.LogMessage($"DEBUG: MobProgCheckPlayerIsImm called with no player ID", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: MobProgCheckPlayerIsImm called with no player ID", LogLevel.Debug);
                 return false;
             }
             var gPlayerID = Guid.Parse(args);

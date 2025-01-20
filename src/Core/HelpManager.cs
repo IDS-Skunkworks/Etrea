@@ -63,14 +63,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveArticleToWorldDatabase(article, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Article {article.Title} to World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Article {article.Title} to World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Articles.TryAdd(article.Title.ToLower(), article))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Article {article.Title} to Help Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Article {article.Title} to Help Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -78,12 +78,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Articles.TryGetValue(article.Title.ToLower(), out var existingArticle))
                     {
-                        Game.LogMessage($"ERROR: Article {article.Title} not found in Help Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Article {article.Title} not found in Help Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Articles.TryUpdate(article.Title.ToLower(), article, existingArticle))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Article {article.Title} in Help Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Article {article.Title} in Help Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -91,7 +91,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in HelpManager.AddOrUpdateArticle(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in HelpManager.AddOrUpdateArticle(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -102,7 +102,7 @@ namespace Etrea3.Core
             {
                 return Instance.Articles.TryRemove(title.ToLower(), out _) && DatabaseManager.RemoveArticle(title);
             }
-            Game.LogMessage($"ERROR: Error removig Article '{title}', no such Article in Help Manager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removig Article '{title}', no such Article in Help Manager", LogLevel.Error);
             return false;
         }
     }

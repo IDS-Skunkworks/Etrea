@@ -228,7 +228,7 @@ namespace Etrea3.Core
         {
             if (!typeof(T).IsSerializable)
             {
-                Game.LogMessage($"ERROR: Cannot clone {src.GetType().Name}, it is not serialisable", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Cannot clone {src.GetType().Name}, it is not serialisable", LogLevel.Error);
                 return default(T);
             }
             return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(src));
@@ -238,7 +238,7 @@ namespace Etrea3.Core
         {
             if (!typeof(T).IsPrimitive || typeof(T) == typeof(bool) || typeof(T) == typeof(char))
             {
-                Game.LogMessage($"ERROR: Error in Helpers.RollDice<T>(): T was not numeric ({typeof(T)})", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in Helpers.RollDice<T>(): T was not numeric ({typeof(T)})", LogLevel.Error);
                 return default(T);
             }
             int result = 0;

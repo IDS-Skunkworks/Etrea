@@ -56,13 +56,13 @@ namespace Etrea3.OLC
                             if (ShopManager.Instance.AddOrUpdateShop(newShop, true))
                             {
                                 session.SendSystem($"%BGT%The new Shop has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added Shop {newShop.ShopName} ({newShop.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added Shop {newShop.ShopName} ({newShop.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%Failed to correctly save the new Shop!%PT%{Constants.NewLine}");
-                                Game.LogMessage($"Player {session.Player.Name} attempted to add Shop {newShop.ShopName} ({newShop.ID}) but the attempt failed.", LogLevel.OLC, true);
+                                Game.LogMessage($"Player {session.Player.Name} attempted to add Shop {newShop.ShopName} ({newShop.ID}) but the attempt failed.", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -130,13 +130,13 @@ namespace Etrea3.OLC
                 if (ShopManager.Instance.RemoveShop(shop.ID))
                 {
                     session.SendSystem($"%BGT%The specified Shop has been successfully removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Shop {shop.ShopName} ({shop.ID})", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Shop {shop.ShopName} ({shop.ID})", LogLevel.OLC);
                     return;
                 }
                 else
                 {
                     session.SendSystem($"%BRT% Failed to remove the specified Shop.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Shop {shop.ShopName} ({shop.ID}) however the attempt failed", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Shop {shop.ShopName} ({shop.ID}) however the attempt failed", LogLevel.OLC);
                     continue;
                 }
             }
@@ -212,13 +212,13 @@ namespace Etrea3.OLC
                             {
                                 session.SendSystem($"%BGT%Shop has been updated successfully.%PT%{Constants.NewLine}");
                                 ShopManager.Instance.SetShopLockStatus(shopID, false, session);
-                                Game.LogMessage($"Player {session.Player.Name} has updated Shop {shop.ID} ({shop.ShopName})", LogLevel.OLC, true);
+                                Game.LogMessage($"Player {session.Player.Name} has updated Shop {shop.ID} ({shop.ShopName})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%Failed to update Shop.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Shop {shop.ID} ({shop.ShopName}) however the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Shop {shop.ID} ({shop.ShopName}) however the attempt failed", LogLevel.OLC);
                             }
                         }
                         else

@@ -48,11 +48,11 @@ namespace Etrea3.Networking
                 listener = new TcpListener(listenerIP, port);
                 listener.Start();
                 accept = true;
-                Game.LogMessage($"INFO: Listening for connections on {listener.LocalEndpoint}", LogLevel.Info, true);
+                Game.LogMessage($"INFO: Listening for connections on {listener.LocalEndpoint}", LogLevel.Info);
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error starting listener: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error starting listener: {ex.Message}", LogLevel.Error);
                 accept = false;
             }
         }
@@ -67,7 +67,7 @@ namespace Etrea3.Networking
                     {
                         if (tokenSource.Token.IsCancellationRequested)
                         {
-                            Game.LogMessage($"INFO: Stopping TCP listener", LogLevel.Info, true);
+                            Game.LogMessage($"INFO: Stopping TCP listener", LogLevel.Info);
                             accept = false;
                             listener.Stop();
                             break;
@@ -76,7 +76,7 @@ namespace Etrea3.Networking
                         if (clientTask.Result != null)
                         {
                             var client = clientTask.Result;
-                            Game.LogMessage($"CONNECTION: Accepting new connection from {client.Client.RemoteEndPoint}", LogLevel.Connection, true);
+                            Game.LogMessage($"CONNECTION: Accepting new connection from {client.Client.RemoteEndPoint}", LogLevel.Connection);
                             await SessionManager.Instance.NewSession(client);
                         }
                     }
@@ -86,7 +86,7 @@ namespace Etrea3.Networking
 
         public void ShutDown()
         {
-            Game.LogMessage($"INFO: Requesting the TCP listener to stop", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Requesting the TCP listener to stop", LogLevel.Info);
             tokenSource.Cancel();
         }
     }

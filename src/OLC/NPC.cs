@@ -163,13 +163,13 @@ namespace Etrea3.OLC
                             if (NPCManager.Instance.AddOrUpdateNPCTemplate(newNPC, true))
                             {
                                 session.SendSystem($"%BGT%The new NPC Template has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added a new NPC Template: {newNPC.Name} ({newNPC.TemplateID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added a new NPC Template: {newNPC.Name} ({newNPC.TemplateID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%Failed to save the new NPC Template.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new NPC Template ({newNPC.Name} ({newNPC.TemplateID})) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new NPC Template ({newNPC.Name} ({newNPC.TemplateID})) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -227,12 +227,12 @@ namespace Etrea3.OLC
                 if (NPCManager.Instance.RemoveNPCTemplate(value))
                 {
                     session.SendSystem($"BGT%The specified NPC Template has been successfully removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed NPC Template {npc.Name} ({npc.TemplateID})", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed NPC Template {npc.Name} ({npc.TemplateID})", LogLevel.OLC);
                 }
                 else
                 {
                     session.SendSystem($"%BRT%Failed to remove the specified NPC Template.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove NPC Template {npc.Name} ({npc.TemplateID}) however the attempt failed", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove NPC Template {npc.Name} ({npc.TemplateID}) however the attempt failed", LogLevel.OLC);
                 }
             }
         }
@@ -413,14 +413,14 @@ namespace Etrea3.OLC
                             if (NPCManager.Instance.AddOrUpdateNPCTemplate(npcTemplate, false))
                             {
                                 session.SendSystem($"%BGT%The NPC Template has been updated successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updatedated NPC Template: {npcTemplate.Name} ({npcTemplate.TemplateID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updatedated NPC Template: {npcTemplate.Name} ({npcTemplate.TemplateID})", LogLevel.OLC);
                                 NPCManager.Instance.SetNPCLockState(npcTemplate.TemplateID, false, session);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%Failed to save the new NPC Template.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new NPC Template ({npcTemplate.Name} ({npcTemplate.TemplateID})) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new NPC Template ({npcTemplate.Name} ({npcTemplate.TemplateID})) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }

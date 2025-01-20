@@ -42,7 +42,7 @@ namespace Etrea3
             await game.Run();
             tcpServer.ShutDown();
             apiServer.Stop();
-            Game.LogMessage($"INFO: TCP server stopped, shutdown complete", LogLevel.Info, true);
+            Game.LogMessage($"INFO: TCP server stopped, shutdown complete", LogLevel.Info);
         }
 
         static bool Setup()

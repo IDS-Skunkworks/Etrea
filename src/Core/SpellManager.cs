@@ -108,14 +108,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveSpellToWorldDatabase(spell, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Spell {spell.Name} ({spell.ID}) to World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Spell {spell.Name} ({spell.ID}) to World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Spells.TryAdd(spell.ID, spell))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Spell {spell.Name} ({spell.ID}) to Spell Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Spell {spell.Name} ({spell.ID}) to Spell Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -123,12 +123,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Spells.TryGetValue(spell.ID, out Spell existingSpell))
                     {
-                        Game.LogMessage($"ERROR: Spell {spell.ID} not found in Spell Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Spell {spell.ID} not found in Spell Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Spells.TryUpdate(spell.ID, spell, existingSpell))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Spell {spell.ID} in Spell Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Spell {spell.ID} in Spell Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -136,7 +136,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in SpellManager.AddOrUpdateSpell(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in SpellManager.AddOrUpdateSpell(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -147,7 +147,7 @@ namespace Etrea3.Core
             {
                 return Instance.Spells.TryRemove(id, out _) && DatabaseManager.RemoveSpell(id);
             }
-            Game.LogMessage($"ERROR: Error removing Spell with ID {id}, no such Spell in SpellManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Spell with ID {id}, no such Spell in SpellManager", LogLevel.Error);
             return false;
         }
     }

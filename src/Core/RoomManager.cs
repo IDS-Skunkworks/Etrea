@@ -132,12 +132,12 @@ namespace Etrea3.Core
         {
             if (!Instance.Rooms.ContainsKey(roomID))
             {
-                Game.LogMessage($"ERROR: Attempt to add an item to Room {roomID} but no such Room in RoomManager", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Attempt to add an item to Room {roomID} but no such Room in RoomManager", LogLevel.Error);
                 return false;
             }
             if (item == null)
             {
-                Game.LogMessage($"ERROR: Attempt to add a null to the inventory of Room {roomID}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Attempt to add a null to the inventory of Room {roomID}", LogLevel.Error);
                 return false;
             }
             try
@@ -147,7 +147,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in RoomManager.AddItemToRoomInventory(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in RoomManager.AddItemToRoomInventory(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -156,12 +156,12 @@ namespace Etrea3.Core
         {
             if (!Instance.Rooms.ContainsKey(roomID))
             {
-                Game.LogMessage($"ERROR: Attempt to remove an item from the inventory of Room {roomID} but no such Room in RoomManager", LogLevel .Error, true);
+                Game.LogMessage($"ERROR: Attempt to remove an item from the inventory of Room {roomID} but no such Room in RoomManager", LogLevel .Error);
                 return false;
             }
             if (item == null)
             {
-                Game.LogMessage($"ERROR: Attempt to remove null from the inventory of Room {roomID}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Attempt to remove null from the inventory of Room {roomID}", LogLevel.Error);
                 return false;
             }
             try
@@ -170,7 +170,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in RoomManager.RemoveItemFromRoomInventory(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in RoomManager.RemoveItemFromRoomInventory(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -214,14 +214,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveRoomToWorldDatabase(r, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Room {r.RoomName} ({r.ID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Room {r.RoomName} ({r.ID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Rooms.TryAdd(r.ID, r))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Room {r.RoomName} ({r.ID}) to Room Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Room {r.RoomName} ({r.ID}) to Room Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -229,12 +229,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Rooms.TryGetValue(r.ID, out Room existingRoom))
                     {
-                        Game.LogMessage($"ERROR: Room {r.ID} not found in Room Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Room {r.ID} not found in Room Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Rooms.TryUpdate(r.ID, r, existingRoom))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Room {r.ID} in Room Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Room {r.ID} in Room Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -242,7 +242,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in RoomManager.AddOrUpdateRoom(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in RoomManager.AddOrUpdateRoom(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -253,7 +253,7 @@ namespace Etrea3.Core
             {
                 return Instance.Rooms.TryRemove(roomID, out _) && DatabaseManager.RemoveRoom(roomID);
             }
-            Game.LogMessage($"ERROR: Error removing Room with ID {roomID}, no such Room in RoomManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Room with ID {roomID}, no such Room in RoomManager", LogLevel.Error);
             return false;
         }
 
@@ -264,7 +264,7 @@ namespace Etrea3.Core
                 Instance.Rooms[roomID].GoldInRoom += gold;
                 return true;
             }
-            Game.LogMessage($"ERROR: Attempt to add {gold:N0} gold to Room {roomID}, no such Room in RoomManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Attempt to add {gold:N0} gold to Room {roomID}, no such Room in RoomManager", LogLevel.Error);
             return false;
         }
 
@@ -275,7 +275,7 @@ namespace Etrea3.Core
                 Instance.Rooms[roomID].GoldInRoom -= gold;
                 return true;
             }
-            Game.LogMessage($"ERROR: Attempt to remove {gold:N0} gold from Room {roomID}, no such Room in RoomManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Attempt to remove {gold:N0} gold from Room {roomID}, no such Room in RoomManager", LogLevel.Error);
             return false;
         }
     }

@@ -9,10 +9,10 @@ namespace Etrea3.OLC
         {
             if (!session.Player.IsImmortal)
             {
-                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to start OLC but they are not Immortal", LogLevel.Warning, true);
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to start OLC but they are not Immortal", LogLevel.Warning);
                 return;
             }
-            Game.LogMessage($"OLC: Player {session.Player.Name} has started OLC", LogLevel.OLC, true);
+            Game.LogMessage($"OLC: Player {session.Player.Name} has started OLC", LogLevel.OLC);
             session.Player.Flags |= PlayerFlags.UsingOLC;
             StringBuilder sb = new StringBuilder();
             while (true)
@@ -43,7 +43,7 @@ namespace Etrea3.OLC
                             break;
 
                         case 4:
-                            Game.LogMessage($"OLC: Player {session.Player.Name} has exited OLC", LogLevel.OLC, true);
+                            Game.LogMessage($"OLC: Player {session.Player.Name} has exited OLC", LogLevel.OLC);
                             session.Player.Flags &= ~PlayerFlags.UsingOLC;
                             return;
 

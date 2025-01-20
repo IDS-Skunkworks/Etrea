@@ -137,14 +137,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveItemToWorldDatabase(item, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Item {item.Name} ({item.ID}) to World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Item {item.Name} ({item.ID}) to World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Items.TryAdd(item.ID, item))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Item {item.Name} ({item.ID}) to Item Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Item {item.Name} ({item.ID}) to Item Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -152,12 +152,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Items.TryGetValue(item.ID, out InventoryItem existingItem))
                     {
-                        Game.LogMessage($"ERROR: Item {item.ID} not found in Item Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Item {item.ID} not found in Item Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Items.TryUpdate(item.ID, item, existingItem))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Item {item.ID} in Item Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Item {item.ID} in Item Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -165,7 +165,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in InventoryManager.AddOrUpdateItem(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in InventoryManager.AddOrUpdateItem(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -176,7 +176,7 @@ namespace Etrea3.Core
             {
                 return Instance.Items.TryRemove(id, out _) && DatabaseManager.RemoveItem(id);
             }
-            Game.LogMessage($"ERROR: Error removing Item with ID {id}, no such Item in ItemManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Item with ID {id}, no such Item in ItemManager", LogLevel.Error);
             return false;
         }
 

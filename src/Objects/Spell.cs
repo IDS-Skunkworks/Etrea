@@ -61,7 +61,7 @@ namespace Etrea3.Objects
                 }
                 else
                 {
-                    Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} in Room {caster.CurrentRoom} which is flagged NoMagic", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} in Room {caster.CurrentRoom} which is flagged NoMagic", LogLevel.Debug);
                 }
                 return;
             }
@@ -73,7 +73,7 @@ namespace Etrea3.Objects
                 }
                 else
                 {
-                    Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} in Room {caster.CurrentRoom} which is flagged Safe and the Spell is {SpellType}", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} in Room {caster.CurrentRoom} which is flagged Safe and the Spell is {SpellType}", LogLevel.Debug);
                 }
                 return;
             }
@@ -86,7 +86,7 @@ namespace Etrea3.Objects
                 }
                 else
                 {
-                    Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} in Room {caster.CurrentRoom} but no target was specified", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} in Room {caster.CurrentRoom} but no target was specified", LogLevel.Debug);
                 }
                 return;
             }
@@ -110,7 +110,7 @@ namespace Etrea3.Objects
                     }
                     else
                     {
-                        Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} against {target.Name} but the target has the NoAttack flag", LogLevel.Debug, true);
+                        Game.LogMessage($"DEBUG: NPC {caster.Name} tried to cast {Name} against {target.Name} but the target has the NoAttack flag", LogLevel.Debug);
                     }
                     return;
                 }
@@ -268,7 +268,7 @@ namespace Etrea3.Objects
             if (caster.ActorType == ActorType.NonPlayer)
             {
                 // NPCs should not be using AOE damage spells, log and return
-                Game.LogMessage($"DEBUG: NPC {caster.Name} in Room {caster.CurrentRoom} attempted to cast '{Name}'", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: NPC {caster.Name} in Room {caster.CurrentRoom} attempted to cast '{Name}'", LogLevel.Debug);
                 return;
             }
             var targets = RoomManager.Instance.GetRoom(caster.CurrentRoom).NPCsInRoom.Where(x => !x.Flags.HasFlag(NPCFlags.NoAttack)).ToList();
@@ -349,7 +349,7 @@ namespace Etrea3.Objects
                         }
                         else
                         {
-                            Game.LogMessage($"DEBUG: Spell {Name} cast by {caster.Name} in Room {caster.CurrentRoom} tried to apply Buff {b} but no such Buff was found in Buff Manager", LogLevel.Debug, true);
+                            Game.LogMessage($"DEBUG: Spell {Name} cast by {caster.Name} in Room {caster.CurrentRoom} tried to apply Buff {b} but no such Buff was found in Buff Manager", LogLevel.Debug);
                         }
                     }
                 }
@@ -395,7 +395,7 @@ namespace Etrea3.Objects
                                 }
                                 else
                                 {
-                                    Game.LogMessage($"DEBUG: Spell '{Name}' cast by {caster.Name} in Room {caster.CurrentRoom} attempted to apply Buff {b} but no such Buff was found in Buff Manager", LogLevel.Debug, true);
+                                    Game.LogMessage($"DEBUG: Spell '{Name}' cast by {caster.Name} in Room {caster.CurrentRoom} attempted to apply Buff {b} but no such Buff was found in Buff Manager", LogLevel.Debug);
                                 }
                             }
                         }
@@ -430,7 +430,7 @@ namespace Etrea3.Objects
                                 }
                                 else
                                 {
-                                    Game.LogMessage($"DEBUG: Spell '{Name}' cast by {caster.Name} in Room {caster.CurrentRoom} attempted to apply Buff {b} but no such Buff was found in Buff Manager", LogLevel.Debug, true);
+                                    Game.LogMessage($"DEBUG: Spell '{Name}' cast by {caster.Name} in Room {caster.CurrentRoom} attempted to apply Buff {b} but no such Buff was found in Buff Manager", LogLevel.Debug);
                                 }
                             }
                         }
@@ -528,7 +528,7 @@ namespace Etrea3.Objects
                             }
                             else
                             {
-                                Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug, true);
+                                Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug);
                             }
                         }
                     }
@@ -598,7 +598,7 @@ namespace Etrea3.Objects
                         }
                         else
                         {
-                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug, true);
+                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug);
                         }
                     }
                 }
@@ -695,7 +695,7 @@ namespace Etrea3.Objects
                                 }
                                 else
                                 {
-                                    Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug, true);
+                                    Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug);
                                 }
                             }
                         }
@@ -796,7 +796,7 @@ namespace Etrea3.Objects
                         }
                         else
                         {
-                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug, true);
+                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug);
                         }
                     }
                 }
@@ -815,7 +815,7 @@ namespace Etrea3.Objects
             if (caster.ActorType == ActorType.NonPlayer)
             {
                 // NPCs should not be able to cast AOE debuff spells, log and return
-                Game.LogMessage($"DEBUG: NPC {caster.Name} in Room {caster.CurrentRoom} attempted to case {Name}", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: NPC {caster.Name} in Room {caster.CurrentRoom} attempted to case {Name}", LogLevel.Debug);
                 return;
             }
             var targets = RoomManager.Instance.GetRoom(caster.CurrentRoom).NPCsInRoom.Where(x => !x.Flags.HasFlag(NPCFlags.NoAttack)).ToList();
@@ -893,7 +893,7 @@ namespace Etrea3.Objects
                         }
                         else
                         {
-                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug, true);
+                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug);
                         }
                     }
                 }
@@ -962,7 +962,7 @@ namespace Etrea3.Objects
                         }
                         else
                         {
-                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug, true);
+                            Game.LogMessage($"DEBUG: Spell '{Name}' cast by '{caster.Name}' cannot apply Buff '{b}', no such Buff in Buff Manager", LogLevel.Debug);
                         }
                     }
                 }

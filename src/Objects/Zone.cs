@@ -23,7 +23,7 @@ namespace Etrea3.Objects
 
         public void PulseZone()
         {
-            Game.LogMessage($"INFO: Pulsing Zone {ZoneName} ({ZoneID})", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Pulsing Zone {ZoneName} ({ZoneID})", LogLevel.Info);
             var npcsForZone = NPCManager.Instance.GetNPCsForZone(ZoneID);
             var roomsForZone = RoomManager.Instance.GetRoomsForZone(ZoneID);
             // spawn new NPCs - spawn at tick first, then random npc generation
@@ -42,17 +42,17 @@ namespace Etrea3.Objects
                             }
                             else
                             {
-                                Game.LogMessage($"INFO: Not spawing NPC {npcTemplate.TemplateID} in Room {r.ID}, max number in world reached", LogLevel.Info, true);
+                                Game.LogMessage($"INFO: Not spawing NPC {npcTemplate.TemplateID} in Room {r.ID}, max number in world reached", LogLevel.Info);
                             }
                         }
                         else
                         {
-                            Game.LogMessage($"INFO: Not spawing NPC {npcTemplate.TemplateID} in Room {r.ID}, max number in Room reached", LogLevel.Info, true);
+                            Game.LogMessage($"INFO: Not spawing NPC {npcTemplate.TemplateID} in Room {r.ID}, max number in Room reached", LogLevel.Info);
                         }
                     }
                     else
                     {
-                        Game.LogMessage($"ERROR: Cannot spawn instance of NPC {n.Key} in Room {r.ID}: No such NPC Template in NPC Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Cannot spawn instance of NPC {n.Key} in Room {r.ID}: No such NPC Template in NPC Manager", LogLevel.Error);
                     }
                 }
             }
@@ -104,14 +104,14 @@ namespace Etrea3.Objects
                                     newItem = Helpers.Clone<Scroll>(item);
                                     break;
                             }
-                            Game.LogMessage($"INFO: Spawning Item {i.Key} in Room {r.ID}", LogLevel.Info, true);
+                            Game.LogMessage($"INFO: Spawning Item {i.Key} in Room {r.ID}", LogLevel.Info);
                             newItem.ItemID = Guid.NewGuid();
                             RoomManager.Instance.AddItemToRoomInventory(r.ID, newItem);
                         }
                     }
                     else
                     {
-                        Game.LogMessage($"ERROR: Not spawning Item {i.Key} in Room {r.ID}: No such Item in Item Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Not spawning Item {i.Key} in Room {r.ID}: No such Item in Item Manager", LogLevel.Error);
                     }
                 }
             }
@@ -128,7 +128,7 @@ namespace Etrea3.Objects
                         var newNode = Helpers.Clone(node);
                         newNode.Depth = Helpers.RollDice<int>(1, 4);
                         r.RSSNode = newNode;
-                        Game.LogMessage($"INFO: Spawning Resource Node {newNode.Name} in Room {r.ID}", LogLevel.Info, true);
+                        Game.LogMessage($"INFO: Spawning Resource Node {newNode.Name} in Room {r.ID}", LogLevel.Info);
                     }
                 }
             }

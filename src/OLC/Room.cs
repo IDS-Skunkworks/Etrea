@@ -97,13 +97,13 @@ namespace Etrea3.OLC
                         {
                             if (RoomManager.Instance.AddOrUpdateRoom(newRoom, true))
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added a new Room: {newRoom.RoomName} ({newRoom.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added a new Room: {newRoom.RoomName} ({newRoom.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%New Room has been successfully created.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new Room: {newRoom.RoomName} ({newRoom.ID}) however the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new Room: {newRoom.RoomName} ({newRoom.ID}) however the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%Failed to save the new Room.%PT%{Constants.NewLine}");
                                 continue;
                             }
@@ -173,7 +173,7 @@ namespace Etrea3.OLC
                         {
                             if (!NPCManager.Instance.RemoveNPCInstance(r.NPCsInRoom[0].ID))
                             {
-                                Game.LogMessage($"ERROR: Error removing NPC {r.NPCsInRoom[0].ID} from Room {r.ID}, aborting deletion of Room", LogLevel.Error, true);
+                                Game.LogMessage($"ERROR: Error removing NPC {r.NPCsInRoom[0].ID} from Room {r.ID}, aborting deletion of Room", LogLevel.Error);
                                 session.SendSystem($"%BRT%Failed to delete an NPC from the Room, aborting deletion of Room%PT%{Constants.NewLine}");
                                 npcDeleteErr = true;
                                 break;
@@ -190,13 +190,13 @@ namespace Etrea3.OLC
                     }
                     if (RoomManager.Instance.RemoveRoom(r.ID))
                     {
-                        Game.LogMessage($"OLC: Player {session.Player.Name} has removed Room {r.ID} ({r.RoomName})", LogLevel.OLC, true);
+                        Game.LogMessage($"OLC: Player {session.Player.Name} has removed Room {r.ID} ({r.RoomName})", LogLevel.OLC);
                         session.SendSystem($"%BGT%The specified Room has been deleted.%PT%{Constants.NewLine}");
                         return;
                     }
                     else
                     {
-                        Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Room {r.ID} ({r.RoomName}) but the attempt failed", LogLevel.OLC, true);
+                        Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Room {r.ID} ({r.RoomName}) but the attempt failed", LogLevel.OLC);
                         session.SendSystem($"%BRT%Failed to remove the specified Room.%PT%{Constants.NewLine}");
                         continue;
                     }
@@ -316,14 +316,14 @@ namespace Etrea3.OLC
                         {
                             if (RoomManager.Instance.AddOrUpdateRoom(room, false))
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Room: {room.RoomName} ({room.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Room: {room.RoomName} ({room.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%Room has been successfully updated.%PT%{Constants.NewLine}");
                                 RoomManager.Instance.SetRoomLockState(rid, false, session);
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Room: {room.RoomName} ({room.ID}) however the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Room: {room.RoomName} ({room.ID}) however the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%Failed to save the updated Room.%PT%{Constants.NewLine}");
                                 continue;
                             }

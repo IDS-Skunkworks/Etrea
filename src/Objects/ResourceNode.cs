@@ -44,7 +44,7 @@ namespace Etrea3.Objects
                     ReduceDepth(out depleted);
                     return itemId;
                 }
-                Game.LogMessage($"ERROR: Node ID {ID} returned Item {itemId} from a call to Mine() but no such Item was found in Item Manager", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Node ID {ID} returned Item {itemId} from a call to Mine() but no such Item was found in Item Manager", LogLevel.Error);
             }
             depleted = Depth <= 0;
             return -1;

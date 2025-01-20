@@ -90,14 +90,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveQuestToWorldDatabase(newQuest, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Quest {newQuest.Name} ({newQuest.ID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Quest {newQuest.Name} ({newQuest.ID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Quests.TryAdd(newQuest.ID, newQuest))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Quest {newQuest.Name} ({newQuest.ID}) to Quest Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Quest {newQuest.Name} ({newQuest.ID}) to Quest Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -105,12 +105,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Quests.TryGetValue(newQuest.ID, out Quest existingQuest))
                     {
-                        Game.LogMessage($"ERROR: Quest {newQuest.ID} not found in Quest Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Quest {newQuest.ID} not found in Quest Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Quests.TryUpdate(newQuest.ID, newQuest, existingQuest))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Quest {newQuest.ID} in Quest Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Quest {newQuest.ID} in Quest Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -118,7 +118,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in QuestManager.AddOrUpdateQuest(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in QuestManager.AddOrUpdateQuest(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -129,7 +129,7 @@ namespace Etrea3.Core
             {
                 return Instance.Quests.TryRemove(id, out _) && DatabaseManager.RemoveQuest(id);
             }
-            Game.LogMessage($"ERROR: Error removing Quest with ID {id}, no such Quest in QuestManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Quest with ID {id}, no such Quest in QuestManager", LogLevel.Error);
             return false;
         }
 

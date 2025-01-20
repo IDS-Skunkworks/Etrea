@@ -29,7 +29,7 @@ namespace Etrea3.Objects
             string pMessage, tMessage = string.Empty;
             if (performer == null)
             {
-                Game.LogMessage($"DEBUG: Emote '{Name}' (ID: {ID}) somehow called with a null performer", LogLevel.Debug, true);
+                Game.LogMessage($"DEBUG: Emote '{Name}' (ID: {ID}) somehow called with a null performer", LogLevel.Debug);
                 return;
             }
             if (target == null && targetProvided)

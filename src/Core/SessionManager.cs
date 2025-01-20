@@ -63,11 +63,11 @@ namespace Etrea3.Core
                 {
                     if (DatabaseManager.SavePlayer(session, false))
                     {
-                        Game.LogMessage($"INFO: Player {session.Player.Name} at {session.Client.Client.RemoteEndPoint} saved on disconnection", LogLevel.Info, true);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} at {session.Client.Client.RemoteEndPoint} saved on disconnection", LogLevel.Info);
                     }
                     else
                     {
-                        Game.LogMessage($"ERROR: Player {session.Player.Name} at {session.Client.Client.RemoteEndPoint} failed to save on disconnection, player data may be out of date on reload", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Player {session.Player.Name} at {session.Client.Client.RemoteEndPoint} failed to save on disconnection, player data may be out of date on reload", LogLevel.Error);
                     }
                     var localPlayers = Instance.GetPlayersInRoom(session.Player.CurrentRoom).Where(x => x.ID != session.ID).ToList();
                     if (localPlayers != null && localPlayers.Count > 0)
@@ -85,11 +85,11 @@ namespace Etrea3.Core
                 session = null;
                 string logMessage = string.IsNullOrEmpty(charName) ? $"CONNECTION: Connection from {endPoint} closed, no player associated with the connection" :
                     $"CONNECTION: Connection from {endPoint} closed, player {charName} has left the game";
-                Game.LogMessage(logMessage, LogLevel.Connection, true);
+                Game.LogMessage(logMessage, LogLevel.Connection);
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in SessionManager.Close(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in SessionManager.Close(): {ex.Message}", LogLevel.Error);
             }
         }
 

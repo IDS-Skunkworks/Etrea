@@ -106,7 +106,7 @@ namespace Etrea3.Objects
                 var item = ItemManager.Instance.GetItem(i.Key);
                 if (item == null)
                 {
-                    Game.LogMessage($"ERROR: Player {session.Player.Name} encountered an error crafting Recipe {ID}: Item {i.Key} returned null from ItemManager", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Player {session.Player.Name} encountered an error crafting Recipe {ID}: Item {i.Key} returned null from ItemManager", LogLevel.Error);
                     session.Send($"This Recipe appears to be broken, please let an Imm know!{Constants.NewLine}");
                     return false;
                 }
@@ -133,7 +133,7 @@ namespace Etrea3.Objects
             var i = ItemManager.Instance.GetItem(RecipeResult);
             if (i == null)
             {
-                Game.LogMessage($"ERROR: Player {session.Player.Name} encountered an error crafting Recipe {ID}: Result Item {RecipeResult} returned null from ItemManager", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Player {session.Player.Name} encountered an error crafting Recipe {ID}: Result Item {RecipeResult} returned null from ItemManager", LogLevel.Error);
                 return false;
             }
             foreach (var requiredItem in RequiredItems)

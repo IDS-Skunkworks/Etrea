@@ -111,13 +111,13 @@ namespace Etrea3.OLC
                             if (RecipeManager.Instance.AddOrUpdateRecipe(newRecipe, true))
                             {
                                 session.SendSystem($"%BGT%The new Crafting Recipe has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has created new Crafting Recipe: {newRecipe.Name} ({newRecipe.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has created new Crafting Recipe: {newRecipe.Name} ({newRecipe.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The new Crafting Recipe could not be saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to save new Crafting Recipe {newRecipe.Name} ({newRecipe.ID}) but the attempt failed.", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to save new Crafting Recipe {newRecipe.Name} ({newRecipe.ID}) but the attempt failed.", LogLevel.OLC);
                             }
                         }
                         else
@@ -265,13 +265,13 @@ namespace Etrea3.OLC
                             {
                                 RecipeManager.Instance.SetRecipeLockState(updateRecipe.ID, false, session);
                                 session.SendSystem($"%BGT%The updated Crafting Recipe has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Crafting Recipe: {updateRecipe.Name} ({updateRecipe.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Crafting Recipe: {updateRecipe.Name} ({updateRecipe.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The updated Crafting Recipe could not be saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to save updated Crafting Recipe {updateRecipe.Name} ({updateRecipe.ID}) but the attempt failed.", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to save updated Crafting Recipe {updateRecipe.Name} ({updateRecipe.ID}) but the attempt failed.", LogLevel.OLC);
                             }
                         }
                         else
@@ -324,13 +324,13 @@ namespace Etrea3.OLC
                 if (RecipeManager.Instance.RemoveRecipe(recipe.ID))
                 {
                     session.SendSystem($"%BGT%The specified Recipe has been successfully removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Crafting Recipe {recipe.ID} ({recipe.Name})", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Crafting Recipe {recipe.ID} ({recipe.Name})", LogLevel.OLC);
                     return;
                 }
                 else
                 {
                     session.SendSystem($"%BRT%The specified Recipe could not be removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Crafting Recipe {recipe.ID} ({recipe.Name}) however the attempt failed", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Crafting Recipe {recipe.ID} ({recipe.Name}) however the attempt failed", LogLevel.OLC);
                     continue;
                 }
             }

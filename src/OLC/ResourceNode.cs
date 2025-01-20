@@ -70,13 +70,13 @@ namespace Etrea3.OLC
                         {
                             if (NodeManager.Instance.AddOrUpdateNode(newNode, true))
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Resource Node: {newNode.Name} ({newNode.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Resource Node: {newNode.Name} ({newNode.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The new Resource Node has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to create new Resource Node {newNode.Name} ({newNode.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to create new Resource Node {newNode.Name} ({newNode.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%Failed to save the new Resource Node.%PT%{Constants.NewLine}");
                                 continue;
                             }
@@ -135,13 +135,13 @@ namespace Etrea3.OLC
                 if (NodeManager.Instance.RemoveNode(node.ID))
                 {
                     session.SendSystem($"%BGT%The specified Resource Node has been successfully removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Resource Node {node.Name} ({node.ID})", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Resource Node {node.Name} ({node.ID})", LogLevel.OLC);
                     return;
                 }
                 else
                 {
                     session.SendSystem($"%BRT%The specified Resource Node could not be removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Resource Node {node.Name} ({node.ID}) however the attempt failed", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Resource Node {node.Name} ({node.ID}) however the attempt failed", LogLevel.OLC);
                     continue;
                 }
             }
@@ -223,13 +223,13 @@ namespace Etrea3.OLC
                             if (NodeManager.Instance.AddOrUpdateNode(node, true))
                             {
                                 NodeManager.Instance.SetNodeLockState(nodeID, false, session);
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Resource Node: {node.Name} ({node.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Resource Node: {node.Name} ({node.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The new Resource Node has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to create new Resource Node {node.Name} ({node.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to create new Resource Node {node.Name} ({node.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%Failed to save the new Resource Node.%PT%{Constants.NewLine}");
                                 continue;
                             }

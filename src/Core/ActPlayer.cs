@@ -310,7 +310,7 @@ namespace Etrea3.Core
             session.Player.AdjustMP(-10);
             target.Send($"%BMT%{session.Player.Name} is summoning you!%PT%{Constants.NewLine}");
             session.Send($"%BYT%Calling on the Winds of Magic you reach through reality and transport them!%PT%{Constants.NewLine}");
-            Game.LogMessage($"INFO: Player {session.Player.Name} summoned {target.Player.Name} from Room {target.Player.CurrentRoom} to {session.Player.CurrentRoom}", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Player {session.Player.Name} summoned {target.Player.Name} from Room {target.Player.CurrentRoom} to {session.Player.CurrentRoom}", LogLevel.Info);
             target.Player.Move(session.Player.CurrentRoom, true);
         }
 
@@ -535,7 +535,15 @@ namespace Etrea3.Core
             int c = 0;
             for (int i = 0; i < matchingEmotes.Count; i++)
             {
-                l = $"{l}{matchingEmotes[i].Name}{Constants.TabStop}{Constants.TabStop}";
+                if (matchingEmotes[i].Name.Length < 4)
+                {
+                    l = $"{l}{matchingEmotes[i].Name}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}";
+                }
+                else
+                {
+                    l = $"{l}{matchingEmotes[i].Name}{Constants.TabStop}{Constants.TabStop}";
+                }
+                
                 c++;
                 if (c >= 4 && i < matchingEmotes.Count)
                 {
@@ -638,7 +646,7 @@ namespace Etrea3.Core
 
         public static void PlayerChangePassword(Session session)
         {
-            Game.LogMessage($"INFO: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} has started the password change process", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} has started the password change process", LogLevel.Info);
             while (true)
             {
                 session.Send($"%BRT%*** PASSWORD CHANGE IN PROGRESS ***%PT%{Constants.NewLine}");
@@ -657,7 +665,7 @@ namespace Etrea3.Core
                 if (!DatabaseManager.ValidatePlayerPassword(session.Player.Name, curPwd.Trim()))
                 {
                     session.Send($"%BRT%Invalid password, reset process cannot continue. This has been logged.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"WARN: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} provided an invalid password ({curPwd.Trim()}) during the password reset process", LogLevel.Warning, true);
+                    Game.LogMessage($"WARN: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} provided an invalid password ({curPwd.Trim()}) during the password reset process", LogLevel.Warning);
                     return;
                 }
                 session.Send($"%BRT%Enter new password: ");
@@ -673,7 +681,7 @@ namespace Etrea3.Core
                 }
                 if (DatabaseManager.ChangePlayerPassword(session.Player.Name, newPwd.Trim()))
                 {
-                    Game.LogMessage($"INFO: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} has changed their password", LogLevel.Info, true);
+                    Game.LogMessage($"INFO: Player {session.Player.Name} connecting from {session.Client.Client.RemoteEndPoint} has changed their password", LogLevel.Info);
                     session.Send($"%BGT%Your password has been changed!%PT%{Constants.NewLine}");
                     return;
                 }
@@ -1446,14 +1454,14 @@ namespace Etrea3.Core
                 {
                     if (DatabaseManager.DeleteCharacter(session.Player.Name))
                     {
-                        Game.LogMessage($"INFO: Player {session.Player.Name} has deleted their character from the database", LogLevel.Info, true);
+                        Game.LogMessage($"INFO: Player {session.Player.Name} has deleted their character from the database", LogLevel.Info);
                         session.Send($"%BRT%Character deleted successfully. Goodbye!%PT%{Constants.NewLine}");
                         SessionManager.Instance.Close(session);
                     }
                     else
                     {
                         session.Send($"%BRT%Failed to delete character. Please contact an Immortal.%PT%{Constants.NewLine}");
-                        Game.LogMessage($"ERROR: Player {session.Player.Name} failed to delete their character", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Player {session.Player.Name} failed to delete their character", LogLevel.Error);
                         return;
                     }
                 }
@@ -1981,7 +1989,7 @@ namespace Etrea3.Core
                 }
                 else
                 {
-                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Skill '{skill.Key}' which is not in Skill Manager", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Skill '{skill.Key}' which is not in Skill Manager", LogLevel.Debug);
                 }
             }
             sb.AppendLine($"%BYT%||%PT% You know {session.Player.Skills.Count} Skill(s)");
@@ -2010,7 +2018,7 @@ namespace Etrea3.Core
                 }
                 else
                 {
-                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Spell '{spell.Key}' which is not in Spell Manager", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Spell '{spell.Key}' which is not in Spell Manager", LogLevel.Debug);
                 }
             }
             sb.AppendLine($"%BYT%||%PT% You know {session.Player.Spells.Count} Spell(s)");
@@ -2042,13 +2050,13 @@ namespace Etrea3.Core
                     }
                     else
                     {
-                        Game.LogMessage($"DEBUG: Player {session.Player.Name} has Recipe '{recipe.Key}' which produces {r.RecipeResult} but no such Item exists in Item Manager", LogLevel.Debug, true);
+                        Game.LogMessage($"DEBUG: Player {session.Player.Name} has Recipe '{recipe.Key}' which produces {r.RecipeResult} but no such Item exists in Item Manager", LogLevel.Debug);
                     }
                     sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
                 }
                 else
                 {
-                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Recipe '{recipe.Key}' which is not in Recipe Manager", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Recipe '{recipe.Key}' which is not in Recipe Manager", LogLevel.Debug);
                 }
             }
             sb.AppendLine($"%BYT%||%PT% You know {session.Player.Recipes.Count} Crafting Recipe(s)");
@@ -2076,7 +2084,7 @@ namespace Etrea3.Core
                 }
                 else
                 {
-                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Buff '{buff.Key}' which is not in Buff Manager", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: Player {session.Player.Name} has Buff '{buff.Key}' which is not in Buff Manager", LogLevel.Debug);
                 }
             }
             sb.AppendLine($"%BYT%||%PT% You have {session.Player.Buffs.Count} Buffs");
@@ -2165,7 +2173,7 @@ namespace Etrea3.Core
                             return;
 
                         default:
-                            Game.LogMessage($"ERROR: Node {n.ID} in Room {session.Player.CurrentRoom} returned unsupported Depth property: {n.Depth}", LogLevel.Error, true);
+                            Game.LogMessage($"ERROR: Node {n.ID} in Room {session.Player.CurrentRoom} returned unsupported Depth property: {n.Depth}", LogLevel.Error);
                             session.Send($"%BRT%Something is wrong with this Node! Tell an Imm!%PT%{Constants.NewLine}");
                             return;
                     }
@@ -2719,7 +2727,7 @@ namespace Etrea3.Core
             session.Player.RemoveItemFromInventory(item);
             session.Send($"%BYT%You offer {item.ShortDescription} to the Gods and it vanishes with a flash!%PT%{Constants.NewLine}");
             RoomManager.Instance.AddItemToRoomInventory(Game.DonationRoomID, item);
-            Game.LogMessage($"INFO: Player {session.Player.Name} donated {item.Name} ({item.ID})", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Player {session.Player.Name} donated {item.Name} ({item.ID})", LogLevel.Info);
             var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
             if (localPlayers != null && localPlayers.Count > 1)
             {
@@ -3496,7 +3504,7 @@ namespace Etrea3.Core
                     session.Send($"%BYT%You become visible as your backstab strikes {npcTarget.Name} for {modDmg} damage, killing them instantly!%PT%{Constants.NewLine}");
                     session.Player.Visible = true;
                     npcTarget.Kill(session.Player, true);
-                    Game.LogMessage($"COMBAT: Player {session.Player.Name} has killed {npcTarget.Name} in Room {session.Player.CurrentRoom} with a backstab", LogLevel.Combat, true);
+                    Game.LogMessage($"COMBAT: Player {session.Player.Name} has killed {npcTarget.Name} in Room {session.Player.CurrentRoom} with a backstab", LogLevel.Combat);
                 }
                 else
                 {

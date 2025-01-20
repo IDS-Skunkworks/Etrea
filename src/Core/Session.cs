@@ -93,7 +93,7 @@ namespace Etrea3.Core
                     {
                         endpoint = $"Error retrieving endpoint: {exc.Message}";
                     }
-                    Game.LogMessage($"ERROR: Error sending to Client {endpoint}: {ex.Message}", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Error sending to Client {endpoint}: {ex.Message}", LogLevel.Error);
                 }
                 finally
                 {
@@ -137,7 +137,7 @@ namespace Etrea3.Core
                     {
                         endpoint = $"Error retrieving endpoint: {exc.Message}";
                     }
-                    Game.LogMessage($"ERROR: Error reading from socket {endpoint}: {ex.Message}", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Error reading from socket {endpoint}: {ex.Message}", LogLevel.Error);
                     SessionManager.Instance.Close(this);
                     return null;
                 }
@@ -148,7 +148,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error reading from socket at Session.Read(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error reading from socket at Session.Read(): {ex.Message}", LogLevel.Error);
                 return null;
             }
         }
@@ -158,7 +158,7 @@ namespace Etrea3.Core
             /// Should not be called directly - close all sessions via the SessionManager!
             if (IsConnected)
             {
-                Game.LogMessage($"CONNECTION: Disconnecting socket {Client.Client.RemoteEndPoint}", LogLevel.Connection, true);
+                Game.LogMessage($"CONNECTION: Disconnecting socket {Client.Client.RemoteEndPoint}", LogLevel.Connection);
                 Client.Client.Dispose();
             }
         }

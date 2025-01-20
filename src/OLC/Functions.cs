@@ -21,7 +21,7 @@ namespace Etrea3.OLC
                 {
                     return (T)(object)val;
                 }
-                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error);
                 return default(T);
             }
             if (typeof(T) == typeof(string))
@@ -34,7 +34,7 @@ namespace Etrea3.OLC
                 {
                     return (T)(object)val;
                 }
-                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error);
                 return default(T);
             }
             if (typeof(T) == typeof(uint))
@@ -43,7 +43,7 @@ namespace Etrea3.OLC
                 {
                     return (T)(object)val;
                 }
-                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error);
                 return default(T);
             }
             if (typeof(T) == typeof(ulong))
@@ -52,7 +52,7 @@ namespace Etrea3.OLC
                 {
                     return (T)(object)val;
                 }
-                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error);
                 return default(T);
             }
             if (typeof(T) == typeof(long))
@@ -61,10 +61,10 @@ namespace Etrea3.OLC
                 {
                     return (T)(object)val;
                 }
-                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in OLC.GetValue(): {input.Trim()} could not be parsed to {typeof(T)}", LogLevel.Error);
                 return default(T);
             }
-            Game.LogMessage($"ERROR: Error in OLC.GetValue(): {typeof(T)} is not supported", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error in OLC.GetValue(): {typeof(T)} is not supported", LogLevel.Error);
             return default(T);
         }
 
@@ -806,7 +806,7 @@ namespace Etrea3.OLC
                 }
                 return true;
             }
-            Game.LogMessage($"ERROR: Error in OLC.ValidateAsset(): {typeof(T)} is not supported", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error in OLC.ValidateAsset(): {typeof(T)} is not supported", LogLevel.Error);
             return false;
         }
 
@@ -818,7 +818,7 @@ namespace Etrea3.OLC
             {
                 return val;
             }
-            Game.LogMessage($"ERROR: Error in OLC.GetEnumValue(): '{input.Trim()}' cannot be parsed into {typeof(T)}", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error in OLC.GetEnumValue(): '{input.Trim()}' cannot be parsed into {typeof(T)}", LogLevel.Error);
             return default(T);
         }
     }

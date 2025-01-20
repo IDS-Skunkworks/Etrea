@@ -91,9 +91,9 @@ namespace Etrea3.Core
             return false;
         }
 
-        public static void LogMessage(string message, LogLevel level, bool writeToScreen)
+        public static void LogMessage(string message, LogLevel level)
         {
-            Logger.LogMessage(message, level, writeToScreen);
+            Logger.LogMessage(message, level);
             PlayerFlags pFlag = PlayerFlags.None;
             switch(level)
             {
@@ -152,22 +152,22 @@ namespace Etrea3.Core
             tcs = new TaskCompletionSource<bool>();
             if (DatabaseManager.ClearLogTable(out int rowCount))
             {
-                LogMessage($"INFO: Log Table cleared, {rowCount} items removed.", LogLevel.Info, true);
+                LogMessage($"INFO: Log Table cleared, {rowCount} items removed.", LogLevel.Info);
             }
             else
             {
-                LogMessage($"ERROR: Failed to clear Log Table", LogLevel.Error, true);
+                LogMessage($"ERROR: Failed to clear Log Table", LogLevel.Error);
             }
             startTime = DateTime.UtcNow;
             bool dbLoad = LoadDatabase();
             if (!dbLoad)
             {
-                LogMessage($"ERROR: Cannot load from database, check logs for more information. Performing shutdown...", LogLevel.Error, true);
+                LogMessage($"ERROR: Cannot load from database, check logs for more information. Performing shutdown...", LogLevel.Error);
                 Shutdown();
             }
             if (RoomManager.Instance.Count > 0)
             {
-                LogMessage($"INFO: Spawning default NPCs and Items", LogLevel.Info, true);
+                LogMessage($"INFO: Spawning default NPCs and Items", LogLevel.Info);
                 var rooms = RoomManager.Instance.GetRoom().Where(x => x.StartingNPCs.Count > 0).ToList();
                 if (rooms.Count > 0)
                 {
@@ -179,7 +179,7 @@ namespace Etrea3.Core
                             int amount = n.Value;
                             for (int i = 0; i < amount; i++)
                             {
-                                LogMessage($"INFO: Spawning NPC {id} in Room {room.ID}", LogLevel.Info, true);
+                                LogMessage($"INFO: Spawning NPC {id} in Room {room.ID}", LogLevel.Info);
                                 NPCManager.Instance.AddNewNPCInstance(id, room.ID);
                             }
                         }
@@ -196,7 +196,7 @@ namespace Etrea3.Core
                             {
                                 if (ItemManager.Instance.ItemExists(i.Key))
                                 {
-                                    LogMessage($"INFO: Spawning Item {i.Key} in Room {room.ID}", LogLevel.Info, true);
+                                    LogMessage($"INFO: Spawning Item {i.Key} in Room {room.ID}", LogLevel.Info);
                                     dynamic spawmItem = null;
                                     var baseItem = ItemManager.Instance.GetItem(i.Key);
                                     switch(baseItem.ItemType)
@@ -229,24 +229,24 @@ namespace Etrea3.Core
                                 }
                                 else
                                 {
-                                    LogMessage($"ERROR: Cannot Spawn Item {i.Key} in Room {room.ID}, no such Item in Item Manager", LogLevel.Error, true);
+                                    LogMessage($"ERROR: Cannot Spawn Item {i.Key} in Room {room.ID}, no such Item in Item Manager", LogLevel.Error);
                                 }
                             }
                         }
                     }
                 }
             }
-            LogMessage($"INFO: Setting default inventories for Shops", LogLevel.Info, true);
+            LogMessage($"INFO: Setting default inventories for Shops", LogLevel.Info);
             foreach(var s in ShopManager.Instance.GetShop())
             {
                 s.RestockShop();
             }
             if (bool.TryParse(ConfigurationManager.AppSettings["TickZonesOnStartup"], out bool startZoneTick) && startZoneTick)
             {
-                LogMessage("INFO: Performing startup Zone tick...", LogLevel.Info, true);
+                LogMessage("INFO: Performing startup Zone tick...", LogLevel.Info);
                 ZoneManager.Instance.PulseAllZones();
             }
-            LogMessage("INFO: Starting timers and entering main game loop", LogLevel.Info, true);
+            LogMessage("INFO: Starting timers and entering main game loop", LogLevel.Info);
             zoneTickTimer.Elapsed += ZoneTick;
             npcTickTimer.Elapsed += NPCTick;
             combatTickTimer.Elapsed += CombatTick;
@@ -263,26 +263,26 @@ namespace Etrea3.Core
             cleanupTimer.Start();
 
             await tcs.Task;
-            LogMessage($"INFO: Shutting down...", LogLevel.Info, true);
+            LogMessage($"INFO: Shutting down...", LogLevel.Info);
         }
 
         public void Shutdown()
         {
-            LogMessage($"INFO: Shutdown in progress, saving all connected players...", LogLevel.Info, true);
+            LogMessage($"INFO: Shutdown in progress, saving all connected players...", LogLevel.Info);
             SaveAllPlayers(true, out _);
             tcs.SetResult(true);
         }
 
         public static void ImmShutdown(Session session, bool force)
         {
-            LogMessage($"INFO: Game shutdown has been initiated by {session.Player.Name}", LogLevel.Info, true);
+            LogMessage($"INFO: Game shutdown has been initiated by {session.Player.Name}", LogLevel.Info);
             SaveAllPlayers(force, out bool saveErr);
             if (saveErr)
             {
-                LogMessage($"WARN: Failed to save all connected players and FORCE was not specified, aborting shutdown", LogLevel.Warning, true);
+                LogMessage($"WARN: Failed to save all connected players and FORCE was not specified, aborting shutdown", LogLevel.Warning);
                 return;
             }
-            LogMessage($"INFO: Processed save of all connected players", LogLevel.Info, true);
+            LogMessage($"INFO: Processed save of all connected players", LogLevel.Info);
             tcs.SetResult(true);
         }
 
@@ -301,20 +301,20 @@ namespace Etrea3.Core
                     }
                     File.Copy($"{worldLocation}\\players.db", $"{backupLocation}\\players-{backupTime:yyyy-MM-dd-HH-mm-ss}.db");
                     File.Copy($"{worldLocation}\\world.db", $"{backupLocation}\\world-{backupTime:yyyy-MM-dd-HH-mm-ss}.db");
-                    LogMessage($"BACKUP: World and Player database backup complete", LogLevel.Info, true);
+                    LogMessage($"BACKUP: World and Player database backup complete", LogLevel.Info);
                     lastBackupTime = backupTime;
                     backupCompleted = true;
                 }
                 catch (Exception ex)
                 {
-                    LogMessage($"ERROR: Error in Game.BackupTick() while backing up databases: {ex.Message}", LogLevel.Error, true);
+                    LogMessage($"ERROR: Error in Game.BackupTick() while backing up databases: {ex.Message}", LogLevel.Error);
                     return;
                 }
                 try
                 {
                     var files = Directory.GetFiles(backupLocation);
                     var cutOff = (backupTick * backupsRetained) * -1;
-                    LogMessage($"BACKUP: Pruning old backups, retention cutoff: {backupTime.AddSeconds(cutOff):yyyy-MM-dd HH-mm-ss}", LogLevel.Info, true);
+                    LogMessage($"BACKUP: Pruning old backups, retention cutoff: {backupTime.AddSeconds(cutOff):yyyy-MM-dd HH-mm-ss}", LogLevel.Info);
                     foreach (var file in files)
                     {
                         try
@@ -323,18 +323,18 @@ namespace Etrea3.Core
                             if (fi.CreationTimeUtc <= backupTime.AddSeconds(cutOff))
                             {
                                 File.Delete(file);
-                                LogMessage($"BACKUP: Deleted backup file: {file}", LogLevel.Info, true);
+                                LogMessage($"BACKUP: Deleted backup file: {file}", LogLevel.Info);
                             }
                         }
                         catch (Exception ex)
                         {
-                            LogMessage($"ERROR: Error removing backup file '{file}': {ex.Message}", LogLevel.Error, true);
+                            LogMessage($"ERROR: Error removing backup file '{file}': {ex.Message}", LogLevel.Error);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogMessage($"ERROR: Error in Game.BackupTick() while processing old backups: {ex.Message}", LogLevel.Error, true);
+                    LogMessage($"ERROR: Error in Game.BackupTick() while processing old backups: {ex.Message}", LogLevel.Error);
                 }
             });
         }
@@ -351,7 +351,7 @@ namespace Etrea3.Core
         {
             tickCount++;
             var upTime = DateTime.UtcNow - StartTime;
-            LogMessage($"INFO: Tick count: {tickCount:N0}; Uptime: {upTime.Days:0} day(s), {upTime.Hours:00}:{upTime.Minutes:00}:{upTime.Seconds:00}", LogLevel.Info, true);
+            LogMessage($"INFO: Tick count: {tickCount:N0}; Uptime: {upTime.Days:0} day(s), {upTime.Hours:00}:{upTime.Minutes:00}:{upTime.Seconds:00}", LogLevel.Info);
             Task.Run(() =>
             {
                 NPCManager.Instance.TickAllNPCs(tickCount);
@@ -368,7 +368,7 @@ namespace Etrea3.Core
             Task.Run(() =>
             {
                 int clearedConnections = 0;
-                LogMessage($"INFO: Clearing stale connections", LogLevel.Info, true);
+                LogMessage($"INFO: Clearing stale connections", LogLevel.Info);
                 while (SessionManager.Instance.DisconnectedSessions.Count > 0)
                 {
                     var s = SessionManager.Instance.DisconnectedSessions.FirstOrDefault();
@@ -378,7 +378,7 @@ namespace Etrea3.Core
                         clearedConnections++;
                     }
                 }
-                LogMessage($"INFO: Cleared {clearedConnections} stale sessions", LogLevel.Info, true);
+                LogMessage($"INFO: Cleared {clearedConnections} stale sessions", LogLevel.Info);
             });
         }
 
@@ -388,24 +388,24 @@ namespace Etrea3.Core
             var connectedPlayers = SessionManager.Instance.ActivePlayers;
             if (connectedPlayers != null && connectedPlayers.Count > 0)
             {
-                LogMessage($"INFO: Starting Autosave of {connectedPlayers.Count} connected players", LogLevel.Info, true);
+                LogMessage($"INFO: Starting Autosave of {connectedPlayers.Count} connected players", LogLevel.Info);
                 foreach (var p in connectedPlayers)
                 {
                     var result = DatabaseManager.SavePlayer(p, false);
                     if (result)
                     {
-                        LogMessage($"AUTOSAVE: Successfully saved Player {p.Player.Name}", LogLevel.Info, true);
+                        LogMessage($"AUTOSAVE: Successfully saved Player {p.Player.Name}", LogLevel.Info);
                     }
                     else
                     {
                         saveErr = true;
-                        LogMessage($"AUTOSAVE: Failed to save Player {p.Player.Name}", LogLevel.Error, true);
+                        LogMessage($"AUTOSAVE: Failed to save Player {p.Player.Name}", LogLevel.Error);
                     }
                 }
             }
             else
             {
-                LogMessage($"INFO: No connected players to save", LogLevel.Info, true);
+                LogMessage($"INFO: No connected players to save", LogLevel.Info);
             }
             if (force)
             {
@@ -422,22 +422,22 @@ namespace Etrea3.Core
                 if (idlePlayers != null && idlePlayers.Count > 0)
                 {
                     int disconCount = 0;
-                    LogMessage($"INFO: Disconnecting idle players, {idlePlayers.Count} players to process", LogLevel.Info, true);
+                    LogMessage($"INFO: Disconnecting idle players, {idlePlayers.Count} players to process", LogLevel.Info);
                     foreach (var p in idlePlayers)
                     {
                         bool okToDiscon = (p.Player.Level < Constants.ImmLevel && !p.Player.Flags.HasFlag(PlayerFlags.Frozen)) || DisconnectIdleImms;
                         if (!okToDiscon)
                         {
-                            LogMessage($"INFO: Not disconnecting player {p.Player.Name}", LogLevel.Info, true);
+                            LogMessage($"INFO: Not disconnecting player {p.Player.Name}", LogLevel.Info);
                             continue;
                         }
                         var idleTime = Convert.ToInt32((DateTime.UtcNow - p.LastInputTime).TotalSeconds);
-                        LogMessage($"INFO: Player {p.Player.Name} has been idle for {idleTime:N0} seconds and will be disconnected", LogLevel.Info, true);
+                        LogMessage($"INFO: Player {p.Player.Name} has been idle for {idleTime:N0} seconds and will be disconnected", LogLevel.Info);
                         p.Send($"You have been idle for {idleTime:N0} seconds and will be disconnected{Constants.NewLine}");
                         SessionManager.Instance.Close(p);
                         disconCount++;
                     }
-                    LogMessage($"INFO: {disconCount} idle players have been disconnected", LogLevel.Info, true);
+                    LogMessage($"INFO: {disconCount} idle players have been disconnected", LogLevel.Info);
                 }
             });
         }
@@ -446,7 +446,7 @@ namespace Etrea3.Core
         {
             Task.Run(() =>
             {
-                LogMessage($"TICK: Pulsing HP/MP/SP regen on all Actors", LogLevel.Info, true);
+                LogMessage($"TICK: Pulsing HP/MP/SP regen on all Actors", LogLevel.Info);
                 foreach (var n in NPCManager.Instance.AllNPCInstances.ToList())
                 {
                     if (n.InCombat && !n.HasBuff("Regen") && !n.Flags.HasFlag(NPCFlags.Regeneration))
@@ -506,7 +506,7 @@ namespace Etrea3.Core
                     p.Player.AdjustMP(mpRegen);
                     p.Player.AdjustSP(spRegen);
                 }
-                LogMessage($"TICK: Pulsing buffs on all Actors", LogLevel.Info, true);
+                LogMessage($"TICK: Pulsing buffs on all Actors", LogLevel.Info);
                 foreach (var n in NPCManager.Instance.AllNPCInstances.Where(x => x.Buffs.Count > 0))
                 {
                     foreach (var b in n.Buffs)
@@ -612,11 +612,11 @@ namespace Etrea3.Core
                 }
                 else
                 {
-                    LogMessage($"ERROR: Failed to create Default Zone, aborting laod process", LogLevel.Error, true);
+                    LogMessage($"ERROR: Failed to create Default Zone, aborting laod process", LogLevel.Error);
                     return false;
                 }
             }
-            LogMessage($"INFO: Loading Database, {ZoneManager.Instance.Count} Zones loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {ZoneManager.Instance.Count} Zones loaded", LogLevel.Info);
             RoomManager.Instance.LoadAllRooms(out bool roomErr);
             if (roomErr)
             {
@@ -630,72 +630,72 @@ namespace Etrea3.Core
                 }
                 else
                 {
-                    LogMessage($"ERROR: Failed to create Default Room, aborting load process", LogLevel.Error, true);
+                    LogMessage($"ERROR: Failed to create Default Room, aborting load process", LogLevel.Error);
                     return false;
                 }
             }
-            LogMessage($"INFO: Loading Database, {RoomManager.Instance.Count} Rooms loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {RoomManager.Instance.Count} Rooms loaded", LogLevel.Info);
             ItemManager.Instance.LoadAllItems(out bool itemErr);
             if (itemErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {ItemManager.Instance.Count} Items loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {ItemManager.Instance.Count} Items loaded", LogLevel.Info);
             ShopManager.Instance.LoadAllShops(out bool shopErr);
             if (shopErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {ShopManager.Instance.Count} Shops loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {ShopManager.Instance.Count} Shops loaded", LogLevel.Info);
             MobProgManager.Instance.LoadAllMobProgs(out bool mobErr);
             if (mobErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {MobProgManager.Instance.Count} MobProgs loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {MobProgManager.Instance.Count} MobProgs loaded", LogLevel.Info);
             NPCManager.Instance.LoadAllNPCs(out bool npcErr);
             if (npcErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {NPCManager.Instance.TemplateCount} NPCs loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {NPCManager.Instance.TemplateCount} NPCs loaded", LogLevel.Info);
             EmoteManager.Instance.LoadAllEmotes(out bool emoteErr);
             if (emoteErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {EmoteManager.Instance.Count} Emotes loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {EmoteManager.Instance.Count} Emotes loaded", LogLevel.Info);
             NodeManager.Instance.LoadAllNodes(out bool nodeErr);
             if (nodeErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {NodeManager.Instance.Count} Resource Nodes loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {NodeManager.Instance.Count} Resource Nodes loaded", LogLevel.Info);
             RecipeManager.Instance.LoadAllRecipes(out bool recipeErr);
             if (recipeErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {RecipeManager.Instance.Count} Crafting Recipes loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {RecipeManager.Instance.Count} Crafting Recipes loaded", LogLevel.Info);
             QuestManager.Instance.LoadAllQuests(out bool questErr);
             if (questErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {QuestManager.Instance.Count} Quests loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {QuestManager.Instance.Count} Quests loaded", LogLevel.Info);
             SpellManager.Instance.LoadAllSpells(out bool spellErr);
             if (spellErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {SpellManager.Instance.Count} Spells loaded", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {SpellManager.Instance.Count} Spells loaded", LogLevel.Info);
             HelpManager.Instance.LoadAllArticles(out bool helpErr);
             if (helpErr)
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {HelpManager.Instance.Count} Help articles loaded", LogLevel.Info, true);
-            LogMessage($"INFO: Player Database check... {DatabaseManager.GetPlayerCount()} Players in database", LogLevel.Info, true);
+            LogMessage($"INFO: Loading Database, {HelpManager.Instance.Count} Help articles loaded", LogLevel.Info);
+            LogMessage($"INFO: Player Database check... {DatabaseManager.GetPlayerCount()} Players in database", LogLevel.Info);
             return true;
         }
 

@@ -34,7 +34,7 @@ namespace Etrea3.Networking.API
                     var principal = new WindowsPrincipal(identity);
                     if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
                     {
-                        Game.LogMessage($"WARN: MUD Server must be run as Administrator to start the API", LogLevel.Warning, true);
+                        Game.LogMessage($"WARN: MUD Server must be run as Administrator to start the API", LogLevel.Warning);
                         return;
                     }
                 }
@@ -45,11 +45,11 @@ namespace Etrea3.Networking.API
                 server = new HttpSelfHostServer(config);
                 server.OpenAsync().Wait();
                 IsRunning = true;
-                Game.LogMessage($"INFO: API server started successfully on {baseAddress}", LogLevel.Info, true);
+                Game.LogMessage($"INFO: API server started successfully on {baseAddress}", LogLevel.Info);
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error starting API server: {ex.Message} ({ex.HResult})", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error starting API server: {ex.Message} ({ex.HResult})", LogLevel.Error);
             }
         }
 
@@ -62,13 +62,13 @@ namespace Etrea3.Networking.API
                     server.CloseAsync().Wait();
                     server.Dispose();
                     IsRunning = false;
-                    Game.LogMessage($"INFO: API server stopped successfully", LogLevel.Info, true);
+                    Game.LogMessage($"INFO: API server stopped successfully", LogLevel.Info);
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error stopping API server: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error stopping API server: {ex.Message}", LogLevel.Error);
                 return false;
             }
         }

@@ -260,13 +260,13 @@ namespace Etrea3.Objects
             {
                 // decrement an existing buff
                 var newDuration = duration - 1;
-                Game.LogMessage($"TICK: Decrementing duration of Buff '{buffName}' on {Name}, new value = {newDuration}", LogLevel.Info, true);
+                Game.LogMessage($"TICK: Decrementing duration of Buff '{buffName}' on {Name}, new value = {newDuration}", LogLevel.Info);
                 Buffs.TryUpdate(buffName, newDuration, duration);
             }
             if (Buffs.TryGetValue(buffName, out duration) && duration == 0)
             {
                 // remove an expired buff
-                Game.LogMessage($"TICK: Removing expired Buff '{buffName}' on {Name}", LogLevel.Info, true);
+                Game.LogMessage($"TICK: Removing expired Buff '{buffName}' on {Name}", LogLevel.Info);
                 if (Buffs.TryRemove(buffName, out _))
                 {
                     switch (buffName)
@@ -823,15 +823,15 @@ namespace Etrea3.Objects
                 itemToAdd.ItemID = Guid.NewGuid();
                 if (!Inventory.TryAdd(itemToAdd.ItemID, itemToAdd))
                 {
-                    Game.LogMessage($"WARN: Failed to add item {itemToAdd.ID} to the inventory of player {Name}", LogLevel.Warning, true);
+                    Game.LogMessage($"WARN: Failed to add item {itemToAdd.ID} to the inventory of player {Name}", LogLevel.Warning);
                     return false;
                 }
                 return true;
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in Actor.AddItemToInventory(): {ex.Message}", LogLevel.Error, true);
-                Game.LogMessage($"DEBUG: ID passed to Actor.AddItemToInventory(): {id}", LogLevel.Debug, true);
+                Game.LogMessage($"ERROR: Error in Actor.AddItemToInventory(): {ex.Message}", LogLevel.Error);
+                Game.LogMessage($"DEBUG: ID passed to Actor.AddItemToInventory(): {id}", LogLevel.Debug);
                 return false;
             }
         }
@@ -855,7 +855,7 @@ namespace Etrea3.Objects
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in Actor.RemoveItemFromInventory(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in Actor.RemoveItemFromInventory(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1602,7 +1602,7 @@ namespace Etrea3.Objects
                 if (LevelTable.HasAchievedNewLevel(Exp, Level, out int nLevel))
                 {
                     var levelsToAdvance = nLevel - Level;
-                    Game.LogMessage($"DEBUG: Advancing Player {Name} by {levelsToAdvance} character levels", LogLevel.Debug, true);
+                    Game.LogMessage($"DEBUG: Advancing Player {Name} by {levelsToAdvance} character levels", LogLevel.Debug);
                     LevelUp(nLevel - Level);
                 }
             }

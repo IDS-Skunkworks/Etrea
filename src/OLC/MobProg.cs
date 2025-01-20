@@ -60,13 +60,13 @@ namespace Etrea3.OLC
                             if (MobProgManager.Instance.AddOrUpdateMobProg(mobProg, true))
                             {
                                 session.SendSystem($"%BGT%The new MobProg has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new MobProg: {mobProg.Name} ({mobProg.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new MobProg: {mobProg.Name} ({mobProg.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The new MobProg was not successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add MobProg {mobProg.Name} ({mobProg.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add MobProg {mobProg.Name} ({mobProg.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -118,13 +118,13 @@ namespace Etrea3.OLC
                 if (MobProgManager.Instance.RemoveMobProg(mobProg.ID))
                 {
                     session.SendSystem($"%BGT%The specified MobProg has been successfully removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed MobProg {mobProg.ID} ({mobProg.Name})", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed MobProg {mobProg.ID} ({mobProg.Name})", LogLevel.OLC);
                     return;
                 }
                 else
                 {
                     session.SendSystem($"%BRT%The specified MobProg could not be removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove MobProg {mobProg.ID} ({mobProg.Name}) but the attempt failed", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove MobProg {mobProg.ID} ({mobProg.Name}) but the attempt failed", LogLevel.OLC);
                     continue;
                 }
             }
@@ -205,13 +205,13 @@ namespace Etrea3.OLC
                             if (MobProgManager.Instance.AddOrUpdateMobProg(updatedMobProg, false))
                             {
                                 session.SendSystem($"%BGT%The updated MobProg has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated MobProg: {updatedMobProg.Name} ({updatedMobProg.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated MobProg: {updatedMobProg.Name} ({updatedMobProg.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The updated MobProg was not successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update MobProg {updatedMobProg.Name} ({updatedMobProg.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update MobProg {updatedMobProg.Name} ({updatedMobProg.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }

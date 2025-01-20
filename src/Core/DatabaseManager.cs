@@ -78,7 +78,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in GetLogEntries(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in GetLogEntries(): {ex.Message}", LogLevel.Error);
                 return null;
             }
         }
@@ -101,7 +101,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.ClearMOTD(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.ClearMOTD(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -126,7 +126,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SetMOTD(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SetMOTD(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -150,7 +150,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.GetMOTD(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.GetMOTD(): {ex.Message}", LogLevel.Error);
                 return string.Empty;
             }
         }
@@ -199,7 +199,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerCount(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerCount(): {ex.Message}", LogLevel.Error);
                 return -1;
             }
         }
@@ -236,7 +236,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.ValidateAPIKey(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.ValidateAPIKey(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -262,7 +262,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerAPIKey(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerAPIKey(): {ex.Message}", LogLevel.Error);
                 return string.Empty;
             }
         }
@@ -288,7 +288,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.UpdatePlayerAPIKey(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.UpdatePlayerAPIKey(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -314,7 +314,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.ChangePlayerPassword(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.ChangePlayerPassword(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -346,7 +346,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.DeleteCharacter(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.DeleteCharacter(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -372,7 +372,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.CharacterExists() looking for '{charName}': {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.CharacterExists() looking for '{charName}': {ex.Message}", LogLevel.Error);
                 return true; // return true to assume the player exists and prevent issues
             }
         }
@@ -397,7 +397,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.ValidatePlayerPassword() verifying password for player '{playerName}': {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.ValidatePlayerPassword() verifying password for player '{playerName}': {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -423,7 +423,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error loading player '{playerName}': {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error loading player '{playerName}': {ex.Message}", LogLevel.Error);
                 return null;
             }
         }
@@ -441,7 +441,7 @@ namespace Etrea3.Core
                         {
                             if (GetPlayerCount() == 0)
                             {
-                                Game.LogMessage($"INFO: Player '{session.Player.Name}' is the first player and will be elevated to Godhood!", LogLevel.Info, true);
+                                Game.LogMessage($"INFO: Player '{session.Player.Name}' is the first player and will be elevated to Godhood!", LogLevel.Info);
                                 SessionManager.Instance.GetSession(session.Player.Name).Player.Level = (int)Constants.ImmLevel + 10;
                             }
                             cmd.CommandText = "INSERT INTO tblPlayers (PlayerName, PlayerPassword, PlayerObject) VALUES (@n, @p, @o);";
@@ -466,7 +466,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SavePlayer(): Failed to save player '{session.Player.Name}': {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SavePlayer(): Failed to save player '{session.Player.Name}': {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -494,7 +494,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Exception in DatabaseManager.RoomIDInUse(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Exception in DatabaseManager.RoomIDInUse(): {ex.Message}", LogLevel.Error);
                 return true;
             }
         }
@@ -519,7 +519,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveRoom(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveRoom(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -546,7 +546,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveRoomToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveRoomToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -578,7 +578,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllRooms(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllRooms(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -608,7 +608,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveQuestToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveQuestToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -633,7 +633,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveQuest(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveQuest(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -665,7 +665,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllQuests(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllQuests(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -693,7 +693,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveRecipe(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveRecipe(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -720,7 +720,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveRecipeToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveRecipeToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -752,7 +752,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllRecipes(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllRecipes(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -780,7 +780,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveNPC(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveNPC(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -808,7 +808,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveNPCTemplateToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveNPCTemplateToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -840,7 +840,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllNPCTemplates(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllNPCTemplates(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -868,7 +868,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveResourceNode(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveResourceNode(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -895,7 +895,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveNodeToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveNodeToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -927,7 +927,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllNodes(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllNodes(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -957,7 +957,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveSpellToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveSpellToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -982,7 +982,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveSpell(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveSpell(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1015,7 +1015,7 @@ namespace Etrea3.Core
             catch(Exception ex)
             {
                 hasErr = true;
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllSpells(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllSpells(): {ex.Message}", LogLevel.Error);
                 return null;
             }
         }
@@ -1042,7 +1042,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveEmote(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveEmote(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1070,7 +1070,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveEmoteToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveEmoteToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1102,7 +1102,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllEmotes(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllEmotes(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -1144,7 +1144,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllZones(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllZones(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -1174,7 +1174,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Exception in DatabaseManager.SaveZoneToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Exception in DatabaseManager.SaveZoneToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1199,7 +1199,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveZone(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveZone(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1228,7 +1228,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveItemToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveItemToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1253,7 +1253,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveItem(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveItem(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1285,7 +1285,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllItems(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllItems(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -1313,7 +1313,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveShop(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveShop(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1340,7 +1340,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveShopToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveShopToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1372,7 +1372,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllShops(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllShops(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -1407,7 +1407,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerMail(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.GetPlayerMail(): {ex.Message}", LogLevel.Error);
                 return null;
             }
         }
@@ -1435,7 +1435,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SendMail(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SendMail(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1461,7 +1461,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.MarkMailAsRead(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.MarkMailAsRead(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1486,7 +1486,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.DeleteMail(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.DeleteMail(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1513,7 +1513,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveArticle(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveArticle(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1549,7 +1549,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllArticles(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllArticles(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -1578,7 +1578,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveArticleToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveArticleToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1605,7 +1605,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveMobProg(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveMobProg(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -1637,7 +1637,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllMobProgs(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllMobProgs(): {ex.Message}", LogLevel.Error);
                 hasErr = true;
                 return null;
             }
@@ -1665,7 +1665,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveMobProgToWorldDatabase(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveMobProgToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }

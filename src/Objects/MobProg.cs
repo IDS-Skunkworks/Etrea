@@ -76,7 +76,7 @@ namespace Etrea3.Objects
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in MobProg.TriggerEvent() for MobProg {ID}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in MobProg.TriggerEvent() for MobProg {ID}: {ex.Message}", LogLevel.Error);
             }
         }
     }

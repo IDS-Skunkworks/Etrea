@@ -92,13 +92,13 @@ namespace Etrea3.OLC
                             if (SpellManager.Instance.AddOrUpdateSpell(newSpell, true))
                             {
                                 session.SendSystem($"%BGT%The new Spell has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Spell: {newSpell.Name} ({newSpell.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Spell: {newSpell.Name} ({newSpell.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The new Spell could not be saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Spell {newSpell.Name} ({newSpell.ID}) but the attempt failed.", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Spell {newSpell.Name} ({newSpell.ID}) but the attempt failed.", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -148,12 +148,12 @@ namespace Etrea3.OLC
             if (SpellManager.Instance.RemoveSpell(spell.ID))
             {
                 session.SendSystem($"%BGT%The specified Spell was removed successfully.%PT%{Constants.NewLine}");
-                Game.LogMessage($"OLC: Player {session.Player.Name} has removed Spell {spell.Name} ({spell.ID})", LogLevel.OLC, true);
+                Game.LogMessage($"OLC: Player {session.Player.Name} has removed Spell {spell.Name} ({spell.ID})", LogLevel.OLC);
             }
             else
             {
                 session.SendSystem($"%BRT%The specified Spell could not be removed.%PT%{Constants.NewLine}");
-                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Spell {spell.Name} ({spell.ID}) but the attempt failed", LogLevel.OLC, true);
+                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Spell {spell.Name} ({spell.ID}) but the attempt failed", LogLevel.OLC);
             }
         }
 
@@ -266,13 +266,13 @@ namespace Etrea3.OLC
                             {
                                 SpellManager.Instance.SetSpellLockState(spellID, false, session);
                                 session.SendSystem($"%BGT%The Spell has been updated successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Spell: {modSpell.Name} ({modSpell.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Spell: {modSpell.Name} ({modSpell.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The updated Spell could not be saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Spell {modSpell.Name} ({modSpell.ID}) but the attempt failed.", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Spell {modSpell.Name} ({modSpell.ID}) but the attempt failed.", LogLevel.OLC);
                                 continue;
                             }
                         }

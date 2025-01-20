@@ -122,14 +122,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveNPCTemplateToWorldDatabase(npc, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save NPC Template {npc.Name} ({npc.TemplateID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save NPC Template {npc.Name} ({npc.TemplateID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.NPCTemplates.TryAdd(npc.TemplateID, npc))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new NPC Template {npc.Name} ({npc.TemplateID}) to NPC Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new NPC Template {npc.Name} ({npc.TemplateID}) to NPC Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -137,12 +137,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.NPCTemplates.TryGetValue(npc.TemplateID, out NPC existingTemplate))
                     {
-                        Game.LogMessage($"ERROR: NPC {npc.TemplateID} not found in NPC Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: NPC {npc.TemplateID} not found in NPC Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.NPCTemplates.TryUpdate(npc.TemplateID, npc, existingTemplate))
                     {
-                        Game.LogMessage($"ERROR: Failed to update NPC Template {npc.TemplateID} in NPC Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update NPC Template {npc.TemplateID} in NPC Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -150,7 +150,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in NPCManager.AddOrUpdateNPCTemplate(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in NPCManager.AddOrUpdateNPCTemplate(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -161,7 +161,7 @@ namespace Etrea3.Core
             {
                 return Instance.NPCTemplates.TryRemove(id, out _) && DatabaseManager.RemoveNPC(id);
             }
-            Game.LogMessage($"ERROR: Error removing NPC with Template ID {id}, no such NPC Template in NPCManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing NPC with Template ID {id}, no such NPC Template in NPCManager", LogLevel.Error);
             return false;
         }
 
@@ -173,7 +173,7 @@ namespace Etrea3.Core
                 SessionManager.Instance.RemovePlayerCombatTarget(id);
                 return true;
             }
-            Game.LogMessage($"ERROR: Error removing NPC with Instance ID {id}, no such NPC Instance in NPCManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing NPC with Instance ID {id}, no such NPC Instance in NPCManager", LogLevel.Error);
             return false;
         }
 
@@ -184,7 +184,7 @@ namespace Etrea3.Core
                 Instance.NPCInstances[npcID].CurrentRoom = roomID;
                 return true;
             }
-            Game.LogMessage($"ERROR: Error updating NPC Instance {npcID}, no such NPC Instance in NPCManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error updating NPC Instance {npcID}, no such NPC Instance in NPCManager", LogLevel.Error);
             return false;
         }
 
@@ -192,7 +192,7 @@ namespace Etrea3.Core
         {
             if (!Instance.NPCTemplates.ContainsKey(npcID) || !RoomManager.Instance.RoomExists(roomID))
             {
-                Game.LogMessage($"ERROR: Cannot add an Instance of NPC {npcID} to Room {roomID}, either the NPC or the Room does not exist", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Cannot add an Instance of NPC {npcID} to Room {roomID}, either the NPC or the Room does not exist", LogLevel.Error);
                 return false;
             }
             var newNPC = Helpers.Clone(GetNPC(npcID));
@@ -205,7 +205,7 @@ namespace Etrea3.Core
             newNPC.CurrentHP = newNPC.MaxHP;
             newNPC.CurrentMP = newNPC.MaxMP;
             Instance.NPCInstances.TryAdd(newNPC.ID, newNPC);
-            Game.LogMessage($"INFO: Spawning NPC {newNPC.ID} ({newNPC.Name}) in Room {roomID}", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Spawning NPC {newNPC.ID} ({newNPC.Name}) in Room {roomID}", LogLevel.Info);
             var playersInRoom = RoomManager.Instance.GetRoom(roomID).PlayersInRoom;
             if (playersInRoom != null && playersInRoom.Count > 0)
             {
@@ -462,7 +462,7 @@ namespace Etrea3.Core
             }
             npc.AddToTargetQueue(target.Player);
             target.Player.AddToTargetQueue(npc);
-            Game.LogMessage($"COMBAT: NPC {npc.Name} in Room {r.ID} has started combat with {target.Player.Name}", LogLevel.Combat, true);
+            Game.LogMessage($"COMBAT: NPC {npc.Name} in Room {r.ID} has started combat with {target.Player.Name}", LogLevel.Combat);
         }
 
         private void NPCDropInRoom(NPC npc)

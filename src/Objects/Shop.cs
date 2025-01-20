@@ -133,7 +133,7 @@ namespace Etrea3.Objects
                     CurrentInventory[foundItem.ID]--;
                 }
                 session.Send($"%BYT%{ShopName} smiles broadly. \"I hope you enjoy your purchase!\"%PT%{Constants.NewLine}");
-                Game.LogMessage($"SHOP: Player {session.Player.Name} purchased Item {foundItem.ID} from Shop {ID} for {purchasePrice:N0} gold", LogLevel.Shop, true);
+                Game.LogMessage($"SHOP: Player {session.Player.Name} purchased Item {foundItem.ID} from Shop {ID} for {purchasePrice:N0} gold", LogLevel.Shop);
                 var npc = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).NPCsInRoom.Where(x => x.ShopID == ID).FirstOrDefault();
                 if (npc != null && npc.MobProgs.Count > 0)
                 {
@@ -171,7 +171,7 @@ namespace Etrea3.Objects
                 session.Player.AdjustGold(salePrice, true);
                 session.Player.RemoveItemFromInventory(item);
                 session.Send($"You hand {item.ShortDescription} to {ShopName} and pocket the {salePrice:N0} gold!{Constants.NewLine}");
-                Game.LogMessage($"SHOP: Player {session.Player.Name} sold {item.ID} to Shop {ID} for {salePrice:N0} gold", LogLevel.Shop, true);
+                Game.LogMessage($"SHOP: Player {session.Player.Name} sold {item.ID} to Shop {ID} for {salePrice:N0} gold", LogLevel.Shop);
                 var npc = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).NPCsInRoom.Where(x => x.ShopID == ID).FirstOrDefault();
                 if (npc != null && npc.MobProgs.Count > 0)
                 {
@@ -194,7 +194,7 @@ namespace Etrea3.Objects
 
         public void RestockShop()
         {
-            Game.LogMessage($"INFO: Restocking Shop {ShopName}", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Restocking Shop {ShopName}", LogLevel.Info);
             foreach(var item in BaseInventory)
             {
                 if (item.Value != -1)

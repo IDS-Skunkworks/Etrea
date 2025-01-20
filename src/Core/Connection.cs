@@ -56,7 +56,7 @@ namespace Etrea3.Core
                     if (!RoomManager.Instance.RoomExists(playerSession.Player.CurrentRoom))
                     {
                         // Player is trying to load into a room that doesn't exist, so move them to Limbo
-                        Game.LogMessage($"WARN: Player {playerSession.Player.Name} tried to load into Room {playerSession.Player.CurrentRoom} which does not exist, transferring to Limbo", LogLevel.Warning, true);
+                        Game.LogMessage($"WARN: Player {playerSession.Player.Name} tried to load into Room {playerSession.Player.CurrentRoom} which does not exist, transferring to Limbo", LogLevel.Warning);
                         playerSession.Send($"The world has shifted and the Gods have transported you to Limbo!{Constants.NewLine}");
                         SessionManager.Instance.GetSession(playerSession.ID).Player.CurrentRoom = Game.Limbo;
                     }
@@ -105,14 +105,14 @@ namespace Etrea3.Core
                         }
                         catch (Exception ex)
                         {
-                            Game.LogMessage($"ERROR: Error parsing input from {playerSession.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
-                            Game.LogMessage($"DEBUG: Input from {playerSession.Client.Client.RemoteEndPoint}: {tInput}", LogLevel.Debug, true);
+                            Game.LogMessage($"ERROR: Error parsing input from {playerSession.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error);
+                            Game.LogMessage($"DEBUG: Input from {playerSession.Client.Client.RemoteEndPoint}: {tInput}", LogLevel.Debug);
                             playerSession.Send($"Sorry, I didn't understand that...{Constants.NewLine}");
                         }
                     }
                     else
                     {
-                        Game.LogMessage($"ERROR: Input from {playerSession.Client.Client.RemoteEndPoint} could not be validated", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Input from {playerSession.Client.Client.RemoteEndPoint} could not be validated", LogLevel.Error);
                     }
                 }
                 else
@@ -161,7 +161,7 @@ namespace Etrea3.Core
                 sb.AppendLine("3. Exit");
                 sb.AppendLine("Choice: ");
                 playerSession.Send(sb.ToString());
-                Game.LogMessage($"ERROR: Error sending welcome message to {playerSession.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error sending welcome message to {playerSession.Client.Client.RemoteEndPoint}: {ex.Message}", LogLevel.Error);
             }
         }
 
@@ -209,7 +209,7 @@ namespace Etrea3.Core
                 }
                 catch (Exception ex)
                 {
-                    Game.LogMessage($"ERROR: Error reading from socket at Connecton.MainMenu(): {ex.Message}", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Error reading from socket at Connecton.MainMenu(): {ex.Message}", LogLevel.Error);
                     SessionManager.Instance.Close(playerSession);
                 }
             }

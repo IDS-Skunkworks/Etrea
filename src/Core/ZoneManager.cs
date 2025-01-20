@@ -86,14 +86,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveZoneToWorldDatabase(z, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Zone {z.ZoneName} ({z.ZoneID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Zone {z.ZoneName} ({z.ZoneID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Zones.TryAdd(z.ZoneID, z))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Zone {z.ZoneName} ({z.ZoneID}) to Zone Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Zone {z.ZoneName} ({z.ZoneID}) to Zone Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -101,12 +101,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Zones.TryGetValue(z.ZoneID, out Zone existingZone))
                     {
-                        Game.LogMessage($"ERROR: Zone {z.ZoneID} not found in Zone Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Zone {z.ZoneID} not found in Zone Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Zones.TryUpdate(z.ZoneID, z, existingZone))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Zone {z.ZoneID} in Zone Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Zone {z.ZoneID} in Zone Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -114,7 +114,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in ZoneManager.AddOrUpdateZone(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in ZoneManager.AddOrUpdateZone(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -125,7 +125,7 @@ namespace Etrea3.Core
             {
                 return Instance.Zones.TryRemove(id, out _) && DatabaseManager.RemoveZone(id);
             }
-            Game.LogMessage($"ERROR: Error removing Zone {id}: No such Zone in Zone Manager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Zone {id}: No such Zone in Zone Manager", LogLevel.Error);
             return false;
         }
 
@@ -147,7 +147,7 @@ namespace Etrea3.Core
             {
                 zone.PulseZone();
             }
-            Game.LogMessage($"INFO: Restocking Shops", LogLevel.Info, true);
+            Game.LogMessage($"INFO: Restocking Shops", LogLevel.Info);
             foreach (var s in ShopManager.Instance.GetShop())
             {
                 s.RestockShop();

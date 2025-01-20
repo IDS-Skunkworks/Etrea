@@ -125,13 +125,13 @@ namespace Etrea3.OLC
                         {
                             if (ItemManager.Instance.AddOrUpdateItem(newItem, true))
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Item {newItem.Name} ({newItem.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Item {newItem.Name} ({newItem.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The new Item has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Item {newItem.Name} ({newItem.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Item {newItem.Name} ({newItem.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The new Item could not be created.%PT%{Constants.NewLine}");
                             }
                         }
@@ -256,13 +256,13 @@ namespace Etrea3.OLC
                         {
                             if (ItemManager.Instance.AddOrUpdateItem(newWeapon, true))
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Weapon {newWeapon.Name} ({newWeapon.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Weapon {newWeapon.Name} ({newWeapon.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The new Weapon has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Weapon {newWeapon.Name} ({newWeapon.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Weapon {newWeapon.Name} ({newWeapon.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The new Weapon could not be saved.%PT%{Constants.NewLine}");
                             }
                         }
@@ -377,13 +377,13 @@ namespace Etrea3.OLC
                         {
                             if (ItemManager.Instance.AddOrUpdateItem(newArmour, true))
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Armour {newArmour.Name} ({newArmour.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Armour {newArmour.Name} ({newArmour.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The new Armour has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Armour {newArmour.Name} ({newArmour.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Armour {newArmour.Name} ({newArmour.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The new Armour was not successfully created.%PT%{Constants.NewLine}");
                             }
                         }
@@ -492,13 +492,13 @@ namespace Etrea3.OLC
                         {
                             if (ItemManager.Instance.AddOrUpdateItem(newArmour, true))
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Armour {newArmour.Name} ({newArmour.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Armour {newArmour.Name} ({newArmour.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The new Armour has been created successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Armour {newArmour.Name} ({newArmour.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Armour {newArmour.Name} ({newArmour.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The new Armour was not successfully created.%PT%{Constants.NewLine}");
                             }
                         }
@@ -604,13 +604,13 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(newRing, true))
                             {
                                 session.SendSystem($"%BGT%The new Ring was saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Ring {newRing.Name} ({newRing.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Ring {newRing.Name} ({newRing.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The new Ring was not successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Ring {newRing.Name} ({newRing.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Ring {newRing.Name} ({newRing.ID}) but the attempt failed", LogLevel.OLC);
                             }
                         }
                         else
@@ -701,12 +701,12 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(newScroll, true))
                             {
                                 session.SendSystem($"%BGT%The new Scroll was saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Scroll {newScroll.Name} ({newScroll.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Scroll {newScroll.Name} ({newScroll.ID})", LogLevel.OLC);
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The new Scroll was not saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new Scroll {newScroll.Name} ({newScroll.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add a new Scroll {newScroll.Name} ({newScroll.ID}) but the attempt failed", LogLevel.OLC);
                             }
                         }
                         else
@@ -799,13 +799,13 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(newConsumable, true))
                             {
                                 session.SendSystem($"BGT%The new Consumable has been added successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Consumable {newConsumable.Name} ({newConsumable.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Consumable {newConsumable.Name} ({newConsumable.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The new Consumable could not be saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Consumable {newConsumable.Name} ({newConsumable.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Consumable {newConsumable.Name} ({newConsumable.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -967,13 +967,13 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(modItem, false))
                             {
                                 ItemManager.Instance.SetItemLockState(modItem.ID, false, session);
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Item {modItem.Name} ({modItem.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Item {modItem.Name} ({modItem.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The Item has been updated successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Item {modItem.Name} ({modItem.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Item {modItem.Name} ({modItem.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The update to the Item failed.%PT%{Constants.NewLine}");
                             }
                         }
@@ -1124,13 +1124,13 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(modWeapon, false))
                             {
                                 ItemManager.Instance.SetItemLockState(modWeapon.ID, false, session);
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Weapon {modWeapon.Name} ({modWeapon.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Weapon {modWeapon.Name} ({modWeapon.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The updated Weapon has been saved successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Weapon {modWeapon.Name} ({modWeapon.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Weapon {modWeapon.Name} ({modWeapon.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The updated Weapon could not be saved.%PT%{Constants.NewLine}");
                             }
                         }
@@ -1271,13 +1271,13 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(modArmour, false))
                             {
                                 ItemManager.Instance.SetItemLockState(modArmour.ID, false, session);
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Armour {modArmour.Name} ({modArmour.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Armour {modArmour.Name} ({modArmour.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The Armour has been updated successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Armour {modArmour.Name} ({modArmour.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Armour {modArmour.Name} ({modArmour.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The Armour could not be successfully updated.%PT%{Constants.NewLine}");
                             }
                         }
@@ -1408,13 +1408,13 @@ namespace Etrea3.OLC
                             if (ItemManager.Instance.AddOrUpdateItem(modArmour, false))
                             {
                                 ItemManager.Instance.SetItemLockState(modArmour.ID, false, session);
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Armour {modArmour.Name} ({modArmour.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Armour {modArmour.Name} ({modArmour.ID})", LogLevel.OLC);
                                 session.SendSystem($"%BGT%The Armour has updated successfully.%PT%{Constants.NewLine}");
                                 return;
                             }
                             else
                             {
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Armour {modArmour.Name} ({modArmour.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Armour {modArmour.Name} ({modArmour.ID}) but the attempt failed", LogLevel.OLC);
                                 session.SendSystem($"%BRT%The Armour was not successfully updated.%PT%{Constants.NewLine}");
                             }
                         }
@@ -1671,12 +1671,12 @@ namespace Etrea3.OLC
                             {
                                 ItemManager.Instance.SetItemLockState(item.ID, false, session);
                                 session.SendSystem($"%BGT%The updated Scroll was saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Scroll {modScroll.Name} ({modScroll.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Scroll {modScroll.Name} ({modScroll.ID})", LogLevel.OLC);
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The updated Scroll was not saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Scroll {modScroll.Name} ({modScroll.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Scroll {modScroll.Name} ({modScroll.ID}) but the attempt failed", LogLevel.OLC);
                             }
                         }
                         else
@@ -1799,13 +1799,13 @@ namespace Etrea3.OLC
                             {
                                 ItemManager.Instance.SetItemLockState(modConsumable.ID, false, session);
                                 session.SendSystem($"BGT%The updated Consumable has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Consumable {modConsumable.Name} ({modConsumable.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Consumable {modConsumable.Name} ({modConsumable.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The updated Consumable could not be saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Consumable {modConsumable.Name} ({modConsumable.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Consumable {modConsumable.Name} ({modConsumable.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -1857,12 +1857,12 @@ namespace Etrea3.OLC
             }
             if (ItemManager.Instance.RemoveItem(item.ID))
             {
-                Game.LogMessage($"OLC: Player {session.Player.Name} removed Item {item.Name} ({item.ID})", LogLevel.OLC, true);
+                Game.LogMessage($"OLC: Player {session.Player.Name} removed Item {item.Name} ({item.ID})", LogLevel.OLC);
                 session.SendSystem($"%BGT%The specified Item has been successfully removed.%PT%{Constants.NewLine}");
             }
             else
             {
-                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Item {item.Name} ({item.ID}) but the attempt failed", LogLevel.OLC, true);
+                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Item {item.Name} ({item.ID}) but the attempt failed", LogLevel.OLC);
                 session.SendSystem($"%BRT%The specified Item could not be removed.%PT%{Constants.NewLine}");
             }
         }

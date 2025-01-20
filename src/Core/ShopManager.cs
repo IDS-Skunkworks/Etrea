@@ -55,14 +55,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveShopToWorldDatabase(shop, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Shop {shop.ShopName} ({shop.ID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Shop {shop.ShopName} ({shop.ID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Shops.TryAdd(shop.ID, shop))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Shop {shop.ShopName} ({shop.ID}) to Shop Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Shop {shop.ShopName} ({shop.ID}) to Shop Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -70,12 +70,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Shops.TryGetValue(shop.ID, out Shop existingShop))
                     {
-                        Game.LogMessage($"ERROR: Shop {shop.ID} not found in Shop Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Shop {shop.ID} not found in Shop Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Shops.TryUpdate(shop.ID, shop, existingShop))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Shop {shop.ID} in Shop Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Shop {shop.ID} in Shop Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -83,7 +83,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in ShopManager.AddOrUpdateShop(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in ShopManager.AddOrUpdateShop(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -94,7 +94,7 @@ namespace Etrea3.Core
             {
                 return Instance.Shops.TryRemove(id, out _) && DatabaseManager.RemoveShop(id);
             }
-            Game.LogMessage($"ERROR: Error removing Shop with ID {id}, no such Shop in ShopManager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Shop with ID {id}, no such Shop in ShopManager", LogLevel.Error);
             return false;
         }
 

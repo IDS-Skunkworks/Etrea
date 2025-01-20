@@ -64,14 +64,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveMobProgToWorldDatabase(mobProg, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save MobProg {mobProg.ID} to World Dataase", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save MobProg {mobProg.ID} to World Dataase", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.MobProgs.TryAdd(mobProg.ID, mobProg))
                     {
-                        Game.LogMessage($"ERROR: Failed to add MobProg {mobProg.ID} to MobProg Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add MobProg {mobProg.ID} to MobProg Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -79,12 +79,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.MobProgs.TryGetValue(mobProg.ID, out var existingMobProg))
                     {
-                        Game.LogMessage($"ERROR: MobProg {mobProg.ID} not found in MobProg Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: MobProg {mobProg.ID} not found in MobProg Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.MobProgs.TryUpdate(mobProg.ID, mobProg, existingMobProg))
                     {
-                        Game.LogMessage($"ERROR: Failed to update MobProg {mobProg.ID} in MobProg Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update MobProg {mobProg.ID} in MobProg Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -92,7 +92,7 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in MobProgManager.AddOrUpdateMobProg(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in MobProgManager.AddOrUpdateMobProg(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -106,10 +106,10 @@ namespace Etrea3.Core
                     mp.Dispose();
                     return true;
                 }
-                Game.LogMessage($"ERROR: Failed to remove MobProg {id} from MobProg Manager and/or World Database", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Failed to remove MobProg {id} from MobProg Manager and/or World Database", LogLevel.Error);
                 return false;
             }
-            Game.LogMessage($"ERROR: Error removing MobProg {id}: No such MobProg in MobProg Manager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing MobProg {id}: No such MobProg in MobProg Manager", LogLevel.Error);
             return false;
         }
 

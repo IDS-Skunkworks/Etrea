@@ -9,7 +9,7 @@ namespace Etrea3.Core
         {
             if (session == null)
             {
-                Game.LogMessage($"ERROR: Attempt to initiate logon with a null session", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Attempt to initiate logon with a null session", LogLevel.Error);
                 return null;
             }
             SessionManager.Instance.UpdateSessionStatus(session.ID, ConnectionState.GetUserName);
@@ -46,7 +46,7 @@ namespace Etrea3.Core
                                             p.ID = session.ID;
                                             SessionManager.Instance.UpdateSessionPlayer(session.ID, p);
                                             SessionManager.Instance.UpdateSessionStatus(session.ID, ConnectionState.Playing);
-                                            Game.LogMessage($"CONNECTION: Player {playerName.Trim()} has logged in successfully from {session.Client.Client.RemoteEndPoint}", LogLevel.Connection, true);
+                                            Game.LogMessage($"CONNECTION: Player {playerName.Trim()} has logged in successfully from {session.Client.Client.RemoteEndPoint}", LogLevel.Connection);
                                             return p;
                                         }
                                         else
@@ -60,7 +60,7 @@ namespace Etrea3.Core
                                     {
                                         var oldSession = SessionManager.Instance.GetSession(playerName);
                                         var oldEndpoint = oldSession.Client.Client.RemoteEndPoint;
-                                        Game.LogMessage($"CONNECTION: Disconnecting existing session for player '{playerName}' to allow connection from {session.Client.Client.RemoteEndPoint}'", LogLevel.Connection, true);
+                                        Game.LogMessage($"CONNECTION: Disconnecting existing session for player '{playerName}' to allow connection from {session.Client.Client.RemoteEndPoint}'", LogLevel.Connection);
                                         SessionManager.Instance.Close(oldSession);
                                         var p = DatabaseManager.LoadPlayer(playerName.Trim());
                                         if (p != null)
@@ -68,7 +68,7 @@ namespace Etrea3.Core
                                             p.ID = session.ID;
                                             SessionManager.Instance.UpdateSessionPlayer(session.ID, p);
                                             SessionManager.Instance.UpdateSessionStatus(session.ID, ConnectionState.Playing);
-                                            Game.LogMessage($"CONNECTION: Player {playerName} has logged in successfully from {session.Client.Client.RemoteEndPoint}", LogLevel.Connection, true);
+                                            Game.LogMessage($"CONNECTION: Player {playerName} has logged in successfully from {session.Client.Client.RemoteEndPoint}", LogLevel.Connection);
                                             return p;
                                         }
                                         else
@@ -82,7 +82,7 @@ namespace Etrea3.Core
                                 else
                                 {
                                     authErrorCount++;
-                                    Game.LogMessage($"WARN: Authentication error for player {playerName.Trim()} from {session.Client.Client.RemoteEndPoint} (Failure count: {authErrorCount})", LogLevel.Warning, true);
+                                    Game.LogMessage($"WARN: Authentication error for player {playerName.Trim()} from {session.Client.Client.RemoteEndPoint} (Failure count: {authErrorCount})", LogLevel.Warning);
                                     session.Send($"Authentication error ({authErrorCount}/{Constants.MaxAuthErrors}){Constants.NewLine}");
                                     if (authErrorCount >= Constants.MaxAuthErrors)
                                     {
@@ -93,7 +93,7 @@ namespace Etrea3.Core
                         }
                         else
                         {
-                            Game.LogMessage($"WARN: Attempt from {session.Client.Client.RemoteEndPoint} to load player '{playerName}' which does not exist", LogLevel.Warning, true);
+                            Game.LogMessage($"WARN: Attempt from {session.Client.Client.RemoteEndPoint} to load player '{playerName}' which does not exist", LogLevel.Warning);
                             session.Send($"{Constants.NewLine}The given player cannot be found!{Constants.NewLine}");
                             break;
                         }
@@ -102,7 +102,7 @@ namespace Etrea3.Core
                 }
                 catch (Exception ex)
                 {
-                    Game.LogMessage($"ERROR: Error in LogonProvider.LogonPlayer(): {ex.Message}", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Error in LogonProvider.LogonPlayer(): {ex.Message}", LogLevel.Error);
                     break;
                 }
             }

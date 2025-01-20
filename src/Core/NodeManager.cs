@@ -85,14 +85,14 @@ namespace Etrea3.Core
             {
                 if (!DatabaseManager.SaveNodeToWorldDatabase(node, isNew))
                 {
-                    Game.LogMessage($"ERROR: Failed to save Node {node.Name} ({node.ID}) to the World Database", LogLevel.Error, true);
+                    Game.LogMessage($"ERROR: Failed to save Node {node.Name} ({node.ID}) to the World Database", LogLevel.Error);
                     return false;
                 }
                 if (isNew)
                 {
                     if (!Instance.Nodes.TryAdd(node.ID, node))
                     {
-                        Game.LogMessage($"ERROR: Failed to add new Node {node.Name} ({node.ID}) to Node Manager", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to add new Node {node.Name} ({node.ID}) to Node Manager", LogLevel.Error);
                         return false;
                     }
                 }
@@ -100,12 +100,12 @@ namespace Etrea3.Core
                 {
                     if (!Instance.Nodes.TryGetValue(node.ID, out ResourceNode existingNode))
                     {
-                        Game.LogMessage($"ERROR: Node {node.ID} not found in Node Manager for update", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Node {node.ID} not found in Node Manager for update", LogLevel.Error);
                         return false;
                     }
                     if (!Instance.Nodes.TryUpdate(node.ID, node, existingNode))
                     {
-                        Game.LogMessage($"ERROR: Failed to update Node {node.ID} in Node Manager due to a value mismatch", LogLevel.Error, true);
+                        Game.LogMessage($"ERROR: Failed to update Node {node.ID} in Node Manager due to a value mismatch", LogLevel.Error);
                         return false;
                     }
                 }
@@ -113,7 +113,7 @@ namespace Etrea3.Core
             }
             catch(Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in NodeManager.AddOrUpdateNode(): {ex.Message}", LogLevel.Error, true);
+                Game.LogMessage($"ERROR: Error in NodeManager.AddOrUpdateNode(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
@@ -124,7 +124,7 @@ namespace Etrea3.Core
             {
                 return Instance.Nodes.TryRemove(id, out _) && DatabaseManager.RemoveResourceNode(id);
             }
-            Game.LogMessage($"ERROR: Error removing Resource Node with ID {id}: No such Node in Node Manager", LogLevel.Error, true);
+            Game.LogMessage($"ERROR: Error removing Resource Node with ID {id}: No such Node in Node Manager", LogLevel.Error);
             return false;
         }
 

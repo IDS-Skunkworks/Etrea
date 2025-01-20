@@ -389,7 +389,6 @@ namespace Etrea3.Core
                     break;
 
                 case "nosnoop":
-                    arg = input.Remove(0, verb.Length).Trim();
                     StopSnoop(session);
                     break;
 
@@ -620,6 +619,10 @@ namespace Etrea3.Core
                 case "force":
                     arg = input.Remove(0, verb.Length).Trim();
                     ForceActor(session, arg);
+                    break;
+
+                case "flags":
+                    ShowFlags(session);
                     break;
 
                 case "checkmemory":

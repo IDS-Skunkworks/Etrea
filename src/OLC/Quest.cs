@@ -94,13 +94,13 @@ namespace Etrea3.OLC
                             if (QuestManager.Instance.AddOrUpdateQuest(newQuest, true))
                             {
                                 session.SendSystem($"%BGT%The new Quest has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Quest: {newQuest.Name} ({newQuest.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new Quest: {newQuest.Name} ({newQuest.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The new Quest was not successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Quest: {newQuest.Name} ({newQuest.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add new Quest: {newQuest.Name} ({newQuest.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
@@ -151,13 +151,13 @@ namespace Etrea3.OLC
                 }
                 if (QuestManager.Instance.RemoveQuest(q.ID))
                 {
-                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Quest: {q.Name} ({q.ID})", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed Quest: {q.Name} ({q.ID})", LogLevel.OLC);
                     session.SendSystem($"%BGT%The specified Quest has been successfully removed.%PT%{Constants.NewLine}");
                     return;
                 }
                 else
                 {
-                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Quest: {q.Name} ({q.ID}) but the attempt failed", LogLevel.OLC, true);
+                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove Quest: {q.Name} ({q.ID}) but the attempt failed", LogLevel.OLC);
                     session.SendSystem($"%BRT%Failed to remove the specified Quest.%PT%{Constants.NewLine}");
                     continue;
                 }
@@ -272,13 +272,13 @@ namespace Etrea3.OLC
                             if (QuestManager.Instance.AddOrUpdateQuest(modQuest, false))
                             {
                                 session.SendSystem($"%BGT%The Quest has been updated successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Quest: {modQuest.Name} ({modQuest.ID})", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated Quest: {modQuest.Name} ({modQuest.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
                                 session.SendSystem($"%BRT%The Quest was not successfully updated.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Quest: {modQuest.Name} ({modQuest.ID}) but the attempt failed", LogLevel.OLC, true);
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update Quest: {modQuest.Name} ({modQuest.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
