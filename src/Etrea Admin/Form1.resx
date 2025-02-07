@@ -1,0 +1,240 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="richTextBox2.Text" xml:space="preserve">
+    <value>The following can be used for Room Flags:
+None - no flags, cannot be set if other flags are also set
+Inside - no weather effects in this room (WIP)
+Cave - no weather effects (WIP), can spawn mining nodes
+Water - room is filled with water (WIP)
+Safe - no attacks are permitted
+Healing - all regeneration is increased
+NoTeleport - teleport to/from this room is not allowed
+NoMobs - no NPCs can spawn or more into this room
+SkillTrainer - players can learn skills here
+MagicTrainer - players can learn spells here
+StatTrainer - players can improve their stats here
+Gambler - players can play dice here
+Dark - players cannot see without a light soruce
+NoMagic - no spells can be cast in this room
+Blacksmith - players can learn and craft Blacksmith recipes here
+Alchemist - players can learn and craft Alchemy recipes here
+Jeweler - players can learn and craft Jewelcraft recipes here
+QuestMaster - players can accept and return Quests here
+PostBox - players can read and send mail here
+Banker - players can deposit and withdraw gold here
+NoHealing - players do not regenerate here
+Vault - players can store and withdraw items here
+LanguageTrainer - players can learn new languages here
+HardTerrain - moving to/from this room costs double SP
+Chef - players can learn and craft Cooking recipes here
+Exorcist - players can have cursed items removed here
+Scribe - players can learn and craft Scribe recipes here
+Sign - room has a Sign to read. Sign text must be set if this flag is used
+GodRoom - players cannot enter this room if they are not Immortal</value>
+  </data>
+  <data name="label21.Text" xml:space="preserve">
+    <value>Placeholders:
+The following placeholders can be used and will be substituted with proper values when the Emote is performed:
+
+%pg% or %tg% = performer or target gender: male, female or nonbinary
+%pg1% or %tg1% = performer or target objective pronoun: him, her, them
+%pg2% or %tg2% = performer or target posessive pronoun: his, hers, their
+%pg3% or %tg3% = performer or target personal pronoun: he, she, they
+%pn% or %tn% = performer or target name</value>
+  </data>
+  <data name="richTextBox1.Text" xml:space="preserve">
+    <value>The following are valid for Triggers:
+MudTick - program runs every time the NPC is ticked
+PlayerEnter - program runs when a player enters the room the NPC is in
+PlayerLeave - program runs when a player leaves the room the NPC is in
+ReceiveItem - program runs when the NPC is given an item
+MobAttacked - program runs when a player attacks the NPC
+MobFlees - program runs when the NPC flees from combat
+MobDeath - program runs when the NPC is killed in combat
+EmoteTarget - program runs when the NPC is the target of an Emote
+PlayerSay - program runs when a player speaks in front of the NPC
+PlayerWhisper - program runs when a player whispers to the NPC
+MobEnter - runs when another NPC enters the same room as the NPC
+MobLeave - runs when another NPC leaves the same room as the NPC
+PlayerLook - runs when a player looks at the NPC
+ReceiveGold - uns when the NPC is given an amount of gold
+PlayerDropItem - runs when a player drops an Item on the floor
+PlayerTakeItem - runs when a player takes an Item from the ground
+PlayerPurchaseItem - runs when a player purchases an Item from a shop
+PlayerSellItem - runs when a player sells an Item to a Shop
+PlayerTakeGold - runs when a player takes gold from the Room
+PlayerDropGold - runs when a player drops gold on the floor
+PlayerEnterShop - runs when a player starts shopping
+PlayerLeaveShop - runs when a player finishes shopping</value>
+  </data>
+  <data name="rtBxNPCFlags.Text" xml:space="preserve">
+    <value>The following can be used as Flags for NPCs:
+None - no additional behaviour
+Regeneration - NPC will always regenerate, even in combat and in rooms flagged NoRegen
+Hostile - NPC can randomly attack players in the same room
+Sentinel - NPC will not move from its location
+Coward - NPC will flee from combat when HP drops below a threshold
+Scavenger - NPC will randomly take items and gold from rooms
+NoPush - NPC cannot be pushed to other rooms by players
+Flying - NPC cannot be hit with melee weapons
+NoBackstab - NPC cannot be backstabbed
+NoPickpocket - NPC cannot be pickpocketed
+LitterBug - NPC will randomly drop items they are carrying onto the floor</value>
+  </data>
+  <data name="richTextBox3.Text" xml:space="preserve">
+    <value>Weapon Type:
+Dagger, Sword, Axe, Spear, Staff, Polearm, Crossbow, Shortbow, Longbow, Greatsword
+
+Armour Type:
+Light, Medium, Heavy, Exotic
+
+Wear Slot: Head, Neck, Body, Weapon, Held, Finger, Feet
+
+Consumable Effect:
+None - no effect
+Healing - restores HP based on the number and size of effect dice
+MPRecovery - restores MP based on the number and size of effect dice
+Buff - applies one or more buffs to the consumer
+SPRecovery - restores SP based on the number and size of effect dice
+Antidote - removes the Poison debuff
+Death - instantly kills the drinker
+Restoration - removes all debuffs and fully restores HP, MP and SP
+Poison - adds a debuff causing loss of HP over time
+DrainMP - adds a debuff causing loss of MP over time
+DrainSP - adds a debuff causing loss of SP over time</value>
+  </data>
+  <data name="rtxtBxSpellInfo.Text" xml:space="preserve">
+    <value>Classes: Wizard, Theif, Cleric, Figher
+
+Spell Type: Damage, Healing, Buff, Debuff
+
+MP Cost: Can be specified as a flat number, e.g. 10 or an expression such as min(level,4). Dice expressions such as 2D6 are not supported. The following placeholders can be used in an expression and will be evaluated on a per-caster basis:
+	level: the caster's character level
+	INT / WIS: the caster's ability modifier for the specified stat
+
+Damage: Can be specified as a dice expression such as 2D6 or a more complex expression to allow for scaling. The following placeholders and functions are supported:
+	level: the caster's character level
+	INT / WIS: the caster's ability modifier for the specified stat
+	min: min(x, y) = the smaller of values x and y
+	max: max(x, y) = the larger of values x and y
+	rand: rand(n1, n2, n3, nn) = a random value from the provided list
+	randbetween: randbetween(x, y) where x &lt; y = a random number in the specified range</value>
+  </data>
+</root>

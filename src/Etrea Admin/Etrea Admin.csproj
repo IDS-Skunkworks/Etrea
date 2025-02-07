@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D599BE26-117F-4759-A0C9-E269B28A40C7}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>Etrea_Admin</RootNamespace>
+    <AssemblyName>Etrea Admin</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AddRoomExit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddRoomExit.Designer.cs">
+      <DependentUpon>AddRoomExit.cs</DependentUpon>
+    </Compile>
+    <Compile Include="APIHelper.cs" />
+    <Compile Include="Armour.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="BuffSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="BuffSelector.Designer.cs">
+      <DependentUpon>BuffSelector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consumable.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CraftingRecipe.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Emotes.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GetIntegerPair.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GetIntegerPair.Designer.cs">
+      <DependentUpon>GetIntegerPair.cs</DependentUpon>
+    </Compile>
+    <Compile Include="HelpArticle.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ListViewItemComparer.cs" />
+    <Compile Include="MiscItems.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MobProgs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="NPCs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Quests.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ResourceNode.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Rings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Rooms.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scrolls.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectInventoryItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectInventoryItem.Designer.cs">
+      <DependentUpon>SelectInventoryItem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SelectMobProg.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectMobProg.Designer.cs">
+      <DependentUpon>SelectMobProg.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SelectNPC.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectNPC.Designer.cs">
+      <DependentUpon>SelectNPC.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SelectSpell.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectSpell.Designer.cs">
+      <DependentUpon>SelectSpell.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Shops.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SkillSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SkillSelector.Designer.cs">
+      <DependentUpon>SkillSelector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Spells.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Weapons.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Zones.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <EmbeddedResource Include="AddRoomExit.resx">
+      <DependentUpon>AddRoomExit.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BuffSelector.resx">
+      <DependentUpon>BuffSelector.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GetIntegerPair.resx">
+      <DependentUpon>GetIntegerPair.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="SelectInventoryItem.resx">
+      <DependentUpon>SelectInventoryItem.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SelectMobProg.resx">
+      <DependentUpon>SelectMobProg.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SelectNPC.resx">
+      <DependentUpon>SelectNPC.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SelectSpell.resx">
+      <DependentUpon>SelectSpell.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SkillSelector.resx">
+      <DependentUpon>SkillSelector.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Etrea3.Core\Etrea3.Core.csproj">
+      <Project>{d1f7b246-b82f-4db9-ac6a-92bce4b83822}</Project>
+      <Name>Etrea3.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Etrea3.Enums\Etrea3.Enums.csproj">
+      <Project>{4c09e4ee-de5e-4899-9ea7-5efa907f18fe}</Project>
+      <Name>Etrea3.Enums</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
