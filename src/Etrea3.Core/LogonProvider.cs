@@ -26,6 +26,7 @@ namespace Etrea3.Core
                     var playerName = session.Read();
                     if (!string.IsNullOrEmpty(playerName))
                     {
+                        playerName = playerName.Trim();
                         if (playerName.Trim().ToUpper() == "EXIT")
                         {
                             return null;
@@ -58,7 +59,7 @@ namespace Etrea3.Core
                                     }
                                     else
                                     {
-                                        var oldSession = SessionManager.Instance.GetSession(playerName);
+                                        var oldSession = SessionManager.Instance.GetSession(playerName.Trim());
                                         var oldEndpoint = oldSession.Client.Client.RemoteEndPoint;
                                         Game.LogMessage($"CONNECTION: Disconnecting existing session for player '{playerName}' to allow connection from {session.Client.Client.RemoteEndPoint}'", LogLevel.Connection);
                                         SessionManager.Instance.Close(oldSession);
