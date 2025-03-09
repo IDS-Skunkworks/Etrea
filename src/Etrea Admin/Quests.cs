@@ -5,6 +5,7 @@ using Etrea3.Objects;
 using System.Linq;
 using Etrea3.Core;
 using Etrea3;
+using System.Text;
 
 namespace Etrea_Admin
 {
@@ -471,7 +472,7 @@ namespace Etrea_Admin
                 newQuest.RewardGold = ulong.Parse(txtBxQuestRewardGP.Text);
                 newQuest.RewardExp = uint.Parse(txtBxQuestRewardExp.Text);
                 newQuest.Zone = int.Parse(txtBxQuestZone.Text);
-                newQuest.FlavourText = rtxtBxQuestFlavourText.Text;
+                newQuest.FlavourText = rtxtBxQuestFlavourText.Lines.ConvertToString();
                 Enum.TryParse(txtBxQuestType.Text, true, out QuestType type);
                 newQuest.QuestType = type;
                 if (listViewQuestRequiredItems.Items.Count > 0)

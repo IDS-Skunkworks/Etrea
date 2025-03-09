@@ -511,8 +511,8 @@ namespace Etrea_Admin
                 room.RoomName = txtBxRoomName.Text;
                 room.ShortDescription = txtBxRoomShortDesc.Text;
                 room.ZoneID = Convert.ToInt32(txtBxRoomZoneID.Text);
-                room.LongDescription = rTxtRoomLongDesc.Text;
-                room.SignText = rTxtRoomSign.Text;
+                room.LongDescription = rTxtRoomLongDesc.Lines.ConvertToString();
+                room.SignText = rTxtRoomSign.Lines.ConvertToString();
                 Enum.TryParse(txtBxRoomFlags.Text, true, out RoomFlags result);
                 room.Flags = result;
                 if (listViewRoomExits.Items.Count > 0)

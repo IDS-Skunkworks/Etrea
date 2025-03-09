@@ -333,7 +333,7 @@ namespace Etrea_Admin
                 newArmour.Slot = armSlot;
                 Enum.TryParse(txtBxArmourType.Text, true, out ArmourType armType);
                 newArmour.ArmourType = armType;
-                newArmour.LongDescription = rTxtBxArmourLongDesc.Text;
+                newArmour.LongDescription = rTxtBxArmourLongDesc.Lines.ConvertToString();
                 if (listBxArmourBuffs.Items.Count > 0)
                 {
                     foreach (var item in listBxArmourBuffs.Items)

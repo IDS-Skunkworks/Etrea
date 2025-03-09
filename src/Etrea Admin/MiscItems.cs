@@ -231,7 +231,7 @@ namespace Etrea_Admin
                 newItem.ID = int.Parse(txtBxMiscItemID.Text);
                 newItem.Name = txtBxMiscItemName.Text;
                 newItem.ShortDescription = txtBxMiscItemShortDesc.Text;
-                newItem.LongDescription = rtxtBxMiscItemLongDesc.Text;
+                newItem.LongDescription = rtxtBxMiscItemLongDesc.Lines.ConvertToString();
                 newItem.BaseValue = int.Parse(txtBxMiscItemValue.Text);
             }
             catch (Exception ex)

@@ -375,7 +375,7 @@ namespace Etrea_Admin
                 newWeapon.WeaponType = wpnType;
                 newWeapon.HitModifier = int.Parse(txtBxWeaponHitMod.Text);
                 newWeapon.DamageModifier = int.Parse(txtBxWeaponDamageMod.Text);
-                newWeapon.LongDescription = rtxtBxWeaponLongDesc.Text;
+                newWeapon.LongDescription = rtxtBxWeaponLongDesc.Lines.ConvertToString();
                 if (lstBxWeaponSkills.Items.Count > 0)
                 {
                     foreach(string skill in lstBxWeaponSkills.Items)

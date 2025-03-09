@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Etrea3.Objects;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace Etrea3.Core
 {
@@ -38,6 +39,65 @@ namespace Etrea3.Core
                 sb.Replace(replacement.Key, replacement.Value);
             }
             return sb.ToString();
+        }
+
+        public static bool AutoWinsDiceGame(int[] rolls, out bool criticalWin)
+        {
+            Array.Sort(rolls);
+            int d1 = rolls[0], d2 = rolls[1], d3 = rolls[2];
+            if ((d1 == d2 && d2 == d3) && (d1 >= 4))
+            {
+                criticalWin = true;
+                return true;
+            }
+            if (d1 == 4 && d2 == 5 && d3 == 6)
+            {
+                criticalWin = false;
+                return true;
+            }
+            criticalWin = false;
+            return false;
+        }
+
+        public static bool AutoLosesDiceGame(int[] rolls, out bool criticalLoss)
+        {
+            Array.Sort(rolls);
+            int d1 = rolls[0], d2 = rolls[1], d3 = rolls[2];
+            if ((d1 == d2 && d2 == d3) && (d1 <= 3))
+            {
+                criticalLoss = true;
+                return true;
+            }
+            if (d1 == 1 && d2 == 2 && d3 == 3)
+            {
+                criticalLoss = false;
+                return true;
+            }
+            criticalLoss = false;
+            return false;
+        }
+
+        public static bool ValidDiceScore(int[] rolls, out int score)
+        {
+            Array.Sort(rolls);
+            int d1 = rolls[0], d2 = rolls[1], d3 = rolls[2];
+            if (d1 == d2)
+            {
+                score = d3;
+                return true;
+            }
+            if (d2 == d3)
+            {
+                score = d1;
+                return true;
+            }
+            if (d1 == d3)
+            {
+                score = d2;
+                return true;
+            }
+            score = 0;
+            return false;
         }
 
         public static bool FleeCombat(Actor fleeing, out int destRID)

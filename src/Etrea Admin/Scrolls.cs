@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Etrea3.Objects;
 using System.Linq;
 using Etrea3.Core;
+using System.Text;
 
 namespace Etrea_Admin
 {
@@ -239,7 +240,7 @@ namespace Etrea_Admin
                 newScroll.ID = int.Parse(txtBxScrollID.Text);
                 newScroll.Name = txtBxScrollName.Text;
                 newScroll.ShortDescription = txtBxScrollShortDesc.Text;
-                newScroll.LongDescription = rtxtBxScrollLongDesc.Text;
+                newScroll.LongDescription = rtxtBxScrollLongDesc.Lines.ConvertToString();
                 newScroll.CastsSpell = txtBxScrollSpell.Text;
                 newScroll.BaseValue = int.Parse(txtBxScrollValue.Text);
             }

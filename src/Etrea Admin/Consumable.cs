@@ -273,7 +273,7 @@ namespace Etrea_Admin
                 newConsumable.BaseValue = int.Parse(txtBxConsumableValue.Text);
                 newConsumable.NumberOfDamageDice = int.Parse(txtBxNoOfConsumableEffectDice.Text);
                 newConsumable.SizeofDamageDice = int.Parse(txtBxConsumableDieSize.Text);
-                newConsumable.LongDescription = rtxtBxConsumableLongDesc.Text;
+                newConsumable.LongDescription = rtxtBxConsumableLongDesc.Lines.ConvertToString();
                 Enum.TryParse(txtBxConsumableEffect.Text, true, out ConsumableEffect effect);
                 newConsumable.Effects = effect;
                 if (listBoxConsumableBuffs.Items.Count > 0)

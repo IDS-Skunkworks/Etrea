@@ -75,6 +75,7 @@
     <Compile Include="Emotes.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

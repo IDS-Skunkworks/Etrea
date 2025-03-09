@@ -160,7 +160,7 @@ namespace Etrea_Admin
             try
             {
                 article.Title = txtBxArticleName.Text;
-                article.ArticleText = rtxtBxArticleText.Text;
+                article.ArticleText = rtxtBxArticleText.Lines.ConvertToString();
                 article.ImmOnly = chkBxArticleImmOnly.Checked;
             }
             catch (Exception ex)

@@ -5,6 +5,7 @@ using Etrea3.Objects;
 using System.Linq;
 using Etrea3;
 using Etrea3.Core;
+using System.Text;
 
 namespace Etrea_Admin
 {
@@ -337,7 +338,7 @@ namespace Etrea_Admin
                 newRing.ACModifier = int.Parse(txtBxRingACMod.Text);
                 newRing.HitModifier = int.Parse(txtBxRingHitMod.Text);
                 newRing.DamageModifier = int.Parse(txtBxRingDamMod.Text);
-                newRing.LongDescription = rtxtBxRingLongDesc.Text;
+                newRing.LongDescription = rtxtBxRingLongDesc.Lines.ConvertToString();
                 if (listBxRingBuffs.Items.Count > 0)
                 {
                     foreach (var item in listBxRingBuffs.Items)

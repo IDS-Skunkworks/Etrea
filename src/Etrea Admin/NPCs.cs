@@ -599,7 +599,7 @@ namespace Etrea_Admin
                 newNPC.TemplateID = int.Parse(txtBxNPCID.Text);
                 newNPC.Name = txtbxNPCName.Text;
                 newNPC.ShortDescription = txtBxNPCShortDesc.Text;
-                newNPC.LongDescription = rtBoxNPCLongDesc.Text;
+                newNPC.LongDescription = rtBoxNPCLongDesc.Lines.ConvertToString();
                 newNPC.ZoneID = int.Parse(txtBxNPCZone.Text);
                 newNPC.MaxNumberInWorld = int.Parse(txtBxNPCMaxNumber.Text);
                 newNPC.AppearanceChance = int.Parse(txtBxNPCAppearChance.Text);

@@ -1482,37 +1482,168 @@ namespace Etrea3.Core
                 session.Send($"%BRT%There is no gambler here!%PT%{Constants.NewLine}");
                 return;
             }
-            if (string.IsNullOrEmpty(arg))
+            if (string.IsNullOrEmpty(arg) || arg.Trim().ToLower() == "help")
             {
+                session.Send($"%BRT%Usage:%PT%{Constants.NewLine}");
+                session.Send($"%BRT%<bet | gamble | dice> <rules | help | amount>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%<bet | gabmle | dice> rules - show the game rules%PT%{Constants.NewLine}");
+                session.Send($"%BRT%<bet | gamble | dice> help - show this message%PT%{Constants.NewLine}");
+                session.Send($"%BRT%<bet | gamble | dice> 1000 - play the game with a bet of 1000 gold%PT%{Constants.NewLine}");
                 session.Send($"%BRT%You need to say how much you want to bet!%PT%{Constants.NewLine}");
                 return;
             }
-            if (!ulong.TryParse(arg, out ulong betAmount))
+            if (arg.Trim().ToLower() == "rules")
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"%BYT%\"You want to know how its played?\" the dicer asks. \"Well then, pay attention, {session.Player.Name}.\"%PT%");
+                sb.AppendLine($"%BYT%The dicer picks up three six-sided dice. \"You roll these. If two dice match, the third one is your score.\"%PT%");
+                sb.AppendLine($"%BYT%\"Then,\" he continues, \"I roll them. Same rules. Whoever scores highest wins. If you win, you get your stake%PT%");
+                sb.AppendLine($"%BYT%back, plus half. If I win, I keep your money. If neither of us score, you get your stake back. There are some%PT%");
+                sb.AppendLine($"%BYT%special cases though,\" he says, picking up the dice again.%PT%");
+                sb.AppendLine($"%BYT%\"If you roll three fours, fives or sixes, you get your stake plus triple. If you roll four-five-six, you get%PT%");
+                sb.AppendLine($"%BYT%your stake plus double. Its not all good news, though,\" he says, turning the dice to show one-two-three.%PT%");
+                sb.AppendLine($"%BYT%\"If you roll this, I keep your stake and take double the amount again. If you're really unlucky and you%PT%");
+                sb.AppendLine($"%BYT%roll three ones, twos or threes, I keep your stake and take triple. Same rules for me, though, so its all");
+                sb.AppendLine($"%BYT%down to luck. Got it? Good! Lets roll some dice!\"%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            if (!long.TryParse(arg.Trim(), out long betAmount) || betAmount < 0)
             {
                 session.Send($"%BRT%That isn't a valid amount to bet.%PT%{Constants.NewLine}");
                 return;
             }
-            if (session.Player.Gold < betAmount)
+            if ((ulong)betAmount > session.Player.Gold)
             {
                 session.Send($"%BRT%You don't have that much gold!%PT%{Constants.NewLine}");
                 return;
             }
-            session.Player.AdjustGold((long)betAmount * -1, true, false);
-            int playerRoll = Helpers.RollDice<int>(1, 100);
-            int npcRoll = Helpers.RollDice<int>(1, 100);
-            int bonusRoll = Helpers.RollDice<int>(1, 100);
-            int finalRoll = session.Player.HasSkill("Gambling") ? Math.Max(playerRoll, bonusRoll) : playerRoll;
-            session.Send($"%BGT%You rolled {finalRoll} and the dicer rolled {npcRoll}...%PT%{Constants.NewLine}");
-            if (finalRoll >= npcRoll)
+            session.Player.AdjustGold(betAmount * -1, true, false);
+            bool playerValidScore, dicerValidScore;
+            int playerScore, dicerScore;
+            long winAmount, lossAmount;
+            int[] playerRolls = new int[]
             {
-                var winAmount = betAmount + (betAmount / 2);
-                session.Send($"%BGT%You won the roll and pocket {winAmount:N0} gold!%PT%{Constants.NewLine}");
-                session.Player.AdjustGold((long)winAmount, true, false);
-            }
-            else
+                session.Player.HasSkill("Gambling") ? Math.Max(Helpers.RollDice<int>(1, 6), Helpers.RollDice<int>(1, 6)) : Helpers.RollDice<int>(1, 6),
+                session.Player.HasSkill("Gambling") ? Math.Max(Helpers.RollDice<int>(1, 6), Helpers.RollDice<int>(1, 6)) : Helpers.RollDice<int>(1, 6),
+                session.Player.HasSkill("Gambling") ? Math.Max(Helpers.RollDice<int>(1, 6), Helpers.RollDice<int>(1, 6)) : Helpers.RollDice<int>(1, 6)
+            };
+            int[] dicerRolls = new int[]
             {
-                session.Send($"%BRT%You lost! Better luck next time!%PT%{Constants.NewLine}");
+                Helpers.RollDice<int>(1, 6),
+                Helpers.RollDice<int>(1, 6),
+                Helpers.RollDice<int>(1, 6)
+            };
+            if (Helpers.AutoWinsDiceGame(playerRolls, out bool playerCritWin))
+            {
+                if (playerCritWin)
+                {
+                    winAmount = betAmount + (betAmount * 3);
+                    session.Send($"%BYT%The dicer laughs, \"You rolled {string.Join(", ", playerRolls)} which is a critical win!\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%The dicer hands you {winAmount:N0} gold coins!%PT%{Constants.NewLine}");
+                    session.Player.AdjustGold(winAmount, true, false);
+                    return;
+                }
+                winAmount = betAmount + (betAmount * 2);
+                session.Send($"%BYT%The dicer grins, \"Luck is with you today! You rolled {string.Join(", ", playerRolls)} which is an instant win!%PT%{Constants.NewLine}");
+                session.Send($"%BYT%The dicer hands you {winAmount:N0} gold coins!%PT%{Constants.NewLine}");
+                session.Player.AdjustGold(winAmount, true, false);
+                return;
             }
+            if (Helpers.AutoLosesDiceGame(playerRolls, out bool playerCritLoss))
+            {
+                if (playerCritLoss)
+                {
+                    lossAmount = Math.Min((long)session.Player.Gold, betAmount * 3);
+                    session.Send($"%BYT%The dicer tuts. \"Not your day, is it? You rolled {string.Join(", ", playerRolls)} which is a critical loss!\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%The dicer takes {lossAmount:N0} gold from you!%PT%{Constants.NewLine}");
+                    session.Player.AdjustGold(lossAmount * -1, true, false);
+                    return;
+                }
+                lossAmount = Math.Min((long)session.Player.Gold, betAmount * 2);
+                session.Send($"%BYT%The dicer laughs, \"It's my lucky day! You rolled {string.Join(", ", playerRolls)} which is an instant loss!\"%PT%{Constants.NewLine}");
+                session.Send($"%BYT%The dicer takes {lossAmount:N0} gold from you!%PT%{Constants.NewLine}");
+                session.Player.AdjustGold(lossAmount * -1, true, false);
+                return;
+            }
+            if (Helpers.AutoWinsDiceGame(dicerRolls, out bool dicerCritWin))
+            {
+                if (dicerCritWin)
+                {
+                    lossAmount = Math.Min((long)session.Player.Gold, betAmount * 3);
+                    session.Send($"%BYT%\"Oh yes!\" the dicer laughs. \"I rolled {string.Join(", ", dicerRolls)} which is a critical win!\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%The dicer take {lossAmount:N0} gold from you!%PT%{Constants.NewLine}");
+                    session.Player.AdjustGold(lossAmount * -1, true, false);
+                    return;
+                }
+                lossAmount = Math.Min((long)session.Player.Gold, betAmount * 2);
+                session.Send($"%BYT%\"My lucky day!\" the dicer laughs. \"I rolled {string.Join(", ", dicerRolls)} which is an instant win!\"%PT%{Constants.NewLine}");
+                session.Send($"%BYT%The dicer takes {lossAmount:N0} gold from you!%PT%{Constants.NewLine}");
+                session.Player.AdjustGold(lossAmount * -1, true, false);
+                return;
+            }
+            if (Helpers.AutoLosesDiceGame(dicerRolls, out bool dicerCritLoss))
+            {
+                if (dicerCritLoss)
+                {
+                    winAmount = betAmount + (betAmount * 3);
+                    session.Send($"%BYT%\"Ah. Luck is not with me today!\" the dicer says. \"I rolled {string.Join(", ", dicerRolls)} which is a critical loss!\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%\"My bad luck means you win {winAmount:N0} gold!\"%PT%{Constants.NewLine}");
+                    session.Player.AdjustGold(winAmount, true, false);
+                    return;
+                }
+                winAmount = betAmount + (betAmount * 2);
+                session.Send($"%BYT%\"Blast these dice!\" the dicer says. \"I rolled {string.Join(", ", dicerRolls)} which is an instant loss!\"%PT%{Constants.NewLine}");
+                session.Send($"%BYT%\"You win {winAmount:N0} gold, enjoy!\"%PT%{Constants.NewLine}");
+                session.Player.AdjustGold(winAmount, true, false);
+                return;
+            }
+            playerValidScore = Helpers.ValidDiceScore(playerRolls, out playerScore);
+            dicerValidScore = Helpers.ValidDiceScore(dicerRolls, out dicerScore);
+            if (playerValidScore && dicerValidScore)
+            {
+                if (playerScore > dicerScore)
+                {
+                    winAmount = betAmount + (betAmount / 2);
+                    session.Send($"%BYT%The dicer looks at the dice. \"You rolled {string.Join(", ", playerRolls)}, so you score {playerScore}.\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%\"I rolled {string.Join(", ", dicerRolls)}, so I score {dicerScore}, whcih means you win!\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%\"My luck had to run out eventually!\" he says, handing you {winAmount:N0} gold.%PT%{Constants.NewLine}");
+                    session.Player.AdjustGold(winAmount, true, false);
+                    return;
+                }
+                if (playerScore < dicerScore)
+                {
+                    session.Send($"%BYT%The dicer looks at the dice. \"You rolled {string.Join(", ", playerRolls)}, so you score {playerScore}.\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%\"I rolled {string.Join(", ", dicerRolls)}, so I score {dicerScore}, which means I win and keep your stake.\"%PT%{Constants.NewLine}");
+                    session.Send($"%BYT%The dicer smiles. \"Better luck next time!\"%PT%{Constants.NewLine}");
+                    return;
+                }
+                // player and dicer scored the same = draw
+                session.Send($"%BYT%The dicer looks at the dice. \"Well, here's something! We both scored {playerScore}, so its a draw!\"%PT%{Constants.NewLine}");
+                session.Send($"%BYT%The dicer hands you {betAmount:N0} gold. \"Here, you can keep your stake.\"%PT%{Constants.NewLine}");
+                session.Player.AdjustGold(betAmount, true, false);
+                return;
+            }
+            if (playerValidScore && !dicerValidScore)
+            {
+                winAmount = betAmount + (betAmount / 2);
+                session.Send($"%BYT%The dicer laughs as he looks at the dice. \"You rolled {string.Join(", ", playerRolls)}, so score {playerScore}, but, alas,%PT%{Constants.NewLine}");
+                session.Send($"%BYT%I rolled {string.Join(", ", dicerRolls)}, and score nothing. Here: you win {winAmount:N0} gold, enjoy!\"%PT%{Constants.NewLine}");
+                session.Player.AdjustGold(winAmount, true, false);
+                return;
+            }
+            if (!playerValidScore && dicerValidScore)
+            {
+                session.Send($"%BYT%\"Well now,\" the dicer says. \"You rolled {string.Join(", ", playerRolls)} which doesn't score anything!\"%PT%{Constants.NewLine}");
+                session.Send($"%BYT%\"I rolled {string.Join(", ", dicerRolls)}, which scores me {dicerScore}, so I win and keep your stake!\"%PT%{Constants.NewLine}");
+                return;
+            }
+            // neither player or dicer had a valid score = draw
+            session.Send($"%BYT%The dicer sneers at the dice. \"You rolled {string.Join(", ", playerRolls)}, and don't score anything.\"%PT%{Constants.NewLine}");
+            session.Send($"%BYT%\"I rolled {string.Join(", ", dicerRolls)}, which also scores nothing, so this round is draw.\"%PT%{Constants.NewLine}");
+            session.Send($"%BYT%\"Here,\" the dicer says, handing you {betAmount:N0} gold coins. \"Returning your stake. Lets play again some time.\"%PT%{Constants.NewLine}");
+            session.Player.AdjustGold(betAmount, true, false);
+            return;
         }
 
         public static void ManagePlayerAliases(Session session, ref string arg)

@@ -5,6 +5,7 @@ using Etrea3.Objects;
 using System.Linq;
 using Newtonsoft.Json;
 using Etrea3;
+using System.Text;
 
 namespace Etrea_Admin
 {
@@ -164,7 +165,12 @@ namespace Etrea_Admin
                 mp.ID = Convert.ToInt32(txtBxMobProgID.Text);
                 mp.Name = txtBxMobProgName.Text;
                 mp.Description = txtBxMobProgDescription.Text;
-                mp.Script = rTxtBxMobProgScript.Text;
+                StringBuilder sb = new StringBuilder();
+                foreach(string ln in rTxtBxMobProgScript.Lines)
+                {
+                    sb.AppendLine(ln);
+                }
+                mp.Script = sb.ToString();
                 Enum.TryParse(txtBxMobProgTrigger.Text, true, out MobProgTrigger trigger);
                 mp.Triggers = trigger;
             }

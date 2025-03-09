@@ -10,6 +10,7 @@ namespace Etrea3.Core
 {
     public static class ActImmortal
     {
+        // TODO: Disconnecting existing socket gives a null exception and
         public static void ShowFlags(Session session)
         {
             if (!session.Player.IsImmortal)
