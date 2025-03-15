@@ -5,12 +5,14 @@ using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Etrea3.Objects;
-using System.Runtime.InteropServices.WindowsRuntime;
+using System.Net;
+using System.Net.Http;
 
 namespace Etrea3.Core
 {
     public static class Helpers
     {
+        private static readonly HttpClient httpClient = new HttpClient();
         private static Random rnd = new Random(DateTime.UtcNow.GetHashCode());
         private static int VowelMask = (1 << 1) | (1 << 5) | (1 << 9) | (1 << 15) | (1 << 21);
         private static readonly ConcurrentDictionary<string, string> colourCodeReplacements = new ConcurrentDictionary<string, string>
@@ -30,6 +32,52 @@ namespace Etrea3.Core
             { "%BBT%", Constants.BrightBlueText },
             { "%BRT%", Constants.BrightRedText }
         };
+
+        private static string GetEtreaServerIP()
+        {
+            try
+            {
+                var httpResponse = httpClient.GetAsync("https://ipinfo.io/json").GetAwaiter().GetResult();
+                if (httpResponse == null || !httpResponse.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+                var responseJson = httpResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var serverIP = DeserialiseEtreaObject<ServerIPRecord>(responseJson);
+                return serverIP.ip;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in Helpers.GetEtreaServerIP(): {ex.Message}", LogLevel.Error);
+                return null;
+            }
+        }
+
+        public static bool IsValidIPAddress(string ip)
+        {
+            if (string.IsNullOrEmpty(ip)) return false;
+            if (string.IsNullOrWhiteSpace(ip)) return false;
+            return IPAddress.TryParse(ip, out _);
+        }
+
+        public static bool CanIPAddressBeBanned(Session session, string ip)
+        {
+            if (ip == "127.0.0.1" || ip == "0.0.0.0" || ip == "255.255.255.255")
+            {
+                return false;
+            }
+            var serverIP = GetEtreaServerIP();
+            if (string.IsNullOrEmpty(serverIP) || ip == serverIP)
+            {
+                return false;
+            }
+            var playerIP = session.Client?.Client?.RemoteEndPoint.ToString().Split(':')[0].Trim();
+            if (ip == playerIP)
+            {
+                return false;
+            }
+            return true;
+        }
 
         public static string ParseColourCodes(string line)
         {
@@ -281,19 +329,28 @@ namespace Etrea3.Core
             return elements.Length > 0 ? elements[0].Trim() : string.Empty;
         }
 
-        public static string SerialiseEtreaObject<T>(object etreaObject)
+        // TODO: Update these...
+        public static string SerialiseEtreaObject<T>(object etreaObject) where T : class
         {
             var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
             return JsonConvert.SerializeObject((T)etreaObject, settings);
         }
 
-        public static T DeserialiseEtreaObject<T>(string etreaObject)
+        public static T DeserialiseEtreaObject<T>(string etreaObject) where T : class
         {
-            var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
-            return JsonConvert.DeserializeObject<T>(etreaObject, settings);
+            try
+            {
+                var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
+                return JsonConvert.DeserializeObject<T>(etreaObject, settings);
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in Helpers.DeserialiseEtreaObject(): {ex.Message}", LogLevel.Error);
+                return null;
+            }
         }
 
-        public static T Clone<T>(T src)
+        public static T Clone<T>(T src) where T : class
         {
             if (!typeof(T).IsSerializable)
             {

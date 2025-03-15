@@ -39,10 +39,11 @@ namespace Etrea3.Networking.API
                     }
                 }
                 var config = new HttpSelfHostConfiguration(baseAddress);
+                config.MessageHandlers.Add(new ConnectionHandler());
                 config.MessageHandlers.Add(new APIKeyAuthenticationHandler());
+                config.MessageHandlers.Add(new LoggingHandler());
                 config.Routes.MapHttpRoute(name: "GetResourceByID", routeTemplate: "api/{controller}/{id}", defaults: new { id = RouteParameter.Optional });
                 config.Routes.MapHttpRoute(name: "GetResourceByName", routeTemplate: "api/{controller}/name/{name}", defaults: new { name = RouteParameter.Optional });
-                config.MessageHandlers.Add(new LoggingHandler());
                 server = new HttpSelfHostServer(config);
                 server.OpenAsync().Wait();
                 IsRunning = true;

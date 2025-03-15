@@ -128,16 +128,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllNodes(out bool hasErr)
+        public bool LoadAllNodes()
         {
-            var result = DatabaseManager.LoadAllNodes(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllNodes(out var nodes) || nodes == null)
             {
-                foreach(var node in result)
-                {
-                    Instance.Nodes.AddOrUpdate(node.Key, node.Value, (k, v) => node.Value);
-                }
+                return false;
             }
+            foreach (var node in Instance.Nodes)
+            {
+                Instance.Nodes.AddOrUpdate(node.Key, node.Value, (k, v) => node.Value);
+            }
+            return true;
         }
     }
 }

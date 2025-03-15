@@ -113,16 +113,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllMobProgs(out bool hasErr)
+        public bool LoadAllMobProgs()
         {
-            var result = DatabaseManager.LoadAllMobProgs(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllMobProgs(out var allMobProgs) || allMobProgs == null)
             {
-                foreach (var mobProg in result)
-                {
-                    Instance.MobProgs.AddOrUpdate(mobProg.Key, mobProg.Value, (k, v) => mobProg.Value);
-                }
+                return false;
             }
+            foreach (var mp in allMobProgs)
+            {
+                Instance.MobProgs.AddOrUpdate(mp.Key, mp.Value, (k, v) => mp.Value);
+            }
+            return true;
         }
     }
 }

@@ -180,16 +180,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllItems(out bool hasErr)
+        public bool LoadAllItems()
         {
-            var result = DatabaseManager.LoadAllItems(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllItems(out var allItems) || allItems == null)
             {
-                foreach(var item in result)
-                {
-                    Instance.Items.AddOrUpdate(item.Key, item.Value, (k, v) => item.Value);
-                }
+                return false;
             }
+            foreach (var item in allItems)
+            {
+                Instance.Items.AddOrUpdate(item.Key, item.Value, (k, v) => item.Value);
+            }
+            return true;
         }
     }
 }

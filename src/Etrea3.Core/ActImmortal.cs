@@ -10,7 +10,53 @@ namespace Etrea3.Core
 {
     public static class ActImmortal
     {
-        // TODO: Disconnecting existing socket gives a null exception and
+        public static void BanIPAddress(Session session, ref string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to ban IP address {arg} but they are not Immortal", LogLevel.Warning);
+                return;
+            }
+            if (!Helpers.IsValidIPAddress(arg))
+            {
+                session.Send($"%BRT%That is not a valid IPV4 address!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!Helpers.CanIPAddressBeBanned(session, arg))
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to ban IP address {arg} but this IP could not be banned", LogLevel.Warning);
+                session.Send($"%BRT%The IP address you have provided cannot be banned.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!BlockManager.Instance.AddBlockedIPAddress(arg, session))
+            {
+                return;
+            }
+            if (!SessionManager.Instance.DisconnectBlockedIPSessions(arg, out int sessionsDropped))
+            {
+                session.Send($"The IP address has been banned, however an error was encountered attempting to drop associated connections.%PT%{Constants.NewLine}");
+                Game.LogMessage($"GOD: Player {session.Player.Name} has banned IP address {arg}: {sessionsDropped} sessions were dropped before the process encountered an error", LogLevel.God);
+                return;
+            }
+            Game.LogMessage($"GOD: Player {session.Player.Name} has banned IP address {arg}: {sessionsDropped} sessions were dropped as a result", LogLevel.God);
+            session.Send($"%BGT%The IP address has been banned and {sessionsDropped} were dropped as a result.%PT%{Constants.NewLine}");
+        }
+
+        public static void UnBanIPAddress(Session session, ref string arg)
+        {
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to unblock IP address {arg} but they are not Immortal", LogLevel.Warning);
+                return;
+            }
+            if (!Helpers.IsValidIPAddress(arg))
+            {
+                session.Send($"%BRT%That is not a valid IPV4 address!%PT%{Constants.NewLine}");
+                return;
+            }
+            BlockManager.Instance.RemoveBlockedIPAddress(arg, session);
+        }
+
         public static void ShowFlags(Session session)
         {
             if (!session.Player.IsImmortal)
@@ -2263,6 +2309,11 @@ namespace Etrea3.Core
                     ListConnections(session);
                     break;
 
+                case "blocks":
+                case "bans":
+                    ListBans(session, criteria);
+                    break;
+
                 case "mobprog":
                     ListMobProgs(session, criteria);
                     break;
@@ -4154,6 +4205,48 @@ namespace Etrea3.Core
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
             return;
+        }
+
+        private static void ListBans(Session session, string criteria)
+        {
+            if (string.IsNullOrEmpty(criteria))
+            {
+                // show every banned IP
+                var allBans = BlockManager.Instance.GetBlockedIPs();
+                if (allBans != null && allBans.Count > 0)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    foreach (var ban in allBans)
+                    {
+                        sb.AppendLine($"%BYT%||%PT%  IP Address: {ban.IPAddress}{Constants.TabStop}{Constants.TabStop}Ban Date: {ban.BlockedDateTime:R}");
+                        sb.AppendLine($"%BYT%||%PT%  Blocked By: {ban.BlockedBy}");
+                        sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                    }
+                    session.Send(sb.ToString());
+                }
+                else
+                {
+                    session.Send($"%BGT%No IP addresses are currently banned.%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            // show banned IPs matching the pattern
+            var matchingBans = BlockManager.Instance.GetBlockedIPs(criteria);
+            if (matchingBans != null && matchingBans.Count > 0)
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                foreach (var ban in matchingBans)
+                {
+                    sb.AppendLine($"%BYT%||%PT%  IP Address: {ban.IPAddress}{Constants.TabStop}{Constants.TabStop}Ban Date: {ban.BlockedDateTime:R}");
+                    sb.AppendLine($"%BYT%||%PT%  Blocked By: {ban.BlockedBy}");
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                }
+                session.Send(sb.ToString());
+                return;
+            }
+            session.Send($"%BGT%No IP addresses matching the criteria were found.%PT%{Constants.NewLine}");
         }
 
         private static void ListConnections(Session session)

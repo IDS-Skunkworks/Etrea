@@ -86,6 +86,7 @@
     <Compile Include="Networking\API\APIKeyAuthenticationHandler.cs" />
     <Compile Include="Networking\API\APIServer.cs" />
     <Compile Include="Networking\API\BuffController.cs" />
+    <Compile Include="Networking\API\ConnectionHandler.cs" />
     <Compile Include="Networking\API\EmoteController.cs" />
     <Compile Include="Networking\API\HelpController.cs" />
     <Compile Include="Networking\API\ItemController.cs" />

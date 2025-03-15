@@ -26,7 +26,7 @@ namespace Etrea3.Networking
             }
             if (!int.TryParse(ConfigurationManager.AppSettings["ListenerPort"], out int listenerPort))
             {
-                errMsg = $"Unable to parse ListenerPort: value {ConfigurationManager.AppSettings["ListenerPort"]} is not a valid number";
+                errMsg = $"Unable to parse ListenerPort: value {ConfigurationManager.AppSettings["ListenerPort"]} is not a valid integer";
                 return false;
             }
             if (listenerPort <= 0 || listenerPort >= 65000)
@@ -75,6 +75,14 @@ namespace Etrea3.Networking
                     {
                         var client = clientTask.Result;
                         Game.LogMessage($"CONNECTION: Accepting new connection from {client.Client.RemoteEndPoint}", LogLevel.Connection);
+                        var clientIP = client.Client.RemoteEndPoint.ToString().Split(':')[0].Trim();
+                        if (BlockManager.Instance.IsIPAddressBanned(clientIP))
+                        {
+                            Game.LogMessage($"CONNECTION: Dropping connection from {client.Client.RemoteEndPoint} - IP address is banned", LogLevel.Connection);
+                            client.Client?.Disconnect(true);
+                            client.Dispose();
+                            continue;
+                        }
                         await SessionManager.Instance.NewSession(client);
                     }
                 }

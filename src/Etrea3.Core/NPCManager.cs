@@ -229,16 +229,17 @@ namespace Etrea3.Core
             }
         }
 
-        public void LoadAllNPCs(out bool hasErr)
+        public bool LoadAllNPCs()
         {
-            var result = DatabaseManager.LoadAllNPCTemplates(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllNPCTemplates(out var npcDic) || npcDic == null)
             {
-                foreach(var npc in result)
-                {
-                    Instance.NPCTemplates.AddOrUpdate(npc.Key, npc.Value, (k, v) => npc.Value);
-                }
+                return false;
             }
+            foreach (var npc in npcDic)
+            {
+                Instance.NPCTemplates.AddOrUpdate(npc.Key, npc.Value, (k, v) => npc.Value);
+            }
+            return true;
         }
 
         public void TickAllNPCs(ulong tickCount)

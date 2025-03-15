@@ -5,6 +5,7 @@ using System.Data.SQLite;
 using System.IO;
 using Etrea3.Objects;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 namespace Etrea3.Core
 {
@@ -17,6 +18,96 @@ namespace Etrea3.Core
         private static readonly string worldDBConnectionString = $"URI=file:{worldDBPath}";
         private static readonly string playerDBConnectionString = $"URI=file:{playerDBPath}";
         private static readonly string logDBConnectionString = $"URI=file:{logDBPath}";
+
+        public static bool AddBlockedIPAddress(BlockedIPAddress block, out string errMsg)
+        {
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "INSERT INTO tblBlockedIPAddresses (IPAddress, BlockDate, BlockedBy) VALUES (@i, @d, @b);";
+                        cmd.Parameters.Add(new SQLiteParameter("@i", block.IPAddress));
+                        cmd.Parameters.Add(new SQLiteParameter("@d", block.BlockedDateTime.ToString("yyyy-MM-dd HH:mm:ss")));
+                        cmd.Parameters.Add(new SQLiteParameter("@b", block.BlockedBy));
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                errMsg = string.Empty;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errMsg = ex.Message;
+                return false;
+            }
+        }
+
+        public static bool RemoveBlockedIPAddress(string ip, out string errMsg)
+        {
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "DELETE FROM tblBlockedIPAddresses WHERE IPAddress = @i;";
+                        cmd.Parameters.Add(new SQLiteParameter("@i", ip));
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                errMsg = string.Empty;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errMsg = ex.Message;
+                return false;
+            }
+        }
+
+        public static bool LoadBlockList(out ConcurrentDictionary<string, BlockedIPAddress> blocklist)
+        {
+            blocklist = new ConcurrentDictionary<string, BlockedIPAddress>();
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "SELECT * FROM tblBlockedIPAddresses;";
+                        using (SQLiteDataReader dr = cmd.ExecuteReader())
+                        {
+                            while (dr.Read())
+                            {
+                                BlockedIPAddress blockedIP = new BlockedIPAddress
+                                {
+                                    IPAddress = dr["IPAddress"].ToString(),
+                                    BlockedBy = dr["BlockedBy"].ToString(),
+                                    BlockedDateTime = DateTime.Parse(dr["BlockDate"].ToString())
+                                };
+                                blocklist.TryAdd(blockedIP.IPAddress, blockedIP);
+                            }
+                        }
+                    }
+                    con.Close();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadBlockList(): {ex.Message}", LogLevel.Error);
+                return false;
+            }
+        }
 
         public static void AddLogEntry(string message, LogLevel level)
         {
@@ -553,10 +644,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, Room> LoadAllRooms(out bool hasErr)
+        public static bool LoadAllRooms(out ConcurrentDictionary<int, Room> rooms)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, Room> retval = new ConcurrentDictionary<int, Room>();
+            rooms = new ConcurrentDictionary<int, Room>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -570,19 +660,19 @@ namespace Etrea3.Core
                             while (dr.Read())
                             {
                                 var r = Helpers.DeserialiseEtreaObject<Room>(dr["RoomData"].ToString());
-                                retval.TryAdd(r.ID, r);
+                                rooms.TryAdd(r.ID, r);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
+                rooms = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllRooms(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
         #endregion
@@ -640,10 +730,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, Quest> LoadAllQuests(out bool hasErr)
+        public static bool LoadAllQuests(out ConcurrentDictionary<int, Quest> quests)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, Quest> retval = new ConcurrentDictionary<int, Quest>();
+            quests = new ConcurrentDictionary<int, Quest>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -656,20 +745,20 @@ namespace Etrea3.Core
                         {
                             while (dr.Read())
                             {
-                                var q = Helpers.DeserialiseEtreaObject<Quest>(dr["QuestData"].ToString());
-                                retval.TryAdd(q.ID, q);
+                                var quest = Helpers.DeserialiseEtreaObject<Quest>(dr["QuestData"].ToString());
+                                quests.TryAdd(quest.ID, quest);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllQuests(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                quests = null;
+                return false;
             }
         }
         #endregion
@@ -727,10 +816,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, CraftingRecipe> LoadAllRecipes(out bool hasErr)
+        public static bool LoadAllRecipes(out ConcurrentDictionary<int, CraftingRecipe> recipes)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, CraftingRecipe> retval = new ConcurrentDictionary<int, CraftingRecipe>();
+            recipes = new ConcurrentDictionary<int, CraftingRecipe>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -743,20 +831,20 @@ namespace Etrea3.Core
                         {
                             while (dr.Read())
                             {
-                                var r = Helpers.DeserialiseEtreaObject<CraftingRecipe>(dr["RecipeData"].ToString());
-                                retval.TryAdd(r.ID, r);
+                                var recipe = Helpers.DeserialiseEtreaObject<CraftingRecipe>(dr["RecipeData"].ToString());
+                                recipes.TryAdd(recipe.ID, recipe);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
+                recipes = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllRecipes(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
         #endregion
@@ -815,10 +903,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, NPC> LoadAllNPCTemplates(out bool hasErr)
+        public static bool LoadAllNPCTemplates(out ConcurrentDictionary<int, NPC> npcDic)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, NPC> retval = new ConcurrentDictionary<int, NPC>();
+            npcDic = new ConcurrentDictionary<int, NPC>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -831,20 +918,20 @@ namespace Etrea3.Core
                         {
                             while (dr.Read())
                             {
-                                var npc = Helpers.DeserialiseEtreaObject<NPC>(dr["NPCData"].ToString());
-                                retval.TryAdd(npc.TemplateID, npc);
+                                var n = Helpers.DeserialiseEtreaObject<NPC>(dr["NPCData"].ToString());
+                                npcDic.TryAdd(n.TemplateID, n);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
+                npcDic = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllNPCTemplates(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
         #endregion
@@ -902,13 +989,12 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, ResourceNode> LoadAllNodes(out bool hasErr)
+        public static bool LoadAllNodes(out ConcurrentDictionary<int, ResourceNode> nodes)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, ResourceNode> retval = new ConcurrentDictionary<int, ResourceNode>();
+            nodes = new ConcurrentDictionary<int, ResourceNode>();
             try
             {
-                using (SQLiteConnection con = new SQLiteConnection(worldDBConnectionString))
+                using (var con = new SQLiteConnection(worldDBConnectionString))
                 {
                     con.Open();
                     using (var cmd = new SQLiteCommand(con))
@@ -919,19 +1005,19 @@ namespace Etrea3.Core
                             while (dr.Read())
                             {
                                 var node = Helpers.DeserialiseEtreaObject<ResourceNode>(dr["NodeData"].ToString());
-                                retval.TryAdd(node.ID, node);
+                                nodes.TryAdd(node.ID, node);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
+                nodes = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllNodes(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
         #endregion
@@ -989,10 +1075,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, Spell> LoadAllSpells(out bool hasErr)
+        public static bool LoadAllSpells(out ConcurrentDictionary<int, Spell> spells)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, Spell> retval = new ConcurrentDictionary<int, Spell>();
+            spells = new ConcurrentDictionary<int, Spell>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1006,19 +1091,19 @@ namespace Etrea3.Core
                             while (dr.Read())
                             {
                                 var s = Helpers.DeserialiseEtreaObject<Spell>(dr["SpellData"].ToString());
-                                retval.TryAdd(s.ID, s);
+                                spells.TryAdd(s.ID, s);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                hasErr = true;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllSpells(): {ex.Message}", LogLevel.Error);
-                return null;
+                spells = null;
+                return false;
             }
         }
         #endregion
@@ -1077,10 +1162,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, Emote> LoadAllEmotes(out bool hasErr)
+        public static bool LoadAllEmotes(out ConcurrentDictionary<int, Emote> emotes)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, Emote> retval = new ConcurrentDictionary<int, Emote>();
+            emotes = new ConcurrentDictionary<int, Emote>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1093,29 +1177,28 @@ namespace Etrea3.Core
                         {
                             while (dr.Read())
                             {
-                                var e = Helpers.DeserialiseEtreaObject<Emote>(dr["EmoteData"].ToString());
-                                retval.TryAdd(e.ID, e);
+                                var emote = Helpers.DeserialiseEtreaObject<Emote>(dr["EmoteData"].ToString());
+                                emotes.TryAdd(emote.ID, emote);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
+                emotes = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllEmotes(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
         #endregion
 
         #region Zones
-        public static ConcurrentDictionary<int, Zone> LoadAllZones(out bool hasErr)
+        public static bool LoadAllZones(out ConcurrentDictionary<int, Zone> zones)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, Zone> retval = new ConcurrentDictionary<int, Zone>();
+            zones = new ConcurrentDictionary<int, Zone>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1128,27 +1211,26 @@ namespace Etrea3.Core
                         {
                             while (dr.Read())
                             {
-                                int zID = int.Parse(dr["ZoneID"].ToString());
                                 Zone z = new Zone
                                 {
-                                    ZoneID = zID,
+                                    ZoneID = int.Parse(dr["ZoneID"].ToString()),
                                     ZoneName = dr["ZoneName"].ToString(),
                                     MinRoom = int.Parse(dr["ZoneMinRoom"].ToString()),
                                     MaxRoom = int.Parse(dr["ZoneMaxRoom"].ToString())
                                 };
-                                retval.TryAdd(zID, z);
+                                zones.TryAdd(z.ZoneID, z);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
+                zones = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllZones(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
 
@@ -1260,10 +1342,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, InventoryItem> LoadAllItems(out bool hasErr)
+        public static bool LoadAllItems(out ConcurrentDictionary<int, InventoryItem> items)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, InventoryItem> retval = new ConcurrentDictionary<int, InventoryItem>();
+            items = new ConcurrentDictionary<int, InventoryItem>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1272,24 +1353,24 @@ namespace Etrea3.Core
                     using (var cmd = new SQLiteCommand(con))
                     {
                         cmd.CommandText = "SELECT * FROM tblItems;";
-                        using (SQLiteDataReader dr = cmd.ExecuteReader())
+                        using (var dr = cmd.ExecuteReader())
                         {
                             while (dr.Read())
                             {
                                 dynamic i = Helpers.DeserialiseEtreaObject<dynamic>(dr["ItemData"].ToString());
-                                retval.TryAdd(i.ID, i);
+                                items.TryAdd(i.ID, i);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
+                items = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllItems(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
         #endregion
@@ -1347,10 +1428,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, Shop> LoadAllShops(out bool hasErr)
+        public static bool LoadAllShops(out ConcurrentDictionary<int, Shop> shops)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, Shop> retval = new ConcurrentDictionary<int, Shop>();
+            shops = new ConcurrentDictionary<int, Shop>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1363,20 +1443,20 @@ namespace Etrea3.Core
                         {
                             while (dr.Read())
                             {
-                                Shop s = Helpers.DeserialiseEtreaObject<Shop>(dr["ShopData"].ToString());
-                                retval.TryAdd(s.ID, s);
+                                Shop shop = Helpers.DeserialiseEtreaObject<Shop>(dr["ShopData"].ToString());
+                                shops.TryAdd(shop.ID, shop);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
+                shops = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllShops(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
         #endregion
@@ -1520,10 +1600,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<string, HelpArticle> LoadAllArticles(out bool hasErr)
+        public static bool LoadAllArticles(out ConcurrentDictionary<string, HelpArticle> articles)
         {
-            hasErr = false;
-            ConcurrentDictionary<string, HelpArticle> retval = new ConcurrentDictionary<string, HelpArticle>();
+            articles = new ConcurrentDictionary<string, HelpArticle>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1532,28 +1611,28 @@ namespace Etrea3.Core
                     using (var cmd = new SQLiteCommand(con))
                     {
                         cmd.CommandText = "SELECT * FROM tblHelpEntries;";
-                        using (SQLiteDataReader dr = cmd.ExecuteReader())
+                        using (var dr = cmd.ExecuteReader())
                         {
                             while (dr.Read())
                             {
-                                retval.TryAdd(dr["HelpName"].ToString(), new HelpArticle
+                                articles.TryAdd(dr["HelpName"].ToString(), new HelpArticle
                                 {
-                                   Title = dr["HelpName"].ToString(),
-                                   ArticleText = dr["HelpText"].ToString(),
-                                   ImmOnly = bool.Parse(dr["ImmOnly"].ToString())
+                                    Title = dr["HelpName"].ToString(),
+                                    ArticleText = dr["HelpText"].ToString(),
+                                    ImmOnly = bool.Parse(dr["ImmOnly"].ToString())
                                 });
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllArticles(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                articles = null;
+                return false;
             }
         }
 
@@ -1612,10 +1691,9 @@ namespace Etrea3.Core
             }
         }
 
-        public static ConcurrentDictionary<int, MobProg> LoadAllMobProgs(out bool hasErr)
+        public static bool LoadAllMobProgs(out ConcurrentDictionary<int, MobProg> allMobProgs)
         {
-            hasErr = false;
-            ConcurrentDictionary<int, MobProg> retval = new ConcurrentDictionary<int, MobProg>();
+            allMobProgs = new ConcurrentDictionary<int, MobProg>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1624,24 +1702,24 @@ namespace Etrea3.Core
                     using (var cmd = new SQLiteCommand(con))
                     {
                         cmd.CommandText = "SELECT * FROM tblMobProgs;";
-                        using (SQLiteDataReader dr = cmd.ExecuteReader())
+                        using (var dr = cmd.ExecuteReader())
                         {
                             while (dr.Read())
                             {
-                                var mobProgs = Helpers.DeserialiseEtreaObject<MobProg>(dr["MobProgData"].ToString());
-                                retval.TryAdd(mobProgs.ID, mobProgs);
+                                var mp = Helpers.DeserialiseEtreaObject<MobProg>(dr["MobProgData"].ToString());
+                                allMobProgs.TryAdd(mp.ID, mp);
                             }
                         }
                     }
                     con.Close();
                 }
-                return retval;
+                return true;
             }
             catch (Exception ex)
             {
+                allMobProgs = null;
                 Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllMobProgs(): {ex.Message}", LogLevel.Error);
-                hasErr = true;
-                return null;
+                return false;
             }
         }
 

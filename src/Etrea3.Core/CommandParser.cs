@@ -383,6 +383,18 @@ namespace Etrea3.Core
                 #endregion
 
                 #region Immortal
+                case "ban":
+                case "block":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    BanIPAddress(session, ref arg);
+                    break;
+
+                case "unban":
+                case "unblock":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    UnBanIPAddress(session, ref arg);
+                    break;
+
                 case "snoop":
                     arg = input.Remove(0, verb.Length).Trim();
                     SnoopConnection(session, ref arg);

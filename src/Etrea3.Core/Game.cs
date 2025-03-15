@@ -599,8 +599,17 @@ namespace Etrea3.Core
 
         private bool LoadDatabase()
         {
-            ZoneManager.Instance.LoadAllZones(out bool zErr);
-            if (zErr)
+            // Load the list of blocked IP addresses - connections from these to the MUD server or the API will be automatically discarded, existing connections will be dropped
+            if (BlockManager.Instance.LoadBlockList())
+            {
+                LogMessage($"INFO: Loading Database, {BlockManager.Instance.Count} blocked IP addresses loaded", LogLevel.Info);
+            }
+            else
+            {
+                LogMessage($"WARN: Failed to load the Block List, please check the log for relevant messages", LogLevel.Warning);
+            }
+            // Load the World Zones
+            if (!ZoneManager.Instance.LoadAllZones())
             {
                 return false;
             }
@@ -608,7 +617,7 @@ namespace Etrea3.Core
             {
                 if (AddDefaultZone())
                 {
-                    LoadDatabase(); // restart the load process if we've added a zone
+                    LoadDatabase(); // restart the load process if we've added default zones
                 }
                 else
                 {
@@ -617,8 +626,8 @@ namespace Etrea3.Core
                 }
             }
             LogMessage($"INFO: Loading Database, {ZoneManager.Instance.Count} Zones loaded", LogLevel.Info);
-            RoomManager.Instance.LoadAllRooms(out bool roomErr);
-            if (roomErr)
+            // Load Rooms
+            if (!RoomManager.Instance.LoadAllRooms())
             {
                 return false;
             }
@@ -626,7 +635,7 @@ namespace Etrea3.Core
             {
                 if (AddDefaultRoom())
                 {
-                    LoadDatabase();
+                    LoadDatabase(); // restart the load process if we've added default rooms
                 }
                 else
                 {
@@ -635,62 +644,62 @@ namespace Etrea3.Core
                 }
             }
             LogMessage($"INFO: Loading Database, {RoomManager.Instance.Count} Rooms loaded", LogLevel.Info);
-            ItemManager.Instance.LoadAllItems(out bool itemErr);
-            if (itemErr)
+            // Load Items
+            if (!ItemManager.Instance.LoadAllItems())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {ItemManager.Instance.Count} Items loaded", LogLevel.Info);
-            ShopManager.Instance.LoadAllShops(out bool shopErr);
-            if (shopErr)
+            // Load Shops
+            if (!ShopManager.Instance.LoadAllShops())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {ShopManager.Instance.Count} Shops loaded", LogLevel.Info);
-            MobProgManager.Instance.LoadAllMobProgs(out bool mobErr);
-            if (mobErr)
+            // Load MobProgs
+            if (!MobProgManager.Instance.LoadAllMobProgs())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {MobProgManager.Instance.Count} MobProgs loaded", LogLevel.Info);
-            NPCManager.Instance.LoadAllNPCs(out bool npcErr);
-            if (npcErr)
+            // Load NPCs
+            if (!NPCManager.Instance.LoadAllNPCs())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {NPCManager.Instance.TemplateCount} NPCs loaded", LogLevel.Info);
-            EmoteManager.Instance.LoadAllEmotes(out bool emoteErr);
-            if (emoteErr)
+            // Load Emotes
+            if (!EmoteManager.Instance.LoadAllEmotes())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {EmoteManager.Instance.Count} Emotes loaded", LogLevel.Info);
-            NodeManager.Instance.LoadAllNodes(out bool nodeErr);
-            if (nodeErr)
+            // Load Resource Nodes
+            if (!NodeManager.Instance.LoadAllNodes())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {NodeManager.Instance.Count} Resource Nodes loaded", LogLevel.Info);
-            RecipeManager.Instance.LoadAllRecipes(out bool recipeErr);
-            if (recipeErr)
+            // Load Crafting Recipes
+            if (!RecipeManager.Instance.LoadAllRecipes())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {RecipeManager.Instance.Count} Crafting Recipes loaded", LogLevel.Info);
-            QuestManager.Instance.LoadAllQuests(out bool questErr);
-            if (questErr)
+            // Load Quests
+            if (!QuestManager.Instance.LoadAllQuests())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {QuestManager.Instance.Count} Quests loaded", LogLevel.Info);
-            SpellManager.Instance.LoadAllSpells(out bool spellErr);
-            if (spellErr)
+            // Load Spells
+            if (!SpellManager.Instance.LoadAllSpells())
             {
                 return false;
             }
             LogMessage($"INFO: Loading Database, {SpellManager.Instance.Count} Spells loaded", LogLevel.Info);
-            HelpManager.Instance.LoadAllArticles(out bool helpErr);
-            if (helpErr)
+            // Load Help Articles
+            if (!HelpManager.Instance.LoadAllArticles())
             {
                 return false;
             }

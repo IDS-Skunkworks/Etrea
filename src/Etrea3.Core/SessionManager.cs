@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Etrea3.Core
@@ -57,6 +58,34 @@ namespace Etrea3.Core
             if (Instance.Sessions.ContainsKey(id))
             {
                 Instance.Sessions[id].State = state;
+            }
+        }
+
+        public bool DisconnectBlockedIPSessions(string ip, out int droppedSessions)
+        {
+            droppedSessions = 0;
+            try
+            {
+                var sessions = Instance.Sessions.Values.Where(x => x.IsConnected && Regex.IsMatch(x.Client.Client.RemoteEndPoint.ToString(), ip)).ToList();
+                foreach (var session in sessions)
+                {
+                    try
+                    {
+                        session.Send($"Your IP address has been banned, this connection will be dropped.{Constants.NewLine}");
+                        session.Disconnect();
+                        droppedSessions++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Game.LogMessage($"ERROR: Error disconnecting session {session?.Client?.Client?.RemoteEndPoint}: {ex.Message}", LogLevel.Error);
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in SessionManager.DisconnectBlockedIPSessions(): {ex.Message}", LogLevel.Error);
+                return false;
             }
         }
 

@@ -125,17 +125,17 @@ namespace Etrea3.Core
             return Instance.Shops.ContainsKey(id);
         }
 
-        public void LoadAllShops(out bool hasErr)
+        public bool LoadAllShops()
         {
-            hasErr = false;
-            var result = DatabaseManager.LoadAllShops(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllShops(out var allShops) || allShops == null)
             {
-                foreach (var shop in result)
-                {
-                    Instance.Shops.AddOrUpdate(shop.Key, shop.Value, (k, v) => shop.Value);
-                }
+                return false;
             }
+            foreach (var shop in allShops)
+            {
+                Instance.Shops.AddOrUpdate(shop.Key, shop.Value, (k, v) => shop.Value);
+            }
+            return true;
         }
 
         public void RestockShops()

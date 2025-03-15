@@ -128,16 +128,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllEmotes(out bool hasErr)
+        public bool LoadAllEmotes()
         {
-            var result = DatabaseManager.LoadAllEmotes(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllEmotes(out var emotes) || emotes == null)
             {
-                foreach (var emote in result)
-                {
-                    Instance.Emotes.AddOrUpdate(emote.Key, emote.Value, (k, v) => emote.Value);
-                }
+                return false;
             }
+            foreach (var emote in emotes)
+            {
+                Instance.Emotes.AddOrUpdate(emote.Key, emote.Value, (k, v) => emote.Value);
+            }
+            return true;
         }
     }
 }

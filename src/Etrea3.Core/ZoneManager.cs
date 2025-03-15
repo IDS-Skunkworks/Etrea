@@ -130,16 +130,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllZones(out bool hasErr)
+        public bool LoadAllZones()
         {
-            var result = DatabaseManager.LoadAllZones(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllZones(out var allZones) || allZones == null)
             {
-                foreach(var zone in result)
-                {
-                    Instance.Zones.AddOrUpdate(zone.Key, zone.Value, (k, v) => zone.Value);
-                }
+                return false;
             }
+            foreach (var zone in allZones)
+            {
+                Instance.Zones.AddOrUpdate(zone.Key, zone.Value, (k, v) => zone.Value);
+            }
+            return true;
         }
 
         public void PulseAllZones()

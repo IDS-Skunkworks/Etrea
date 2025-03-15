@@ -133,17 +133,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllQuests(out bool hasErr)
+        public bool LoadAllQuests()
         {
-            hasErr = false;
-            var results = DatabaseManager.LoadAllQuests(out hasErr);
-            if (!hasErr && results != null)
+            if (!DatabaseManager.LoadAllQuests(out var quests) || quests == null)
             {
-                foreach(var r in results)
-                {
-                    Instance.Quests.AddOrUpdate(r.Key, r.Value, (k, v) => r.Value);
-                }
+                return false;
             }
+            foreach (var quest in quests)
+            {
+                Instance.Quests.AddOrUpdate(quest.Key, quest.Value, (k, v) => quest.Value);
+            }
+            return true;
         }
     }
 }

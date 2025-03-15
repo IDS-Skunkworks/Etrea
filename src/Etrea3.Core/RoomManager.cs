@@ -65,16 +65,17 @@ namespace Etrea3.Core
             return Instance.Rooms.ContainsKey(id);
         }
 
-        public void LoadAllRooms(out bool hasError)
+        public bool LoadAllRooms()
         {
-            var result = DatabaseManager.LoadAllRooms(out hasError);
-            if (!hasError && result != null)
+            if (!DatabaseManager.LoadAllRooms(out var allRooms) || allRooms == null)
             {
-                foreach(var r in result)
-                {
-                    Instance.Rooms.AddOrUpdate(r.Key, r.Value, (k, v) => r.Value);
-                }
+                return false;
             }
+            foreach (var room in allRooms)
+            {
+                Instance.Rooms.AddOrUpdate(room.Key, room.Value, (k, v) => room.Value);
+            }
+            return true;
         }
 
         public List<Room> GetRoomsForZone(int zoneId)

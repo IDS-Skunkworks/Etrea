@@ -3,8 +3,6 @@ using Etrea3.Objects;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Etrea3.Core
 {
@@ -31,16 +29,17 @@ namespace Etrea3.Core
             }
         }
 
-        public void LoadAllArticles(out bool hasErr)
+        public bool LoadAllArticles()
         {
-            var result = DatabaseManager.LoadAllArticles(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllArticles(out var articles) || articles == null)
             {
-                foreach(var article in result)
-                {
-                    Instance.Articles.AddOrUpdate(article.Key.ToLower(), article.Value, (k, v) => v = article.Value);
-                }
+                return false;
             }
+            foreach (var article in articles)
+            {
+                Instance.Articles.AddOrUpdate(article.Key, article.Value, (k, v) => article.Value);
+            }
+            return true;
         }
 
         public HelpArticle GetArticle(string name)

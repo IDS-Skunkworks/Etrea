@@ -128,16 +128,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllRecipes(out bool hasErr)
+        public bool LoadAllRecipes()
         {
-            var result = DatabaseManager.LoadAllRecipes(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllRecipes(out var recipes) || recipes == null)
             {
-                foreach(var r in result)
-                {
-                    Instance.Recipes.AddOrUpdate(r.Key, r.Value, (k, v) => r.Value);
-                }
+                return false;
             }
+            foreach (var recipe in recipes)
+            {
+                Instance.Recipes.AddOrUpdate(recipe.Key, recipe.Value, (k, v) => recipe.Value);
+            }
+            return true;
         }
     }
 }

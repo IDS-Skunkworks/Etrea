@@ -49,17 +49,17 @@ namespace Etrea3.Core
             return false;
         }
 
-        public void LoadAllSpells(out bool hasErr)
+        public bool LoadAllSpells()
         {
-            var result = DatabaseManager.LoadAllSpells(out hasErr);
-            if (!hasErr && result != null)
+            if (!DatabaseManager.LoadAllSpells(out var spells) || spells == null)
             {
-                Instance.Spells.Clear();
-                foreach(var spell in result)
-                {
-                    Instance.Spells.TryAdd(spell.Key, spell.Value);
-                }
+                return false;
             }
+            foreach (var spell in spells)
+            {
+                Instance.Spells.AddOrUpdate(spell.Key, spell.Value, (k, v) => spell.Value);
+            }
+            return true;
         }
 
         public Spell GetSpell(int id)
