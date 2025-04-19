@@ -11,7 +11,7 @@ namespace Etrea_Admin
 {
     public partial class Form1 : Form
     {
-        List<MobProg> allMobProgs = new List<MobProg>();
+        List<ScriptingObject> allScripts = new List<ScriptingObject>();
         private static ListViewItemComparer mobProgListViewComparer;
 
         #region Event Handlers
@@ -21,7 +21,7 @@ namespace Etrea_Admin
             {
                 return;
             }
-            var mp = allMobProgs.FirstOrDefault(x => x.ID == Convert.ToInt32(listViewMobProgs.SelectedItems[0].SubItems[0].Text));
+            var mp = allScripts.FirstOrDefault(x => x.ID == Convert.ToInt32(listViewMobProgs.SelectedItems[0].SubItems[0].Text));
             if (mp == null)
             {
                 return;
@@ -29,7 +29,18 @@ namespace Etrea_Admin
             txtBxMobProgID.Text = mp.ID.ToString();
             txtBxMobProgName.Text = mp.Name.ToString();
             txtBxMobProgDescription.Text = mp.Description.ToString();
-            txtBxMobProgTrigger.Text = mp.Triggers.ToString();
+            if (mp.GetType() == typeof(MobProg))
+            {
+                MobProg mobProg = (MobProg)mp;
+                txtBxMobProgTrigger.Text = mobProg.Triggers.ToString();
+                comboScriptType.Text = "MobProg";
+            }
+            if (mp.GetType() == typeof(RoomProg))
+            {
+                RoomProg roomProg = (RoomProg)mp;
+                txtBxMobProgTrigger.Text = roomProg.Triggers.ToString();
+                comboScriptType.Text = "RoomProg";
+            }
             rTxtBxMobProgScript.Text = mp.Script;
         }
 
@@ -111,7 +122,7 @@ namespace Etrea_Admin
             {
                 return;
             }
-            var mp = allMobProgs.FirstOrDefault(x => x.ID == Convert.ToInt32(listViewMobProgs.SelectedItems[0].SubItems[0].Text));
+            var mp = allScripts.FirstOrDefault(x => x.ID == Convert.ToInt32(listViewMobProgs.SelectedItems[0].SubItems[0].Text));
             if (mp == null)
             {
                 return;
@@ -134,52 +145,74 @@ namespace Etrea_Admin
             btnMobProgLoad.Enabled = false;
             ClearMobProgForm();
             listViewMobProgs.Items.Clear();
-            allMobProgs.Clear();
-            var result = await APIHelper.LoadAssets<List<MobProg>>("/mobprog", false);
-            if (result != null)
+            allScripts.Clear();
+            var mps = await APIHelper.LoadAssets<List<MobProg>>("/mobprog", false);
+            var rps = await APIHelper.LoadAssets<List<RoomProg>>("/roomprog", false);
+            if (mps != null)
             {
-                foreach (var mp in result.OrderBy(x => x.ID))
+                allScripts.AddRange(mps);
+            }
+            if (rps != null)
+            {
+                allScripts.AddRange(rps);
+            }
+            allScripts = allScripts.OrderBy(x => x.ID).ToList();
+            foreach (var script in allScripts)
+            {
+                listViewMobProgs.Items.Add(new ListViewItem(new[]
                 {
-                    allMobProgs.Add(mp);
-                    listViewMobProgs.Items.Add(new ListViewItem(new[]
-                    {
-                        mp.ID.ToString(),
-                        mp.Name,
-                        mp.Description,
-                        mp.Triggers.ToString(),
-                    }));
-                }
-                foreach(ColumnHeader h in listViewMobProgs.Columns)
-                {
-                    h.Width = -2;
-                }
+                    script.ID.ToString(),
+                    script.Name,
+                    script.Description,
+                    script.GetType().Name.ToString()
+                }));
+            }
+            foreach (ColumnHeader h in listViewMobProgs.Columns)
+            {
+                h.Width = -2;
             }
             btnMobProgLoad.Enabled = true;
         }
 
-        private MobProg GetMobProgFromFormData()
+        private dynamic GetMobProgFromFormData()
         {
-            MobProg mp = new MobProg();
+            dynamic retval;
+            if (comboScriptType.Text == "MobProg")
+            {
+                retval = new MobProg();
+            }
+            else
+            {
+                retval = new RoomProg();
+            }
             try
             {
-                mp.ID = Convert.ToInt32(txtBxMobProgID.Text);
-                mp.Name = txtBxMobProgName.Text;
-                mp.Description = txtBxMobProgDescription.Text;
+                retval.ID = Convert.ToInt32(txtBxMobProgID.Text);
+                retval.Name = txtBxMobProgName.Text;
+                retval.Description = txtBxMobProgDescription.Text;
                 StringBuilder sb = new StringBuilder();
                 foreach(string ln in rTxtBxMobProgScript.Lines)
                 {
                     sb.AppendLine(ln);
                 }
-                mp.Script = sb.ToString();
-                Enum.TryParse(txtBxMobProgTrigger.Text, true, out MobProgTrigger trigger);
-                mp.Triggers = trigger;
+                retval.Script = sb.ToString();
+                if (comboScriptType.Text == "MobProg")
+                {
+                    Enum.TryParse(txtBxMobProgTrigger.Text, true, out MobProgTrigger trigger);
+                    retval.Trigger = trigger;
+                }
+                else
+                {
+                    Enum.TryParse(txtBxMobProgTrigger.Text, true, out RoomProgTrigger trigger);
+                    retval.Trigger = trigger;
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error creating MobProg object: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                mp = null;
+                retval = null;
             }
-            return mp;
+            return retval;
         }
 
         private bool ValidateMobProgData()
@@ -229,6 +262,7 @@ namespace Etrea_Admin
             txtBxMobProgDescription.Clear();
             txtBxMobProgTrigger.Clear();
             rTxtBxMobProgScript.Clear();
+            comboScriptType.SelectedIndex = -1;
         }
         #endregion
     }

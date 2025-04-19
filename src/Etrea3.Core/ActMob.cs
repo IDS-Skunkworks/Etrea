@@ -6,7 +6,7 @@ namespace Etrea3.Core
 {
     public static partial class ActMob
     {
-        private static void MobMove(NPC mob, string args, Session session)
+        public static void MobMove(NPC mob, string args, Session session)
         {
             if (!mob.CanMove())
             {
@@ -40,7 +40,7 @@ namespace Etrea3.Core
             mob.Move(exit.DestinationRoomID, false);
         }
 
-        private static void MobTakeItem(NPC mob, string args, Session session)
+        public static void MobTakeItem(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -90,7 +90,7 @@ namespace Etrea3.Core
             }
         }
 
-        private static void MobDropItem(NPC mob, string args, Session session)
+        public static void MobDropItem(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -139,7 +139,7 @@ namespace Etrea3.Core
             }    
         }
 
-        private static void MobGiveItem(NPC mob, string args, Session session)
+        public static void MobGiveItem(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -215,7 +215,7 @@ namespace Etrea3.Core
             }
         }
 
-        private static void MobAttack(NPC mob, string args, Session session)
+        public static void MobAttack(NPC mob, string args, Session session)
         {
             if (mob.Flags.HasFlag(NPCFlags.NoAttack))
             {
@@ -266,7 +266,7 @@ namespace Etrea3.Core
             target.AddToTargetQueue(mob);
         }
 
-        private static void MobEmote(NPC mob, string args, Session session)
+        public static void MobEmote(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -296,7 +296,7 @@ namespace Etrea3.Core
             }
         }
 
-        private static void MobCastSpell(NPC mob, string args, Session session)
+        public static void MobCastSpell(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -330,7 +330,7 @@ namespace Etrea3.Core
             spell.Cast(mob, target);
         }
 
-        private static void MobSay(NPC mob, string args, Session session)
+        public static void MobSay(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -343,7 +343,7 @@ namespace Etrea3.Core
             }
         }
 
-        private static void MobYell(NPC mob, string args, Session session)
+        public static void MobYell(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -367,7 +367,7 @@ namespace Etrea3.Core
             }
         }
 
-        private static void MobWhisper(NPC mob, string args, Session session)
+        public static void MobWhisper(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -399,7 +399,7 @@ namespace Etrea3.Core
             }
         }
 
-        private static void MobRememberPlayer(NPC mob, string args, Session session)
+        public static void MobRememberPlayer(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {
@@ -417,7 +417,7 @@ namespace Etrea3.Core
             session?.Send($"%BGT%{mob.Name} now remembers {target.Player.Name}%PT%{Constants.NewLine}");
         }
 
-        private static void MobForgetPlayer(NPC mob, string args, Session session)
+        public static void MobForgetPlayer(NPC mob, string args, Session session)
         {
             if (string.IsNullOrEmpty(args))
             {

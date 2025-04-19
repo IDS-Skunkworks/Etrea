@@ -13,7 +13,7 @@ namespace Etrea3.Networking.API
         {
             try
             {
-                var mobprogs = MobProgManager.Instance.GetMobProg();
+                var mobprogs = ScriptObjectManager.Instance.GetScriptObject<MobProg>();
                 if (mobprogs == null)
                 {
                     return NotFound();
@@ -31,7 +31,7 @@ namespace Etrea3.Networking.API
         {
             try
             {
-                var mobProg = MobProgManager.Instance.GetMobProg(id);
+                var mobProg = ScriptObjectManager.Instance.GetScriptObject<MobProg>(id);
                 if (mobProg == null)
                 {
                     return NotFound();
@@ -61,7 +61,7 @@ namespace Etrea3.Networking.API
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Post() sent an NPC which failed validation: {repl}", LogLevel.Warning);
                     return BadRequest(repl);
                 }
-                if (!MobProgManager.Instance.AddOrUpdateMobProg(n, true))
+                if (!ScriptObjectManager.Instance.AddOrUpdateScriptObject<MobProg>(n, true))
                 {
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Post() failed to add a MobProg to MobProg Manager", LogLevel.Warning);
                     return BadRequest("Failed to add the MobProg to MobProg Manager");
@@ -92,7 +92,7 @@ namespace Etrea3.Networking.API
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Put() sent a MobProg which failed validation", LogLevel.Warning);
                     return BadRequest(repl);
                 }
-                var currentMobProg = MobProgManager.Instance.GetMobProg(n.ID);
+                var currentMobProg = ScriptObjectManager.Instance.GetScriptObject<MobProg>(n.ID);
                 if (currentMobProg == null)
                 {
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Put() sent a MobProg which does not exist", LogLevel.Warning);
@@ -103,7 +103,7 @@ namespace Etrea3.Networking.API
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Put() sent a MobProg which is locked in OLC ({n.ID})", LogLevel.Warning);
                     return BadRequest($"Cannot update MobProg {n.ID} it is locked in OLC");
                 }
-                if (!MobProgManager.Instance.AddOrUpdateMobProg(n, false))
+                if (!ScriptObjectManager.Instance.AddOrUpdateScriptObject<MobProg>(n, false))
                 {
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Put() failed to udpate MobProg {n.Name} ({n.ID}) in MobProg Manager", LogLevel.Warning);
                     return BadRequest("Failed to update MobProg in MobProg Manager");
@@ -123,7 +123,7 @@ namespace Etrea3.Networking.API
         {
             try
             {
-                var n = MobProgManager.Instance.GetMobProg(id);
+                var n = ScriptObjectManager.Instance.GetMobProg(id);
                 if (n == null)
                 {
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Delete() requested deletion of MobProg {id} which does not exist", LogLevel.Warning);
@@ -134,7 +134,7 @@ namespace Etrea3.Networking.API
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Delete() requested deletion of MobProg {id} which is locked in OLC", LogLevel.Warning);
                     return BadRequest($"Cannot delete MobProg {id} it is locked in OLC");
                 }
-                if (!NPCManager.Instance.RemoveNPCTemplate(id))
+                if (!ScriptObjectManager.Instance.RemoveScriptObject<MobProg>(id))
                 {
                     Game.LogMessage($"WARN: Connection from {Request.GetClientIPAddress()} to MobProgController.Delete() failed to remove MobProg {id} from MobProg Manager", LogLevel.Warning);
                     return BadRequest($"Failed to remove MobProg {id} from MobProg Manager");

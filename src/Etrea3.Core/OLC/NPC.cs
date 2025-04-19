@@ -545,7 +545,7 @@ namespace Etrea3.OLC
                     sb.AppendLine("MobProgs:");
                     foreach (var mp in npc.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             sb.AppendLine($"  {mobProg.ID} - {mobProg.Name}");
@@ -575,7 +575,7 @@ namespace Etrea3.OLC
                 {
                     case 1:
                         var id = GetValue<int>(session, "Enter MobProg ID:");
-                        if (MobProgManager.Instance.MobProgExists(id))
+                        if (ScriptObjectManager.Instance.ScriptObjectExists<MobProg>(id))
                         {
                             npc.MobProgs.TryAdd(id, true);
                         }

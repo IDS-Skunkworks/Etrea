@@ -147,7 +147,8 @@ Chef - players can learn and craft Cooking recipes here
 Exorcist - players can have cursed items removed here
 Scribe - players can learn and craft Scribe recipes here
 Sign - room has a Sign to read. Sign text must be set if this flag is used
-GodRoom - players cannot enter this room if they are not Immortal</value>
+GodRoom - players cannot enter this room if they are not Immortal
+Clock - players will see the actual time rather than approximation</value>
   </data>
   <data name="label21.Text" xml:space="preserve">
     <value>Placeholders:

@@ -2,7 +2,6 @@
 using System;
 using Etrea3.Objects;
 
-
 namespace Etrea3.OLC
 {
     public static partial class OLC
@@ -71,6 +70,47 @@ namespace Etrea3.OLC
         public static bool ValidateAsset<T>(Session session, T asset, bool isNew, out string reply)
         {
             reply = string.Empty;
+            if (typeof(T) == typeof(RoomProg))
+            {
+                var mp = (RoomProg)(object)asset;
+                if (mp.ID < 0)
+                {
+                    reply = "RoomProg ID cannot be less than 0.";
+                    session?.SendSystem($"%BRT%RoomProg ID cannot be less than 0%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(mp.Name))
+                {
+                    reply = "RoomProg must have a Name";
+                    session?.SendSystem($"%BRT%RoomProg must have a Name%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(mp.Description))
+                {
+                    reply = "RoomProg must have a Description";
+                    session?.SendSystem($"%BRT%RoomProg must have a Description%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (string.IsNullOrEmpty(mp.Script))
+                {
+                    reply = "RoomProg contains no LUA script";
+                    session?.SendSystem($"%BRT%RoomProg contains no LUA script%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (mp.Triggers == RoomProgTrigger.None)
+                {
+                    reply = "RoomProg Trigger cannot be None";
+                    session?.SendSystem($"%BRT%RoomProg Trigger cannot be None%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (isNew && ScriptObjectManager.Instance.ScriptObjectExists<RoomProg>(mp.ID))
+                {
+                    reply = "RoomProg ID is already in use";
+                    session?.SendSystem($"%BRT%RoomProg ID is already in use%PT%{Constants.NewLine}");
+                    return false;
+                }
+                return true;
+            }
             if (typeof(T) == typeof(MobProg))
             {
                 var mp = (MobProg)(object)asset;
@@ -104,7 +144,7 @@ namespace Etrea3.OLC
                     session?.SendSystem($"%BRT%MobProg Trigger cannot be None%PT%{Constants.NewLine}");
                     return false;
                 }
-                if (isNew && MobProgManager.Instance.MobProgExists(mp.ID))
+                if (isNew && ScriptObjectManager.Instance.ScriptObjectExists<MobProg>(mp.ID))
                 {
                     reply = "MobProg ID is already in use";
                     session?.SendSystem($"%BRT%MobProg ID is already in use%PT%{Constants.NewLine}");
@@ -159,6 +199,12 @@ namespace Etrea3.OLC
                 if (node.ApperanceChance <= 0)
                 {
                     reply = "The Appearance Chance for this Node must be greater than 0.";
+                    session?.SendSystem($"%BRT%{reply}%PT%{Constants.NewLine}");
+                    return false;
+                }
+                if (node.VeinType == ResourceVeinType.None)
+                {
+                    reply = "The Vein Type cannot be None.";
                     session?.SendSystem($"%BRT%{reply}%PT%{Constants.NewLine}");
                     return false;
                 }
@@ -464,9 +510,9 @@ namespace Etrea3.OLC
                     return false;
                 }
                 if (string.IsNullOrEmpty(room.RoomName) || string.IsNullOrEmpty(room.ShortDescription)
-                    || string.IsNullOrEmpty(room.LongDescription))
+                    || string.IsNullOrEmpty(room.MorningDescription))
                 {
-                    reply = "The Room must have a Name, Short and Long Descriptions.";
+                    reply = "The Room must have a Name, Short and Morning Descriptions.";
                     session?.SendSystem($"%BRT%{reply}%PT%{Constants.NewLine}");
                     return false;
                 }

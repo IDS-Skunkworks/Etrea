@@ -5,6 +5,7 @@ using Etrea3.Core;
 using System.Threading.Tasks;
 using Etrea3.Networking.API;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 
 namespace Etrea3
@@ -89,7 +90,7 @@ namespace Etrea3
                 }
                 if (!File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\world.db")))
                 {
-                    using (Stream rStream = assembly.GetManifestResourceStream("Etrea3.Resources.world.db"))
+                    using (Stream rStream = assembly.GetManifestResourceStream("Etrea3.Resources.world.zip"))
                     {
                         if (rStream == null)
                         {
@@ -97,9 +98,22 @@ namespace Etrea3
                             return false;
                         }
                         Console.WriteLine("Creating default world database...");
-                        using (FileStream fs = new FileStream(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\world.db"), FileMode.Create, FileAccess.Write))
+                        using (var archive = new ZipArchive(rStream, ZipArchiveMode.Read))
                         {
-                            rStream.CopyTo(fs);
+                            foreach (ZipArchiveEntry entry in archive.Entries)
+                            {
+                                if (entry.FullName == "world.db")
+                                {
+                                    using (var entryStream = entry.Open())
+                                    {
+                                        using (var outputStream = File.Create(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "world\\world.db")))
+                                        {
+                                            Console.WriteLine("Decompressing world database...");
+                                            entryStream.CopyTo(outputStream);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

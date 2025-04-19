@@ -13,8 +13,8 @@ namespace Etrea3.OLC
             while(true)
             {
                 sb.Clear();
-                sb.AppendLine($"Node ID: {newNode.ID}{Constants.TabStop}{Constants.TabStop}Name: {newNode.Name}");
-                sb.AppendLine($"Appearance Chance: {newNode.ApperanceChance}");
+                sb.AppendLine($"Vein ID: {newNode.ID}{Constants.TabStop}{Constants.TabStop}Name: {newNode.Name}");
+                sb.AppendLine($"Vein Type: {newNode.VeinType}");
                 if (newNode.CanFind.Count > 0)
                 {
                     sb.AppendLine($"Can Find:");
@@ -37,7 +37,7 @@ namespace Etrea3.OLC
                 }
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set ID{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}2. Set Name");
-                sb.AppendLine($"3. Set Appearance Chance{Constants.TabStop}4. Manage Findable Items");
+                sb.AppendLine($"3. Set Vein Type{Constants.TabStop}4. Manage Findable Items");
                 sb.AppendLine($"5. Save{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice: ");
                 session.SendSystem(sb.ToString());
@@ -58,7 +58,7 @@ namespace Etrea3.OLC
                         break;
 
                     case 3:
-                        newNode.ApperanceChance = GetValue<int>(session, "Enter Appearance Chance: ");
+                        newNode.VeinType = GetEnumValue<ResourceVeinType>(session, "Enter Vein Type: ");
                         break;
 
                     case 4:
@@ -169,8 +169,8 @@ namespace Etrea3.OLC
             while (true)
             {
                 sb.Clear();
-                sb.AppendLine($"Node ID: {node.ID}{Constants.TabStop}{Constants.TabStop}Name: {node.Name}");
-                sb.AppendLine($"Appearance Chance: {node.ApperanceChance}");
+                sb.AppendLine($"Vein ID: {node.ID}{Constants.TabStop}{Constants.TabStop}Name: {node.Name}");
+                sb.AppendLine($"Vein Type: {node.VeinType}");
                 if (node.CanFind.Count > 0)
                 {
                     sb.AppendLine($"Can Find:");
@@ -193,7 +193,7 @@ namespace Etrea3.OLC
                 }
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Name");
-                sb.AppendLine($"2. Set Appearance Chance{Constants.TabStop}3. Manage Findable Items");
+                sb.AppendLine($"2. Set Vein Type{Constants.TabStop}3. Manage Findable Items");
                 sb.AppendLine($"4. Save{Constants.TabStop}{Constants.TabStop}5. Return");
                 sb.AppendLine("Choice: ");
                 session.SendSystem(sb.ToString());
@@ -210,7 +210,7 @@ namespace Etrea3.OLC
                         break;
 
                     case 2:
-                        node.ApperanceChance = GetValue<int>(session, "Enter Appearance Chance: ");
+                        node.VeinType = GetEnumValue<ResourceVeinType>(session, "Enter Vein Type: ");
                         break;
 
                     case 3:

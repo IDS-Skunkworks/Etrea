@@ -17,9 +17,52 @@ namespace Etrea3.Core
         public int Count => Sessions.Count;
         public List<Session> AllSessions => Sessions.Values.ToList();
         public List<Session> ActivePlayers => Sessions.Values.Where(x => x.IsConnected && x.Player != null).ToList();
-        public List<Session> IdleSessions => Sessions.Values.Where(x => x.IsConnected && x.Player != null && (DateTime.UtcNow - x.LastInputTime).TotalSeconds > Game.MaxIdleSeconds).ToList();
-        public List<Session> DisconnectedSessions => Sessions.Values.Where(x => !x.IsConnected || ((x.Player == null && x.State != ConnectionState.CreatingCharacter)
-        || (x.Player == null && (DateTime.UtcNow - x.ConnectionTime).TotalSeconds > Game.MaxIdleSeconds))).ToList();
+        public ConcurrentDictionary<Session, string> DeadPeers
+        {
+            get
+            {
+                var dProcTime = DateTime.UtcNow;
+                var dSessions = new ConcurrentDictionary<Session, string>();
+                foreach (var s in Sessions.Values)
+                {
+                    if (!s.IsConnected)
+                    {
+                        dSessions.Add(s, "Disconnected Session");
+                        continue;
+                    }
+                    if (s.Player == null)
+                    {
+                        if (s.State != ConnectionState.GetPassword && s.State != ConnectionState.CreatingCharacter)
+                        {
+                            var idleTime = (dProcTime - s.ConnectionTime).TotalSeconds;
+                            if (idleTime > Game.MaxIdleSeconds)
+                            {
+                                dSessions.Add(s, $"No Player, not in GetPassword or CreateCharacter, idle for {idleTime:N0} seconds");
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            var idleTime = (dProcTime - s.ConnectionTime).TotalSeconds;
+                            if (idleTime >= (Game.MaxIdleSeconds * 2))
+                            {
+                                dSessions.Add(s, $"No Player, idle in GetPassword or CreateCharacter for {idleTime:N0} seconds");
+                                continue;
+                            }
+                        }
+                    }
+                    if (s.Player != null)
+                    {
+                        var idleTime = (dProcTime - s.LastInputTime).TotalSeconds;
+                        if ((!s.Player.IsImmortal || Game.DisconnectIdleImms) && idleTime > Game.MaxIdleSeconds)
+                        {
+                            dSessions.Add(s, $"Idle for {idleTime:N0} seconds");
+                        }
+                    }
+                }
+                return dSessions;
+            }
+        }
         public List<Session> Immortals => Sessions.Values.Where(x => x.IsConnected && x.Player != null && x.Player.IsImmortal).ToList();
 
         private SessionManager()
@@ -89,7 +132,7 @@ namespace Etrea3.Core
             }
         }
 
-        public void Close(Session session)
+        public bool Close(Session session)
         {
             EndPoint endPoint = null;
             try
@@ -123,10 +166,12 @@ namespace Etrea3.Core
                 string logMessage = string.IsNullOrEmpty(charName) ? $"CONNECTION: Connection from {endPoint} closed, no player associated with the connection" :
                     $"CONNECTION: Connection from {endPoint} closed, player {charName} has left the game";
                 Game.LogMessage(logMessage, LogLevel.Connection);
+                return true;
             }
             catch (Exception ex)
             {
                 Game.LogMessage($"ERROR: Error in SessionManager.Close(): {ex.Message}", LogLevel.Error);
+                return false;
             }
         }
 

@@ -24,12 +24,14 @@ namespace Etrea3.Objects
         public bool OLCLocked { get; set; }
         [JsonIgnore]
         public Guid LockHolder { get; set; }
+        [JsonProperty]
+        public ResourceVeinType VeinType { get; set; } = ResourceVeinType.Common;
         [JsonIgnore]
         private static readonly object lockObject = new object();
 
         public ResourceNode()
         {
-            Name = "New Resource Node";
+            Name = "New Resource Vein";
             CanFind = new ConcurrentDictionary<int, bool>();
             LockHolder = Guid.Empty;
         }

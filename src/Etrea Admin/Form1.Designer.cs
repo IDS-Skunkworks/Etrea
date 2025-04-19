@@ -100,9 +100,21 @@
             this.columnHeader29 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.tabControl2 = new System.Windows.Forms.TabControl();
             this.tabPage3 = new System.Windows.Forms.TabPage();
-            this.lblRoomLongDescLength = new System.Windows.Forms.Label();
-            this.chkBoxRoomLongDescOverride = new System.Windows.Forms.CheckBox();
-            this.rTxtRoomLongDesc = new System.Windows.Forms.RichTextBox();
+            this.lblRoomMornDescLength = new System.Windows.Forms.Label();
+            this.chkBoxRoomMornDescOverride = new System.Windows.Forms.CheckBox();
+            this.rTxtRoomMorningDesc = new System.Windows.Forms.RichTextBox();
+            this.tabPage38 = new System.Windows.Forms.TabPage();
+            this.lblRoomAftDescLength = new System.Windows.Forms.Label();
+            this.chkBoxRoomAftDescOverride = new System.Windows.Forms.CheckBox();
+            this.rTxtRoomAfternoonDesc = new System.Windows.Forms.RichTextBox();
+            this.tabPage39 = new System.Windows.Forms.TabPage();
+            this.lblRoomEveDescLength = new System.Windows.Forms.Label();
+            this.chkBoxRoomEveDescOverride = new System.Windows.Forms.CheckBox();
+            this.rTxtRoomEveningDesc = new System.Windows.Forms.RichTextBox();
+            this.tabPage40 = new System.Windows.Forms.TabPage();
+            this.lblRoomNightDescLength = new System.Windows.Forms.Label();
+            this.chkBoxRoomNightDescOverride = new System.Windows.Forms.CheckBox();
+            this.rTxtRoomNightDesc = new System.Windows.Forms.RichTextBox();
             this.tabPage4 = new System.Windows.Forms.TabPage();
             this.lblRoomSignLength = new System.Windows.Forms.Label();
             this.chkBoxRoomSignOverride = new System.Windows.Forms.CheckBox();
@@ -754,6 +766,8 @@
             this.txtBxArticleName = new System.Windows.Forms.TextBox();
             this.label136 = new System.Windows.Forms.Label();
             this.listBoxHelpArticles = new System.Windows.Forms.ListBox();
+            this.label137 = new System.Windows.Forms.Label();
+            this.comboScriptType = new System.Windows.Forms.ComboBox();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -767,6 +781,9 @@
             this.tabPage9.SuspendLayout();
             this.tabControl2.SuspendLayout();
             this.tabPage3.SuspendLayout();
+            this.tabPage38.SuspendLayout();
+            this.tabPage39.SuspendLayout();
+            this.tabPage40.SuspendLayout();
             this.tabPage4.SuspendLayout();
             this.tabPage12.SuspendLayout();
             this.tabPage10.SuspendLayout();
@@ -1556,6 +1573,9 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.tabControl2.Controls.Add(this.tabPage3);
+            this.tabControl2.Controls.Add(this.tabPage38);
+            this.tabControl2.Controls.Add(this.tabPage39);
+            this.tabControl2.Controls.Add(this.tabPage40);
             this.tabControl2.Controls.Add(this.tabPage4);
             this.tabControl2.Controls.Add(this.tabPage12);
             this.tabControl2.Location = new System.Drawing.Point(6, 71);
@@ -1566,46 +1586,172 @@
             // 
             // tabPage3
             // 
-            this.tabPage3.Controls.Add(this.lblRoomLongDescLength);
-            this.tabPage3.Controls.Add(this.chkBoxRoomLongDescOverride);
-            this.tabPage3.Controls.Add(this.rTxtRoomLongDesc);
+            this.tabPage3.Controls.Add(this.lblRoomMornDescLength);
+            this.tabPage3.Controls.Add(this.chkBoxRoomMornDescOverride);
+            this.tabPage3.Controls.Add(this.rTxtRoomMorningDesc);
             this.tabPage3.Location = new System.Drawing.Point(4, 22);
             this.tabPage3.Name = "tabPage3";
             this.tabPage3.Padding = new System.Windows.Forms.Padding(3);
             this.tabPage3.Size = new System.Drawing.Size(491, 196);
             this.tabPage3.TabIndex = 0;
-            this.tabPage3.Text = "Long Description";
+            this.tabPage3.Text = "Morning Description";
             this.tabPage3.UseVisualStyleBackColor = true;
             // 
-            // lblRoomLongDescLength
+            // lblRoomMornDescLength
             // 
-            this.lblRoomLongDescLength.AutoSize = true;
-            this.lblRoomLongDescLength.Location = new System.Drawing.Point(200, 174);
-            this.lblRoomLongDescLength.Name = "lblRoomLongDescLength";
-            this.lblRoomLongDescLength.Size = new System.Drawing.Size(128, 13);
-            this.lblRoomLongDescLength.TabIndex = 2;
-            this.lblRoomLongDescLength.Text = "Line Length: 0 characters";
+            this.lblRoomMornDescLength.AutoSize = true;
+            this.lblRoomMornDescLength.Location = new System.Drawing.Point(200, 174);
+            this.lblRoomMornDescLength.Name = "lblRoomMornDescLength";
+            this.lblRoomMornDescLength.Size = new System.Drawing.Size(128, 13);
+            this.lblRoomMornDescLength.TabIndex = 2;
+            this.lblRoomMornDescLength.Text = "Line Length: 0 characters";
             // 
-            // chkBoxRoomLongDescOverride
+            // chkBoxRoomMornDescOverride
             // 
-            this.chkBoxRoomLongDescOverride.AutoSize = true;
-            this.chkBoxRoomLongDescOverride.Location = new System.Drawing.Point(6, 173);
-            this.chkBoxRoomLongDescOverride.Name = "chkBoxRoomLongDescOverride";
-            this.chkBoxRoomLongDescOverride.Size = new System.Drawing.Size(174, 17);
-            this.chkBoxRoomLongDescOverride.TabIndex = 1;
-            this.chkBoxRoomLongDescOverride.Text = "Override 80 character line limit?";
-            this.chkBoxRoomLongDescOverride.UseVisualStyleBackColor = true;
+            this.chkBoxRoomMornDescOverride.AutoSize = true;
+            this.chkBoxRoomMornDescOverride.Location = new System.Drawing.Point(6, 173);
+            this.chkBoxRoomMornDescOverride.Name = "chkBoxRoomMornDescOverride";
+            this.chkBoxRoomMornDescOverride.Size = new System.Drawing.Size(174, 17);
+            this.chkBoxRoomMornDescOverride.TabIndex = 1;
+            this.chkBoxRoomMornDescOverride.Text = "Override 80 character line limit?";
+            this.chkBoxRoomMornDescOverride.UseVisualStyleBackColor = true;
             // 
-            // rTxtRoomLongDesc
+            // rTxtRoomMorningDesc
             // 
-            this.rTxtRoomLongDesc.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.rTxtRoomMorningDesc.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.rTxtRoomLongDesc.Location = new System.Drawing.Point(6, 6);
-            this.rTxtRoomLongDesc.Name = "rTxtRoomLongDesc";
-            this.rTxtRoomLongDesc.Size = new System.Drawing.Size(479, 161);
-            this.rTxtRoomLongDesc.TabIndex = 0;
-            this.rTxtRoomLongDesc.Text = "";
-            this.rTxtRoomLongDesc.KeyUp += new System.Windows.Forms.KeyEventHandler(this.rTxtRoomLongDesc_KeyUp);
+            this.rTxtRoomMorningDesc.Location = new System.Drawing.Point(6, 6);
+            this.rTxtRoomMorningDesc.Name = "rTxtRoomMorningDesc";
+            this.rTxtRoomMorningDesc.Size = new System.Drawing.Size(479, 161);
+            this.rTxtRoomMorningDesc.TabIndex = 0;
+            this.rTxtRoomMorningDesc.Text = "";
+            this.rTxtRoomMorningDesc.KeyUp += new System.Windows.Forms.KeyEventHandler(this.rTxtRoomLongDesc_KeyUp);
+            // 
+            // tabPage38
+            // 
+            this.tabPage38.Controls.Add(this.lblRoomAftDescLength);
+            this.tabPage38.Controls.Add(this.chkBoxRoomAftDescOverride);
+            this.tabPage38.Controls.Add(this.rTxtRoomAfternoonDesc);
+            this.tabPage38.Location = new System.Drawing.Point(4, 22);
+            this.tabPage38.Name = "tabPage38";
+            this.tabPage38.Size = new System.Drawing.Size(491, 196);
+            this.tabPage38.TabIndex = 3;
+            this.tabPage38.Text = "Afternoon Description";
+            this.tabPage38.UseVisualStyleBackColor = true;
+            // 
+            // lblRoomAftDescLength
+            // 
+            this.lblRoomAftDescLength.AutoSize = true;
+            this.lblRoomAftDescLength.Location = new System.Drawing.Point(200, 174);
+            this.lblRoomAftDescLength.Name = "lblRoomAftDescLength";
+            this.lblRoomAftDescLength.Size = new System.Drawing.Size(128, 13);
+            this.lblRoomAftDescLength.TabIndex = 5;
+            this.lblRoomAftDescLength.Text = "Line Length: 0 characters";
+            // 
+            // chkBoxRoomAftDescOverride
+            // 
+            this.chkBoxRoomAftDescOverride.AutoSize = true;
+            this.chkBoxRoomAftDescOverride.Location = new System.Drawing.Point(6, 173);
+            this.chkBoxRoomAftDescOverride.Name = "chkBoxRoomAftDescOverride";
+            this.chkBoxRoomAftDescOverride.Size = new System.Drawing.Size(174, 17);
+            this.chkBoxRoomAftDescOverride.TabIndex = 4;
+            this.chkBoxRoomAftDescOverride.Text = "Override 80 character line limit?";
+            this.chkBoxRoomAftDescOverride.UseVisualStyleBackColor = true;
+            // 
+            // rTxtRoomAfternoonDesc
+            // 
+            this.rTxtRoomAfternoonDesc.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.rTxtRoomAfternoonDesc.Location = new System.Drawing.Point(6, 6);
+            this.rTxtRoomAfternoonDesc.Name = "rTxtRoomAfternoonDesc";
+            this.rTxtRoomAfternoonDesc.Size = new System.Drawing.Size(479, 161);
+            this.rTxtRoomAfternoonDesc.TabIndex = 3;
+            this.rTxtRoomAfternoonDesc.Text = "";
+            this.rTxtRoomAfternoonDesc.KeyUp += new System.Windows.Forms.KeyEventHandler(this.rTxtRoomAfternoonDesc_KeyUp);
+            // 
+            // tabPage39
+            // 
+            this.tabPage39.Controls.Add(this.lblRoomEveDescLength);
+            this.tabPage39.Controls.Add(this.chkBoxRoomEveDescOverride);
+            this.tabPage39.Controls.Add(this.rTxtRoomEveningDesc);
+            this.tabPage39.Location = new System.Drawing.Point(4, 22);
+            this.tabPage39.Name = "tabPage39";
+            this.tabPage39.Size = new System.Drawing.Size(491, 196);
+            this.tabPage39.TabIndex = 4;
+            this.tabPage39.Text = "Evening Description";
+            this.tabPage39.UseVisualStyleBackColor = true;
+            // 
+            // lblRoomEveDescLength
+            // 
+            this.lblRoomEveDescLength.AutoSize = true;
+            this.lblRoomEveDescLength.Location = new System.Drawing.Point(200, 174);
+            this.lblRoomEveDescLength.Name = "lblRoomEveDescLength";
+            this.lblRoomEveDescLength.Size = new System.Drawing.Size(128, 13);
+            this.lblRoomEveDescLength.TabIndex = 5;
+            this.lblRoomEveDescLength.Text = "Line Length: 0 characters";
+            // 
+            // chkBoxRoomEveDescOverride
+            // 
+            this.chkBoxRoomEveDescOverride.AutoSize = true;
+            this.chkBoxRoomEveDescOverride.Location = new System.Drawing.Point(6, 173);
+            this.chkBoxRoomEveDescOverride.Name = "chkBoxRoomEveDescOverride";
+            this.chkBoxRoomEveDescOverride.Size = new System.Drawing.Size(174, 17);
+            this.chkBoxRoomEveDescOverride.TabIndex = 4;
+            this.chkBoxRoomEveDescOverride.Text = "Override 80 character line limit?";
+            this.chkBoxRoomEveDescOverride.UseVisualStyleBackColor = true;
+            // 
+            // rTxtRoomEveningDesc
+            // 
+            this.rTxtRoomEveningDesc.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.rTxtRoomEveningDesc.Location = new System.Drawing.Point(6, 6);
+            this.rTxtRoomEveningDesc.Name = "rTxtRoomEveningDesc";
+            this.rTxtRoomEveningDesc.Size = new System.Drawing.Size(479, 161);
+            this.rTxtRoomEveningDesc.TabIndex = 3;
+            this.rTxtRoomEveningDesc.Text = "";
+            this.rTxtRoomEveningDesc.KeyUp += new System.Windows.Forms.KeyEventHandler(this.rTxtRoomEveningDesc_KeyUp);
+            // 
+            // tabPage40
+            // 
+            this.tabPage40.Controls.Add(this.lblRoomNightDescLength);
+            this.tabPage40.Controls.Add(this.chkBoxRoomNightDescOverride);
+            this.tabPage40.Controls.Add(this.rTxtRoomNightDesc);
+            this.tabPage40.Location = new System.Drawing.Point(4, 22);
+            this.tabPage40.Name = "tabPage40";
+            this.tabPage40.Size = new System.Drawing.Size(491, 196);
+            this.tabPage40.TabIndex = 5;
+            this.tabPage40.Text = "Night Description";
+            this.tabPage40.UseVisualStyleBackColor = true;
+            // 
+            // lblRoomNightDescLength
+            // 
+            this.lblRoomNightDescLength.AutoSize = true;
+            this.lblRoomNightDescLength.Location = new System.Drawing.Point(200, 174);
+            this.lblRoomNightDescLength.Name = "lblRoomNightDescLength";
+            this.lblRoomNightDescLength.Size = new System.Drawing.Size(128, 13);
+            this.lblRoomNightDescLength.TabIndex = 5;
+            this.lblRoomNightDescLength.Text = "Line Length: 0 characters";
+            // 
+            // chkBoxRoomNightDescOverride
+            // 
+            this.chkBoxRoomNightDescOverride.AutoSize = true;
+            this.chkBoxRoomNightDescOverride.Location = new System.Drawing.Point(6, 173);
+            this.chkBoxRoomNightDescOverride.Name = "chkBoxRoomNightDescOverride";
+            this.chkBoxRoomNightDescOverride.Size = new System.Drawing.Size(174, 17);
+            this.chkBoxRoomNightDescOverride.TabIndex = 4;
+            this.chkBoxRoomNightDescOverride.Text = "Override 80 character line limit?";
+            this.chkBoxRoomNightDescOverride.UseVisualStyleBackColor = true;
+            // 
+            // rTxtRoomNightDesc
+            // 
+            this.rTxtRoomNightDesc.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.rTxtRoomNightDesc.Location = new System.Drawing.Point(6, 6);
+            this.rTxtRoomNightDesc.Name = "rTxtRoomNightDesc";
+            this.rTxtRoomNightDesc.Size = new System.Drawing.Size(479, 161);
+            this.rTxtRoomNightDesc.TabIndex = 3;
+            this.rTxtRoomNightDesc.Text = "";
+            this.rTxtRoomNightDesc.KeyUp += new System.Windows.Forms.KeyEventHandler(this.rTxtRoomNightDesc_KeyUp);
             // 
             // tabPage4
             // 
@@ -2176,6 +2322,8 @@
             // 
             this.groupBox5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox5.Controls.Add(this.comboScriptType);
+            this.groupBox5.Controls.Add(this.label137);
             this.groupBox5.Controls.Add(this.richTextBox1);
             this.groupBox5.Controls.Add(this.btnMobProgDelete);
             this.groupBox5.Controls.Add(this.btnMobProgClear);
@@ -2291,7 +2439,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtBxMobProgTrigger.Location = new System.Drawing.Point(601, 19);
             this.txtBxMobProgTrigger.Name = "txtBxMobProgTrigger";
-            this.txtBxMobProgTrigger.Size = new System.Drawing.Size(317, 20);
+            this.txtBxMobProgTrigger.Size = new System.Drawing.Size(90, 20);
             this.txtBxMobProgTrigger.TabIndex = 7;
             // 
             // txtBxMobProgName
@@ -2391,7 +2539,7 @@
             // 
             // columnHeader33
             // 
-            this.columnHeader33.Text = "Triggers";
+            this.columnHeader33.Text = "Type";
             // 
             // tabPage13
             // 
@@ -7881,6 +8029,29 @@
             this.listBoxHelpArticles.TabIndex = 0;
             this.listBoxHelpArticles.SelectedIndexChanged += new System.EventHandler(this.listBoxHelpArticles_SelectedIndexChanged);
             // 
+            // label137
+            // 
+            this.label137.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.label137.AutoSize = true;
+            this.label137.Location = new System.Drawing.Point(727, 22);
+            this.label137.Name = "label137";
+            this.label137.Size = new System.Drawing.Size(34, 13);
+            this.label137.TabIndex = 16;
+            this.label137.Text = "Type:";
+            // 
+            // comboScriptType
+            // 
+            this.comboScriptType.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.comboScriptType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboScriptType.FormattingEnabled = true;
+            this.comboScriptType.Items.AddRange(new object[] {
+            "MobProg",
+            "RoomProg"});
+            this.comboScriptType.Location = new System.Drawing.Point(767, 18);
+            this.comboScriptType.Name = "comboScriptType";
+            this.comboScriptType.Size = new System.Drawing.Size(151, 21);
+            this.comboScriptType.TabIndex = 17;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -7908,6 +8079,12 @@
             this.tabControl2.ResumeLayout(false);
             this.tabPage3.ResumeLayout(false);
             this.tabPage3.PerformLayout();
+            this.tabPage38.ResumeLayout(false);
+            this.tabPage38.PerformLayout();
+            this.tabPage39.ResumeLayout(false);
+            this.tabPage39.PerformLayout();
+            this.tabPage40.ResumeLayout(false);
+            this.tabPage40.PerformLayout();
             this.tabPage4.ResumeLayout(false);
             this.tabPage4.PerformLayout();
             this.tabPage12.ResumeLayout(false);
@@ -8031,10 +8208,10 @@
         private System.Windows.Forms.TabControl tabControl2;
         private System.Windows.Forms.TabPage tabPage3;
         private System.Windows.Forms.TabPage tabPage4;
-        private System.Windows.Forms.RichTextBox rTxtRoomLongDesc;
+        private System.Windows.Forms.RichTextBox rTxtRoomMorningDesc;
         private System.Windows.Forms.RichTextBox rTxtRoomSign;
-        private System.Windows.Forms.Label lblRoomLongDescLength;
-        private System.Windows.Forms.CheckBox chkBoxRoomLongDescOverride;
+        private System.Windows.Forms.Label lblRoomMornDescLength;
+        private System.Windows.Forms.CheckBox chkBoxRoomMornDescOverride;
         private System.Windows.Forms.Label lblRoomSignLength;
         private System.Windows.Forms.CheckBox chkBoxRoomSignOverride;
         private System.Windows.Forms.TabControl tabControl3;
@@ -8709,6 +8886,20 @@
         private System.Windows.Forms.Button btnUpdateArticle;
         private System.Windows.Forms.Button btnAddArticle;
         private System.Windows.Forms.Button btnLoadArticles;
+        private System.Windows.Forms.TabPage tabPage38;
+        private System.Windows.Forms.TabPage tabPage39;
+        private System.Windows.Forms.TabPage tabPage40;
+        private System.Windows.Forms.Label lblRoomAftDescLength;
+        private System.Windows.Forms.CheckBox chkBoxRoomAftDescOverride;
+        private System.Windows.Forms.RichTextBox rTxtRoomAfternoonDesc;
+        private System.Windows.Forms.Label lblRoomEveDescLength;
+        private System.Windows.Forms.CheckBox chkBoxRoomEveDescOverride;
+        private System.Windows.Forms.RichTextBox rTxtRoomEveningDesc;
+        private System.Windows.Forms.Label lblRoomNightDescLength;
+        private System.Windows.Forms.CheckBox chkBoxRoomNightDescOverride;
+        private System.Windows.Forms.RichTextBox rTxtRoomNightDesc;
+        private System.Windows.Forms.ComboBox comboScriptType;
+        private System.Windows.Forms.Label label137;
     }
 }
 

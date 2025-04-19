@@ -69,7 +69,8 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Shop{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}3. NPC");
                 sb.AppendLine($"4. Recipe{Constants.TabStop}5. Emote{Constants.TabStop}{Constants.TabStop}6. Quest");
                 sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
-                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
+                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. RoomProg");
+                sb.AppendLine($"13. Return");
                 sb.AppendLine("Choice: ");
                 session.SendSystem(sb.ToString());
                 var input = session.Read();
@@ -122,6 +123,10 @@ namespace Etrea3.OLC
                             break;
 
                         case 12:
+                            CreateRoomProg(session);
+                            break;
+
+                        case 13:
                             return;
 
                         default:
@@ -146,7 +151,8 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Shop{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}3. NPC");
                 sb.AppendLine($"4. Recipe{Constants.TabStop}5. Emote{Constants.TabStop}{Constants.TabStop}6. Quest");
                 sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
-                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
+                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. RoomProg");
+                sb.AppendLine($"13. Return");
                 sb.AppendLine("Choice: ");
                 session.SendSystem(sb.ToString());
                 var input = session.Read();
@@ -199,6 +205,10 @@ namespace Etrea3.OLC
                             break;
 
                         case 12:
+                            DeleteRoomProg(session);
+                            break;
+
+                        case 13:
                             return;
 
                         default:
@@ -223,7 +233,8 @@ namespace Etrea3.OLC
                 sb.AppendLine($"1. Item{Constants.TabStop}{Constants.TabStop}2. Shop{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}3. NPC");
                 sb.AppendLine($"4. Recipe{Constants.TabStop}5. Emote{Constants.TabStop}{Constants.TabStop}6. Quest");
                 sb.AppendLine($"7. Room{Constants.TabStop}{Constants.TabStop}8. Zone{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}9. Spell");
-                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. Return");
+                sb.AppendLine($"10. MobProg{Constants.TabStop}11. Resource Node{Constants.TabStop}12. RoomProg");
+                sb.AppendLine($"13. Return");
                 sb.AppendLine("Choice: ");
                 session.SendSystem(sb.ToString());
                 var input = session.Read();
@@ -276,6 +287,10 @@ namespace Etrea3.OLC
                             break;
 
                         case 12:
+                            ChangeRoomProg(session);
+                            break;
+
+                        case 13:
                             return;
 
                         default:

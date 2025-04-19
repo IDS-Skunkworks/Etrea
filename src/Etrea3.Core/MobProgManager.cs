@@ -6,89 +6,181 @@ using System.Linq;
 
 namespace Etrea3.Core
 {
-    public class MobProgManager
+    public class ScriptObjectManager
     {
-        private static MobProgManager instance = null;
+        private static ScriptObjectManager instance = null;
         private ConcurrentDictionary<int, MobProg> MobProgs { get; set; }
-        public int Count => MobProgs.Count;
+        private ConcurrentDictionary<int, RoomProg> RoomProgs { get; set; }
+        public int Count => MobProgs.Count + RoomProgs.Count;
 
-        private MobProgManager()
+        private ScriptObjectManager()
         {
             MobProgs = new ConcurrentDictionary<int, MobProg>();
+            RoomProgs = new ConcurrentDictionary<int, RoomProg>();
         }
 
-        public static MobProgManager Instance
+        public static ScriptObjectManager Instance
         {
             get
             {
                 if (instance == null)
                 {
-                    instance = new MobProgManager();
+                    instance = new ScriptObjectManager();
                 }
                 return instance;
             }
         }
 
-        public void SetMobProgLockState(int id, bool locked, Session session)
+        public void SetScriptLockState<T>(int id, bool locked, Session session)
         {
-            if (Instance.MobProgs.ContainsKey(id))
+            if (typeof(T) == typeof(MobProg))
             {
-                Instance.MobProgs[id].OLCLocked = locked;
-                Instance.MobProgs[id].LockHolder = locked ? session.ID : Guid.Empty;
+                if (Instance.MobProgs.ContainsKey(id))
+                {
+                    Instance.MobProgs[id].OLCLocked = locked;
+                    Instance.MobProgs[id].LockHolder = locked ? session.ID : Guid.Empty;
+                }
+                return;
+            }
+            if (typeof(T) == typeof(RoomProg))
+            {
+                if (Instance.RoomProgs.ContainsKey(id))
+                {
+                    Instance.RoomProgs[id].OLCLocked = locked;
+                    Instance.RoomProgs[id].LockHolder = locked ? session.ID: Guid.Empty;
+                }
+                return;
             }
         }
 
-        public bool MobProgExists(int id)
+        public bool ScriptObjectExists<T>(int id)
         {
-            return Instance.MobProgs.ContainsKey(id);
+            if (typeof(T) == typeof(MobProg))
+            {
+                return Instance.MobProgs.ContainsKey(id);
+            }
+            if (typeof(T) == typeof(RoomProg))
+            {
+                return Instance.RoomProgs.ContainsKey(id);
+            }
+            return false;
+        }
+
+        public dynamic GetScriptObject<T>(int id)
+        {
+            if (typeof(T) == typeof(MobProg) && Instance.MobProgs.ContainsKey(id))
+            {
+                return Instance.MobProgs[id];
+            }
+            if (typeof(T) == typeof(RoomProg) && Instance.RoomProgs.ContainsKey(id))
+            {
+                return Instance.RoomProgs[id];
+            }
+            return null;
         }
 
         public MobProg GetMobProg(int id)
         {
-            return Instance.MobProgs.ContainsKey(id) ? Instance.MobProgs[id] : null;
+            return Instance.GetScriptObject<MobProg>(id);
         }
 
-        public List<MobProg> GetMobProg()
+        public List<T> GetScriptObject<T>()
         {
-            return Instance.MobProgs.Values.ToList();
+            if (typeof(T) == typeof(MobProg))
+            {
+                return Instance.MobProgs.Values.Cast<T>().ToList();
+            }
+            if (typeof(T) == typeof(RoomProg))
+            {
+                return Instance.RoomProgs.Values.Cast<T>().ToList();
+            }
+            return null;
         }
 
-        public List<MobProg> GetMobProg(int start, int end)
+        public List<T> GetScriptObject<T>(int start, int end)
         {
-            return end <= start ? null : Instance.MobProgs.Values.Where(x => x.ID >= start && x.ID <= end).ToList();
+            if (end <= start)
+            {
+                return null;
+            }
+            if (typeof(T) == typeof(MobProg))
+            {
+                return Instance.MobProgs.Values.Where(x => x.ID >= start && x.ID <= end).Cast<T>().ToList();
+            }
+            if (typeof(T) == typeof(RoomProg))
+            {
+                return Instance.RoomProgs.Values.Where(x => x.ID >= start && x.ID <= end).Cast<T>().ToList();
+            }
+            return null;
         }
 
-        public bool AddOrUpdateMobProg(MobProg mobProg, bool isNew)
+        public bool AddOrUpdateScriptObject<T>(T script, bool isNew)
         {
             try
             {
-                if (!DatabaseManager.SaveMobProgToWorldDatabase(mobProg, isNew))
+                if (typeof(T) == typeof(MobProg))
                 {
-                    Game.LogMessage($"ERROR: Failed to save MobProg {mobProg.ID} to World Dataase", LogLevel.Error);
-                    return false;
-                }
-                if (isNew)
-                {
-                    if (!Instance.MobProgs.TryAdd(mobProg.ID, mobProg))
+                    MobProg mp = script as MobProg;
+                    if (!DatabaseManager.SaveScriptToWorldDatabase<MobProg>(mp, isNew))
                     {
-                        Game.LogMessage($"ERROR: Failed to add MobProg {mobProg.ID} to MobProg Manager", LogLevel.Error);
+                        Game.LogMessage($"ERROR: Failed to save MobProg {mp.ID} to World Database", LogLevel.Error);
                         return false;
                     }
+                    if (isNew)
+                    {
+                        if (!Instance.MobProgs.TryAdd(mp.ID, mp))
+                        {
+                            Game.LogMessage($"ERROR: Failed to add MobProg {mp.ID} to MobProg Manager", LogLevel.Error);
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (!Instance.MobProgs.TryGetValue(mp.ID, out var existingMobProg))
+                        {
+                            Game.LogMessage($"ERROR: MobProg {mp.ID} not found in MobProg Manager for update", LogLevel.Error);
+                            return false;
+                        }
+                        if (!Instance.MobProgs.TryUpdate(mp.ID, mp, existingMobProg))
+                        {
+                            Game.LogMessage($"ERROR: Failed to update MobProg {mp.ID} in MobProg Manager due to a value mismatch", LogLevel.Error);
+                            return false;
+                        }
+                    }
+                    return true;
                 }
-                else
+                if (typeof(T) == typeof(RoomProg))
                 {
-                    if (!Instance.MobProgs.TryGetValue(mobProg.ID, out var existingMobProg))
+                    RoomProg rp = script as RoomProg;
+                    if (!DatabaseManager.SaveScriptToWorldDatabase<RoomProg>(rp, isNew))
                     {
-                        Game.LogMessage($"ERROR: MobProg {mobProg.ID} not found in MobProg Manager for update", LogLevel.Error);
+                        Game.LogMessage($"ERROR: Failed to save RoomProg {rp.ID} to World Database", LogLevel.Error);
                         return false;
                     }
-                    if (!Instance.MobProgs.TryUpdate(mobProg.ID, mobProg, existingMobProg))
+                    if (isNew)
                     {
-                        Game.LogMessage($"ERROR: Failed to update MobProg {mobProg.ID} in MobProg Manager due to a value mismatch", LogLevel.Error);
-                        return false;
+                        if (!Instance.RoomProgs.TryAdd(rp.ID, rp))
+                        {
+                            Game.LogMessage($"ERROR: Failed to add RoomProg {rp.ID} to RoomProg Manager", LogLevel.Error);
+                            return false;
+                        }
                     }
+                    else
+                    {
+                        if (!Instance.RoomProgs.TryGetValue(rp.ID, out var existingRoomProg))
+                        {
+                            Game.LogMessage($"ERROR: RoomProg {rp.ID} not found in RoomProg Manager for update", LogLevel.Error);
+                            return false;
+                        }
+                        if (!Instance.RoomProgs.TryUpdate(rp.ID, rp, existingRoomProg))
+                        {
+                            Game.LogMessage($"ERROR: Failed to update RoomProg {rp.ID} in RoomProg Manager due to a value mismatch", LogLevel.Error);
+                            return false;
+                        }
+                    }
+                    return true;
                 }
-                return true;
+                return false;
             }
             catch (Exception ex)
             {
@@ -97,31 +189,59 @@ namespace Etrea3.Core
             }
         }
 
-        public bool RemoveMobProg(int id)
+        public bool RemoveScriptObject<T>(int id)
         {
-            if (Instance.MobProgs.ContainsKey(id))
+            if (typeof(T) == typeof(MobProg))
             {
-                if (Instance.MobProgs.TryRemove(id, out var mp) && DatabaseManager.RemoveMobProg(id))
+                if (Instance.MobProgs.ContainsKey(id))
                 {
-                    mp.Dispose();
-                    return true;
+                    if (Instance.MobProgs.TryRemove(id, out var mp) && DatabaseManager.RemoveScriptObject<MobProg>(id))
+                    {
+                        mp.Dispose();
+                        return true;
+                    }
+                    Game.LogMessage($"ERROR: Failed to remove MobProg {id} from MobProg Manager and/or World Database", LogLevel.Error);
+                    return false;
                 }
-                Game.LogMessage($"ERROR: Failed to remove MobProg {id} from MobProg Manager and/or World Database", LogLevel.Error);
+                Game.LogMessage($"ERROR: Error removing MobProg {id}: No such MobProg in MobProg Manager", LogLevel.Error);
                 return false;
             }
-            Game.LogMessage($"ERROR: Error removing MobProg {id}: No such MobProg in MobProg Manager", LogLevel.Error);
+            if (typeof(T) == typeof(RoomProg))
+            {
+                if (Instance.RoomProgs.ContainsKey(id))
+                {
+                    if (Instance.RoomProgs.TryRemove(id, out var rp) && DatabaseManager.RemoveScriptObject<RoomProg>(id))
+                    {
+                        rp.Dispose();
+                        return true;
+                    }
+                    Game.LogMessage($"ERROR: Failed to remove RoomProg {id} from RoomProg Manager and/or World Database", LogLevel.Error);
+                    return false;
+                }
+                Game.LogMessage($"ERROR: Error removing RoomProg {id}: No such RoomProg in RoomProg Manager", LogLevel.Error);
+                return false;
+            }
+            Game.LogMessage($"ERROR: RemoveScriptObject() called with unsupported object type: {typeof(T)}", LogLevel.Error);
             return false;
         }
 
-        public bool LoadAllMobProgs()
+        public bool LoadAllScripts()
         {
-            if (!DatabaseManager.LoadAllMobProgs(out var allMobProgs) || allMobProgs == null)
+            if (!DatabaseManager.LoadAllScripts<MobProg>(out var allMobProgs) || allMobProgs == null)
             {
                 return false;
             }
-            foreach (var mp in allMobProgs)
+            if (!DatabaseManager.LoadAllScripts<RoomProg>(out var allRoomProgs) || allRoomProgs == null)
+            {
+                return false;
+            }
+            foreach(var mp in allMobProgs)
             {
                 Instance.MobProgs.AddOrUpdate(mp.Key, mp.Value, (k, v) => mp.Value);
+            }
+            foreach(var rp in allRoomProgs)
+            {
+                Instance.RoomProgs.AddOrUpdate(rp.Key, rp.Value, (k, v) => rp.Value);
             }
             return true;
         }

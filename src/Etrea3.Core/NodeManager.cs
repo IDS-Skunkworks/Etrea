@@ -64,6 +64,11 @@ namespace Etrea3.Core
             return Instance.Nodes.ContainsKey(id) ? Instance.Nodes[id] : null;
         }
 
+        public List<ResourceNode> GetNode(ResourceVeinType veinType)
+        {
+            return Instance.Nodes.Values.Where(x => x.VeinType <= veinType).ToList();
+        }
+
         public List<ResourceNode> GetNode(int start, int end)
         {
             return end <= start ? null : (from n in Instance.Nodes.Values where n.ID >= start && n.ID <= end select n).ToList();
@@ -134,7 +139,7 @@ namespace Etrea3.Core
             {
                 return false;
             }
-            foreach (var node in Instance.Nodes)
+            foreach (var node in nodes)
             {
                 Instance.Nodes.AddOrUpdate(node.Key, node.Value, (k, v) => node.Value);
             }

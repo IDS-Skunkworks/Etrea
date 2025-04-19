@@ -104,30 +104,36 @@ namespace Etrea3.Objects
             KillActor(killer, killedInCombat);
         }
 
-        protected virtual void KillActor(Actor killer, bool killedInCombat)
-        {
-            // handled in the override methods on NPC and Player
-        }
+        //protected virtual void KillActor(Actor killer, bool killedInCombat)
+        //{
+        //    // handled in the override methods on NPC and Player
+        //}
+
+        protected abstract void KillActor(Actor killer, bool killedInCombat);
 
         public virtual void Move(int newRID, bool wasTeleported)
         {
             MoveActor(newRID, wasTeleported);
         }
 
-        protected virtual void MoveActor(int newRID, bool wasTeleported)
-        {
-            // handled in the override methods on NPC and Player
-        }
+        protected abstract void MoveActor(int newRID, bool wasTeleported);
+
+        //protected virtual void MoveActor(int newRID, bool wasTeleported)
+        //{
+        //    // handled in the override methods on NPC and Player
+        //}
 
         public virtual void Restore()
         {
             RestoreActor();
         }
 
-        protected virtual void RestoreActor()
-        {
-            // override in derived classes
-        }
+        protected abstract void RestoreActor();
+
+        //protected virtual void RestoreActor()
+        //{
+        //    // override in derived classes
+        //}
 
         public void Esuna()
         {
@@ -1138,7 +1144,7 @@ namespace Etrea3.Objects
             {
                 foreach (var mp in MobProgs.Keys)
                 {
-                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                     if (mobProg != null)
                     {
                         mobProg.Init();
@@ -1159,7 +1165,7 @@ namespace Etrea3.Objects
             {
                 foreach (var mp in MobProgs.Keys)
                 {
-                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                     if (mobProg != null)
                     {
                         mobProg.Init();
@@ -1279,7 +1285,7 @@ namespace Etrea3.Objects
             {
                 foreach(var mp in MobProgs.Keys)
                 {
-                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                     if (mobProg != null)
                     {
                         mobProg.Init();
@@ -1440,7 +1446,7 @@ namespace Etrea3.Objects
                 {
                     foreach(var mp in n.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();
@@ -1475,7 +1481,7 @@ namespace Etrea3.Objects
                 {
                     foreach(var m in n.MobProgs)
                     {
-                        var mp = MobProgManager.Instance.GetMobProg(m.Key);
+                        var mp = ScriptObjectManager.Instance.GetMobProg(m.Key);
                         if (mp != null)
                         {
                             mp.Init();

@@ -166,7 +166,7 @@ namespace Etrea3.Core
                 {
                     foreach(var mp in nTarget.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();
@@ -233,7 +233,7 @@ namespace Etrea3.Core
                 {
                     foreach(var mp in n.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();
@@ -269,6 +269,22 @@ namespace Etrea3.Core
         #endregion
 
         #region Misc
+        public static void ShowWorldTime(Session session)
+        {
+            var day = DateTime.UtcNow.Day;
+            var month = Constants.MonthNames[(DateTime.UtcNow.Month - 1) % 12];
+            if (RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.Clock))
+            {
+                var tod = DateTime.UtcNow.ToString("HH:mm");
+                session.Send($"%BYT%It is {tod} on the {Helpers.GetOrdinal(day)} of {month}.%PT%{Constants.NewLine}");
+            }
+            else
+            {
+                var tod = Helpers.GetTimeOfDay().ToString().ToLower();
+                session.Send($"%BYT%It is the {tod} of the {Helpers.GetOrdinal(day)} of {month}.%PT%{Constants.NewLine}");
+            }
+        }
+
         public static void PlayerSummon(Session session, ref string arg)
         {
             if (string.IsNullOrEmpty(arg))
@@ -1751,7 +1767,350 @@ namespace Etrea3.Core
             session.Send(sb.ToString());
         }
 
-        public static void ShowQuests(Session session, ref string arg)
+        private static void ShowCompletedQuests(Session session)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (session.Player.CompletedQuests.Count == 0)
+            {
+                session.Send($"BRT%You haven't completed any Quests yet!%PT%{Constants.NewLine}");
+                return;
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            sb.AppendLine($"%BYT%|| You have completed the following Quetss:%PT%");
+            foreach (var kvp in session.Player.CompletedQuests)
+            {
+                var quest = QuestManager.Instance.GetQuest(kvp.Key);
+                if (quest != null)
+                {
+                    sb.AppendLine($"%BYT%|| {quest.Name} in {ZoneManager.Instance.GetZone(quest.Zone).ZoneName}%PT%");
+                }
+            }
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+            return;
+        }
+
+        private static void ShowActiveQuests(Session session)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (session.Player.ActiveQuests.Count == 0)
+            {
+                session.Send($"%BGT%You don't have any Quests right now.%PT%{Constants.NewLine}");
+            }
+            else
+            {
+                int i = 0;
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                foreach (var qGuid in session.Player.ActiveQuests.Keys)
+                {
+                    i++;
+                    var q = QuestManager.Instance.GetQuest(qGuid);
+                    sb.AppendLine($"%BYT%|| ID: {i}{Constants.TabStop}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(q.Zone).ZoneName}%PT%");
+                    sb.AppendLine($"%BYT%|| Name: {q.Name}%PT%");
+                    if (q.RequiredMonsters != null && q.RequiredMonsters.Count > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Required Monsters:");
+                        foreach (var mid in q.RequiredMonsters)
+                        {
+                            var monster = NPCManager.Instance.GetNPC(mid.Key);
+                            string monsterName = monster != null ? monster.Name : "Unknown Monster";
+                            sb.AppendLine($"%BYT%||{Constants.TabStop}{mid.Value} x {monsterName}");
+                        }
+                    }
+                    if (q.RequiredItems != null && q.RequiredItems.Count > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Required Items:");
+                        foreach (var iid in q.RequiredItems)
+                        {
+                            InventoryItem item = ItemManager.Instance.GetItem(iid.Key);
+                            string itemName = item != null ? item.Name : "Unknown Item";
+                            sb.AppendLine($"%BYT%||{Constants.TabStop}{iid.Value} x {itemName}");
+                        }
+                    }
+                    if (q.RewardItems != null && q.RewardItems.Count > 0)
+                    {
+                        sb.AppendLine($"%BYT%|| Reward Items:");
+                        foreach (var iid in q.RewardItems)
+                        {
+                            InventoryItem item = ItemManager.Instance.GetItem(iid.Key);
+                            string itemName = item != null ? item.Name : "Unknown Item";
+                            sb.AppendLine($"%BYT%||{Constants.TabStop}{iid.Value} x {itemName}");
+                        }
+                    }
+                    sb.AppendLine($"%BYT%|| Reward Gold: {q.RewardGold:N0}{Constants.TabStop}Exp: {q.RewardExp:N0}");
+                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                }
+                sb.AppendLine($"%BYT%|| {i} Active Quest(s)%PT%");
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+            }
+            return;
+        }
+
+        private static void AbandonActiveQuest(Session session, ref string arg)
+        {
+            var args = arg.Split(' ');
+            StringBuilder sb = new StringBuilder();
+            if (args.Length < 2 || string.IsNullOrEmpty(args[1]) || !int.TryParse(args[1], out int id))
+            {
+                session.Send($"%BRT%Usage: quest abandon <id>%PT%{Constants.NewLine}");
+                return;
+            }
+            int qid = id - 1;
+            if (qid < 0 || qid > session.Player.ActiveQuests.Count)
+            {
+                session.Send($"%BRT%That ID isn't valid!%PT%{Constants.NewLine}");
+                return;
+            }
+            var questToAbandon = QuestManager.Instance.GetQuest(session.Player.ActiveQuests.Keys.ToList()[qid]);
+            if (questToAbandon == null)
+            {
+                session.Send($"%BRT%Couldn't find a Quest with that ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            while (true)
+            {
+                sb.Clear();
+                sb.AppendLine($"%BRT%Abandon Quest: {questToAbandon.Name}");
+                sb.AppendLine($"1. Yes{Constants.TabStop}{Constants.TabStop}2. No");
+                sb.AppendLine("Choice: ");
+                session.Send(sb.ToString());
+                var abChoice = session.Read();
+                if (string.IsNullOrEmpty(abChoice) || !int.TryParse(abChoice, out int option))
+                {
+                    continue;
+                }
+                switch (option)
+                {
+                    case 1:
+                        if (session.Player.ActiveQuests.TryRemove(questToAbandon.QuestGUID, out _))
+                        {
+                            session.Send($"%BGT%You have abandoned the Quest!%PT%{Constants.NewLine}");
+                            return;
+                        }
+                        session.Send($"%BRT%Failed to abandon the Quest, please see an Imm!%PT%{Constants.NewLine}");
+                        return;
+
+                    case 2:
+                        return;
+
+                    default:
+                        session.Send($"%BRT%That does not look like a valid option.%PT%{Constants.NewLine}");
+                        continue;
+                }
+            }
+        }
+
+        private static void ListAvailableQuests(Session session, ref string arg)
+        {
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
+            {
+                session.Send($"%BRT%There is no Quest Master here!%PT%{Constants.NewLine}");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            var args = arg.Split(' ');
+            sb.Clear();
+            int qid = -1;
+            if (args.Length == 2 && !int.TryParse(args[1].Trim(), out qid))
+            {
+                session.Send($"%BRT%Usage: quest list - list all available quests%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest list <id> - show more info on a specific quest%PT%{Constants.NewLine}");
+                return;
+            }
+            var currentZone = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom).ZoneID;
+            var availableQuests = QuestManager.Instance.GetQuestsForZone(currentZone)
+                .Where(x => !session.Player.CompletedQuests.ContainsKey(x.QuestGUID) && !session.Player.ActiveQuests.ContainsKey(x.QuestGUID)).ToList();
+            if (availableQuests == null || availableQuests.Count == 0)
+            {
+                session.Send($"%BGT%There are no Quests available at the moment!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (args.Length == 2 && qid < 0 || qid > availableQuests.Count)
+            {
+                session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (args.Length == 2)
+            {
+                qid = Math.Max(0, (--qid));
+                var selectedQuest = availableQuests[qid];
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                sb.AppendLine($"%BYT%|| Name: {selectedQuest.Name}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(selectedQuest.Zone).ZoneName}%PT%");
+                sb.AppendLine($"%BYT%|| Type: {selectedQuest.QuestType}{Constants.TabStop}Exp: {selectedQuest.RewardExp}{Constants.TabStop}Gold: {selectedQuest.RewardGold:N0}%PT%");
+                if (selectedQuest.RequiredItems != null && selectedQuest.RequiredItems.Count > 0)
+                {
+                    sb.AppendLine($"%BYT%|| Reward Items:");
+                    foreach (var kvp in selectedQuest.RewardItems)
+                    {
+                        InventoryItem item = ItemManager.Instance.GetItem(kvp.Key);
+                        var itemName = item != null ? item.Name : "Unknown Item";
+                        sb.AppendLine($"%BYT%||   {kvp.Value} x {itemName}");
+                    }
+                }
+                sb.AppendLine($"%BYT%|| Quest Info:%PT%");
+                foreach (var l in selectedQuest.FlavourText.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
+                {
+                    sb.AppendLine($"%BYT%||  {l}%PT%");
+                }
+                if (selectedQuest.RequiredMonsters != null && selectedQuest.RequiredMonsters.Count > 0)
+                {
+                    sb.AppendLine($"%BYT%|| Required Monsters:");
+                    foreach (var kvp in selectedQuest.RequiredMonsters)
+                    {
+                        var monster = NPCManager.Instance.GetNPC(kvp.Key);
+                        var monsterName = monster != null ? monster.Name : "Unknown Monster";
+                        sb.AppendLine($"%BYT%||    {kvp.Value} x {monsterName}");
+                    }
+                }
+                if (selectedQuest.RequiredItems != null && selectedQuest.RequiredItems.Count > 0)
+                {
+                    sb.AppendLine($"%BYT%|| Required Items:");
+                    foreach (var kvp in selectedQuest.RequiredItems)
+                    {
+                        InventoryItem item = ItemManager.Instance.GetItem(kvp.Key);
+                        var itemName = item != null ? item.Name : "Unknown Item";
+                        sb.AppendLine($"%BYT%||    {kvp.Value} x {itemName}");
+                    }
+                }
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+                session.Send(sb.ToString());
+                return;
+            }
+            int qCount = 0;
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            foreach (var quest in availableQuests)
+            {
+                qCount++;
+                sb.AppendLine($"%BYT%|| ID: {qCount}{Constants.TabStop}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(quest.Zone).ZoneName}%PT%");
+                sb.AppendLine($"%BYT%|| Name: {quest.Name}%PT%");
+                sb.AppendLine($"%BYT%|| Type: {quest.QuestType}%PT%");
+                sb.AppendLine($"%BYT%|| Quest Info:%PT%");
+                sb.AppendLine($"%BYT%|| Exp: {quest.RewardExp}{Constants.TabStop}Gold: {quest.RewardGold:N0}{Constants.TabStop}Items: {(quest.RewardItems.Count > 0 ? "Yes" : "No")}");
+                sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+            }
+            sb.AppendLine($"%BYT%|| {qCount} Quest(s) available here%PT%");
+            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            session.Send(sb.ToString());
+            return;
+        }
+
+        private static void AcceptNewQuest(Session session, ref string arg)
+        {
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
+            {
+                Console.WriteLine($"%BRT%There is no Quest Master here!%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: quest accept <id>%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(args[1].Trim(), out int qid))
+            {
+                session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            var currentZone = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom).ZoneID;
+            var availableQuests = QuestManager.Instance.GetQuestsForZone(currentZone)
+                .Where(x => !session.Player.CompletedQuests.ContainsKey(x.QuestGUID) && !session.Player.ActiveQuests.ContainsKey(x.QuestGUID)).ToList();
+            if (availableQuests == null || availableQuests.Count == 0)
+            {
+                session.Send($"%BGT%There are no Quests available right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            qid = Math.Max(0, --qid);
+            if (qid > availableQuests.Count)
+            {
+                session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            var quest = availableQuests[qid];
+            if (session.Player.ActiveQuests.TryAdd(quest.QuestGUID, true))
+            {
+                session.Send($"%BGT%Quest accepted!%PT%{Constants.NewLine}");
+            }
+            else
+            {
+                session.Send($"%BRT%Dark forces prevent you from accepting the Quest! See an Imm!%PT%{Constants.NewLine}");
+            }
+            return;
+        }
+
+        private static void ReturnCompletedQuest(Session session, ref string arg)
+        {
+            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
+            {
+                Console.WriteLine($"%BRT%There is no Quest Master here!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (session.Player.ActiveQuests.Count == 0)
+            {
+                session.Send($"%BGT%You don't have any active Quests right now!%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length < 2)
+            {
+                session.Send($"%BRT%Usage: quest return <id>%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(args[1].Trim(), out int qid))
+            {
+                session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            qid = Math.Max(0, --qid);
+            if (qid > session.Player.ActiveQuests.Count)
+            {
+                session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            var quest = QuestManager.Instance.GetQuest(session.Player.ActiveQuests.Keys.ToList()[qid]);
+            if (quest == null)
+            {
+                session.Send($"%BRT%Couldn't find an active Quest with that ID.%PT%{Constants.NewLine}");
+                return;
+            }
+            if (quest.IsComplete(session))
+            {
+                session.Player.ActiveQuests.TryRemove(quest.QuestGUID, out _);
+                session.Player.CompletedQuests.TryAdd(quest.QuestGUID, true);
+                session.Player.AdjustExp((int)quest.RewardExp, true, true);
+                session.Player.AdjustGold((long)quest.RewardGold, true, true);
+                foreach (var kvp in quest.RequiredItems)
+                {
+                    for (int n = 0; n < kvp.Value; n++)
+                    {
+                        session.Player.RemoveItemFromInventory(kvp.Key);
+                    }
+                }
+                if (quest.RewardItems != null && quest.RewardItems.Count > 0)
+                {
+                    foreach (var kvp in quest.RewardItems)
+                    {
+                        for (int n = 0; n < kvp.Value; n++)
+                        {
+                            var item = ItemManager.Instance.GetItem(kvp.Key);
+                            if (item != null)
+                            {
+                                session.Player.AddItemToInventory(kvp.Key);
+                                session.Send($"%BGT%The Quest Master smiles and hands you {item.ShortDescription}.%PT%{Constants.NewLine}");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                session.Send($"%BYT%\"I'm sorry,\" the Quest Master says, \"you haven't met the requirements of that Quest yet.\"%PT%{Constants.NewLine}");
+            }
+            return;
+        }
+
+        public static void DoQuestOperation(Session session, ref string arg)
         {
             if (string.IsNullOrEmpty(arg))
             {
@@ -1759,7 +2118,7 @@ namespace Etrea3.Core
                 session.Send($"%BRT%Usage: quest show - show your current Quests%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest list - show available Quests%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest completed - show completed Quests%PT%{Constants.NewLine}");
-                session.Send($"%BRT%Usage: quest accpet <id> - accept the specified Quest%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest accept <id> - accept the specified Quest%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest abandon <id> - abandon the specified Quest%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest return <id> - turn in a completed Quest%PT%{Constants.NewLine}");
                 return;
@@ -1771,339 +2130,42 @@ namespace Etrea3.Core
                 session.Send($"%BRT%Usage: quest show - show your current Quests%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest list - show available Quests%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest completed - show completed Quests%PT%{Constants.NewLine}");
-                session.Send($"%BRT%Usage: quest accpet <id> - accept the specified Quest%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: quest accept <id> - accept the specified Quest%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest abandon <id> - abandon the specified Quest%PT%{Constants.NewLine}");
                 session.Send($"%BRT%Usage: quest return <id> - turn in a completed Quest%PT%{Constants.NewLine}");
                 return;
             }
             var operation = args[0].Trim().ToLower();
-            StringBuilder sb = new StringBuilder();
-            if (operation == "completed")
+            switch (operation)
             {
-                if (session.Player.CompletedQuests.Count == 0)
-                {
-                    session.Send($"BRT%You haven't completed any Quests yet!%PT%{Constants.NewLine}");
-                    return;
-                }
-                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                sb.AppendLine($"%BYT%|| You have completed the following Quetss:%PT%");
-                foreach(var kvp in session.Player.CompletedQuests)
-                {
-                    var quest = QuestManager.Instance.GetQuest(kvp.Key);
-                    if (quest != null)
-                    {
-                        sb.AppendLine($"%BYT%|| {quest.Name} in {ZoneManager.Instance.GetZone(quest.Zone).ZoneName}%PT%");
-                    }
-                }
-                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                session.Send(sb.ToString());
-                return;
-            }
-            if (operation == "show")
-            {
-                if (session.Player.ActiveQuests.Count == 0)
-                {
-                    session.Send($"%BGT%You don't have any Quests right now.%PT%{Constants.NewLine}");
-                }
-                else
-                {
-                    int i = 0;
-                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                    foreach(var qGuid in session.Player.ActiveQuests.Keys)
-                    {
-                        i++;
-                        var q = QuestManager.Instance.GetQuest(qGuid);
-                        sb.AppendLine($"%BYT%|| ID: {i}{Constants.TabStop}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(q.Zone).ZoneName}%PT%");
-                        sb.AppendLine($"%BYT%|| Name: {q.Name}%PT%");
-                        if (q.RequiredMonsters != null && q.RequiredMonsters.Count > 0)
-                        {
-                            sb.AppendLine($"%BYT%|| Required Monsters:");
-                            foreach(var mid in q.RequiredMonsters)
-                            {
-                                var monster = NPCManager.Instance.GetNPC(mid.Key);
-                                string monsterName = monster != null ? monster.Name : "Unknown Monster";
-                                sb.AppendLine($"%BYT%||{Constants.TabStop}{mid.Value} x {monsterName}");
-                            }
-                        }
-                        if (q.RequiredItems != null && q.RequiredItems.Count > 0)
-                        {
-                            sb.AppendLine($"%BYT%|| Required Items:");
-                            foreach(var iid in q.RequiredItems)
-                            {
-                                InventoryItem item = ItemManager.Instance.GetItem(iid.Key);
-                                string itemName = item != null ? item.Name : "Unknown Item";
-                                sb.AppendLine($"%BYT%||{Constants.TabStop}{iid.Value} x {itemName}");
-                            }
-                        }
-                        if (q.RewardItems != null && q.RewardItems.Count > 0)
-                        {
-                            sb.AppendLine($"%BYT%|| Reward Items:");
-                            foreach(var iid in q.RewardItems)
-                            {
-                                InventoryItem item = ItemManager.Instance.GetItem(iid.Key);
-                                string itemName = item != null ? item.Name : "Unknown Item";
-                                sb.AppendLine($"%BYT%||{Constants.TabStop}{iid.Value} x {itemName}");
-                            }
-                        }
-                        sb.AppendLine($"%BYT%|| Reward Gold: {q.RewardGold:N0}{Constants.TabStop}Exp: {q.RewardExp:N0}");
-                        sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
-                    }
-                    sb.AppendLine($"%BYT%|| {i} Active Quest(s)%PT%");
-                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                    session.Send(sb.ToString());
-                }
-                return;
-            }
-            if (operation == "abandon")
-            {
-                if (args.Length < 2 || string.IsNullOrEmpty(args[1]) || !int.TryParse(args[1], out int id))
-                {
-                    session.Send($"%BRT%Usage: quest abandon <id>%PT%{Constants.NewLine}");
-                    return;
-                }
-                int qid = id - 1;
-                if (qid < 0 || qid > session.Player.ActiveQuests.Count)
-                {
-                    session.Send($"%BRT%That ID isn't valid!%PT%{Constants.NewLine}");
-                    return;
-                }
-                var questToAbandon = QuestManager.Instance.GetQuest(session.Player.ActiveQuests.Keys.ToList()[qid]);
-                if (questToAbandon == null)
-                {
-                    session.Send($"%BRT%Couldn't find a Quest with that ID!%PT%{Constants.NewLine}");
-                    return;
-                }
-                while (true)
-                {
-                    sb.Clear();
-                    sb.AppendLine($"%BRT%Abandon Quest: {questToAbandon.Name}");
-                    sb.AppendLine($"1. Yes{Constants.TabStop}{Constants.TabStop}2. No");
-                    sb.AppendLine("Choice: ");
-                    session.Send(sb.ToString());
-                    var abChoice = session.Read();
-                    if (string.IsNullOrEmpty(abChoice) || !int.TryParse(abChoice, out int option))
-                    {
-                        continue;
-                    }
-                    switch(option)
-                    {
-                        case 1:
-                            if (session.Player.ActiveQuests.TryRemove(questToAbandon.QuestGUID, out _))
-                            {
-                                session.Send($"%BGT%You have abandoned the Quest!%PT%{Constants.NewLine}");
-                                return;
-                            }
-                            session.Send($"%BRT%Failed to abandon the Quest, please see an Imm!%PT%{Constants.NewLine}");
-                            return;
+                case "completed":
+                    ShowCompletedQuests(session);
+                    break;
 
-                        case 2:
-                            return;
+                case "show":
+                    ShowActiveQuests(session);
+                    break;
 
-                        default:
-                            session.Send($"%BRT%That does not look like a valid option.%PT%{Constants.NewLine}");
-                            continue;
-                    }
-                }
+                case "abandon":
+                    AbandonActiveQuest(session, ref arg);
+                    break;
+
+                case "list":
+                    ListAvailableQuests(session, ref arg);
+                    break;
+
+                case "accept":
+                    AcceptNewQuest(session, ref arg);
+                    break;
+
+                case "return":
+                    ReturnCompletedQuest(session, ref arg);
+                    break;
+
+                default:
+                    session.Send($"%BRT%That is not a valid Quest operation!%PT%{Constants.NewLine}");
+                    break;
             }
-            if (!RoomManager.Instance.GetRoom(session.Player.CurrentRoom).Flags.HasFlag(RoomFlags.QuestMaster))
-            {
-                session.Send($"%BRT%There is no Quest Master here!%PT%{Constants.NewLine}");
-                return;
-            }
-            if (operation == "list")
-            {
-                sb.Clear();
-                int qid = -1;
-                if (args.Length == 2 && !int.TryParse(args[1].Trim(), out qid))
-                {
-                    session.Send($"%BRT%Usage: quest list - list all available quests%PT%{Constants.NewLine}");
-                    session.Send($"%BRT%Usage: quest list <id> - show more info on a specific quest%PT%{Constants.NewLine}");
-                    return;
-                }
-                var currentZone = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom).ZoneID;
-                var availableQuests = QuestManager.Instance.GetQuestsForZone(currentZone)
-                    .Where(x => !session.Player.CompletedQuests.ContainsKey(x.QuestGUID) && !session.Player.ActiveQuests.ContainsKey(x.QuestGUID)).ToList();
-                if (availableQuests == null || availableQuests.Count == 0)
-                {
-                    session.Send($"%BGT%There are no Quests available at the moment!%PT%{Constants.NewLine}");
-                    return;
-                }
-                if (args.Length == 2 && qid < 0 || qid > availableQuests.Count)
-                {
-                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
-                    return;
-                }
-                if (args.Length == 2)
-                {
-                    qid = Math.Min(0, qid--);
-                    var selectedQuest = availableQuests[qid];
-                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                    sb.AppendLine($"%BYT%|| Name: {selectedQuest.Name}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(selectedQuest.Zone).ZoneName}%PT%");
-                    sb.AppendLine($"%BYT%|| Type: {selectedQuest.QuestType}{Constants.TabStop}Exp: {selectedQuest.RewardExp}{Constants.TabStop}Gold: {selectedQuest.RewardGold:N0}%PT%");
-                    if (selectedQuest.RequiredItems != null && selectedQuest.RequiredItems.Count > 0)
-                    {
-                        sb.AppendLine($"%BYT%|| Reward Items:");
-                        foreach(var kvp in selectedQuest.RewardItems)
-                        {
-                            InventoryItem item = ItemManager.Instance.GetItem(kvp.Key);
-                            var itemName = item != null ? item.Name : "Unknown Item";
-                            sb.AppendLine($"%BYT%||   {kvp.Value} x {itemName}");
-                        }
-                    }
-                    sb.AppendLine($"%BYT%|| Quest Info:%PT%");
-                    foreach (var l in selectedQuest.FlavourText.Split(new[] { Constants.NewLine }, StringSplitOptions.None))
-                    {
-                        sb.AppendLine($"%BYT%||  {l}%PT%");
-                    }
-                    if (selectedQuest.RequiredMonsters != null && selectedQuest.RequiredMonsters.Count > 0)
-                    {
-                        sb.AppendLine($"%BYT%|| Required Monsters:");
-                        foreach (var kvp in selectedQuest.RequiredMonsters)
-                        {
-                            var monster = NPCManager.Instance.GetNPC(kvp.Key);
-                            var monsterName = monster != null ? monster.Name : "Unknown Monster";
-                            sb.AppendLine($"%BYT%||    {kvp.Value} x {monsterName}");
-                        }
-                    }
-                    if (selectedQuest.RequiredItems != null && selectedQuest.RequiredItems.Count > 0)
-                    {
-                        sb.AppendLine($"%BYT%|| Required Items:");
-                        foreach (var kvp in selectedQuest.RequiredItems)
-                        {
-                            InventoryItem item = ItemManager.Instance.GetItem(kvp.Key);
-                            var itemName = item != null ? item.Name : "Unknown Item";
-                            sb.AppendLine($"%BYT%||    {kvp.Value} x {itemName}");
-                        }
-                    }
-                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                    session.Send(sb.ToString());
-                    return;
-                }
-                int qCount = 0;
-                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                foreach(var quest in availableQuests)
-                {
-                    qCount++;
-                    sb.AppendLine($"%BYT%|| ID: {qCount}{Constants.TabStop}{Constants.TabStop}Zone: {ZoneManager.Instance.GetZone(quest.Zone).ZoneName}%PT%");
-                    sb.AppendLine($"%BYT%|| Name: {quest.Name}%PT%");
-                    sb.AppendLine($"%BYT%|| Type: {quest.QuestType}%PT%");
-                    sb.AppendLine($"%BYT%|| Quest Info:%PT%");
-                    sb.AppendLine($"%BYT%|| Exp: {quest.RewardExp}{Constants.TabStop}Gold: {quest.RewardGold:N0}{Constants.TabStop}Items: {(quest.RewardItems.Count > 0 ? "Yes" : "No")}");
-                    sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
-                }
-                sb.AppendLine($"%BYT%|| {qCount} Quest(s) available here%PT%");
-                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
-                session.Send(sb.ToString());
-                return;
-            }
-            if (operation == "accept")
-            {
-                if (args.Length < 2)
-                {
-                    session.Send($"%BRT%Usage: quest accept <id>%PT%{Constants.NewLine}");
-                    return;
-                }
-                if (!int.TryParse(args[1].Trim(), out int qid))
-                {
-                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
-                    return;
-                }
-                var currentZone = ZoneManager.Instance.GetZoneForRID(session.Player.CurrentRoom).ZoneID;
-                var availableQuests = QuestManager.Instance.GetQuestsForZone(currentZone)
-                    .Where(x => !session.Player.CompletedQuests.ContainsKey(x.QuestGUID) && !session.Player.ActiveQuests.ContainsKey(x.QuestGUID)).ToList();
-                if (availableQuests == null || availableQuests.Count == 0)
-                {
-                    session.Send($"%BGT%There are no Quests available right now!%PT%{Constants.NewLine}");
-                    return;
-                }
-                qid = Math.Min(0, qid--);
-                if (qid > availableQuests.Count)
-                {
-                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
-                    return;
-                }
-                var quest = availableQuests[qid];
-                if (session.Player.ActiveQuests.TryAdd(quest.QuestGUID, true))
-                {
-                    session.Send($"%BGT%Quest accepted!%PT%{Constants.NewLine}");
-                }
-                else
-                {
-                    session.Send($"%BRT%Dark forces prevent you from accepting the Quest! See an Imm!%PT%{Constants.NewLine}");
-                }
-                return;
-            }
-            if (operation == "return")
-            {
-                if (session.Player.ActiveQuests.Count == 0)
-                {
-                    session.Send($"%BGT%You don't have any active Quests right now!%PT%{Constants.NewLine}");
-                    return;
-                }
-                if (args.Length < 2)
-                {
-                    session.Send($"%BRT%Usage: quest return <id>%PT%{Constants.NewLine}");
-                    return;
-                }
-                if (!int.TryParse(args[1].Trim(), out int qid))
-                {
-                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
-                    return;
-                }
-                qid = Math.Min(0, qid--);
-                if (qid > session.Player.ActiveQuests.Count)
-                {
-                    session.Send($"%BRT%That isn't a valid ID!%PT%{Constants.NewLine}");
-                    return;
-                }
-                var quest = QuestManager.Instance.GetQuest(session.Player.ActiveQuests.Keys.ToList()[qid]);
-                if (quest == null)
-                {
-                    session.Send($"%BRT%Couldn't find an active Quest with that ID.%PT%{Constants.NewLine}");
-                    return;
-                }
-                if (quest.IsComplete(session))
-                {
-                    session.Player.ActiveQuests.TryRemove(quest.QuestGUID, out _);
-                    session.Player.CompletedQuests.TryAdd(quest.QuestGUID, true);
-                    session.Player.AdjustExp((int)quest.RewardExp, true, true);
-                    session.Player.AdjustGold((long)quest.RewardGold, true, true);
-                    foreach(var kvp in quest.RequiredItems)
-                    {
-                        for (int n = 0; n < kvp.Value; n++)
-                        {
-                            session.Player.RemoveItemFromInventory(kvp.Key);
-                        }
-                    }
-                    if (quest.RewardItems != null && quest.RewardItems.Count > 0)
-                    {
-                        foreach(var kvp in quest.RewardItems)
-                        {
-                            for (int n = 0; n < kvp.Value; n++)
-                            {
-                                var item = ItemManager.Instance.GetItem(kvp.Key);
-                                if (item != null)
-                                {
-                                    session.Player.AddItemToInventory(kvp.Key);
-                                    session.Send($"%BGT%The Quest Master smiles and hands you {item.ShortDescription}.%PT%{Constants.NewLine}");
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    session.Send($"%BYT%\"I'm sorry,\" the Quest Master says, \"you haven't met the requirements of that Quest yet.\"%PT%{Constants.NewLine}");
-                }
-                return;
-            }
-            session.Send($"%BRT%Usage: quest <show | list | accept | abandon | return>%PT%{Constants.NewLine}");
-            session.Send($"%BRT%Usage: quest show - show your current Quests%PT%{Constants.NewLine}");
-            session.Send($"%BRT%Usage: quest list - show available Quests%PT%{Constants.NewLine}");
-            session.Send($"%BRT%Usage: quest completed - show completed Quests%PT%{Constants.NewLine}");
-            session.Send($"%BRT%Usage: quest accpet <id> - accept the specified Quest%PT%{Constants.NewLine}");
-            session.Send($"%BRT%Usage: quest abandon <id> - abandon the specified Quest%PT%{Constants.NewLine}");
-            session.Send($"%BRT%Usage: quest return <id> - turn in a completed Quest%PT%{Constants.NewLine}");
         }
 
         public static void ShowSkills(Session session)
@@ -2338,7 +2400,7 @@ namespace Etrea3.Core
                         {
                             foreach(var mp in tNPC.MobProgs.Keys)
                             {
-                                var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                                var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                                 if (mobProg != null)
                                 {
                                     mobProg.Init();
@@ -2934,7 +2996,7 @@ namespace Etrea3.Core
                     {
                         foreach(var mp in tNPC.MobProgs.Keys)
                         {
-                            var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                            var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                             if (mobProg != null)
                             {
                                 mobProg.Init();
@@ -2978,7 +3040,7 @@ namespace Etrea3.Core
                 {
                     foreach(var mp in tNPC.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();
@@ -3037,7 +3099,7 @@ namespace Etrea3.Core
                     {
                         foreach(var mp in n.MobProgs.Keys)
                         {
-                            var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                            var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                             if (mobProg != null)
                             {
                                 mobProg.Init();
@@ -3073,7 +3135,7 @@ namespace Etrea3.Core
                 {
                     foreach(var mp in n.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();
@@ -3126,7 +3188,7 @@ namespace Etrea3.Core
                     {
                         foreach(var mp in n.MobProgs.Keys)
                         {
-                            var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                            var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                             if (mobProg != null)
                             {
                                 mobProg.Init();
@@ -3162,7 +3224,7 @@ namespace Etrea3.Core
                 {
                     foreach(var mp in n.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();
@@ -3465,7 +3527,7 @@ namespace Etrea3.Core
                 {
                     foreach(var mp in tNPC.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();
@@ -3494,7 +3556,7 @@ namespace Etrea3.Core
             {
                 foreach (var mp in tNPC.MobProgs.Keys)
                 {
-                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                     if (mobProg != null)
                     {
                         mobProg.Init();
@@ -3734,7 +3796,7 @@ namespace Etrea3.Core
             {
                 foreach(var mp in tNPC.MobProgs.Keys)
                 {
-                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                     if (mobProg != null)
                     {
                         mobProg.Init();

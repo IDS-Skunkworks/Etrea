@@ -16,6 +16,8 @@ namespace Etrea3.Objects
         public int MinRoom { get; set; }
         [JsonProperty]
         public int MaxRoom { get; set; }
+        [JsonProperty]
+        public ResourceVeinType AllowedVeinTypes { get; set; } = ResourceVeinType.Common;
         [JsonIgnore]
         public bool OLCLocked { get; set; }
         [JsonIgnore]
@@ -72,63 +74,33 @@ namespace Etrea3.Objects
             {
                 foreach (var i in r.SpawnItemsOnTick)
                 {
-                    var item = ItemManager.Instance.GetItem(i.Key);
-                    if (item != null)
+                    while (r.ItemsInRoom.Values.Count(x => x.ID == i.Key) < i.Value)
                     {
-                        while (r.ItemsInRoom.Values.Where(x => x.ID == item.ID).Count() < i.Value)
+                        if (RoomManager.Instance.AddItemToRoomInventory(r.ID, i.Key))
                         {
-                            dynamic newItem = null;
-                            switch (item.ItemType)
-                            {
-                                case ItemType.Misc:
-                                    newItem = Helpers.Clone<InventoryItem>(item);
-                                    break;
-
-                                case ItemType.Weapon:
-                                    newItem = Helpers.Clone<Weapon>(item);
-                                    break;
-
-                                case ItemType.Consumable:
-                                    newItem = Helpers.Clone<Consumable>(item);
-                                    break;
-
-                                case ItemType.Armour:
-                                    newItem = Helpers.Clone<Armour>(item);
-                                    break;
-
-                                case ItemType.Ring:
-                                    newItem = Helpers.Clone<Ring>(item);
-                                    break;
-
-                                case ItemType.Scroll:
-                                    newItem = Helpers.Clone<Scroll>(item);
-                                    break;
-                            }
                             Game.LogMessage($"INFO: Spawning Item {i.Key} in Room {r.ID}", LogLevel.Info);
-                            newItem.ItemID = Guid.NewGuid();
-                            RoomManager.Instance.AddItemToRoomInventory(r.ID, newItem);
                         }
-                    }
-                    else
-                    {
-                        Game.LogMessage($"ERROR: Not spawning Item {i.Key} in Room {r.ID}: No such Item in Item Manager", LogLevel.Error);
                     }
                 }
             }
             // spawn nodes in caves, if there are any
             var caves = roomsForZone.Where(x => x.Flags.HasFlag(RoomFlags.Cave)).ToList();
-            foreach (var r in caves)
+            if (caves.Count > 0)
             {
-                if (r.RSSNode == null)
+                var nodesForZone = NodeManager.Instance.GetNode(AllowedVeinTypes);
+                if (nodesForZone == null || nodesForZone.Count == 0)
                 {
-                    var roll = Helpers.RollDice<int>(1, 100);
-                    var node = NodeManager.Instance.GetRandomNode(roll);
+                    return;
+                }
+                foreach (var r in caves)
+                {
+                    var node = nodesForZone.GetRandomElement();
                     if (node != null)
                     {
-                        var newNode = Helpers.Clone(node);
-                        newNode.Depth = Helpers.RollDice<int>(1, 4);
-                        r.RSSNode = newNode;
-                        Game.LogMessage($"INFO: Spawning Resource Node {newNode.Name} in Room {r.ID}", LogLevel.Info);
+                        var newNodes = Helpers.Clone(node);
+                        newNodes.Depth = Helpers.RollDice<int>(1, 4);
+                        r.RSSNode = newNodes;
+                        Game.LogMessage($"INFO: Spawning Resource Vein {newNodes.Name} in Room {r.ID}", LogLevel.Info);
                     }
                 }
             }

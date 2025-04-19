@@ -19,8 +19,35 @@ namespace Etrea3.Objects
         public string RoomName { get; set; }
         [JsonProperty]
         public string ShortDescription { get; set; }
+        [JsonIgnore]
+        public string LongDescription
+        {
+            get
+            {
+                var tod = Helpers.GetTimeOfDay();
+                if (tod == TimeOfDay.Afternoon && !string.IsNullOrEmpty(AfternoonDescription))
+                {
+                    return AfternoonDescription;
+                }
+                if (tod == TimeOfDay.Evening && !string.IsNullOrEmpty(EveningDescription))
+                {
+                    return EveningDescription;
+                }
+                if (tod == TimeOfDay.Night && !string.IsNullOrEmpty(NightDescription))
+                {
+                    return NightDescription;
+                }
+                return MorningDescription;
+            }
+        }
         [JsonProperty]
-        public string LongDescription { get; set; }
+        public string MorningDescription { get; set; }
+        [JsonProperty]
+        public string AfternoonDescription { get; set; }
+        [JsonProperty]
+        public string EveningDescription { get; set; }
+        [JsonProperty]
+        public string NightDescription { get; set; }
         [JsonProperty]
         public string SignText { get; set; }
         [JsonProperty]
@@ -35,6 +62,8 @@ namespace Etrea3.Objects
         public ConcurrentDictionary<int, int> SpawnItemsOnTick { get; set; }
         [JsonProperty]
         public ConcurrentDictionary<int, int> SpawnNPCsOnTick { get; set; }
+        [JsonProperty]
+        public ConcurrentDictionary<int, bool> RoomProgs { get; set; }
         [JsonIgnore]
         public ResourceNode RSSNode { get; set; }
         [JsonIgnore]
@@ -91,13 +120,14 @@ namespace Etrea3.Objects
         {
             RoomName = "New Room";
             ShortDescription = "A new blank room";
-            LongDescription = "An empty and featureless room, ready for development";
+            MorningDescription = "An empty and featureless room, ready for development";
             RoomExits = new ConcurrentDictionary<string, RoomExit>();
             ItemsInRoom = new ConcurrentDictionary<Guid, InventoryItem>();
             StartingNPCs = new ConcurrentDictionary<int, int>();
             SpawnNPCsOnTick = new ConcurrentDictionary<int, int>();
             StartingItems = new ConcurrentDictionary<int, int>();
             SpawnItemsOnTick = new ConcurrentDictionary<int, int>();
+            RoomProgs = new ConcurrentDictionary<int, bool>();
             LockHolder = Guid.Empty;
             OLCLocked = false;
             Flags = RoomFlags.None;
@@ -130,6 +160,11 @@ namespace Etrea3.Objects
         public InventoryItem GetItem(string name)
         {
             return ItemsInRoom.Values.FirstOrDefault(x => x.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        public InventoryItem GetItem(int id)
+        {
+            return ItemsInRoom.Values.FirstOrDefault(x => x.ID == id);
         }
 
         public bool HasExitInDirection(string direction)

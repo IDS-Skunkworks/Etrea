@@ -33,6 +33,39 @@ namespace Etrea3.Core
             { "%BRT%", Constants.BrightRedText }
         };
 
+        public static TimeOfDay GetTimeOfDay(int? currentHour = null)
+        {
+            var hour = currentHour ?? DateTime.UtcNow.Hour;
+            if (hour >= 6 && hour <= 11)
+            {
+                return TimeOfDay.Morning;
+            }
+            if (hour >= 12 && hour <= 16)
+            {
+                return TimeOfDay.Afternoon;
+            }
+            if (hour >= 17 && hour <= 20)
+            {
+                return TimeOfDay.Evening;
+            }
+            // hours 21-23 and 0-5
+            return TimeOfDay.Night;
+        }
+
+        public static string GetOrdinal(int n)
+        {
+            int lastTwo = n % 100;
+            int lastOne = n % 10;
+            if (lastTwo >= 11 && lastTwo <= 13)
+            {
+                return $"{n}th";
+            }
+            if (lastOne == 1) { return $"{n}st"; }
+            if (lastOne == 2) { return $"{n}nd"; }
+            if (lastOne == 3) { return $"{n}rd"; }
+            return $"{n}th";
+        }
+
         private static string GetEtreaServerIP()
         {
             try
@@ -329,11 +362,18 @@ namespace Etrea3.Core
             return elements.Length > 0 ? elements[0].Trim() : string.Empty;
         }
 
-        // TODO: Update these...
         public static string SerialiseEtreaObject<T>(object etreaObject) where T : class
         {
-            var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
-            return JsonConvert.SerializeObject((T)etreaObject, settings);
+            try
+            {
+                var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
+                return JsonConvert.SerializeObject((T)etreaObject, settings);
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in Helpers.SerialiseEtreaObject(): {ex.Message}", LogLevel.Error);
+                return null;
+            }
         }
 
         public static T DeserialiseEtreaObject<T>(string etreaObject) where T : class
@@ -373,6 +413,16 @@ namespace Etrea3.Core
                 result += rnd.Next(1, sides + 1);
             }
             return (T)Convert.ChangeType(result, typeof(T));
+        }
+
+        public static int GetRandomNumber(int start, int end)
+        {
+            if ((start <= 0 && end <= 0) || (start >= end))
+            {
+                return -1;
+            }
+            var result = rnd.Next(start, end);
+            return result;
         }
 
         public static bool IsCharAVowel(char c)

@@ -26,6 +26,8 @@ namespace Etrea3.Core
         private static int maxIdleSeconds;
         private static ulong tickCount = 0;
         private static bool disconnectIdleImms = false;
+        private static TimeOfDay currentTOD;
+        private static TimeOfDay previousTOD;
 
         private static Timer zoneTickTimer = new Timer();
         private static Timer npcTickTimer = new Timer();
@@ -44,6 +46,8 @@ namespace Etrea3.Core
         public static int Limbo => limboRoomID;
         public static int MaxIdleSeconds => maxIdleSeconds;
         public static bool DisconnectIdleImms => disconnectIdleImms;
+        public static TimeOfDay CurrentTOD => currentTOD;
+        public static TimeOfDay PreviousTOD => previousTOD;
 
         public Game()
         {
@@ -59,6 +63,8 @@ namespace Etrea3.Core
             limboRoomID = int.Parse(ConfigurationManager.AppSettings["LimboRoom"]);
             maxIdleSeconds = int.Parse(ConfigurationManager.AppSettings["MaxIdleTime"]);
             disconnectIdleImms = bool.Parse(ConfigurationManager.AppSettings["DisconnectIdleImmortals"]);
+            currentTOD = Helpers.GetTimeOfDay();
+            previousTOD = TimeOfDay.None;
 
             zoneTickTimer.Interval = zoneTick * 1000;
             npcTickTimer.Interval = npcTick * 1000;
@@ -66,7 +72,7 @@ namespace Etrea3.Core
             autoSaveTimer.Interval = autoSaveTick * 1000;
             buffTickTimer.Interval = buffTick * 1000;
             backupTickTimer.Interval = backupTick * 1000;
-            cleanupTimer.Interval = 120 * 1000;
+            cleanupTimer.Interval = 60 * 1000;
         }
 
         public static void SetDonationRoom(int newRID)
@@ -159,8 +165,7 @@ namespace Etrea3.Core
                 LogMessage($"ERROR: Failed to clear Log Table", LogLevel.Error);
             }
             startTime = DateTime.UtcNow;
-            bool dbLoad = LoadDatabase();
-            if (!dbLoad)
+            if (!LoadDatabase())
             {
                 LogMessage($"ERROR: Cannot load from database, check logs for more information. Performing shutdown...", LogLevel.Error);
                 Shutdown();
@@ -194,43 +199,45 @@ namespace Etrea3.Core
                         {
                             for (int c = 0; c < i.Value; c++)
                             {
-                                if (ItemManager.Instance.ItemExists(i.Key))
-                                {
-                                    LogMessage($"INFO: Spawning Item {i.Key} in Room {room.ID}", LogLevel.Info);
-                                    dynamic spawmItem = null;
-                                    var baseItem = ItemManager.Instance.GetItem(i.Key);
-                                    switch(baseItem.ItemType)
-                                    {
-                                        case ItemType.Misc:
-                                            spawmItem = Helpers.Clone<InventoryItem>(baseItem);
-                                            break;
+                                LogMessage($"INFO: Spawning Item {i.Key} in Room {room.ID}", LogLevel.Info);
+                                RoomManager.Instance.AddItemToRoomInventory(room.ID, i.Key);
+                                //if (ItemManager.Instance.ItemExists(i.Key))
+                                //{
+                                    
+                                //    dynamic spawmItem = null;
+                                //    var baseItem = ItemManager.Instance.GetItem(i.Key);
+                                //    switch(baseItem.ItemType)
+                                //    {
+                                //        case ItemType.Misc:
+                                //            spawmItem = Helpers.Clone<InventoryItem>(baseItem);
+                                //            break;
 
-                                        case ItemType.Weapon:
-                                            spawmItem = Helpers.Clone<Weapon>(baseItem);
-                                            break;
+                                //        case ItemType.Weapon:
+                                //            spawmItem = Helpers.Clone<Weapon>(baseItem);
+                                //            break;
 
-                                        case ItemType.Consumable:
-                                            spawmItem = Helpers.Clone<Consumable>(baseItem);
-                                            break;
+                                //        case ItemType.Consumable:
+                                //            spawmItem = Helpers.Clone<Consumable>(baseItem);
+                                //            break;
 
-                                        case ItemType.Armour:
-                                            spawmItem = Helpers.Clone<Armour>(baseItem);
-                                            break;
+                                //        case ItemType.Armour:
+                                //            spawmItem = Helpers.Clone<Armour>(baseItem);
+                                //            break;
 
-                                        case ItemType.Ring:
-                                            spawmItem = Helpers.Clone<Ring>(baseItem);
-                                            break;
+                                //        case ItemType.Ring:
+                                //            spawmItem = Helpers.Clone<Ring>(baseItem);
+                                //            break;
 
-                                        case ItemType.Scroll:
-                                            spawmItem = Helpers.Clone<Scroll>(baseItem);
-                                            break;
-                                    }
-                                    RoomManager.Instance.AddItemToRoomInventory(room.ID, spawmItem);
-                                }
-                                else
-                                {
-                                    LogMessage($"ERROR: Cannot Spawn Item {i.Key} in Room {room.ID}, no such Item in Item Manager", LogLevel.Error);
-                                }
+                                //        case ItemType.Scroll:
+                                //            spawmItem = Helpers.Clone<Scroll>(baseItem);
+                                //            break;
+                                //    }
+                                //    RoomManager.Instance.AddItemToRoomInventory(room.ID, spawmItem);
+                                //}
+                                //else
+                                //{
+                                //    LogMessage($"ERROR: Cannot Spawn Item {i.Key} in Room {room.ID}, no such Item in Item Manager", LogLevel.Error);
+                                //}
                             }
                         }
                     }
@@ -360,7 +367,14 @@ namespace Etrea3.Core
 
         private void ZoneTick(object sender, ElapsedEventArgs e)
         {
+            if (currentTOD != Helpers.GetTimeOfDay())
+            {
+                previousTOD = currentTOD;
+                currentTOD = Helpers.GetTimeOfDay();
+                RoomManager.Instance.RunRoomProgs(tickCount, RoomProgTrigger.TimeOfDayChange);
+            }
             ZoneManager.Instance.PulseAllZones();
+            RoomManager.Instance.RunRoomProgs(tickCount, RoomProgTrigger.MudTick);
         }
 
         private void CleanUpTick(object sender, ElapsedEventArgs e)
@@ -368,17 +382,30 @@ namespace Etrea3.Core
             Task.Run(() =>
             {
                 int clearedConnections = 0;
-                LogMessage($"INFO: Clearing stale connections", LogLevel.Info);
-                while (SessionManager.Instance.DisconnectedSessions.Count > 0)
+                LogMessage($"INFO: Clearing dead peers and idle connections...", LogLevel.Info);
+                var deadPeers = SessionManager.Instance.DeadPeers;
+                if (deadPeers.Count > 0)
                 {
-                    var s = SessionManager.Instance.DisconnectedSessions.FirstOrDefault();
-                    if (s != null)
+                    foreach(var deadPeer in deadPeers)
                     {
-                        SessionManager.Instance.Close(s);
-                        clearedConnections++;
+                        var conID = deadPeer.Key.ID;
+                        LogMessage($"CONNECTION: Disconnecting {conID}: {deadPeer.Value}", LogLevel.Connection);
+                        if (SessionManager.Instance.Close(deadPeer.Key))
+                        {
+                            clearedConnections++;
+                            LogMessage($"CONNECTION: Connection {conID} closed successfully", LogLevel.Connection);
+                        }
+                        else
+                        {
+                            LogMessage($"CONNECTION: Connection {conID} could not be closed, please see logs for errors or warnings", LogLevel.Connection);
+                        }    
                     }
+                    LogMessage($"INFO: Dead peer and idle connection cleanup completed: {clearedConnections} connections dropped", LogLevel.Info);
                 }
-                LogMessage($"INFO: Cleared {clearedConnections} stale sessions", LogLevel.Info);
+                else
+                {
+                    LogMessage($"INFO: No dead peers or idle connections to process", LogLevel.Info);
+                }
             });
         }
 
@@ -418,27 +445,6 @@ namespace Etrea3.Core
             Task.Run(() =>
             {
                 SaveAllPlayers(true, out _);
-                var idlePlayers = SessionManager.Instance.IdleSessions;
-                if (idlePlayers != null && idlePlayers.Count > 0)
-                {
-                    int disconCount = 0;
-                    LogMessage($"INFO: Disconnecting idle players, {idlePlayers.Count} players to process", LogLevel.Info);
-                    foreach (var p in idlePlayers)
-                    {
-                        bool okToDiscon = (p.Player.Level < Constants.ImmLevel && !p.Player.Flags.HasFlag(PlayerFlags.Frozen)) || DisconnectIdleImms;
-                        if (!okToDiscon)
-                        {
-                            LogMessage($"INFO: Not disconnecting player {p.Player.Name}", LogLevel.Info);
-                            continue;
-                        }
-                        var idleTime = Convert.ToInt32((DateTime.UtcNow - p.LastInputTime).TotalSeconds);
-                        LogMessage($"INFO: Player {p.Player.Name} has been idle for {idleTime:N0} seconds and will be disconnected", LogLevel.Info);
-                        p.Send($"You have been idle for {idleTime:N0} seconds and will be disconnected{Constants.NewLine}");
-                        SessionManager.Instance.Close(p);
-                        disconCount++;
-                    }
-                    LogMessage($"INFO: {disconCount} idle players have been disconnected", LogLevel.Info);
-                }
             });
         }
 
@@ -460,7 +466,6 @@ namespace Etrea3.Core
                         hpRegen += Helpers.RollDice<int>(1, 6);
                         mpRegen += Helpers.RollDice<int>(1, 8);
                     }
-                    //LogMessage($"INFO: Restoring {hpRegen} HP and {mpRegen} MP to {n.Name}", LogLevel.Info, true);
                     n.AdjustHP(hpRegen, out _);
                     n.AdjustMP(mpRegen);
                 }
@@ -501,7 +506,6 @@ namespace Etrea3.Core
                             spRegen += Helpers.RollDice<int>(1, 6);
                             break;
                     }
-                    //LogMessage($"INFO: Restoring {hpRegen} HP, {mpRegen} MP and {spRegen} SP to {p.Player.Name}", LogLevel.Info, true);
                     p.Player.AdjustHP(hpRegen, out _);
                     p.Player.AdjustMP(mpRegen);
                     p.Player.AdjustSP(spRegen);
@@ -657,11 +661,11 @@ namespace Etrea3.Core
             }
             LogMessage($"INFO: Loading Database, {ShopManager.Instance.Count} Shops loaded", LogLevel.Info);
             // Load MobProgs
-            if (!MobProgManager.Instance.LoadAllMobProgs())
+            if (!ScriptObjectManager.Instance.LoadAllScripts())
             {
                 return false;
             }
-            LogMessage($"INFO: Loading Database, {MobProgManager.Instance.Count} MobProgs loaded", LogLevel.Info);
+            LogMessage($"INFO: Loading Database, {ScriptObjectManager.Instance.Count} Scripts loaded", LogLevel.Info);
             // Load NPCs
             if (!NPCManager.Instance.LoadAllNPCs())
             {
@@ -716,7 +720,7 @@ namespace Etrea3.Core
                 ID = 0,
                 ZoneID = 0,
                 ShortDescription = "the world between worlds",
-                LongDescription = "White clouds swirl around, carrying the faint echo of mortal voices. Through a ghostly mist, the city of Etrea is visible below.",
+                MorningDescription = "White clouds swirl around, carrying the faint echo of mortal voices. Through a ghostly mist, the city of Etrea is visible below.",
                 Flags = RoomFlags.Safe
             };
             return DatabaseManager.SaveRoomToWorldDatabase(limbo, true);

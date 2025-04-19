@@ -90,7 +90,7 @@ namespace Etrea3.Objects
                 {
                     foreach(var mp in tgt.MobProgs.Keys)
                     {
-                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                         if (mobProg != null)
                         {
                             mobProg.Init();

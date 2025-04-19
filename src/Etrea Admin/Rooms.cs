@@ -294,9 +294,30 @@ namespace Etrea_Admin
 
         private void rTxtRoomLongDesc_KeyUp(object sender, KeyEventArgs e)
         {
-            int currentLineIndex = rTxtRoomLongDesc.GetLineFromCharIndex(rTxtRoomLongDesc.SelectionStart);
-            string currentLine = rTxtRoomLongDesc.Lines.Length > currentLineIndex ? rTxtRoomLongDesc.Lines[currentLineIndex] : string.Empty;
-            lblRoomLongDescLength.Text = $"Line Length: {currentLine.Length} characters";
+            int currentLineIndex = rTxtRoomMorningDesc.GetLineFromCharIndex(rTxtRoomMorningDesc.SelectionStart);
+            string currentLine = rTxtRoomMorningDesc.Lines.Length > currentLineIndex ? rTxtRoomMorningDesc.Lines[currentLineIndex] : string.Empty;
+            lblRoomMornDescLength.Text = $"Line Length: {currentLine.Length} characters";
+        }
+
+        private void rTxtRoomAfternoonDesc_KeyUp(object sender, KeyEventArgs e)
+        {
+            int currentLineIndex = rTxtRoomAfternoonDesc.GetLineFromCharIndex(rTxtRoomAfternoonDesc.SelectionStart);
+            string currentLine = rTxtRoomAfternoonDesc.Lines.Length > currentLineIndex ? rTxtRoomAfternoonDesc.Lines[currentLineIndex] : string.Empty;
+            lblRoomAftDescLength.Text = $"Line Length: {currentLine.Length} characters";
+        }
+
+        private void rTxtRoomEveningDesc_KeyUp(object sender, KeyEventArgs e)
+        {
+            int currentLineIndex = rTxtRoomEveningDesc.GetLineFromCharIndex(rTxtRoomEveningDesc.SelectionStart);
+            string currentLine = rTxtRoomEveningDesc.Lines.Length > currentLineIndex ? rTxtRoomEveningDesc.Lines[currentLineIndex] : string.Empty;
+            lblRoomEveDescLength.Text = $"Line Length: {currentLine.Length} characters";
+        }
+
+        private void rTxtRoomNightDesc_KeyUp(object sender, KeyEventArgs e)
+        {
+            int currentLineIndex = rTxtRoomNightDesc.GetLineFromCharIndex(rTxtRoomNightDesc.SelectionStart);
+            string currentLine = rTxtRoomNightDesc.Lines.Length > currentLineIndex ? rTxtRoomNightDesc.Lines[currentLineIndex] : string.Empty;
+            lblRoomNightDescLength.Text = $"Line Length: {currentLine.Length} characters";
         }
 
         private void rTxtRoomSign_KeyUp(object sender, KeyEventArgs e)
@@ -321,7 +342,10 @@ namespace Etrea_Admin
                 txtBxRoomName.Text = room.RoomName;
                 txtBxRoomFlags.Text = room.Flags.ToString();
                 txtBxRoomShortDesc.Text = room.ShortDescription;
-                rTxtRoomLongDesc.Text = room.LongDescription;
+                rTxtRoomMorningDesc.Text = room.MorningDescription;
+                rTxtRoomAfternoonDesc.Text = room.AfternoonDescription;
+                rTxtRoomEveningDesc.Text = room.EveningDescription;
+                rTxtRoomNightDesc.Text = room.NightDescription;
                 rTxtRoomSign.Text = room.SignText;
                 if (room.RoomExits.Count > 0)
                 {
@@ -455,16 +479,25 @@ namespace Etrea_Admin
             txtBxRoomName.Clear();
             txtBxRoomShortDesc.Clear();
             txtBxRoomFlags.Clear();
-            rTxtRoomLongDesc.Clear();
+            rTxtRoomMorningDesc.Clear();
+            rTxtRoomAfternoonDesc.Clear();
+            rTxtRoomEveningDesc.Clear();
+            rTxtRoomNightDesc.Clear();
             rTxtRoomSign.Clear();
-            chkBoxRoomLongDescOverride.Checked = false;
+            chkBoxRoomMornDescOverride.Checked = false;
+            chkBoxRoomEveDescOverride.Checked = false;
+            chkBoxRoomAftDescOverride.Checked = false;
+            chkBoxRoomNightDescOverride.Checked = false;
             chkBoxRoomSignOverride.Checked = false;
             listViewRoomExits.Items.Clear();
             listViewRoomStartNPCs.Items.Clear();
             listViewRoomStartItems.Items.Clear();
             listViewRoomTickNPCs.Items.Clear();
             listViewRoomTickItems.Items.Clear();
-            lblRoomLongDescLength.Text = "Line Length: 0 characters";
+            lblRoomMornDescLength.Text = "Line Length: 0 characters";
+            lblRoomAftDescLength.Text = "Line Length: 0 characters";
+            lblRoomEveDescLength.Text = "Line Length: 0 characters";
+            lblRoomNightDescLength.Text = "Line Length: 0 characters";
             lblRoomSignLength.Text = "Line Length: 0 characters";
         }
 
@@ -511,7 +544,10 @@ namespace Etrea_Admin
                 room.RoomName = txtBxRoomName.Text;
                 room.ShortDescription = txtBxRoomShortDesc.Text;
                 room.ZoneID = Convert.ToInt32(txtBxRoomZoneID.Text);
-                room.LongDescription = rTxtRoomLongDesc.Lines.ConvertToString();
+                room.MorningDescription = rTxtRoomMorningDesc.Lines.ConvertToString();
+                room.AfternoonDescription = rTxtRoomAfternoonDesc.Lines.ConvertToString();
+                room.EveningDescription = rTxtRoomEveningDesc.Lines.ConvertToString();
+                room.NightDescription = rTxtRoomNightDesc.Lines.ConvertToString();
                 room.SignText = rTxtRoomSign.Lines.ConvertToString();
                 Enum.TryParse(txtBxRoomFlags.Text, true, out RoomFlags result);
                 room.Flags = result;
@@ -595,9 +631,9 @@ namespace Etrea_Admin
                 MessageBox.Show("You must provide a Zone ID.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
-            if (string.IsNullOrEmpty(rTxtRoomLongDesc.Text))
+            if (string.IsNullOrEmpty(rTxtRoomMorningDesc.Text))
             {
-                MessageBox.Show("You must provide a Long Description.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("You must provide a Morning Description.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
             if (txtBxRoomFlags.Text.IndexOf("Sign", StringComparison.OrdinalIgnoreCase) >=0 && string.IsNullOrEmpty(rTxtRoomSign.Text))
@@ -605,16 +641,25 @@ namespace Etrea_Admin
                 MessageBox.Show("If the Room has a Sign, you must provide Sign text.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
-            if (!chkBoxRoomLongDescOverride.Checked)
+            if (!chkBoxRoomMornDescOverride.Checked && rTxtRoomMorningDesc.Lines.Any(x => x.Length > 80))
             {
-                foreach (var line in rTxtRoomLongDesc.Lines)
-                {
-                    if (line.Length > 80)
-                    {
-                        MessageBox.Show("One or more lines in Long Description are longer than 80 characters.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return false;
-                    }
-                }
+                MessageBox.Show("One or more lines in the Morning Description are longer than 80 characters.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            if (!chkBoxRoomAftDescOverride.Checked && rTxtRoomAfternoonDesc.Lines.Any(x => x.Length > 80))
+            {
+                MessageBox.Show("One or more lines in the Afternoon Description are longer than 80 characters.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            if (!chkBoxRoomEveDescOverride.Checked && rTxtRoomEveningDesc.Lines.Any(x => x.Length > 80))
+            {
+                MessageBox.Show("One or more lines in the Evening Description are longer than 80 characters.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            if (!chkBoxRoomNightDescOverride.Checked && rTxtRoomNightDesc.Lines.Any(x => x.Length > 80))
+            {
+                MessageBox.Show("One or more lines in the Night Description are longer than 80 characters.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
             if (!chkBoxRoomSignOverride.Checked)
             {

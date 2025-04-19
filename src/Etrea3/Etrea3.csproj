@@ -48,6 +48,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
     </Reference>
@@ -97,6 +98,7 @@
     <Compile Include="Networking\API\QuestController.cs" />
     <Compile Include="Networking\API\RecipeController.cs" />
     <Compile Include="Networking\API\RoomController.cs" />
+    <Compile Include="Networking\API\RoomProgController.cs" />
     <Compile Include="Networking\API\ShopController.cs" />
     <Compile Include="Networking\API\SkillController.cs" />
     <Compile Include="Networking\API\SpellController.cs" />
@@ -115,7 +117,7 @@
     <None Include="packages.config" />
     <EmbeddedResource Include="Resources\logs.db" />
     <EmbeddedResource Include="Resources\players.db" />
-    <EmbeddedResource Include="Resources\world.db" />
+    <EmbeddedResource Include="Resources\world.zip" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">

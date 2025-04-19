@@ -79,6 +79,11 @@ namespace Etrea3.Core
             return Instance.Quests.ContainsKey(id);
         }
 
+        public bool QuestExists(Guid id)
+        {
+            return Instance.Quests.Values.Any(x  => x.QuestGUID == id);
+        }
+
         public List<Quest> GetQuestsForZone(int zoneID)
         {
             return Instance.Quests.Values.Where(x => x.Zone == zoneID).ToList();

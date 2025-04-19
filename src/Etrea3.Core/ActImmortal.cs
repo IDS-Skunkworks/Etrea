@@ -10,6 +10,92 @@ namespace Etrea3.Core
 {
     public static class ActImmortal
     {
+        public static void ShowRoomDesc(Session session, ref string arg)
+        {
+            // rdesc <rid> <time>
+            if (!session.Player.IsImmortal)
+            {
+                Game.LogMessage($"WARN: Player {session.Player.Name} attempted to view a Room description but they are not Immortal", LogLevel.Warning);
+                return;
+            }
+            if (string.IsNullOrEmpty(arg))
+            {
+                session.Send($"%BRT%RDESC - Show Room descriptions at different times of day%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: rdesc <rid> <time>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Udate: rdesc 100 morning%PT%{Constants.NewLine}");
+                session.Send($"%BRT%<time> can be: morning, afternoon, evening, night%PT%{Constants.NewLine}");
+                return;
+            }
+            var args = arg.Split(' ');
+            if (args.Length != 2)
+            {
+                session.Send($"%BRT%RDESC - Show Room descriptions at different times of day%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Usage: rdesc <rid> <time>%PT%{Constants.NewLine}");
+                session.Send($"%BRT%Udate: rdesc 100 morning%PT%{Constants.NewLine}");
+                session.Send($"%BRT%<time> can be: morning, afternoon, evening, night%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!int.TryParse(args[0], out int rid))
+            {
+                session.Send($"%BRT%That is not a valid Room ID!%PT%{Constants.NewLine}");
+                return;
+            }
+            var r = RoomManager.Instance.GetRoom(rid);
+            if (r == null)
+            {
+                session.Send($"%BRT%No Room with ID {rid} was found in Room Manager!%PT%{Constants.NewLine}");
+                return;
+            }
+            if (!Enum.TryParse(args[1], true, out TimeOfDay tod))
+            {
+                session.Send($"%BRT%That is not a valid time of day!%PT%{Constants.NewLine}");
+                return;
+            }
+            switch(tod)
+            {
+                case TimeOfDay.Afternoon:
+                    session.Send($"%BGT%Description for {rid} in the afternoon:%PT%{Constants.NewLine}");
+                    if (string.IsNullOrEmpty(r.AfternoonDescription))
+                    {
+                        session.Send($"No description set for the Afternoon!{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        session.Send(r.AfternoonDescription);
+                    }
+                    break;
+
+                case TimeOfDay.Evening:
+                    session.Send($"%BGT%Description for {rid} in the evening:%PT%{Constants.NewLine}");
+                    if (string.IsNullOrEmpty(r.EveningDescription))
+                    {
+                        session.Send($"No description set for the Evening!{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        session.Send(r.EveningDescription);
+                    }
+                    break;
+
+                case TimeOfDay.Night:
+                    session.Send($"%BGT%Description for {rid} in the night:%PT%{Constants.NewLine}");
+                    if (string.IsNullOrEmpty(r.NightDescription))
+                    {
+                        session.Send($"No description set for the Night!{Constants.NewLine}");
+                    }
+                    else
+                    {
+                        session.Send(r.NightDescription);
+                    }
+                    break;
+
+                default:
+                    session.Send($"%BGT%Description for {rid} in the morning:%PT%{Constants.NewLine}");
+                    session.Send(r.MorningDescription);
+                    break;
+            }
+        }
+
         public static void BanIPAddress(Session session, ref string arg)
         {
             if (!session.Player.IsImmortal)
@@ -39,7 +125,7 @@ namespace Etrea3.Core
                 return;
             }
             Game.LogMessage($"GOD: Player {session.Player.Name} has banned IP address {arg}: {sessionsDropped} sessions were dropped as a result", LogLevel.God);
-            session.Send($"%BGT%The IP address has been banned and {sessionsDropped} were dropped as a result.%PT%{Constants.NewLine}");
+            session.Send($"%BGT%The IP address has been banned and {sessionsDropped} connections were dropped as a result.%PT%{Constants.NewLine}");
         }
 
         public static void UnBanIPAddress(Session session, ref string arg)
@@ -503,9 +589,9 @@ namespace Etrea3.Core
                     break;
 
                 case "mobprog":
-                    if (MobProgManager.Instance.MobProgExists(objID))
+                    if (ScriptObjectManager.Instance.ScriptObjectExists<MobProg>(objID))
                     {
-                        MobProgManager.Instance.SetMobProgLockState(objID, false, session);
+                        ScriptObjectManager.Instance.SetScriptLockState<MobProg>(objID, false, session);
                         Game.LogMessage($"GOD: Player {session.Player.Name} force-released the OLC lock of MobProg {objID}", LogLevel.God);
                     }
                     else
@@ -2311,46 +2397,57 @@ namespace Etrea3.Core
 
                 case "blocks":
                 case "bans":
+                case "ban":
                     ListBans(session, criteria);
                     break;
 
                 case "mobprog":
+                case "mobprogs":
                     ListMobProgs(session, criteria);
                     break;
 
                 case "room":
+                case "rooms":
                     ListRooms(session, criteria);
                     break;
 
                 case "npc":
+                case "npcs":
                     ListNPCs(session, criteria);
                     break;
 
                 case "npcinstance":
+                case "npcinstances":
                     ListNPCInstances(session, criteria);
                     break;
 
                 case "item":
+                case "items":
                     ListItems(session, criteria);
                     break;
 
                 case "emote":
+                case "emotes":
                     ListEmotes(session, criteria);
                     break;
 
                 case "zone":
+                case "zones":
                     ListZones(session, criteria);
                     break;
 
                 case "quest":
+                case "quests":
                     ListQuests(session, criteria);
                     break;
 
                 case "recipe":
+                case "recipes":
                     ListRecipes(session, criteria);
                     break;
 
                 case "buff":
+                case "buffs":
                     ListBuffs(session, criteria);
                     break;
 
@@ -2359,21 +2456,27 @@ namespace Etrea3.Core
                     break;
 
                 case "skill":
+                case "skills":
                     ListSkills(session, criteria);
                     break;
 
                 case "node":
                 case "resourcenode":
+                case "nodes":
+                case "resourcenodes":
                     ListNodes(session, criteria);
                     break;
 
                 case "shop":
+                case "shops":
                     ListShops(session, criteria);
                     break;
 
                 case "article":
                 case "help":
                 case "helparticle":
+                case "articles":
+                case "helparticles":
                     ListHelpArticles(session, criteria);
                     break;
 
@@ -2677,41 +2780,17 @@ namespace Etrea3.Core
         {
             if (int.TryParse(id, out int itemID))
             {
-                var item = ItemManager.Instance.GetItem(itemID);
-                if (item == null)
+                if (!ItemManager.Instance.ItemExists(itemID))
                 {
                     session.Send($"%BRT%No Item with that ID was found in Item Manager.%PT%{Constants.NewLine}");
                     return;
                 }
-                dynamic newItem = null;
-                switch(item.ItemType)
+                if (!RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, itemID))
                 {
-                    case ItemType.Misc:
-                        newItem = Helpers.Clone<InventoryItem>(item);
-                        break;
-
-                    case ItemType.Weapon:
-                        newItem = Helpers.Clone<Weapon>(item);
-                        break;
-
-                    case ItemType.Consumable:
-                        newItem = Helpers.Clone<Consumable>(item);
-                        break;
-
-                    case ItemType.Armour:
-                        newItem = Helpers.Clone<Armour>(item);
-                        break;
-
-                    case ItemType.Ring:
-                        newItem = Helpers.Clone<Ring>(item);
-                        break;
-
-                    case ItemType.Scroll:
-                        newItem = Helpers.Clone<Scroll>(item);
-                        break;
+                    session.Send($"%BRT%The Winds of Magic have failed! The item was not created!%PT%{Constants.NewLine}");
+                    return;
                 }
-                newItem.ItemID = Guid.NewGuid();
-                RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, newItem);
+                var newItem = ItemManager.Instance.GetItem(itemID);
                 session.Send($"%BYT%Calling on the Winds of Magic, you summon {newItem.ShortDescription} into existence!%PT%{Constants.NewLine}");
                 Game.LogMessage($"GOD: Player {session.Player.Name} created item {newItem.Name} ({newItem.ID}) in Room {session.Player.CurrentRoom}", LogLevel.God);
                 var localPlayers = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
@@ -2719,57 +2798,33 @@ namespace Etrea3.Core
                 {
                     foreach (var lp in localPlayers.Where(x => x.ID != session.ID))
                     {
-                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {item.ShortDescription}!%PT%{Constants.NewLine}" :
-                            $"%BYT%The Winds of Magic shift, creating {item.ShortDescription}!%PT%{Constants.NewLine}";
+                        var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {newItem.ShortDescription}!%PT%{Constants.NewLine}" :
+                            $"%BYT%The Winds of Magic shift, creating {newItem.ShortDescription}!%PT%{Constants.NewLine}";
                         lp.Send(msg);
                     }
                 }
                 return;
             }
-            var mItem = ItemManager.Instance.GetItem(id);
+            InventoryItem mItem = ItemManager.Instance.GetItem(id);
             if (mItem == null)
             {
                 session.Send($"%BRT%No Item matching that criteria was found in Item Manager.%PT%{Constants.NewLine}");
                 return;
             }
-            dynamic mItemNew = null;
-            switch (mItem.ItemType)
+            if (!RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, mItem.ID))
             {
-                case ItemType.Misc:
-                    mItemNew = Helpers.Clone<InventoryItem>(mItem);
-                    break;
-
-                case ItemType.Weapon:
-                    mItemNew = Helpers.Clone<Weapon>(mItem);
-                    break;
-
-                case ItemType.Consumable:
-                    mItemNew = Helpers.Clone<Consumable>(mItem);
-                    break;
-
-                case ItemType.Armour:
-                    mItemNew = Helpers.Clone<Armour>(mItem);
-                    break;
-
-                case ItemType.Ring:
-                    mItemNew = Helpers.Clone<Ring>(mItem);
-                    break;
-
-                case ItemType.Scroll:
-                    mItemNew = Helpers.Clone<Scroll>(mItem);
-                    break;
+                session.Send($"%BRT%The Winds of Magic have failed! The item was not created!%PT%{Constants.NewLine}");
+                return;
             }
-            mItemNew.ItemID = Guid.NewGuid();
-            RoomManager.Instance.AddItemToRoomInventory(session.Player.CurrentRoom, mItemNew);
-            session.Send($"%BYT%Calling on the Winds of Magic, you summon {mItemNew.ShortDescription} into existence!%PT%{Constants.NewLine}");
-            Game.LogMessage($"GOD: Player {session.Player.Name} created item {mItemNew.Name} ({mItemNew.ID}) in Room {session.Player.CurrentRoom}", LogLevel.God);
+            session.Send($"%BYT%Calling on the Winds of Magic, you summon {mItem.ShortDescription} into existence!%PT%{Constants.NewLine}");
+            Game.LogMessage($"GOD: Player {session.Player.Name} created item {mItem.Name} ({mItem.ID}) in Room {session.Player.CurrentRoom}", LogLevel.God);
             var players = RoomManager.Instance.GetRoom(session.Player.CurrentRoom).PlayersInRoom;
             if (players != null && players.Count > 1)
             {
                 foreach (var lp in players.Where(x => x.ID != session.ID))
                 {
-                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {mItemNew.ShortDescription}!%PT%{Constants.NewLine}" :
-                        $"%BYT%The Winds of Magic shift, creating {mItemNew.ShortDescription}!%PT%{Constants.NewLine}";
+                    var msg = session.Player.CanBeSeenBy(lp.Player) ? $"%BYT%{session.Player.Name} makes an arcane gesture and summons {mItem.ShortDescription}!%PT%{Constants.NewLine}" :
+                        $"%BYT%The Winds of Magic shift, creating {mItem.ShortDescription}!%PT%{Constants.NewLine}";
                     lp.Send(msg);
                 }
             }
@@ -2786,6 +2841,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"%BYT%||%PT% Title: {art.Title} (Imm Only: {art.ImmOnly})");
                 }
+                sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+                sb.AppendLine($"%BYT%|| {articles.Count} Help Articles%PT%");
                 sb.AppendLine($"  %BYT%{new string('=', 77)}%PT%");
                 session.Send(sb.ToString());
             }
@@ -2826,6 +2883,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {shop.ID} - {shop.ShopName}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {shops.Count} Shops");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -2911,6 +2970,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {shop.ID} - {shop.ShopName}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {shops.Count} Shops");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -2926,6 +2987,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {shop.ID} - {shop.ShopName}");
             }
+            sb.AppendLine($"||{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingShops.Count} Shops");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
         }
@@ -2946,6 +3009,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {node.ID} - {node.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {nodes.Count} Resource Nodes");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -2997,6 +3062,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {node.ID} - {node.Name}");
             }
+            sb.AppendLine($"||{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingNodes.Count} Resource Nodes");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
         }
@@ -3017,6 +3084,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {skill.Name} ({skill.LearnCost} gold)");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {skills.Count} Skills");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3035,6 +3104,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {skill.Name} ({skill.LearnCost} gold)");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {skills.Count} Skills");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3068,6 +3139,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {spell.ID} - {spell.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {spells.Count} Spells");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3139,6 +3212,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {spell.ID} - {spell.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {spells.Count} Spells");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3154,6 +3229,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {spell.ID} - {spell.Name}");
             }
+            sb.AppendLine($"||{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingSpells.Count} Spells");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
         }
@@ -3174,6 +3251,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| Name: {buff.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {buffs.Count} Buffs");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3208,6 +3287,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {recipe.ID} - {recipe.Name} ({recipe.RecipeType})");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {recipes.Count} Recipes");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3301,6 +3382,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {recipe.ID} - {recipe.Name} ({recipe.RecipeType})");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {recipes.Count} Recipes");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3316,6 +3399,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {recipe.ID} - {recipe.Name} ({recipe.RecipeType})");
             }
+            sb.AppendLine($"||{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingRecipes.Count} Recipes");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
         }
@@ -3336,6 +3421,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {quest.ID} - {quest.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {quests.Count} Quests");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3426,6 +3513,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {quest.ID} - {quest.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {quests.Count} Quests");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3441,6 +3530,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {quest.ID} - {quest.Name}");
             }
+            sb.AppendLine($"||{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingQuests.Count} Quests");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
         }
@@ -3461,6 +3552,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {zone.ZoneID} - {zone.ZoneName}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {zones.Count} Zones");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3525,6 +3618,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {zone.ZoneID} - {zone.ZoneName}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {zones.Count} Zones");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3574,6 +3669,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {emote.ID} - {emote.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {emotes.Count} Emotes");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3649,6 +3746,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {emote.ID} - {emote.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {emotes.Count} Emotes");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3709,6 +3808,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {item.ID} - {item.Name} ({item.ItemType})");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {items.Count} Items");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3778,6 +3879,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {item.ID} - {item.Name} ({item.ItemType})");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {items.Count} Items");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3793,6 +3896,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {item.ID} - {item.Name} ({item.ItemType})");
             }
+            sb.AppendLine($"||{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingItems.Count} Items");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
             return;
@@ -3821,7 +3926,9 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"%BYT%||%PT%Name: {npc.Name} (ID: {npc.ID}) in Room {npc.CurrentRoom}");
             }
-            sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
+            sb.AppendLine($"%BYT%||{new string('=', 77)}%PT%");
+            sb.AppendLine($"%BYT%|| {npcInstances.Count} NPC Instances");
+            sb.AppendLine($"%BYT%  {new string('=', 77)}");
             session.Send(sb.ToString());
         }
 
@@ -3841,6 +3948,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {npc.TemplateID} - {npc.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {npcs.Count} NPC Templates");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -3933,6 +4042,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {npc.TemplateID} - {npc.Name}");
             }
+            sb.AppendLine($"{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingNPCs.Count} NPC Templates");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
         }
@@ -3942,7 +4053,7 @@ namespace Etrea3.Core
             StringBuilder sb = new StringBuilder();
             if (string.IsNullOrEmpty(criteria))
             {
-                var mobprogs = MobProgManager.Instance.GetMobProg();
+                var mobprogs = ScriptObjectManager.Instance.GetScriptObject<MobProg>();
                 if (mobprogs == null || mobprogs.Count == 0)
                 {
                     session.Send($"%BRT%No MobProgs found in MobProg Manager.%PT%{Constants.NewLine}");
@@ -3953,13 +4064,15 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {mp.ID} - {mp.Name}");
                 }
-                sb.AppendLine($"  {new string('=', 77)}");
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {mobprogs.Count} MobProgs");
+                sb.AppendLine($"||{new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
             }
             if (int.TryParse(criteria, out int mpID))
             {
-                var mp = MobProgManager.Instance.GetMobProg(mpID);
+                var mp = ScriptObjectManager.Instance.GetMobProg(mpID);
                 if (mp == null)
                 {
                     session.Send($"%BRT%No MobProg with that ID was found in MobProg Manager.%PT%{Constants.NewLine}");
@@ -4003,7 +4116,7 @@ namespace Etrea3.Core
                     session.Send($"%BRT%End must be greater than Start.%PT%{Constants.NewLine}");
                     return;
                 }
-                var mobProgs = MobProgManager.Instance.GetMobProg(start, end);
+                var mobProgs = ScriptObjectManager.Instance.GetScriptObject<MobProg>(start, end);
                 if (mobProgs == null || mobProgs.Count == 0)
                 {
                     session.Send($"%BRT%No MobProgs in the specified range were found in MobProg Manager.%PT%{Constants.NewLine}");
@@ -4014,6 +4127,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {mp.ID} - {mp.Name}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {mobProgs.Count} MobProgs");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -4036,6 +4151,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {room.ID} - {room.RoomName}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {rooms.Count} Rooms");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -4187,6 +4304,8 @@ namespace Etrea3.Core
                 {
                     sb.AppendLine($"|| {room.ID} - {room.RoomName}");
                 }
+                sb.AppendLine($"||{new string('=', 77)}");
+                sb.AppendLine($"|| {rooms.Count} Rooms");
                 sb.AppendLine($"  {new string('=', 77)}");
                 session.Send(sb.ToString());
                 return;
@@ -4202,6 +4321,8 @@ namespace Etrea3.Core
             {
                 sb.AppendLine($"|| {room.ID} - {room.RoomName}");
             }
+            sb.AppendLine($"||{new string('=', 77)}");
+            sb.AppendLine($"|| {matchingRooms.Count} Rooms");
             sb.AppendLine($"  {new string('=', 77)}");
             session.Send(sb.ToString());
             return;
@@ -4223,6 +4344,8 @@ namespace Etrea3.Core
                         sb.AppendLine($"%BYT%||%PT%  Blocked By: {ban.BlockedBy}");
                         sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
                     }
+                    sb.AppendLine($"%BYT%||%PT% {allBans.Count} banned IP addresses");
+                    sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
                     session.Send(sb.ToString());
                 }
                 else
@@ -4243,6 +4366,8 @@ namespace Etrea3.Core
                     sb.AppendLine($"%BYT%||%PT%  Blocked By: {ban.BlockedBy}");
                     sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
                 }
+                sb.AppendLine($"%BYT%||%PT% {matchingBans.Count} banned IP addresses");
+                sb.AppendLine($"%BYT%  {new string('=', 77)}%PT%");
                 session.Send(sb.ToString());
                 return;
             }

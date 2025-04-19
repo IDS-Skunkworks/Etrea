@@ -17,11 +17,12 @@ namespace Etrea3.OLC
                 sb.AppendLine($"Zone ID: {newZone.ZoneID}");
                 sb.AppendLine($"Zone Name: {newZone.ZoneName}");
                 sb.AppendLine($"Start Room: {newZone.MinRoom}{Constants.TabStop}{Constants.TabStop}End Room: {newZone.MaxRoom}");
+                sb.AppendLine($"Resource Vein Types: {newZone.AllowedVeinTypes}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Zone ID{Constants.TabStop}{Constants.TabStop}2. Set Zone Name");
-                sb.AppendLine($"3. Set Start Room{Constants.TabStop}4. Set End Room");
-                sb.AppendLine($"5. Save Zone{Constants.TabStop}{Constants.TabStop}6. Return");
+                sb.AppendLine($"3. Set Start Room{Constants.TabStop}4. Set End Room{Constants.TabStop}5. Set Resource Types");
+                sb.AppendLine($"6. Save Zone{Constants.TabStop}{Constants.TabStop}7. Return");
                 sb.AppendLine("Choice: ");
                 session.SendSystem(sb.ToString());
                 var input = session.Read();
@@ -49,6 +50,10 @@ namespace Etrea3.OLC
                         break;
 
                     case 5:
+                        newZone.AllowedVeinTypes = GetEnumValue<ResourceVeinType>(session, "Enter Resource Vein Types: ");
+                        break;
+
+                    case 6:
                         if (ValidateAsset(session, newZone, true, out _))
                         {
                             if (ZoneManager.Instance.AddOrUpdateZone(newZone, true))
@@ -70,7 +75,7 @@ namespace Etrea3.OLC
                         }
                         break;
 
-                    case 6:
+                    case 7:
                         return;
 
                     default:
@@ -217,11 +222,12 @@ namespace Etrea3.OLC
                 sb.AppendLine($"Zone ID: {zone.ZoneID}");
                 sb.AppendLine($"Zone Name: {zone.ZoneName}");
                 sb.AppendLine($"Start Room: {zone.MinRoom}{Constants.TabStop}{Constants.TabStop}End Room: {zone.MaxRoom}");
+                sb.AppendLine($"Resource Vein Types: {zone.AllowedVeinTypes}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
-                sb.AppendLine($"1. Set Zone Name");
-                sb.AppendLine($"2. Set Start Room{Constants.TabStop}3. Set End Room");
-                sb.AppendLine($"4. Save Zone{Constants.TabStop}{Constants.TabStop}5. Return");
+                sb.AppendLine($"1. Set Zone Name{Constants.TabStop}{Constants.TabStop}2. Set Start Room");
+                sb.AppendLine($"3. Set End Room{Constants.TabStop}{Constants.TabStop}4. Set Resource Vein Types");
+                sb.AppendLine($"5. Save Zone{Constants.TabStop}{Constants.TabStop}6. Return");
                 sb.AppendLine("Choice: ");
                 session.SendSystem(sb.ToString());
                 input = session.Read();
@@ -245,6 +251,10 @@ namespace Etrea3.OLC
                         break;
 
                     case 4:
+                        zone.AllowedVeinTypes = GetEnumValue<ResourceVeinType>(session, "Enter Resource Node Types: ");
+                        break;
+
+                    case 5:
                         if (ValidateAsset(session, zone, false, out _))
                         {
                             if (ZoneManager.Instance.AddOrUpdateZone(zone, false))
@@ -267,7 +277,7 @@ namespace Etrea3.OLC
                         }
                         break;
 
-                    case 5:
+                    case 6:
                         ZoneManager.Instance.SetZoneLockState(zone.ZoneID, false, session);
                         return;
 

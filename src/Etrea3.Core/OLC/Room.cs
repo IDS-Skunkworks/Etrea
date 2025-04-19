@@ -16,20 +16,21 @@ namespace Etrea3.OLC
                 sb.Clear();
                 sb.AppendLine($"Room ID: {newRoom.ID}{Constants.TabStop}Zone: {newRoom.ZoneID}{Constants.TabStop}Name: {newRoom.RoomName}");
                 sb.AppendLine($"Short Desc: {newRoom.ShortDescription}");
-                sb.AppendLine($"Long Desc: {newRoom.LongDescription}");
+                sb.AppendLine($"Long Description Status:");
+                sb.AppendLine($"{Constants.TabStop}Morning: {!newRoom.MorningDescription.IsNullEmptyOrWhiteSpace()}{Constants.TabStop}Afternoon: {!newRoom.AfternoonDescription.IsNullEmptyOrWhiteSpace()}");
+                sb.AppendLine($"{Constants.TabStop}Evening: {!newRoom.EveningDescription.IsNullEmptyOrWhiteSpace()}{Constants.TabStop}Night: {!newRoom.NightDescription.IsNullEmptyOrWhiteSpace()}");
                 sb.AppendLine($"Sign Text: {!string.IsNullOrEmpty(newRoom.SignText)}");
                 sb.AppendLine($"Flags: {newRoom.Flags}");
-                sb.AppendLine($"Exits: {newRoom.RoomExits.Count}");
+                sb.AppendLine($"Exits: {newRoom.RoomExits.Count}{Constants.TabStop}{Constants.TabStop}RoomProgs: {newRoom.RoomProgs.Count}");
                 sb.AppendLine($"Starting NPCs: {newRoom.StartingNPCs.Count}{Constants.TabStop}Starting Items: {newRoom.StartingItems.Count}");
                 sb.AppendLine($"Tick NPCs: {newRoom.SpawnNPCsOnTick.Count}{Constants.TabStop}Tick Items: {newRoom.SpawnItemsOnTick.Count}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set ID{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}2. Set Zone{Constants.TabStop}3. Set Name");
-                sb.AppendLine($"4. Set Short Description{Constants.TabStop}5. Set Long Description");
-                sb.AppendLine($"6. Set Flags{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}7. Manage Exits");
-                sb.AppendLine($"8. Manage Starting NPCs{Constants.TabStop}{Constants.TabStop}9. Manage Starting Items");
-                sb.AppendLine($"10. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}11. Manage Tick Items");
-                sb.AppendLine($"12. Set Sign Text{Constants.TabStop}{Constants.TabStop}13. Clear Sign Text");
+                sb.AppendLine($"4. Manage Descriptions{Constants.TabStop}{Constants.TabStop}5. Set Flags{Constants.TabStop}{Constants.TabStop}6. Manage Exits");
+                sb.AppendLine($"7. Manage Starting NPCs{Constants.TabStop}{Constants.TabStop}8. Manage Starting Items");
+                sb.AppendLine($"9. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}10. Manage Tick Items");
+                sb.AppendLine($"11. Set Sign Text{Constants.TabStop}{Constants.TabStop}12. Clear Sign Text{Constants.TabStop}13. Manage RoomProgs");
                 sb.AppendLine($"14. Save Room{Constants.TabStop}{Constants.TabStop}{Constants.TabStop}15. Return");
                 session.SendSystem(sb.ToString());
                 var input = session.Read();
@@ -53,43 +54,43 @@ namespace Etrea3.OLC
                         break;
 
                     case 4:
-                        newRoom.ShortDescription = GetValue<string>(session, "Enter Short Description: ");
+                        ManageDescriptions(session, ref newRoom);
                         break;
 
                     case 5:
-                        newRoom.LongDescription = Helpers.GetLongDescription(session);
-                        break;
-
-                    case 6:
                         newRoom.Flags = GetEnumValue<RoomFlags>(session, "Enter Room Flags: ");
                         break;
 
-                    case 7:
+                    case 6:
                         ManageExits(session, ref newRoom);
                         break;
 
-                    case 8:
+                    case 7:
                         ManageStartingNPCs(session, ref newRoom);
                         break;
 
-                    case 9:
+                    case 8:
                         ManageStartingItems(session, ref newRoom);
                         break;
 
-                    case 10:
+                    case 9:
                         ManageTickNPCs(session, ref newRoom);
                         break;
 
-                    case 11:
+                    case 10:
                         ManageTickItems(session, ref newRoom);
                         break;
 
-                    case 12:
+                    case 11:
                         newRoom.SignText = Helpers.GetLongDescription(session);
                         break;
 
-                    case 13:
+                    case 12:
                         newRoom.SignText = string.Empty;
+                        break;
+
+                    case 13:
+                        ManageRoomProgs(session, ref newRoom);
                         break;
 
                     case 14:
@@ -239,21 +240,22 @@ namespace Etrea3.OLC
                 sb.Clear();
                 sb.AppendLine($"Room ID: {room.ID}{Constants.TabStop}Zone: {room.ZoneID}{Constants.TabStop}Name: {room.RoomName}");
                 sb.AppendLine($"Short Desc: {room.ShortDescription}");
-                sb.AppendLine($"Long Desc: {room.LongDescription}");
+                sb.AppendLine($"Long Description Status:");
+                sb.AppendLine($"{Constants.TabStop}Morning: {!room.MorningDescription.IsNullEmptyOrWhiteSpace()}{Constants.TabStop}Afternoon: {!room.AfternoonDescription.IsNullEmptyOrWhiteSpace()}");
+                sb.AppendLine($"{Constants.TabStop}Evening: {!room.EveningDescription.IsNullEmptyOrWhiteSpace()}{Constants.TabStop}Night: {!room.NightDescription.IsNullEmptyOrWhiteSpace()}");
                 sb.AppendLine($"Sign Text: {!string.IsNullOrEmpty(room.SignText)}");
                 sb.AppendLine($"Flags: {room.Flags}");
-                sb.AppendLine($"Exits: {room.RoomExits.Count}");
+                sb.AppendLine($"Exits: {room.RoomExits.Count}{Constants.TabStop}{Constants.TabStop}RoomProgs: {room.RoomProgs.Count}");
                 sb.AppendLine($"Starting NPCs: {room.StartingNPCs.Count}{Constants.TabStop}Starting Items: {room.StartingItems.Count}");
                 sb.AppendLine($"Tick NPCs: {room.SpawnNPCsOnTick.Count}{Constants.TabStop}Tick Items: {room.SpawnItemsOnTick.Count}");
                 sb.AppendLine();
                 sb.AppendLine("Options:");
                 sb.AppendLine($"1. Set Zone{Constants.TabStop}2. Set Name");
-                sb.AppendLine($"3. Set Short Description{Constants.TabStop}4. Set Long Description");
-                sb.AppendLine($"5. Set Flags{Constants.TabStop}6. Manage Exits");
-                sb.AppendLine($"7. Manage Starting NPCs{Constants.TabStop}{Constants.TabStop}8. Manage Starting Items");
-                sb.AppendLine($"9. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}10. Manage Tick Items");
-                sb.AppendLine($"11. Set Sign Text{Constants.TabStop}{Constants.TabStop}12. Clear Sign Text");
-                sb.AppendLine($"13. Save Room{Constants.TabStop}14. Return");
+                sb.AppendLine($"3. Manage Descriptions{Constants.TabStop}4. Set Flags{Constants.TabStop}5. Manage Exits");
+                sb.AppendLine($"6. Manage Starting NPCs{Constants.TabStop}{Constants.TabStop}7. Manage Starting Items");
+                sb.AppendLine($"8. Manage Tick NPCs{Constants.TabStop}{Constants.TabStop}9. Manage Tick Items");
+                sb.AppendLine($"10. Set Sign Text{Constants.TabStop}{Constants.TabStop}11. Clear Sign Text");
+                sb.AppendLine($"12. Manage RoomProgs{Constants.TabStop}{Constants.TabStop}13. Save Room{Constants.TabStop}14. Return");
                 session.SendSystem(sb.ToString());
                 input = session.Read();
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input.Trim(), out int option))
@@ -272,43 +274,43 @@ namespace Etrea3.OLC
                         break;
 
                     case 3:
-                        room.ShortDescription = GetValue<string>(session, "Enter Short Description: ");
+                        ManageDescriptions(session, ref room);
                         break;
 
                     case 4:
-                        room.LongDescription = Helpers.GetLongDescription(session);
-                        break;
-
-                    case 5:
                         room.Flags = GetEnumValue<RoomFlags>(session, "Enter Room Flags: ");
                         break;
 
-                    case 6:
+                    case 5:
                         ManageExits(session, ref room);
                         break;
 
-                    case 7:
+                    case 6:
                         ManageStartingNPCs(session, ref room);
                         break;
 
-                    case 8:
+                    case 7:
                         ManageStartingItems(session, ref room);
                         break;
 
-                    case 9:
+                    case 8:
                         ManageTickNPCs(session, ref room);
                         break;
 
-                    case 10:
+                    case 9:
                         ManageTickItems(session, ref room);
                         break;
 
-                    case 11:
+                    case 10:
                         room.SignText = Helpers.GetLongDescription(session);
                         break;
 
-                    case 12:
+                    case 11:
                         room.SignText = string.Empty;
+                        break;
+
+                    case 12:
+                        ManageRoomProgs(session, ref room);
                         break;
 
                     case 13:
@@ -341,6 +343,78 @@ namespace Etrea3.OLC
                     default:
                         session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
+                }
+            }
+        }
+
+        private static void ManageRoomProgs(Session session, ref Room room)
+        {
+            StringBuilder sb = new StringBuilder();
+            while (true)
+            {
+                sb.Clear();
+                sb.AppendLine($"Current RoomProgs:");
+                if (room.RoomProgs.Count > 0)
+                {
+                    foreach(var rp in room.RoomProgs.Keys)
+                    {
+                        RoomProg prog = ScriptObjectManager.Instance.GetScriptObject<RoomProg>(rp);
+                        if (prog != null)
+                        {
+                            sb.AppendLine($"{Constants.TabStop}{rp}: {prog.Name}");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"{Constants.TabStop}{rp}: Unknown RoomProg");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine($"{Constants.TabStop}No RoomProgs assigned");
+                }
+                sb.AppendLine($"Options:");
+                sb.AppendLine($"1. Add RoomProg{Constants.TabStop}{Constants.TabStop}2. Remove RoomProg");
+                sb.AppendLine($"3. Return");
+                sb.AppendLine("Choice:");
+                session.Send(sb.ToString());
+                var input = session.Read();
+                if (input.IsNullEmptyOrWhiteSpace() || !int.TryParse(input, out int option))
+                {
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    continue;
+                }
+                switch (option)
+                {
+                    case 1:
+                        var progID = GetValue<int>(session, "Enter RoomProg ID:");
+                        if (ScriptObjectManager.Instance.ScriptObjectExists<RoomProg>(progID))
+                        {
+                            if (!room.RoomProgs.ContainsKey(progID))
+                            {
+                                room.RoomProgs.Add(progID, true);
+                            }
+                        }
+                        else
+                        {
+                            session.Send($"%BRT%No RoomProg with that ID could be found.%PT%{Constants.NewLine}");
+                        }    
+                        break;
+
+                    case 2:
+                        progID = GetValue<int>(session, "Enter RoomProg ID:");
+                        if (room.RoomProgs.ContainsKey(progID))
+                        {
+                            room.RoomProgs.TryRemove(progID, out _);
+                        }
+                        break;
+
+                    case 3:
+                        return;
+
+                    default:
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        break;
                 }
             }
         }
@@ -761,6 +835,135 @@ namespace Etrea3.OLC
                         session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
                         continue;
                 }
+            }
+        }
+
+        private static void ManageDescriptions(Session session, ref Room room)
+        {
+            StringBuilder sb = new StringBuilder();
+            while (true)
+            {
+                sb.Clear();
+                sb.AppendLine($"Short Description Set: {room.ShortDescription}");
+                sb.AppendLine($"Morning Description Set: {!room.MorningDescription.IsNullEmptyOrWhiteSpace()}");
+                sb.AppendLine($"Afternoon Description Set: {!room.AfternoonDescription.IsNullEmptyOrWhiteSpace()}");
+                sb.AppendLine($"Evening Description Set: {!room.EveningDescription.IsNullEmptyOrWhiteSpace()}");
+                sb.AppendLine($"Night Description Set: {!room.NightDescription.IsNullEmptyOrWhiteSpace()}");
+                sb.AppendLine();
+                sb.AppendLine("Options:");
+                sb.AppendLine($"1. Set Short Description{Constants.TabStop}2. Set Morning Description");
+                sb.AppendLine($"3. Set Afternoon Description{Constants.TabStop}4. Set Evening Description");
+                sb.AppendLine($"5. Set Night Description{Constants.TabStop}6. View Description");
+                sb.AppendLine($"7. Return");
+                sb.AppendLine("Choice:");
+                session.SendSystem(sb.ToString());
+                var input = session.Read();
+                if (input.IsNullEmptyOrWhiteSpace() || !int.TryParse(input.Trim(), out int option))
+                {
+                    session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                    continue;
+                }
+                switch (option)
+                {
+                    case 1:
+                        room.ShortDescription = GetValue<string>(session, "Enter Short Description: ");
+                        break;
+
+                    case 2:
+                        room.MorningDescription = Helpers.GetLongDescription(session);
+                        break;
+
+                    case 3:
+                        room.AfternoonDescription = Helpers.GetLongDescription(session);
+                        break;
+
+                    case 4:
+                        room.EveningDescription = Helpers.GetLongDescription(session);
+                        break;
+
+                    case 5:
+                        room.NightDescription = Helpers.GetLongDescription(session);
+                        break;
+
+                    case 6:
+                        session.SendSystem("Enter Time of Day: ");
+                        var tod = session.Read();
+                        if (!tod.IsNullEmptyOrWhiteSpace() && Enum.TryParse(tod.Trim(), true, out TimeOfDay timeOfDay))
+                        {
+                            if (timeOfDay != TimeOfDay.None)
+                            {
+                                PrintRoomDescription(session, timeOfDay, ref room);
+                            }
+                            else
+                            {
+                                session.SendSystem($"%BRT%Not a valid Time of Day. Please use: Morning, Afternoon, Evening, Night.%PT%{Constants.NewLine}");
+                            }
+                        }
+                        else
+                        {
+                            session.SendSystem($"%BRT%Not a valid Time of Day. Please use: Morning, Afternoon, Evening, Night.%PT%{Constants.NewLine}");
+                        }
+                        break;
+
+                    case 7:
+                        return;
+
+                    default:
+                        session.SendSystem($"%BRT%That does not appear to be a valid option...%PT%{Constants.NewLine}");
+                        continue;
+                }
+            }
+        }
+
+        private static void PrintRoomDescription(Session session, TimeOfDay timeOfDay, ref Room room)
+        {
+            if (timeOfDay == TimeOfDay.Morning)
+            {
+                if (!room.MorningDescription.IsNullEmptyOrWhiteSpace())
+                {
+                    session.SendSystem(room.MorningDescription);
+                }
+                else
+                {
+                    session.SendSystem($"%BRT%No Morning description has been set.%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            if (timeOfDay == TimeOfDay.Afternoon)
+            {
+                if (!room.AfternoonDescription.IsNullEmptyOrWhiteSpace())
+                {
+                    session.SendSystem(room.AfternoonDescription);
+                }
+                else
+                {
+                    session.SendSystem($"%BRT%No Afternoon description has been set.%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            if (timeOfDay == TimeOfDay.Evening)
+            {
+                if (!room.EveningDescription.IsNullEmptyOrWhiteSpace())
+                {
+                    session.SendSystem(room.EveningDescription);
+                }
+                else
+                {
+                    session.SendSystem($"%BRT%No Evening description has been set.%PT%{Constants.NewLine}");
+                }
+                return;
+            }
+            if (timeOfDay == TimeOfDay.Night)
+            {
+                if (!room.NightDescription.IsNullEmptyOrWhiteSpace())
+                {
+                    session.SendSystem(room.NightDescription);
+                }
+                else
+                {
+                    session.SendSystem($"%BRT%No Night description has been set.%PT%{Constants.NewLine}");
+                }
+                return;
             }
         }
     }

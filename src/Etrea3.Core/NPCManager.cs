@@ -34,6 +34,35 @@ namespace Etrea3.Core
             }
         }
 
+        public bool ToggleNPCFlag(Guid npcID, NPCFlags flags)
+        {
+            if (Instance.NPCInstances.ContainsKey(npcID))
+            {
+                Instance.NPCInstances[npcID].Flags ^= flags;
+                return true;
+            }
+            return false;
+        }
+
+        public bool SetNPCFlag(Guid npcID, NPCFlags flags, bool enable)
+        {
+            if (Instance.NPCInstances.ContainsKey(npcID))
+            {
+                switch (enable)
+                {
+                    case true:
+                        Instance.NPCInstances[npcID].Flags |= flags;
+                        break;
+
+                    case false:
+                        Instance.NPCInstances[npcID].Flags &= ~flags;
+                        break;
+                }
+                return true;
+            }
+            return false;
+        }
+
         public List<NPC> GetNPCsInRoom(int roomId)
         {
             return (from n in NPCInstances.Values where n.CurrentRoom == roomId select n).ToList();
@@ -248,7 +277,7 @@ namespace Etrea3.Core
             {
                 foreach(var mp in npc.MobProgs.Keys)
                 {
-                    var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                    var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                     if (mobProg != null)
                     {
                         mobProg.Init();

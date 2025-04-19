@@ -6,9 +6,9 @@ namespace Etrea3.OLC
 {
     public static partial class OLC
     {
-        private static void CreateMobProg(Session session)
+        private static void CreateRoomProg(Session session)
         {
-            var mobProg = new MobProg();
+            var mobProg = new RoomProg();
             StringBuilder sb = new StringBuilder();
             while (true)
             {
@@ -35,15 +35,15 @@ namespace Etrea3.OLC
                 switch (option)
                 {
                     case 1:
-                        mobProg.ID = GetValue<int>(session, "Enter MobProg ID: ");
+                        mobProg.ID = GetValue<int>(session, "Enter RoomProg ID: ");
                         break;
 
                     case 2:
-                        mobProg.Name = GetValue<string>(session, "Enter MobProg Name: ");
+                        mobProg.Name = GetValue<string>(session, "Enter RoomProg Name: ");
                         break;
 
                     case 3:
-                        mobProg.Description = GetValue<string>(session, "Enter MobProg Description: ");
+                        mobProg.Description = GetValue<string>(session, "Enter RoomProg Description: ");
                         break;
 
                     case 4:
@@ -51,28 +51,28 @@ namespace Etrea3.OLC
                         break;
 
                     case 5:
-                        mobProg.Triggers = GetEnumValue<MobProgTrigger>(session, "Enter MobProg Triggers: ");
+                        mobProg.Triggers = GetEnumValue<RoomProgTrigger>(session, "Enter RoomProg Triggers: ");
                         break;
 
                     case 6:
                         if (ValidateAsset(session, mobProg, true, out _))
                         {
-                            if (ScriptObjectManager.Instance.AddOrUpdateScriptObject<MobProg>(mobProg, true))
+                            if (ScriptObjectManager.Instance.AddOrUpdateScriptObject<RoomProg>(mobProg, true))
                             {
-                                session.SendSystem($"%BGT%The new MobProg has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new MobProg: {mobProg.Name} ({mobProg.ID})", LogLevel.OLC);
+                                session.SendSystem($"%BGT%The new RoomProg has been saved successfully.%PT%{Constants.NewLine}");
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has added new RoomProg: {mobProg.Name} ({mobProg.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
-                                session.SendSystem($"%BRT%The new MobProg was not successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add MobProg {mobProg.Name} ({mobProg.ID}) but the attempt failed", LogLevel.OLC);
+                                session.SendSystem($"%BRT%The new RoomProg was not successfully saved.%PT%{Constants.NewLine}");
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to add RoomProg {mobProg.Name} ({mobProg.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.SendSystem($"%BRT%The new MobProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The new RoomProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 
@@ -86,11 +86,11 @@ namespace Etrea3.OLC
             }
         }
 
-        private static void DeleteMobProg(Session session)
+        private static void DeleteRoomProg(Session session)
         {
             while (true)
             {
-                session.SendSystem($"Enter MobProg ID or END to return: ");
+                session.SendSystem($"Enter RoomProg ID or END to return: ");
                 var input = session.Read();
                 if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
                 {
@@ -98,41 +98,41 @@ namespace Etrea3.OLC
                 }
                 if (!int.TryParse(input.Trim(), out int progID))
                 {
-                    session.SendSystem($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%That is not a valid RoomProg ID.%PT%{Constants.NewLine}");
                     continue;
                 }
-                var mobProg = ScriptObjectManager.Instance.GetMobProg(progID);
+                var mobProg = ScriptObjectManager.Instance.GetScriptObject<RoomProg>(progID);
                 if (mobProg == null)
                 {
-                    session.SendSystem($"%BRT%No MobProg with that ID could be found in MobProg Manager.%PT%{Constants.NewLine}");
+                    session.SendSystem($"%BRT%No RoomProg with that ID could be found in RoomProg Manager.%PT%{Constants.NewLine}");
                     continue;
                 }
                 if (mobProg.OLCLocked)
                 {
                     var lockHolder = SessionManager.Instance.GetSession(mobProg.LockHolder);
-                    var msg = lockHolder != null ? $"%BRT%The specified MobProg is locked in OLC by {lockHolder.Player.Name}.%PT%{Constants.NewLine}" :
-                        $"The specified MobProg is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
+                    var msg = lockHolder != null ? $"%BRT%The specified RoomProg is locked in OLC by {lockHolder.Player.Name}.%PT%{Constants.NewLine}" :
+                        $"The specified RoomProg is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
                     session.SendSystem(msg);
                     continue;
                 }
-                if (ScriptObjectManager.Instance.RemoveScriptObject<MobProg>(mobProg.ID))
+                if (ScriptObjectManager.Instance.RemoveScriptObject<RoomProg>(mobProg.ID))
                 {
-                    session.SendSystem($"%BGT%The specified MobProg has been successfully removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed MobProg {mobProg.ID} ({mobProg.Name})", LogLevel.OLC);
+                    session.SendSystem($"%BGT%The specified RoomProg has been successfully removed.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"OLC: Player {session.Player.Name} has removed RoomProg {mobProg.ID} ({mobProg.Name})", LogLevel.OLC);
                     return;
                 }
                 else
                 {
-                    session.SendSystem($"%BRT%The specified MobProg could not be removed.%PT%{Constants.NewLine}");
-                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove MobProg {mobProg.ID} ({mobProg.Name}) but the attempt failed", LogLevel.OLC);
+                    session.SendSystem($"%BRT%The specified RoomProg could not be removed.%PT%{Constants.NewLine}");
+                    Game.LogMessage($"OLC: Player {session.Player.Name} attempted to remove RoomProg {mobProg.ID} ({mobProg.Name}) but the attempt failed", LogLevel.OLC);
                     continue;
                 }
             }
         }
 
-        private static void ChangeMobProg(Session session)
+        private static void ChangeRoomProg(Session session)
         {
-            session.SendSystem("Enter MobProg ID or END to return: ");
+            session.SendSystem("Enter RoomProg ID or END to return: ");
             var input = session.Read();
             if (string.IsNullOrEmpty(input) || input.Trim().ToUpper() == "END")
             {
@@ -140,25 +140,25 @@ namespace Etrea3.OLC
             }
             if (!int.TryParse(input.Trim(), out int progID))
             {
-                session.SendSystem($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid RoomProg ID.%PT%{Constants.NewLine}");
                 return;
             }
-            if (!ScriptObjectManager.Instance.ScriptObjectExists<MobProg>(progID))
+            if (!ScriptObjectManager.Instance.ScriptObjectExists<RoomProg>(progID))
             {
-                session.SendSystem($"%BRT%That is not a valid MobProg ID.%PT%{Constants.NewLine}");
+                session.SendSystem($"%BRT%That is not a valid RoomProg ID.%PT%{Constants.NewLine}");
                 return;
             }
-            var mobProg = ScriptObjectManager.Instance.GetMobProg(progID);
+            var mobProg = ScriptObjectManager.Instance.GetScriptObject<RoomProg>(progID);
             if (mobProg.OLCLocked)
             {
                 var lockingSession = SessionManager.Instance.GetSession(mobProg.LockHolder);
-                var msg = lockingSession != null ? $"%BRT%The specified MobProg is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
-                    $"The specified MobProg is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
+                var msg = lockingSession != null ? $"%BRT%The specified RoomProg is locked in OLC by {lockingSession.Player.Name}.%PT%{Constants.NewLine}" :
+                    $"The specified RoomProg is locked in OLC but the locking session could not be found.%PT%{Constants.NewLine}";
                 session.SendSystem(msg);
                 return;
             }
-            var updatedMobProg = Helpers.Clone<MobProg>(mobProg);
-            ScriptObjectManager.Instance.SetScriptLockState<MobProg>(progID, true, session);
+            RoomProg updatedMobProg = Helpers.Clone<RoomProg>(mobProg);
+            ScriptObjectManager.Instance.SetScriptLockState<RoomProg>(progID, true, session);
             StringBuilder sb = new StringBuilder();
             while (true)
             {
@@ -181,14 +181,14 @@ namespace Etrea3.OLC
                     session.SendSystem($"%BRT%That is not a valid option.%PT%{Constants.NewLine}");
                     continue;
                 }
-                switch(option)
+                switch (option)
                 {
                     case 1:
-                        updatedMobProg.Name = GetValue<string>(session, "Enter MobProg Name: ");
+                        updatedMobProg.Name = GetValue<string>(session, "Enter RoomProg Name: ");
                         break;
 
                     case 2:
-                        updatedMobProg.Description = GetValue<string>(session, "Enter MobProg Description: ");
+                        updatedMobProg.Description = GetValue<string>(session, "Enter RoomProg Description: ");
                         break;
 
                     case 3:
@@ -196,28 +196,28 @@ namespace Etrea3.OLC
                         break;
 
                     case 4:
-                        updatedMobProg.Triggers = GetEnumValue<MobProgTrigger>(session, "Enter MobProg Triggers: ");
+                        updatedMobProg.Triggers = GetEnumValue<RoomProgTrigger>(session, "Enter RoomProg Triggers: ");
                         break;
 
                     case 5:
-                        if (ValidateAsset(session, updatedMobProg, false, out _))
+                        if (ValidateAsset<RoomProg>(session, updatedMobProg, false, out _))
                         {
-                            if (ScriptObjectManager.Instance.AddOrUpdateScriptObject<MobProg>(updatedMobProg, false))
+                            if (ScriptObjectManager.Instance.AddOrUpdateScriptObject<RoomProg>(updatedMobProg, false))
                             {
-                                session.SendSystem($"%BGT%The updated MobProg has been saved successfully.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated MobProg: {updatedMobProg.Name} ({updatedMobProg.ID})", LogLevel.OLC);
+                                session.SendSystem($"%BGT%The updated RoomProg has been saved successfully.%PT%{Constants.NewLine}");
+                                Game.LogMessage($"OLC: Player {session.Player.Name} has updated RoomProg: {updatedMobProg.Name} ({updatedMobProg.ID})", LogLevel.OLC);
                                 return;
                             }
                             else
                             {
-                                session.SendSystem($"%BRT%The updated MobProg was not successfully saved.%PT%{Constants.NewLine}");
-                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update MobProg {updatedMobProg.Name} ({updatedMobProg.ID}) but the attempt failed", LogLevel.OLC);
+                                session.SendSystem($"%BRT%The updated RoomProg was not successfully saved.%PT%{Constants.NewLine}");
+                                Game.LogMessage($"OLC: Player {session.Player.Name} attempted to update RoomProg {updatedMobProg.Name} ({updatedMobProg.ID}) but the attempt failed", LogLevel.OLC);
                                 continue;
                             }
                         }
                         else
                         {
-                            session.SendSystem($"%BRT%The updated MobProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
+                            session.SendSystem($"%BRT%The updated RoomProg could not be validated and will not be saved.%PT%{Constants.NewLine}");
                         }
                         break;
 

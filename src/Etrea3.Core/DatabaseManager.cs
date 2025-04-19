@@ -5,7 +5,6 @@ using System.Data.SQLite;
 using System.IO;
 using Etrea3.Objects;
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 
 namespace Etrea3.Core
 {
@@ -1666,17 +1665,25 @@ namespace Etrea3.Core
         #endregion
 
         #region MobProgs
-        public static bool RemoveMobProg(int id)
+        public static bool RemoveScriptObject<T>(int id) where T : class
         {
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
                 {
                     con.Open();
-                    using (var cmd = new SQLiteCommand(con))
+                    using (var cmd = new SQLiteCommand())
                     {
-                        cmd.CommandText = "DELETE FROM tblMobProgs WHERE ID = @i;";
+                        cmd.CommandText = "DELETE FROM tblScriptingObjects WHERE Type = @t AND ID = @i;";
                         cmd.Parameters.Add(new SQLiteParameter("@i", id));
+                        if (typeof(T) == typeof(MobProg))
+                        {
+                            cmd.Parameters.Add(new SQLiteParameter("@t", "MobProg"));
+                        }
+                        if (typeof(T) == typeof(RoomProg))
+                        {
+                            cmd.Parameters.Add(new SQLiteParameter("@t", "RoomProg"));
+                        }
                         cmd.Prepare();
                         cmd.ExecuteNonQuery();
                     }
@@ -1686,14 +1693,14 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveMobProg(): {ex.Message}", LogLevel.Error);
+                Game.LogMessage($"ERROR: Error in DatabaseManager.RemoveScriptObject(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }
 
-        public static bool LoadAllMobProgs(out ConcurrentDictionary<int, MobProg> allMobProgs)
+        public static bool LoadAllScripts<T>(out ConcurrentDictionary<int, T> allScripts) where T : class
         {
-            allMobProgs = new ConcurrentDictionary<int, MobProg>();
+            allScripts = new ConcurrentDictionary<int, T>();
             try
             {
                 using (var con = new SQLiteConnection(worldDBConnectionString))
@@ -1701,13 +1708,22 @@ namespace Etrea3.Core
                     con.Open();
                     using (var cmd = new SQLiteCommand(con))
                     {
-                        cmd.CommandText = "SELECT * FROM tblMobProgs;";
+                        cmd.CommandText = "SELECT * FROM tblScriptingObjects WHERE Type = @t;";
+                        if (typeof(T) == typeof(MobProg))
+                        {
+                            cmd.Parameters.Add(new SQLiteParameter("@t", "MobProg"));
+                        }
+                        if (typeof(T) == typeof(RoomProg))
+                        {
+                            cmd.Parameters.Add(new SQLiteParameter("@t", "RoomProg"));
+                        }
+                        cmd.Prepare();
                         using (var dr = cmd.ExecuteReader())
                         {
                             while (dr.Read())
                             {
-                                var mp = Helpers.DeserialiseEtreaObject<MobProg>(dr["MobProgData"].ToString());
-                                allMobProgs.TryAdd(mp.ID, mp);
+                                var so = Helpers.DeserialiseEtreaObject<T>(dr["ObjectData"].ToString());
+                                allScripts.TryAdd(int.Parse(dr["ID"].ToString()), so);
                             }
                         }
                     }
@@ -1717,8 +1733,42 @@ namespace Etrea3.Core
             }
             catch (Exception ex)
             {
-                allMobProgs = null;
-                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllMobProgs(): {ex.Message}", LogLevel.Error);
+                allScripts = null;
+                Game.LogMessage($"ERROR: Error in DatabaseManager.LoadAllScripts(): {ex.Message}", LogLevel.Error);
+                return false;
+            }
+        }
+
+        public static bool SaveScriptToWorldDatabase<T>(T script, bool isNew) where T : class
+        {
+            try
+            {
+                using (var con = new SQLiteConnection(worldDBConnectionString))
+                {
+                    con.Open();
+                    using (var cmd = new SQLiteCommand(con))
+                    {
+                        cmd.CommandText = "INSERT INTO tblScriptingObjects (ID, Type, ObjectData) VALUES (@i, @t, @d);";
+                        cmd.Parameters.Add(new SQLiteParameter("@i", (script as ScriptingObject).ID));
+                        cmd.Parameters.Add(new SQLiteParameter("@d", Helpers.SerialiseEtreaObject<T>(script)));
+                        if (typeof(T) == typeof(MobProg))
+                        {
+                            cmd.Parameters.Add(new SQLiteParameter("@t", "MobProg"));
+                        }
+                        if (typeof(T) == typeof(RoomProg))
+                        {
+                            cmd.Parameters.Add(new SQLiteParameter("@t", "RoomProg"));
+                        }
+                        cmd.Prepare();
+                        cmd.ExecuteNonQuery();
+                    }
+                    con.Close();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Game.LogMessage($"ERROR: Error in DatabaseManager.SaveScriptToWorldDatabase(): {ex.Message}", LogLevel.Error);
                 return false;
             }
         }

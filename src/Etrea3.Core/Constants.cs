@@ -29,5 +29,6 @@
         public static readonly string[] PosessivePronouns = { "his", "her", "their" };        // posessive pronouns for emotes
         public static readonly string[] PersonalPronouns = { "he", "she", "they" };           // personal pronouns for emotes
         public static readonly string[] Languages = { "Common", "Orcish", "Dwarvish", "Elvish", "Draconic", "Infernal", "Celestial" };      // languages players can learn and speak
+        public static readonly string[] MonthNames = { "Xaneth", "Brume", "Kelmar", "Sarth", "Velun", "Morndas", "Tavris", "Olyen", "Xivsh", "Nareth", "Dranul", "Feylin" };
     }
 }

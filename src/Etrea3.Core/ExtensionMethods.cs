@@ -37,6 +37,19 @@ namespace Etrea3.Core
             dictionary.TryAdd(key, value);
         }
 
+        public static bool IsNullEmptyOrWhiteSpace(this string val)
+        {
+            if ((object)val == null || val.Length == 0)
+            {
+                return true;
+            }
+            if (!val.Any(x => char.IsWhiteSpace(x)))
+            {
+                return false;
+            }
+            return true;
+        }
+
         //public static Tobj Clone<Tobj>(this Tobj obj)
         //{
         //    if (!typeof(Tobj).IsSerializable)

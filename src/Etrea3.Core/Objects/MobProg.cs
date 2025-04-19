@@ -6,69 +6,51 @@ using Etrea3.Core;
 namespace Etrea3.Objects
 {
     [Serializable]
-    public class MobProg
+    public class MobProg : ScriptingObject
     {
         [JsonProperty]
-        public int ID { get; set; }
-        [JsonProperty]
-        public string Name { get; set; }
-        [JsonProperty]
-        public string Description { get; set; }
-        [JsonProperty]
-        public string Script { get; set; }
-        [JsonProperty]
         public MobProgTrigger Triggers { get; set; }
-        [JsonIgnore]
-        public bool OLCLocked { get; set; }
-        [JsonIgnore]
-        public Guid LockHolder { get; set; }
-        [NonSerialized]
-        private Lua _lua = null;
 
         public MobProg()
         {
 
         }
 
-        public void Init()
+        public override void Init()
         {
             if (_lua == null)
             {
                 _lua = new Lua();
-                _lua.RegisterFunction("MobEmote", typeof(ActMob).GetMethod("MobProgEmote"));
-                _lua.RegisterFunction("MobMove", typeof(ActMob).GetMethod("MobProgMove"));
-                _lua.RegisterFunction("MobTakeItem", typeof(ActMob).GetMethod("MobProgTakeItem"));
-                _lua.RegisterFunction("MobDropItem", typeof(ActMob).GetMethod("MobProgDropItem"));
-                _lua.RegisterFunction("MobGiveItem", typeof(ActMob).GetMethod("MobProgGiveItem"));
-                _lua.RegisterFunction("MobAttack", typeof(ActMob).GetMethod("MobProgAttack"));
-                _lua.RegisterFunction("MobCastSpell", typeof(ActMob).GetMethod("MobProgCastSpell"));
-                _lua.RegisterFunction("MobSay", typeof(ActMob).GetMethod("MobProgSay"));
-                _lua.RegisterFunction("MobYell", typeof(ActMob).GetMethod("MobProgYell"));
-                _lua.RegisterFunction("MobWhisper", typeof(ActMob).GetMethod("MobProgWhisper"));
-                _lua.RegisterFunction("MobTeleportPlayer", typeof(ActMob).GetMethod("MobProgTeleportPlayer"));
-                _lua.RegisterFunction("MobRememberPlayer", typeof(ActMob).GetMethod("MobProgRememberPlayer"));
-                _lua.RegisterFunction("MobForgetPlayer", typeof(ActMob).GetMethod("MobProgForgetPlayer"));
-                _lua.RegisterFunction("MobRemembersPlayer", typeof(ActMob).GetMethod("MobProgRemembersPlayer"));
-                _lua.RegisterFunction("MobGetRememberedPlayerTick", typeof(ActMob).GetMethod("MobProgGetRememberPlayerTickCount"));
-                _lua.RegisterFunction("MobHasItem", typeof(ActMob).GetMethod("MobProgMobHasItem"));
-                _lua.RegisterFunction("MobGetMUDTick", typeof(ActMob).GetMethod("MobProgGetMudTick"));
-                _lua.RegisterFunction("MobRollDice", typeof(ActMob).GetMethod("MobProgRollDice"));
-                _lua.RegisterFunction("MobCheckIfPlayerIsImm", typeof(ActMob).GetMethod("MobProgCheckPlayerIsImm"));
-                _lua.RegisterFunction("MobGetPlayerName", typeof(ActMob).GetMethod("MobProgGetPlayerName"));
-                _lua.RegisterFunction("MobGetRandomPlayer", typeof(ActMob).GetMethod("MobProgGetRandomPlayerID"));
-                _lua.RegisterFunction("MobGetItemName", typeof(ActMob).GetMethod("MobProgGetItemName"));
-                _lua.RegisterFunction("MobItemInRoom", typeof(ActMob).GetMethod("MobProgItemInRoom"));
-                _lua.RegisterFunction("MobSellPlayerItem", typeof(ActMob).GetMethod("MogProgMobSellPlayerItem"));
+                _lua.RegisterFunction("MobEmote", typeof(ScriptingFunctions).GetMethod("MobProgEmote"));
+                _lua.RegisterFunction("MobMove", typeof(ScriptingFunctions).GetMethod("MobProgMove"));
+                _lua.RegisterFunction("MobTakeItem", typeof(ScriptingFunctions).GetMethod("MobProgTakeItem"));
+                _lua.RegisterFunction("MobDropItem", typeof(ScriptingFunctions).GetMethod("MobProgDropItem"));
+                _lua.RegisterFunction("MobGiveItem", typeof(ScriptingFunctions).GetMethod("MobProgGiveItem"));
+                _lua.RegisterFunction("MobAttack", typeof(ScriptingFunctions).GetMethod("MobProgAttack"));
+                _lua.RegisterFunction("MobCastSpell", typeof(ScriptingFunctions).GetMethod("MobProgCastSpell"));
+                _lua.RegisterFunction("MobSay", typeof(ScriptingFunctions).GetMethod("MobProgSay"));
+                _lua.RegisterFunction("MobYell", typeof(ScriptingFunctions).GetMethod("MobProgYell"));
+                _lua.RegisterFunction("MobWhisper", typeof(ScriptingFunctions).GetMethod("MobProgWhisper"));
+                _lua.RegisterFunction("MobTeleportPlayer", typeof(ScriptingFunctions).GetMethod("MobProgTeleportPlayer"));
+                _lua.RegisterFunction("MobRememberPlayer", typeof(ScriptingFunctions).GetMethod("MobProgRememberPlayer"));
+                _lua.RegisterFunction("MobForgetPlayer", typeof(ScriptingFunctions).GetMethod("MobProgForgetPlayer"));
+                _lua.RegisterFunction("MobRemembersPlayer", typeof(ScriptingFunctions).GetMethod("MobProgRemembersPlayer"));
+                _lua.RegisterFunction("MobGetRememberedPlayerTick", typeof(ScriptingFunctions).GetMethod("MobProgGetRememberPlayerTickCount"));
+                _lua.RegisterFunction("MobHasItem", typeof(ScriptingFunctions).GetMethod("MobProgMobHasItem"));
+                _lua.RegisterFunction("GetMUDTick", typeof(ScriptingFunctions).GetMethod("GetMudTick"));
+                _lua.RegisterFunction("RollDice", typeof(ScriptingFunctions).GetMethod("RollDice"));
+                _lua.RegisterFunction("GetRandomNumber", typeof(ScriptingFunctions).GetMethod("GetRandomNumber"));
+                _lua.RegisterFunction("MobCheckIfPlayerIsImm", typeof(ScriptingFunctions).GetMethod("MobProgCheckPlayerIsImm"));
+                _lua.RegisterFunction("MobGetPlayerName", typeof(ScriptingFunctions).GetMethod("MobProgGetPlayerName"));
+                _lua.RegisterFunction("GetRandomPlayer", typeof(ScriptingFunctions).GetMethod("GetRandomPlayerID"));
+                _lua.RegisterFunction("GetItemName", typeof(ScriptingFunctions).GetMethod("MobProgGetItemName"));
+                _lua.RegisterFunction("IsItemInRoom", typeof(ScriptingFunctions).GetMethod("MobProgIsItemInRoom"));
+                _lua.RegisterFunction("MobSellPlayerItem", typeof(ScriptingFunctions).GetMethod("MogProgMobSellPlayerItem"));
+                _lua.RegisterFunction("GetCurrentTimeOfDay", typeof(ScriptingFunctions).GetMethod("GetCurrentTOD"));
+                _lua.RegisterFunction("GetPreviousTimeOfDay", typeof(ScriptingFunctions).GetMethod("GetPreviousTOD"));
+                _lua.RegisterFunction("PlayerHasQuest", typeof(ScriptingFunctions).GetMethod("PlayerHasQuest"));
             }
             _lua.DoString(Script);
-        }
-
-        public void Dispose()
-        {
-            if (_lua != null)
-            {
-                _lua.Dispose();
-            }
         }
 
         public void TriggerEvent(MobProgTrigger trigger, object parameters)

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Etrea3.Objects;
 
 namespace Etrea3.Core
@@ -30,6 +31,32 @@ namespace Etrea3.Core
             }
         }
 
+        public void RunRoomProgs(ulong tickCount, RoomProgTrigger trigger)
+        {
+            _ = Task.Run(() =>
+            {
+                ConcurrentBag<Room> progRooms = (ConcurrentBag<Room>)Instance.Rooms.Values.Where(x => x.RoomProgs.Count > 0);
+                Parallel.ForEach(progRooms, r =>
+                {
+                    foreach (var p in r.RoomProgs)
+                    {
+                        RoomProg rp = ScriptObjectManager.Instance.GetScriptObject<RoomProg>(p.Key);
+                        if (rp == null)
+                        {
+                            Game.LogMessage($"WARN: Cannot execute RoomProg {p.Key} in Room {r.ID} for Trigger {trigger}: No such RoomProg could be found", LogLevel.Warning);
+                            continue;
+                        }
+                        if (rp.Triggers.HasFlag(trigger))
+                        {
+                            rp.Init();
+                            rp.TriggerEvent(trigger, new { r.ID, tickCount });
+                        }
+                    }
+                });
+                progRooms = null;
+            });
+        }
+
         public void SetRoomLockState(int id, bool locked, Session session)
         {
             if (Instance.Rooms.ContainsKey(id))
@@ -37,6 +64,35 @@ namespace Etrea3.Core
                 Instance.Rooms[id].OLCLocked = locked;
                 Instance.Rooms[id].LockHolder = locked ? session.ID : Guid.Empty;
             }
+        }
+
+        public bool ToggleRoomFlag(int id, RoomFlags flag)
+        {
+            if (Instance.Rooms.ContainsKey(id))
+            {
+                Instance.Rooms[id].Flags ^= flag;
+                return true;
+            }
+            return false;
+        }
+
+        public bool SetRoomFlag(int id, RoomFlags flag, bool enable)
+        {
+            if (Instance.Rooms.ContainsKey(id))
+            {
+                switch(enable)
+                {
+                    case true:
+                        Instance.Rooms[id].Flags |= flag;
+                        break;
+
+                    case false:
+                        Instance.Rooms[id].Flags &= ~flag;
+                        break;
+                }
+                return true;
+            }
+            return false;
         }
 
         public bool GetRoomLockState(int id, out Guid lockHolder)
@@ -127,6 +183,53 @@ namespace Etrea3.Core
                     }
                 }
             }
+        }
+
+        public bool AddItemToRoomInventory(int roomID, int itemID)
+        {
+            if (!ItemManager.Instance.ItemExists(itemID))
+            {
+                Game.LogMessage($"ERROR: Cannot spawn Item {itemID} in Room {roomID}, no such Item in Item Manager", LogLevel.Error);
+                return false;
+            }
+            if (!Instance.Rooms.ContainsKey(roomID))
+            {
+                Game.LogMessage($"ERROR: Cannot spawn Item {itemID} in Room {roomID}, no such Room in Room Manager", LogLevel.Error);
+                return false;
+            }
+            dynamic spawmItem = null;
+            var baseItem = ItemManager.Instance.GetItem(itemID);
+            switch (baseItem.ItemType)
+            {
+                case ItemType.Misc:
+                    spawmItem = Helpers.Clone<InventoryItem>(baseItem);
+                    break;
+
+                case ItemType.Weapon:
+                    spawmItem = Helpers.Clone<Weapon>(baseItem);
+                    break;
+
+                case ItemType.Consumable:
+                    spawmItem = Helpers.Clone<Consumable>(baseItem);
+                    break;
+
+                case ItemType.Armour:
+                    spawmItem = Helpers.Clone<Armour>(baseItem);
+                    break;
+
+                case ItemType.Ring:
+                    spawmItem = Helpers.Clone<Ring>(baseItem);
+                    break;
+
+                case ItemType.Scroll:
+                    spawmItem = Helpers.Clone<Scroll>(baseItem);
+                    break;
+            }
+            if (spawmItem.ItemID == Guid.Empty)
+            {
+                spawmItem.ItemID = Guid.NewGuid();
+            }
+            return Instance.AddItemToRoomInventory(roomID, spawmItem);
         }
 
         public bool AddItemToRoomInventory(int roomID, InventoryItem item)

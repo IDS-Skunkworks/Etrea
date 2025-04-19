@@ -34,5 +34,6 @@ namespace Etrea3
         Scribe = 1 << 25,                           // Scribe allows learning/crafting Scribe recipes
         Sign = 1 << 26,                             // Sign can be looked at with the READ command
         GodRoom = 1 << 27,                          // Only Immortals can enter this room
+        Clock = 1 << 28,                            // When players check the time here, they will see the full time rather than an approximation
     }
 }

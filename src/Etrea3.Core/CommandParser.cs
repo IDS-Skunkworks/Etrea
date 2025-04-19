@@ -234,6 +234,11 @@ namespace Etrea3.Core
                 #endregion
 
                 #region Misc
+                case "date":
+                case "time":
+                    ShowWorldTime(session);
+                    break;
+
                 case "psummon":
                     arg = input.Remove(0, verb.Length).Trim();
                     PlayerSummon(session, ref arg);
@@ -354,7 +359,7 @@ namespace Etrea3.Core
                 case "quest":
                 case "quests":
                     arg = input.Remove(0, verb.Length).Trim();
-                    ShowQuests(session, ref arg);
+                    DoQuestOperation(session, ref arg);
                     break;
 
                 case "score":
@@ -383,6 +388,12 @@ namespace Etrea3.Core
                 #endregion
 
                 #region Immortal
+                case "rdesc":
+                case "roomdesc":
+                    arg = input.Remove(0, verb.Length).Trim();
+                    ShowRoomDesc(session, ref arg);
+                    break;
+
                 case "ban":
                 case "block":
                     arg = input.Remove(0, verb.Length).Trim();

@@ -117,7 +117,7 @@ namespace Etrea3.Core
                                 {
                                     foreach (var mp in n.MobProgs.Keys)
                                     {
-                                        var mobProg = MobProgManager.Instance.GetMobProg(mp);
+                                        var mobProg = ScriptObjectManager.Instance.GetMobProg(mp);
                                         if (mobProg != null)
                                         {
                                             string attackerID = target.ActorType == ActorType.Player ? target.ID.ToString() : string.Empty;
